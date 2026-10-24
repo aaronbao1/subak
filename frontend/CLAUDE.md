@@ -9,7 +9,8 @@ Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`
 - `src/lib/contracts/index.ts` — **shared types for the six handoffs. Frozen.** Add optional fields only; never rename or remove. Ask the integration owner for anything else.
 - `src/lib/data/client.ts` — `DataClient` interface. UI never imports fixtures directly; it goes through `useAppStore` (`src/lib/store.ts`) or `getDataClient()`.
 - `src/lib/data/mock-client.ts` — in-memory mock. Will be swapped for an HTTP client when the backend lands.
-- `src/fixtures/index.ts` — the shared company example from the plan (Northstar Software, 3 teams, USD, Q4 2026, $200k envelope). Totals are fixed by the plan; see the header comment. Includes `scriptedReply()` for the mock assistant.
+- `src/fixtures/index.ts` — the shared company example from the plan (Northstar Software, 3 teams, USD, $200k envelope). Totals are fixed by the plan; see the header comment. Includes `scriptedReply()` for the mock assistant. Exported as `northstar: Dataset`.
+- `src/fixtures/generate.ts` — `generateCompany(n)` builds a deterministic synthetic company with 0..16 teams plus a generic assistant. The mock client picks it when the URL has `?teams=N` (remembered in localStorage; `?teams=default` resets). **UI code must never assume a team count or hard-code team ids.**
 - `src/lib/store.ts` — app state. Applying a proposal here updates budgets everywhere.
 - `src/lib/format.ts` — `formatAmount`, `pct`, `formatPct`. Use these; don't hand-format numbers.
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AssistantDrawer } from "@/components/assistant/assistant-drawer";
+import { TeamCountSwitcher } from "@/components/shell/team-count-switcher";
 
 const nav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -49,10 +50,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b flex items-center justify-between px-6">
-          <div className="text-sm text-muted-foreground">Internal planning envelope in <span className="font-medium text-foreground">{company?.budgetUnit === "usd" ? "USD" : company?.budgetUnit ?? "…"}</span>. Planning records, not provider limits or purchases.</div>
-          <Button variant={assistantOpen ? "secondary" : "default"} size="sm" onClick={() => setAssistantOpen(!assistantOpen)}>
-            <MessageSquare className="size-4" /> Assistant
-          </Button>
+          <div className="text-sm text-muted-foreground hidden md:block">Internal planning envelope in <span className="font-medium text-foreground">{company?.budgetUnit === "usd" ? "USD" : company?.budgetUnit ?? "…"}</span>. Planning records, not provider limits or purchases.</div>
+          <div className="flex items-center gap-2">
+            {company?.isDemo && <TeamCountSwitcher />}
+            <Button variant={assistantOpen ? "secondary" : "default"} size="sm" onClick={() => setAssistantOpen(!assistantOpen)}>
+              <MessageSquare className="size-4" /> Assistant
+            </Button>
+          </div>
         </header>
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>
