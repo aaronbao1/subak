@@ -566,3 +566,25 @@ Code: `api/routes_{meta,spending,forecasts,signals,admin}.py`, `services/{spendi
   `request/status/response`; `fixtures/index.json` lists them. Six scenarios (main, addition, rejection,
   forecast_unavailable, imports, incomplete) each run against their own seeded DB, so ids restart per scenario.
   Agent-run fixtures are deferred to the Droid module. `ErrorBody` lives in `schemas/common.py`.
+
+## 14. Droid agent (as built)
+
+Code: `app/agent/{runner,tools,toolbox,fake_runner,loader}.py`, `app/services/agent_runs.py`,
+`app/api/routes_agent.py`, `app/schemas/agent.py`, `agent/northstar_droid/{sdk_runner,sdk_tools}.py`.
+Differences from and additions to §3.12 / §5 / §6:
+- Tool names (shared by both runners): `search_corpus`, `read_document`, `get_spend_summary`, `get_budgets`,
+  `get_forecast` (persists a citable snapshot), `list_signals`, `record_signal`, `draft_proposal`. One
+  `draft_proposal` takes either action type. `tool_manifest.json` is generated from `app/agent/tools.py`.
+- New table `agent_run_events` (`run_id`, `seq`, `type`, `source`, `data`, `at`) backs the SSE stream
+  `GET /api/agent/runs/{id}/events` (replay + follow, `Last-Event-ID` / `?after=` resume). Event types are
+  listed in `app/agent/runner.py::EVENT_TYPES`.
+- `POST /api/agent/runs` (finance roles): `{task_type, instruction, params, wait}`; `wait=true` (default) 201
+  after completion, `wait=false` 202 and a background thread (at most 2 concurrent, else 429 `runner_busy`).
+  Params are validated up front (422 `unknown_team|non_positive_amount|invalid_params|unexpected_params`).
+- The run row is written before the runner starts; 503 `runner_unavailable` still leaves an `unavailable`
+  run. `output.proposal_ids/signal_ids` come from the toolbox, not the runner. `AgentRunOut.proposals`
+  shows each draft's live status; `applied_changes` is always false.
+- Droid's actor id is `droid:<run id>` (role `droid_agent`). The finance user who starts a run is recorded in
+  `input.initiated_by` but is not the proposal's requester, so separation of duties does not block them
+  from approving Droid's draft (open product decision).
+- `create_app(droid_runner=...)` injects a runner (tests); otherwise the runner is resolved per run.

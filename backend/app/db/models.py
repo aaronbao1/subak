@@ -466,3 +466,27 @@ class AgentRunStep(_IdMixin, Base):
     run: Mapped[AgentRun] = relationship(back_populates="steps")
 
     __table_args__ = (UniqueConstraint("run_id", "seq"),)
+
+
+AGENT_EVENT_SOURCES = ("fake_runner", "droid_sdk", "backend")
+
+
+class AgentRunEvent(_IdMixin, Base):
+    """Visible activity stream of a run (tool called, evidence found, proposal drafted, ...).
+
+    Stored, not just pushed, so the SSE endpoint can replay a finished run and a reconnecting client
+    resumes from `seq` without losing events."""
+
+    __tablename__ = "agent_run_events"
+
+    run_id: Mapped[str] = mapped_column(ForeignKey("agent_runs.id"), nullable=False)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[str] = mapped_column(String(40), nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("run_id", "seq"),
+        CheckConstraint(_in("source", AGENT_EVENT_SOURCES), name="source"),
+    )

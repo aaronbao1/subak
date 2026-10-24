@@ -106,5 +106,7 @@ cd backend
 `tests/test_contract.py` fails when the committed files drift from what the code produces. A changed
 fixture shape is an integration change: tell the frontend owner before merging it.
 
-Not yet included: agent-run fixtures (`agent_run_*`, `error_runner_unavailable`) arrive with the
-Droid runner module.
+Agent runs: `agent_run_interpret`, `agent_run_propose_addition`, `agent_run_propose_transfer` and
+`agent_runs` are real FakeDroidRunner runs (scenario `agent`); `error_runner_unavailable` is the 503
+for `DROID_RUNNER=sdk` without a key. Each run embeds its `steps` and `events`; the same events are
+streamed live by `GET /api/agent/runs/{id}/events` (SSE, see `backend/README.md`).

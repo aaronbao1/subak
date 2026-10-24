@@ -45,6 +45,7 @@ Every test uses its own temporary SQLite file, a frozen clock, and sequential id
 | `BACKEND_CORS_ORIGIN_REGEX` | localhost / 127.0.0.1, any port | Allowed browser origins; credentials are never allowed |
 | `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model) or `unavailable` |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
+| `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos |
 
 No credentials are stored in this repo or requested by the backend. The Factory SDK reads its own
@@ -91,9 +92,36 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 | `GET/POST /api/signals`, `GET/PATCH/DELETE /api/signals/{id}` | context signals with verified citations |
 | `POST /api/proposals`, `.../{id}/decision`, `.../rebase`, `.../revise` | drafting and finance decisions |
 | `GET /api/decisions`, `GET /api/decision-events` | decision history and blocked attempts |
+| `POST /api/agent/runs`, `GET /api/agent/runs[/{id}]` | start a Droid task (finance roles), run output + step log + events |
+| `GET /api/agent/runs/{id}/events` | SSE activity stream (tool called, evidence found, proposal drafted, ...) |
+| `GET /api/agent/tools` | the exact tools Droid gets (read + draft only) |
 
 Regenerate the contract after any schema or seed change:
 `.venv/bin/python -m app.contract.export` (`--check` to verify; `tests/test_contract.py` enforces it).
+
+## Droid agent runs
+
+Droid interprets the corpus into cited signals and drafts proposals through a scoped toolbox; it cannot
+apply anything. See [`../agent/README.md`](../agent/README.md) for the runtime design.
+
+```bash
+H='-H X-Actor-Id:fin-ana -H X-Actor-Role:finance_analyst -H Content-Type:application/json'
+# run to completion (201) - default
+curl $H -d '{"task_type":"interpret_corpus"}' http://127.0.0.1:8787/api/agent/runs
+# start in the background (202) and follow live activity over SSE
+curl $H -d '{"task_type":"propose_allocation","params":{"mode":"addition","amount":"50000.00","prioritize":"research"},"wait":false}' \
+     http://127.0.0.1:8787/api/agent/runs
+curl -N http://127.0.0.1:8787/api/agent/runs/<run id>/events
+```
+
+Task types: `interpret_corpus`, `propose_allocation` (`params.mode` `addition` | `transfer`, `amount`,
+`prioritize`), `answer_question`. SSE frames are `id: <seq>`, `event: <type>`, `data: <json>`; event
+types: `run_started`, `tool_call`, `tool_result`, `evidence_found`, `supersession_detected`,
+`conflict_detected`, `signal_recorded`, `proposal_drafted`, `assistant_text`, `warning`, `error`,
+`run_finished`. The stream replays stored events, follows a running run, and ends after
+`run_finished`; reconnect with `Last-Event-ID` or `?after=<seq>`. In the browser use `EventSource`.
+Every event carries `source` (`fake_runner` | `droid_sdk` | `backend`) and every run `runner_kind` and
+`simulated`, so the UI can label simulated activity honestly.
 
 ## Real vs simulated
 

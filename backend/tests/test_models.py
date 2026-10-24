@@ -14,7 +14,7 @@ EXPECTED_TABLES = {
     "planning_periods", "teams", "team_mappings", "import_batches", "usage_records",
     "budget_envelopes", "budget_allocations", "budget_snapshots", "proposals", "decisions",
     "decision_events", "corpus_documents", "context_signals", "signal_citations",
-    "forecast_snapshots", "agent_runs", "agent_run_steps",
+    "forecast_snapshots", "agent_runs", "agent_run_steps", "agent_run_events",
 }
 
 

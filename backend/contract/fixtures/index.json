@@ -1,6 +1,46 @@
 {
   "fixtures": [
     {
+      "description": "fake runner reads the corpus, flags the superseded research thread, records cited signals",
+      "file": "agent_run_interpret.json",
+      "method": "POST",
+      "name": "agent_run_interpret",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRun",
+      "status": 201
+    },
+    {
+      "description": "fake runner drafts outcome B (+50k: research +35k, engineering +15k) as pending_review",
+      "file": "agent_run_propose_addition.json",
+      "method": "POST",
+      "name": "agent_run_propose_addition",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRun",
+      "status": 201
+    },
+    {
+      "description": "fake runner drafts outcome A (product -> research 25k, product -> engineering 5k)",
+      "file": "agent_run_propose_transfer.json",
+      "method": "POST",
+      "name": "agent_run_propose_transfer",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRun",
+      "status": 201
+    },
+    {
+      "description": "recent runs, newest first, each with its step log and events",
+      "file": "agent_runs.json",
+      "method": "GET",
+      "name": "agent_runs",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRunList",
+      "status": 200
+    },
+    {
       "description": "immutable snapshots v1 (seed) and v2 linked to the decision",
       "file": "budget_history.json",
       "method": "GET",
@@ -209,6 +249,16 @@
       "scenario": "main",
       "schema": "ErrorBody",
       "status": 403
+    },
+    {
+      "description": "DROID_RUNNER=sdk without FACTORY_API_KEY: 503, no silent fallback to the fake runner",
+      "file": "error_runner_unavailable.json",
+      "method": "POST",
+      "name": "error_runner_unavailable",
+      "path": "/api/agent/runs",
+      "scenario": "agent_sdk_unavailable",
+      "schema": "ErrorBody",
+      "status": 503
     },
     {
       "description": "the requester cannot approve its own proposal",

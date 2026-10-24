@@ -19,7 +19,8 @@ REQUIRED = {
     "budget_state_after_transfer", "budget_state_after_addition", "decision_history", "error_stale_proposal",
     "proposal_rebased", "error_self_approval", "error_role_forbidden_droid_decides",
     "error_validation_negative_allocation", "error_validation_addition_mismatch", "error_idempotency_key_reused",
-    "error_citation_not_found",
+    "error_citation_not_found", "agent_run_interpret", "agent_run_propose_addition", "agent_run_propose_transfer",
+    "agent_runs", "error_runner_unavailable",
 }
 
 
@@ -66,11 +67,15 @@ def test_fixture_values_match_northstar_story():
     assert f["proposal_transfer_pending"]["response"]["envelope_increase"] == "0.00"
     assert f["proposal_addition_pending"]["response"]["action_type"] == "addition"
     assert f["error_stale_proposal"]["response"]["error"]["details"]["current_version"] == 2
+    b = f["agent_run_propose_addition"]["response"]
+    assert b["applied_changes"] is False and b["proposals"][0]["status"] == "pending_review"
+    assert f["error_runner_unavailable"]["status"] == 503
 
 
 def test_openapi_lists_every_route():
     spec = json.loads((CONTRACT / "openapi.json").read_text())
     for path in ("/api/spend/summary", "/api/spend/records", "/api/coverage", "/api/budget", "/api/forecasts",
                  "/api/overview", "/api/documents", "/api/signals", "/api/signals/{signal_id}", "/api/proposals",
-                 "/api/proposals/{proposal_id}/decision", "/api/decisions", "/api/meta"):
+                 "/api/proposals/{proposal_id}/decision", "/api/decisions", "/api/meta", "/api/agent/runs",
+                 "/api/agent/runs/{run_id}", "/api/agent/runs/{run_id}/events", "/api/agent/tools"):
         assert path in spec["paths"], path

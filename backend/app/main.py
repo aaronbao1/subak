@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,7 @@ def create_app(
     clock: Clock | None = None,
     id_factory: IdFactory | None = None,
     forecast_provider: ForecastProvider | None = None,
+    droid_runner: Any | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
 
@@ -39,6 +41,9 @@ def create_app(
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
     app.state.forecast_provider = forecast_provider or provider_from_settings(settings.forecast_provider)
+    # None: the runner is selected per run from settings (DROID_RUNNER), so a missing Factory key is a
+    # visible 503 on the run, not a startup crash. Tests may inject a runner.
+    app.state.droid_runner = droid_runner
 
     app.add_middleware(
         CORSMiddleware,
@@ -61,6 +66,7 @@ def create_app(
 
     from app.api import (
         routes_admin,
+        routes_agent,
         routes_budget,
         routes_decisions,
         routes_documents,
@@ -84,6 +90,7 @@ def create_app(
         routes_signals,
         routes_proposals,
         routes_decisions,
+        routes_agent,
         routes_admin,
     ):
         app.include_router(module.router)

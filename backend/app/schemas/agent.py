@@ -1,0 +1,80 @@
+"""Agent runs: create request, run output with step log, and streamed activity events."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import Field
+
+from app.schemas.common import InModel, MoneyStr, OutModel
+
+TaskType = Literal["interpret_corpus", "propose_allocation", "answer_question"]
+
+
+class ProposeParams(InModel):
+    mode: Literal["addition", "transfer"] = "addition"
+    # addition: new money entering the envelope (default 50000.00); transfer: optional cap on funds moved.
+    amount: MoneyStr | None = None
+    prioritize: str = "research"
+
+
+class AgentRunCreate(InModel):
+    task_type: TaskType
+    instruction: str = Field(default="", max_length=4000)
+    params: dict[str, Any] = Field(default_factory=dict)
+    # true: run to completion before responding (201). false: start in the background (202) and follow
+    # GET /api/agent/runs/{id}/events (SSE) for live activity.
+    wait: bool = True
+
+
+class AgentStepOut(OutModel):
+    seq: int
+    tool: str
+    args: dict[str, Any]
+    result_summary: str | None
+    at: datetime
+
+
+class AgentEventOut(OutModel):
+    seq: int
+    type: str
+    source: Literal["fake_runner", "droid_sdk", "backend"]
+    data: dict[str, Any]
+    at: datetime
+
+
+class RunProposalRef(OutModel):
+    id: str
+    action_type: Literal["addition", "transfer"]
+    # Current status, read live: a drafted proposal is pending_review until finance decides it.
+    status: str
+
+
+class AgentRunOut(OutModel):
+    id: str
+    task_type: TaskType
+    instruction: str
+    params: dict[str, Any]
+    initiated_by: dict[str, str]
+    runner_kind: Literal["fake", "sdk"]
+    status: Literal["running", "succeeded", "failed", "unavailable"]
+    # Real-vs-simulated label for the UI: the fake runner is a scripted playbook, not a model.
+    simulated: bool
+    summary: str | None
+    output: dict[str, Any] | None
+    error: str | None
+    proposals: list[RunProposalRef]
+    signal_ids: list[str]
+    # Droid can only draft: a run never applies an allocation change.
+    applied_changes: Literal[False] = False
+    steps: list[AgentStepOut]
+    events: list[AgentEventOut]
+    events_url: str
+    started_at: datetime
+    finished_at: datetime | None
+
+
+class AgentRunList(OutModel):
+    count: int
+    items: list[AgentRunOut]

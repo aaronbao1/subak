@@ -28,6 +28,7 @@ from pydantic import BaseModel, TypeAdapter
 from app.config import BACKEND_ROOT, Settings
 from app.core.clock import FrozenClock, SequentialIdFactory
 from app.main import create_app
+from app.schemas.agent import AgentRunList, AgentRunOut
 from app.schemas.budget import BudgetHistory, BudgetState
 from app.schemas.common import ErrorBody
 from app.schemas.decisions import DecisionEventOut, DecisionOut
@@ -68,6 +69,7 @@ SCHEMAS: dict[str, Any] = {
     "ContextSignal": ContextSignalOut, "SignalList": SignalList, "Proposal": ProposalOut,
     "ProposalList": list[ProposalOut], "Decision": DecisionOut, "DecisionList": list[DecisionOut],
     "DecisionEventList": list[DecisionEventOut], "ErrorBody": ErrorBody,
+    "AgentRun": AgentRunOut, "AgentRunList": AgentRunList,
 }
 
 
@@ -126,12 +128,12 @@ Scenario = Callable[[Recorder], None]
 
 
 def _run(scenario: str, fn: Scenario, out: dict[str, dict], *, forecast_provider: str = "placeholder",
-         seed_kwargs: dict | None = None) -> None:
+         seed_kwargs: dict | None = None, droid_runner: str = "fake") -> None:
     with tempfile.TemporaryDirectory() as tmp:
         clock = FrozenClock(FROZEN_AT)
         ids = SequentialIdFactory()
         app = create_app(Settings(db_path=Path(tmp) / "contract.db", forecast_provider=forecast_provider,
-                                  droid_runner="fake"), clock=clock, id_factory=ids)
+                                  droid_runner=droid_runner), clock=clock, id_factory=ids)
         s = app.state.session_factory()
         try:
             seed(s, clock=clock, ids=ids, **(seed_kwargs or {}))
@@ -337,6 +339,37 @@ def scenario_addition(r: Recorder) -> None:
            description="version 2 after outcome B")
 
 
+def scenario_agent(r: Recorder) -> None:
+    """FakeDroidRunner: interpret the corpus, then draft outcome B; nothing is applied."""
+    r.call("agent_run_interpret", "POST", "/api/agent/runs", headers=ANALYST,
+           json_body={"task_type": "interpret_corpus"}, schema="AgentRun", expect=201,
+           description="fake runner reads the corpus, flags the superseded research thread, records cited signals")
+    r.call("agent_run_propose_addition", "POST", "/api/agent/runs", headers=ANALYST,
+           json_body={"task_type": "propose_allocation",
+                      "params": {"mode": "addition", "amount": "50000.00", "prioritize": "research"}},
+           schema="AgentRun", expect=201,
+           description="fake runner drafts outcome B (+50k: research +35k, engineering +15k) as pending_review")
+    r.call("agent_run_propose_transfer", "POST", "/api/agent/runs", headers=ANALYST,
+           json_body={"task_type": "propose_allocation", "params": {"mode": "transfer", "prioritize": "research"}},
+           schema="AgentRun", expect=201,
+           description="fake runner drafts outcome A (product -> research 25k, product -> engineering 5k)")
+    r.call("agent_runs", "GET", "/api/agent/runs", schema="AgentRunList", expect=200,
+           description="recent runs, newest first, each with its step log and events")
+
+
+def scenario_agent_sdk_unavailable(r: Recorder) -> None:
+    import os
+
+    saved = os.environ.pop("FACTORY_API_KEY", None)  # the fixture documents the no-key case
+    try:
+        r.call("error_runner_unavailable", "POST", "/api/agent/runs", headers=ANALYST,
+               json_body={"task_type": "interpret_corpus"}, schema="ErrorBody", expect=503,
+               description="DROID_RUNNER=sdk without FACTORY_API_KEY: 503, no silent fallback to the fake runner")
+    finally:
+        if saved is not None:
+            os.environ["FACTORY_API_KEY"] = saved
+
+
 def scenario_rejection(r: Recorder) -> None:
     p = r.call(None, "POST", "/api/proposals", headers=APPROVER, schema="Proposal", expect=201, description="",
                json_body=_addition("Requesting new funds for evaluation."))
@@ -420,6 +453,8 @@ SCENARIOS: list[tuple[str, Scenario, dict]] = [
     ("forecast_unavailable", scenario_forecast_unavailable, {"forecast_provider": "unavailable"}),
     ("imports", scenario_imports, {"seed_kwargs": {"include_spend": False}}),
     ("incomplete", scenario_incomplete, {}),
+    ("agent", scenario_agent, {}),
+    ("agent_sdk_unavailable", scenario_agent_sdk_unavailable, {"droid_runner": "sdk"}),
 ]
 
 

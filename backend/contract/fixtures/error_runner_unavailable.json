@@ -1,0 +1,29 @@
+{
+  "description": "DROID_RUNNER=sdk without FACTORY_API_KEY: 503, no silent fallback to the fake runner",
+  "name": "error_runner_unavailable",
+  "request": {
+    "body": {
+      "task_type": "interpret_corpus"
+    },
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "POST",
+    "path": "/api/agent/runs"
+  },
+  "response": {
+    "error": {
+      "code": "runner_unavailable",
+      "details": {
+        "reason": "missing_api_key",
+        "run_id": "run_000001",
+        "runner_kind": "sdk"
+      },
+      "message": "DROID_RUNNER=sdk but FACTORY_API_KEY is not set in the backend environment; no run was started"
+    }
+  },
+  "scenario": "agent_sdk_unavailable",
+  "schema": "ErrorBody",
+  "status": 503
+}

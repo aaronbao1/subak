@@ -139,6 +139,310 @@
         "title": "AdditionLineIn",
         "type": "object"
       },
+      "AgentEventOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "fake_runner",
+              "droid_sdk",
+              "backend"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "type",
+          "source",
+          "data",
+          "at"
+        ],
+        "title": "AgentEventOut",
+        "type": "object"
+      },
+      "AgentRunCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "instruction": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Instruction",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "task_type": {
+            "enum": [
+              "interpret_corpus",
+              "propose_allocation",
+              "answer_question"
+            ],
+            "title": "Task Type",
+            "type": "string"
+          },
+          "wait": {
+            "default": true,
+            "title": "Wait",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "task_type"
+        ],
+        "title": "AgentRunCreate",
+        "type": "object"
+      },
+      "AgentRunList": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "AgentRunList",
+        "type": "object"
+      },
+      "AgentRunOut": {
+        "properties": {
+          "applied_changes": {
+            "const": false,
+            "default": false,
+            "title": "Applied Changes",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AgentEventOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "events_url": {
+            "title": "Events Url",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "initiated_by": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Initiated By",
+            "type": "object"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/RunProposalRef"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "runner_kind": {
+            "enum": [
+              "fake",
+              "sdk"
+            ],
+            "title": "Runner Kind",
+            "type": "string"
+          },
+          "signal_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signal Ids",
+            "type": "array"
+          },
+          "simulated": {
+            "title": "Simulated",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "succeeded",
+              "failed",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/AgentStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "task_type": {
+            "enum": [
+              "interpret_corpus",
+              "propose_allocation",
+              "answer_question"
+            ],
+            "title": "Task Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "task_type",
+          "instruction",
+          "params",
+          "initiated_by",
+          "runner_kind",
+          "status",
+          "simulated",
+          "summary",
+          "output",
+          "error",
+          "proposals",
+          "signal_ids",
+          "steps",
+          "events",
+          "events_url",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "AgentRunOut",
+        "type": "object"
+      },
+      "AgentStepOut": {
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "result_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Summary"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "tool",
+          "args",
+          "result_summary",
+          "at"
+        ],
+        "title": "AgentStepOut",
+        "type": "object"
+      },
       "AllocationOut": {
         "properties": {
           "amount": {
@@ -3025,6 +3329,33 @@
         "title": "Requester",
         "type": "object"
       },
+      "RunProposalRef": {
+        "properties": {
+          "action_type": {
+            "enum": [
+              "addition",
+              "transfer"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action_type",
+          "status"
+        ],
+        "title": "RunProposalRef",
+        "type": "object"
+      },
       "SearchMatch": {
         "properties": {
           "char_end": {
@@ -4194,6 +4525,271 @@
         "summary": "Reset",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/agent/runs": {
+      "get": {
+        "operationId": "list_runs_api_agent_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "agent"
+        ]
+      },
+      "post": {
+        "operationId": "create_run_api_agent_runs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-actor-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunOut"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "runner_unavailable"
+          }
+        },
+        "summary": "Create Run",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_agent_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/runs/{run_id}/events": {
+      "get": {
+        "description": "Server-Sent Events: `id: <seq>`, `event: <type>`, `data: <json>`. Replays stored events, then follows\na running run until `run_finished`. Reconnecting clients resume via `Last-Event-ID` or `?after=`.",
+        "operationId": "stream_events_api_agent_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "resume after this event seq",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "resume after this event seq",
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Events",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/tools": {
+      "get": {
+        "description": "The exact tools Droid gets (read + draft only).",
+        "operationId": "agent_tools_api_agent_tools_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Agent Tools Api Agent Tools Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Agent Tools",
+        "tags": [
+          "agent"
         ]
       }
     },
