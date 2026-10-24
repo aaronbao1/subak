@@ -116,9 +116,12 @@ the run as `output.usage.provider_reported`.
    SDK's own parser fails and cancels the call. The inner MCP call then raises a second request with
    `details.type = "mcp_tool"`, `serverName = "northstar"` and `toolName = "northstar___<tool>"`.
    The gate approved both kinds, one at a time, only after checking the script source and the
-   server/tool name. No other tool use was ever requested.
-2. **Droid writes scripts the static check accepts.** Over 39 permission requests, none was a false
-   refusal.
+   server/tool name. In these five product runs no other tool use was requested.
+2. **Droid writes scripts the static check accepts.** Over the 41 permission requests of the five
+   product runs (33 + 3 + 3 + 1 + 1 in the table above; the earlier figure of 39 counted runs 1-3
+   only), none was a false refusal. This covers the product runs only: the later eval runs had two gate
+   cancellations (transfer and forecast_unavailable, the two that ended without drafting) whose
+   requests were not kept, so a false refusal there cannot be ruled out (`../evals/README.md`).
 3. **Usage arrives as the `Usage` dataclass.** It is stored as plain JSON, and credits are visible
    per run.
 

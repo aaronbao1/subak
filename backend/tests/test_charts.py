@@ -125,6 +125,36 @@ def test_projection_vs_allocation_uses_forecast_without_snapshot(seeded, client)
         {"research": "25000.00", "product": "-30000.00", "engineering": "5000.00"}
 
 
+def test_projection_chart_adds_recorded_spend_when_the_provider_reports_remaining(seeded, client):
+    from app.providers.forecast import PlaceholderForecastProvider
+
+    base = PlaceholderForecastProvider()
+
+    class Remaining:
+        name = "remaining-test"
+
+        def get_forecast(self, period_id, team_ids):
+            r = base.get_forecast(period_id, team_ids)
+            return r.model_copy(update={"provider": self.name, "basis": "remaining"})
+
+    spent = {a["team"]: Decimal(a["recorded_spend"]) for a in client.get("/api/budget").json()["allocations"]}
+    alloc = {a["team"]: Decimal(a["amount"]) for a in client.get("/api/budget").json()["allocations"]}
+    assert any(spent.values())
+    seeded.state.forecast_provider = Remaining()
+    try:
+        body = chart(client, "projection_vs_allocation")
+        got = {r["team"]: Decimal(r["amount"]) for r in rows(body, series="projected")}
+        assert got == {t: v + spent[t] for t, v in
+                       {"research": Decimal("85000"), "product": Decimal("50000"), "engineering": Decimal("65000")}.items()}
+        assert all(r["basis"] == "remaining" for r in rows(body, series="projected"))
+        assert any("recorded spend plus that remaining amount" in n for n in body["notes"])
+        gap = chart(client, "projection_vs_allocation", metric="gap")
+        assert {r["team"]: Decimal(r["amount"]) for r in gap["spec"]["data"]["values"]} == \
+            {t: got[t] - alloc[t] for t in got}
+    finally:
+        seeded.state.forecast_provider = base
+
+
 def test_projection_chart_with_forecast_unavailable_plots_no_projection(tmp_path, clock, id_factory):
     from app.seed.northstar import seed
 

@@ -4,6 +4,12 @@ Generated 2026-10-24T10:49:06+00:00 by `python -m evals.run --runner sdk`. Answe
 
 **7 pass, 3 fail, 1 not run** (of 11 scenarios).
 
+> **Re-scoring note (added by hand after generation):** this file was scored before the
+> `completed_or_declined` check existed. `forecast_unavailable_warns` passed only for that reason (the
+> run ended without drafting). Under the current scorer the live score is **6 pass, 4 fail, 1 not run**.
+> The transfer and forecast_unavailable runs, the two that ended without drafting, each had one gate
+> cancellation (`permission_cancelled: 1`) that could not be examined. See [`../README.md`](../README.md).
+
 Live Droid runs used by this invocation: 5. Total lines in `backend/data/live_runs.log` afterwards: 13.
 
 - Fixtures not run live: stale_recovery (live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare).

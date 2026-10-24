@@ -101,7 +101,10 @@ zsh -ic '.venv/bin/python -m evals.run --runner sdk --scenario stale_recovery --
 - The harness runs live only while the log has fewer than `--live-cap` (15) minus `--live-reserve` (2)
   lines. With 13 lines it runs nothing until you add `--live-reserve 0` or start a fresh log.
 - The full live set is 6 runs, about 270k credits.
-- Last night's live score was 7 pass, 3 fail, 1 not run. See `evals/README.md` for the reasons.
+- Last night's live score is 6 pass, 4 fail, 1 not run under the current scorer. The committed
+  `results/sdk.*` still say 7 / 3 / 1: they were scored before the `completed_or_declined` check
+  existed, and `forecast_unavailable_warns` passed only because of that. The two runs that ended
+  without drafting each had one gate cancellation that could not be examined. See `evals/README.md`.
 
 ## 4. Point the frontend at the backend
 

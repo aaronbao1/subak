@@ -118,7 +118,7 @@ def test_recovery_params_are_validated(seeded, client):
 
 def test_rebase_tool_counts_against_the_draft_budget_and_records_a_step(seeded, client):
     b = _stale_b(client)
-    tb = _toolbox(seeded)
+    tb = _toolbox(seeded, rebase_target=b)
     tb._writes["draft_proposal"] = 3
     with pytest.raises(ToolError) as exc:
         tb.rebase_proposal(b)
@@ -135,8 +135,9 @@ def test_rebase_tool_counts_against_the_draft_budget_and_records_a_step(seeded, 
     finally:
         s.close()
     # a refusal still carries what changed
+    tb2 = _toolbox(seeded, run_id="run_t2", rebase_target=res["proposal"]["id"])
     with pytest.raises(ToolError) as exc:
-        tb.rebase_proposal(res["proposal"]["id"])
+        tb2.rebase_proposal(res["proposal"]["id"])
     assert exc.value.code == "proposal_not_stale"
     assert exc.value.details["stale_context"]["is_outdated"] is False
 
@@ -152,3 +153,63 @@ def test_droid_still_cannot_decide_the_rebased_draft(seeded, client):
     r = decide(client, pid, headers={"X-Actor-Id": "fin-ana", "X-Actor-Role": "finance_approver"})
     assert r.status_code == 403
     assert decide(client, pid, headers=APPROVER).status_code == 201
+
+
+def test_rebase_is_limited_to_the_proposal_the_run_was_asked_to_recover(seeded, client):
+    """An outdated pending proposal by finance must not be flipped to `stale` by a Droid run that was
+    not asked to recover it (rebasing marks the original stale and drops it from the review queue)."""
+    a = draft(client, transfer_body()).json()
+    mine = draft(client, addition_body(), headers=ANALYST).json()  # finance's own draft on v1
+    assert decide(client, a["id"]).status_code == 201  # budget now v2; `mine` is outdated but pending
+    for target in (None, a["id"]):
+        tb = _toolbox(seeded, run_id=f"run_{target or 'none'}", rebase_target=target)
+        with pytest.raises(ToolError) as exc:
+            tb.rebase_proposal(mine["id"])
+        assert exc.value.code == "rebase_not_permitted"
+        assert tb.proposal_ids == []
+    assert client.get(f"/api/proposals/{mine['id']}").json()["status"] == "pending_review"
+    # the API wires the run's stale_proposal_id in as the only target; plain drafting runs get none
+    from app.agent.fake_runner import FakeDroidRunner
+
+    seen = {}
+
+    class Spy(FakeDroidRunner):
+        def run(self, task, tools):
+            seen[task.type] = tools.rebase_target
+            return super().run(task, tools)
+
+    seeded.state.droid_runner = Spy()
+    try:
+        run(client, {"stale_proposal_id": mine["id"]})
+        client.post("/api/agent/runs", json={"task_type": "answer_question", "instruction": "x"}, headers=ANALYST)
+    finally:
+        seeded.state.droid_runner = None
+    assert seen == {"propose_allocation": mine["id"], "answer_question": None}
+
+
+def test_stale_context_lists_only_decisions_of_the_proposals_period(seeded, client):
+    from datetime import date
+
+    from app.agent.toolbox import stale_context
+    from app.db.models import Decision, PlanningPeriod, Proposal
+
+    b = _stale_b(client)
+    s = seeded.state.session_factory()
+    try:
+        now = seeded.state.clock.now()
+        s.add(PlanningPeriod(id="2027-P1", label="next", starts_on=date(2027, 1, 1), ends_on=date(2027, 3, 31)))
+        other = Proposal(period_id="2027-P1", unit="USD", action_type="transfer", base_version=1,
+                         envelope_increase="0.00", lines=[], before={}, after={}, rationale="r", status="applied",
+                         created_by_actor="fin-x", created_by_role="finance_analyst", origin="finance_manual")
+        s.add(other)
+        s.flush()
+        s.add(Decision(proposal_id=other.id, outcome="approved_applied", actor_id="fin-y",
+                       actor_role="finance_approver", rationale="ok", idempotency_key="other-period",
+                       request_fingerprint="f", from_version=1, to_version=2, before={}, after={}, decided_at=now))
+        s.commit()
+        ctx = stale_context(s, s.get(Proposal, b))
+
+        assert other.id not in [m["proposal_id"] for m in ctx["decisions_since_base"]]
+        assert len(ctx["decisions_since_base"]) == 1
+    finally:
+        s.close()

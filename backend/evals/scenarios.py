@@ -37,6 +37,7 @@ class RunCtx:
     fixture: str
     runner: str
     ran: bool = False
+    posted: bool = False  # the run request was sent (a live attempt may have used credits from here on)
     skip_reason: str | None = None
     setup: dict[str, Any] = field(default_factory=dict)
     request: dict[str, Any] = field(default_factory=dict)

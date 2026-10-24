@@ -315,6 +315,56 @@ def test_gate_refuses_scripts_that_reach_anything_else(code):
     assert decide_permission(_raw(_script(code)))[0] == "cancel"
 
 
+@pytest.mark.parametrize("code", [
+    # rationale text may use words that are forbidden as code; string contents are not code
+    "text(await tools.northstar.draft_proposal({rationale: 'This team needs this, with care; self-serve.'}))",
+    "const r = JSON.parse(await tools.northstar.get_budgets({})); text(`total ${r.total} (${r.items[0].team})`);",
+    "const r = JSON.parse(await tools.northstar.get_budgets({})); text(Math.round(r.total * 100) / 100 / 2);",
+    "// it's a comment\ntext(await tools.northstar.get_budgets({}))",
+    "const r = JSON.parse(await tools.northstar.get_budgets({})); text(r['allocations'][0].team);",
+])
+def test_gate_allows_ordinary_javascript_around_northstar_calls(code):
+    assert check_script(code)[0], check_script(code)
+
+
+@pytest.mark.parametrize("code", [
+    # member access to `tools` and routes to the global object
+    "await this.tools.Execute({command: 'ls'})",
+    "await self.tools.Execute({command: 'ls'})",
+    "await window.tools.Execute({})",
+    "await x?.tools.Execute({})",
+    "const t = this['to' + 'ols']; await t.Execute({})",
+    "const g = (function () { return this })(); await g['to' + 'ols'].Execute({})",
+    "text(`${this}`)",
+    "with (o) { text(1) }",
+    "function f() { return arguments.callee }",
+    "text(Object.getPrototypeOf(text))",
+    "Error.prepareStackTrace = (e, s) => s",
+    "setTimeout('1+1')",
+    # unicode / hex escapes spell any identifier
+    "await \\u0074ools.Execute({command: 'ls'})",
+    "\\u0065val('1')",
+    "\\u{74}ools.Execute({})",
+    "const k = 'to\\x6fls'",
+    # computed keys can spell constructor / tools at run time
+    "const k = 'constr' + 'uctor'; const F = [][k][k]; F('return 1')()",
+    "const k = 'constr' + 'uctor'; const {[k]: A} = []; text(A)",
+    "const o = {}; text(o[k])",
+    "text(x?.['constructor'])",
+    "text(x['tools'])",
+    # the lexer refuses what could make it misread where a string ends
+    "if (1) /\"/; x[atob('dG9vbHM=')].Execute(); \"/",
+    "x = 1 <!-- \"\nfoo()\n\"",
+    "const ok = /\"/.test(s)",
+    "a // c\u2028this.tools.Execute({})",
+    "text('unterminated)",
+    "text(await tools.northstar.get_budgets({})",
+])
+def test_gate_refuses_bypasses_of_the_static_check(code):
+    assert not check_script(code)[0], code
+    assert decide_permission(_raw(_script(code)))[0] == "cancel"
+
+
 @pytest.mark.parametrize("ctype", ["edit", "exec", "create", "apply_patch", "ask_user", "sandbox_violation"])
 def test_gate_never_allows_dangerous_confirmation_types(ctype):
     assert decide_permission(_raw(_script("text(await tools.northstar.get_budgets({}))", ctype)))[0] == "cancel"

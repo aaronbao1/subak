@@ -4,7 +4,9 @@ Kinds:
 - `spend_vs_allocation`: recorded spend to date next to each team's internal allocation
   (metric `recorded_spend`, default) or allocation minus recorded spend (`remaining`).
 - `projection_vs_allocation`: the ForecastProvider's full-period projection next to allocation
-  (`projected`, default) or projection minus allocation (`gap`). An unavailable forecast plots no
+  (`projected`, default) or projection minus allocation (`gap`). A provider with basis `remaining`
+  reports what is still to come, so recorded spend is added to reach the full-period figure (as the
+  fake runner and compat do). An unavailable forecast plots no
   projection rows at all (never zeros) and says so in the title, subtitle and notes.
 - `spend_by_cost_category`: recorded spend per team stacked by cost category (`recorded_spend`,
   default; included usage and unpriced usage never count as spend and are not plotted, their notional
@@ -317,6 +319,9 @@ def _projection_vs_allocation(ctx: _Context, session: Session, period, clock: Cl
         ctx.forecast_label = forecast.value_kind
         ctx.notes.append(f"projections are {forecast.value_kind} ({forecast.method_label}), basis "
                          f"{forecast.basis}, provider {forecast.provider}; not measured spend.")
+        if forecast.basis == "remaining":
+            ctx.notes.append("the provider reports remaining amounts; each projection plotted is recorded spend "
+                             "plus that remaining amount (a full-period figure).")
     else:
         ctx.notes.append(f"projections unavailable ({forecast.reason or 'no reason given'}); no projection is "
                          "plotted (never zero).")
@@ -328,19 +333,22 @@ def _projection_vs_allocation(ctx: _Context, session: Session, period, clock: Cl
         if not ctx.include(t):
             continue
         p = projections.get(t)
+        full = None
+        if p is not None:
+            full = p.amount + a["recorded_spend"] if forecast.basis == "remaining" else p.amount
         common = {"team": t, "coverage_status": a["coverage_status"], "state_version": state["state_version"]}
         if ctx.metric == "projected":
             ctx.rows.append({**common, "series": "allocation", "amount": money_str(a["amount"]),
                              "value_kind": PLANNED, "simulated": None})
             ctx.value_kinds.add(PLANNED)
             if p is not None:
-                ctx.rows.append({**common, "series": "projected", "amount": money_str(p.amount),
+                ctx.rows.append({**common, "series": "projected", "amount": money_str(full),
                                  "value_kind": forecast.value_kind, "simulated": forecast.value_kind == "simulated",
                                  "basis": forecast.basis, "method_label": forecast.method_label})
                 ctx.value_kinds.add(forecast.value_kind)
         elif p is not None:
             ctx.rows.append({**common, "series": "projected_minus_allocation",
-                             "amount": money_str(p.amount - a["amount"]),
+                             "amount": money_str(full - a["amount"]),
                              "value_kind": f"{forecast.value_kind}-{PLANNED}",
                              "simulated": forecast.value_kind == "simulated", "basis": forecast.basis,
                              "method_label": forecast.method_label})

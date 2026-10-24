@@ -122,7 +122,9 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
         ))
     source = "droid_sdk" if kind == "sdk" else "fake_runner"
     toolbox = BackendToolbox(session_factory=factory, run_id=run_id, source=source, runner_kind=kind,
-                             clock=clock, ids=ids, forecast_provider=app_state.forecast_provider)
+                             clock=clock, ids=ids, forecast_provider=app_state.forecast_provider,
+                             rebase_target=(task.params.get("stale_proposal_id")
+                                            if task.type == "propose_allocation" else None))
     if unavailable is not None:
         toolbox.emit("error", {"code": "runner_unavailable", "reason": unavailable.reason, "message": str(unavailable)},
                      source="backend")

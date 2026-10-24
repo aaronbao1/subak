@@ -9,7 +9,8 @@
   "live_runs_used": 5,
   "live_log_total": 13,
   "notes": [
-    "Fixtures not run live: stale_recovery (live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare)."
+    "Fixtures not run live: stale_recovery (live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare).",
+    "Re-scoring note (added by hand after generation): scored before the completed_or_declined check existed; forecast_unavailable_warns passed only for that reason. Under the current scorer: 6 pass, 4 fail, 1 not run. The transfer and forecast_unavailable runs (both ended without drafting) each had one gate cancellation that could not be examined. See evals/README.md."
   ],
   "scenarios": [
     {

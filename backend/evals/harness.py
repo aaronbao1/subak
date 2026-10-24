@@ -7,7 +7,10 @@ run is started as `finance_analyst` with `wait: true`; everything scored is read
 Live (sdk) runs: before each one the global log (`backend/data/live_runs.log`, gitignored) is counted.
 A fixture runs live only while `count < cap - reserve` and fewer than `max_live` runs were made in this
 invocation; otherwise it is skipped (its scenarios are `not_run`), never silently replaced by the fake.
-After each live run one line is appended: ISO time | purpose | result | usage.
+After each live attempt one line is appended: ISO time | purpose | result | usage. Every attempt whose
+run request was sent counts, whatever its outcome (succeeded, failed, unavailable mid-stream after a
+Droid process or connection error, or an exception in the request itself), except the pre-flight 503
+`runner_unavailable` (no key / SDK / CLI), which starts no Droid process.
 """
 
 from __future__ import annotations
@@ -52,6 +55,14 @@ def append_live_line(path: Path, purpose: str, result: str, usage: Any) -> None:
         fh.write(line.replace("\n", " ") + "\n")
 
 
+def live_attempt(ctx: RunCtx) -> bool:
+    """True when a live run may have spent credits: the request was sent and was not refused pre-flight."""
+    if not ctx.posted:
+        return False
+    code = ((ctx.response.get("error") or {}) if isinstance(ctx.response.get("error"), dict) else {}).get("code")
+    return not (ctx.http_status == 503 and code == "runner_unavailable")
+
+
 def _usage(ctx: RunCtx) -> Any:
     out = ctx.run.get("output") or {}
     usage = (out.get("usage") or {}).get("provider_reported")
@@ -88,6 +99,7 @@ def execute_fixture(fx: Fixture, runner_kind: str, workdir: Path, *, runner: Any
             ctx.decisions_before = client.get("/api/decisions").json()
             ctx.request = {**fx.request(ctx.setup), "wait": True}
             started = time.monotonic()
+            ctx.posted = True
             resp = client.post("/api/agent/runs", json=ctx.request, headers=ANALYST)
             ctx.duration_s = round(time.monotonic() - started, 2)
             ctx.ran = True
@@ -175,9 +187,9 @@ def run_suite(runner_kind: str, *, scenario_ids: Iterable[str] | None = None, wo
                     continue
             ctx = execute_fixture(fx, runner_kind, workdir, runner=runner)
             ctxs[name] = ctx
-            if live and ctx.ran and ctx.run.get("status") in ("succeeded", "failed"):
+            if live and live_attempt(ctx):
                 used += 1
-                result = ctx.run.get("status")
+                result = ctx.run.get("status") or (f"error: {ctx.error}"[:200] if ctx.error else "unknown")
                 subtype = ((ctx.run.get("output") or {}).get("usage") or {}).get("subtype")
                 append_live_line(live_log, f"evals sdk: {name}: {fx.purpose}",
                                  f"{result}" + (f" (subtype {subtype})" if subtype else ""), _usage(ctx))

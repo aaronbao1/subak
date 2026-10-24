@@ -152,7 +152,9 @@ def test_documents_list_has_bodies_and_supersession(c):
     v1 = next(d for d in docs if d["title"].startswith("Product launch plan - assistant"))
     assert v1["supersededBy"] and v1["kind"] == "plan" and v1["origin"].endswith("(simulated)")
     assert get(c, f"documents/{v1['id']}")["body"] == v1["body"]
-    assert_error(c.get(f"{API}/documents/doc_missing"), 404)
+    # DataClient.getDocument resolves to `CompanyDocument | undefined`: an unknown id is 200 null, not 404
+    r = c.get(f"{API}/documents/doc_missing")
+    assert r.status_code == 200 and r.json() is None
 
 
 def test_context_is_empty_until_interpreted_then_cited(c):
@@ -372,8 +374,9 @@ def test_reset_wipes_threads(tmp_path, clock, id_factory):
 
 
 def test_errors_are_plain_strings(c):
-    assert_error(c.get(f"{API}/proposals/prop_missing"), 404, "That proposal does not exist.")
-    assert_error(c.post(f"{API}/proposals/prop_missing/apply", json={}), 404)
+    r = c.get(f"{API}/proposals/prop_missing")  # getProposal resolves to `AllocationProposal | undefined`
+    assert r.status_code == 200 and r.json() is None
+    assert_error(c.post(f"{API}/proposals/prop_missing/apply", json={}), 404, "That proposal does not exist.")
     assert_error(c.get(f"{API}/nope"), 404)
     # /api keeps the structured envelope.
     assert c.get("/api/proposals/prop_missing").json()["error"]["code"] == "proposal_not_found"
@@ -459,6 +462,42 @@ def test_intent_rules(text, task, params):
     assert parsed.ask is None and parsed.run["task_type"] == task
     assert parsed.run.get("params") == params
     assert parsed.read_as
+
+
+@pytest.mark.parametrize("text,amount", [
+    ("add 5000 dollars to research", "5000.00"), ("increase research budget by 7500 USD", "7500.00"),
+    ("Move 5000 from product to research", "5000.00"), ("in 2026 add 5000", "5000.00"),
+    ("add 2026 to research", None), ("plan for 2026-P1", None),
+])
+def test_parse_amount_plain_four_digits_and_dollar_words(text, amount):
+    assert intent.parse_amount(text.lower()) == amount
+
+
+@pytest.mark.parametrize("text,prioritize", [
+    ("Move 5000 from product to research", "research"),
+    ("shift budget from research to product", "product"),
+    ("move funds out of engineering toward Product", "product"),
+    ("take money from research and move it into engineering", "engineering"),
+])
+def test_transfer_prioritizes_the_destination_never_the_source(text, prioritize):
+    p = intent.parse(text, teams=TEAMS, gaps=GAPS)
+    assert p.run["params"]["mode"] == "transfer" and p.run["params"]["prioritize"] == prioritize
+    assert f"toward {dict(TEAMS)[prioritize]}" in p.read_as and "as the source" in p.read_as
+
+
+def test_transfer_from_a_team_alone_never_prioritizes_that_team():
+    gaps = {"research": Decimal("-1.00"), "engineering": Decimal("5000.00"), "product": Decimal("9000.00")}
+    p = intent.parse("move money from product", teams=TEAMS, gaps=gaps)
+    assert p.run["params"]["prioritize"] == "engineering"
+
+
+@pytest.mark.parametrize("text", [
+    "add 20000 credits to research", "add 2,000,000 tokens to research", "move 5k tokens to product",
+    "add 300 GPU hours for research", "add €5000 to research", "add 5000 EUR to research",
+])
+def test_amounts_in_other_units_ask_instead_of_drafting_usd(text):
+    p = intent.parse(text, teams=TEAMS, gaps=GAPS)
+    assert p.run is None and p.ask and "dollars" in p.ask and "not convert" in p.ask
 
 
 def test_intent_refresh_and_questions():

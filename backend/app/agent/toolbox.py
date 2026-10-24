@@ -8,7 +8,10 @@
   runner as a `ToolError` with the backend's error code.
 - Per-run budgets cap tool calls and draft writes so a misbehaving model cannot flood the workspace.
 - `rebase_proposal` only creates a NEW `pending_review` draft from a stale one (the HTTP rebase route,
-  which `droid_agent` may already call); it shares the draft budget with `draft_proposal`.
+  which `droid_agent` may already call); it shares the draft budget with `draft_proposal`. It works only
+  on the one proposal the run was asked to recover (`params.stale_proposal_id`, passed in as
+  `rebase_target`): rebasing marks the original `stale`, so any other proposal, including a finance
+  analyst's pending one, is refused with `rebase_not_permitted`.
 - There is no method that decides, applies, approves or rejects a proposal.
 """
 
@@ -71,6 +74,7 @@ class BackendToolbox:
         ids: IdFactory,
         forecast_provider: Any,
         start_seq: int = 0,
+        rebase_target: str | None = None,
     ) -> None:
         self._factory = session_factory
         self.run_id = run_id
@@ -79,6 +83,7 @@ class BackendToolbox:
         self._clock = clock
         self._ids = ids
         self._provider = forecast_provider
+        self.rebase_target = rebase_target  # the only proposal rebase_proposal may touch (None: none)
         self.actor = Actor(id=f"droid:{run_id}", role="droid_agent")
         self._lock = threading.Lock()
         self._event_seq = start_seq
@@ -289,6 +294,13 @@ class BackendToolbox:
         draft). A refusal (not stale, intent no longer fits, unknown id) carries `stale_context` in its
         details whenever the original exists, so Droid can still explain what changed.
         """
+        if self.rebase_target is None or proposal_id != self.rebase_target:
+            err = ToolError("rebase_proposal", "rebase_not_permitted",
+                            "this run may only rebase the proposal it was asked to recover"
+                            + (f" ({self.rebase_target})" if self.rebase_target else " (none was given)"),
+                            {"proposal_id": proposal_id, "allowed_proposal_id": self.rebase_target})
+            self.emit("error", err.as_dict())
+            raise err
         self._check_write_budget("rebase_proposal", MAX_PROPOSALS, counter="draft_proposal")
         args = {"proposal_id": proposal_id, "rationale": rationale}
 
@@ -324,8 +336,10 @@ def stale_context(s: Session, p: Proposal) -> dict:
     changes = [{"team": t, "at_base": str(base.get(t, Decimal("0.00"))), "now": str(now.get(t, Decimal("0.00"))),
                 "change": str(now.get(t, Decimal("0.00")) - base.get(t, Decimal("0.00")))}
                for t in sorted(set(base) | set(now))]
-    decided = s.scalars(select(Decision).where(Decision.to_version.is_not(None),
-                                               Decision.from_version >= p.base_version)
+    # state_version is per envelope (per period): only decisions on this proposal's period moved it
+    decided = s.scalars(select(Decision).join(Proposal, Proposal.id == Decision.proposal_id)
+                        .where(Decision.to_version.is_not(None), Decision.from_version >= p.base_version,
+                               Proposal.period_id == p.period_id)
                         .order_by(Decision.to_version)).all()
     moves = []
     for d in decided:

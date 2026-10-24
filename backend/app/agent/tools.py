@@ -160,7 +160,8 @@ TOOLS: tuple[ToolDef, ...] = (
             "`proposal` (the new draft with before/after). If the same intent no longer fits the current "
             "budget it is refused with the validation reasons and nothing is created; draft a fresh proposal "
             "instead. `rationale` is an optional note (what changed, why rebase) placed before the original "
-            "rationale. Changes no allocation.",
+            "rationale. Changes no allocation. Only the proposal this run was asked to recover may be rebased; "
+            "any other id is refused with rebase_not_permitted.",
             RebaseProposalIn),
 )
 

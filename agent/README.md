@@ -61,13 +61,21 @@ reported by Factory:
   interpret (6 cited signals, superseded thread flagged), +50k addition (one `pending_review` draft,
   budget unchanged; the first attempt exposed a ref-shape bug, which was fixed), stale-proposal
   recovery (a rebased draft on v2 that explains the transfer that moved the budget) and a chart answer.
-  Over 39 permission requests the gate made no false refusal and nothing outside `northstar` was requested.
-- 5 eval runs (249,652 credits; `../backend/evals/results/sdk.md`): **7 pass, 3 fail, 1 not run** of
-  11 scenarios. Passes: superseded thread, informal/cancelled documents, product timing shift citing
-  v2, no invented token cost, unsupported question limited, never claims saved, forecast unavailable.
-  Failures: Droid put the whole +50k into research instead of the answer key's 35k/15k split (a valid
-  draft, but a different judgment), and the transfer run ended its turn without drafting (two
-  scenarios). The fake runner passes 11/11.
+  Across the 41 permission requests of these five product runs (33 + 3 + 3 + 1 + 1 in the run table)
+  the gate made no false refusal and nothing outside `northstar` was requested. That claim covers the
+  product runs only; the eval runs below had two cancellations that could not be examined.
+- 5 eval runs (249,652 credits; `../backend/evals/results/sdk.md`): **6 pass, 4 fail, 1 not run** of
+  11 scenarios under the current scorer. The committed `sdk.md` / `sdk.json` say 7 / 3 / 1 because they
+  were scored before the `completed_or_declined` check existed; `forecast_unavailable_warns` passed only
+  for that reason (`../backend/evals/README.md`). Passes: superseded thread, informal/cancelled
+  documents, product timing shift citing v2, no invented token cost, unsupported question limited, never
+  claims saved. Failures: Droid put the whole +50k into research instead of the answer key's 35k/15k
+  split (a valid draft, but a different judgment); the transfer run ended its turn without drafting (two
+  scenarios); and the forecast-unavailable run also ended without drafting. Those two early-ending runs
+  are exactly the two eval runs where the gate cancelled a request (`permission_cancelled: 1` each in
+  `sdk.json`). The run databases and events are gone, so whether the gate refused the `draft_proposal`
+  script (a false refusal) or Droid simply stopped cannot be settled; treat the cancellation as a
+  possible cause. The fake runner passes 11/11.
 - Credits per run ranged from 13,661 (stale recovery) to 72,548 (interpret in evals). The credit unit
   is not documented by Factory.
 

@@ -159,6 +159,7 @@ Autonomy `MEDIUM`/`HIGH` may auto-approve the `Script` call (still bounded by `r
   script source.
 - `SdkDroidRunner` replaces `session._dispatcher` with its own `PermissionGate`. The gate takes the raw
   params and returns `{"selectedOption": ...}`, and it statically checks the script source, so
-  Autonomy can stay LOW. With this in place our tools execute: 39 of 39 live requests were approved
-  correctly. This relies on a private attribute of the pinned 0.5.0, and the runner refuses to start
+  Autonomy can stay LOW. With this in place our tools execute: all 41 requests of the five product runs
+  were approved correctly (39 of 39 when this was first written, after runs 1-3). The eval runs later
+  had two cancellations that were not kept, see `../evals/README.md`. This relies on a private attribute of the pinned 0.5.0, and the runner refuses to start
   (`sdk_api_mismatch`) if that attribute is missing.

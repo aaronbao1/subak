@@ -24,7 +24,9 @@ Scoping (all of these hold for every run; any mismatch refuses the run as `Runne
 - the gate proceeds once only for (a) MCP tool confirmations on the `northstar` server for a known
   tool and (b) `Script` calls whose source references nothing but `tools.ToolSearch` and
   `tools.northstar.<known tool>`, with no escape hatches (`fetch`, `import`, `eval`, constructor or
-  prototype access, ...). Edits, shell, file creation, patches, other servers and questions are
+  prototype access, `this` / `self` / `globalThis` or any other route to the global object, `\\u`
+  escapes, computed member access, regex literals; see `check_script`, which lexes the source so string
+  text cannot hide code). Edits, shell, file creation, patches, other servers and questions are
   cancelled. A live Droid has no path to approve or apply a decision: no such tool exists, and the
   decision endpoint requires a finance approver.
 """
@@ -112,30 +114,234 @@ def is_northstar_tool_id(raw: str | None) -> bool:
 
 # ---- the permission gate -----------------------------------------------------------------------
 
-_TOOLS_REF = re.compile(r"(?<![\w$.])tools(?![\w$])")
+_TOOLS_REF = re.compile(r"(?<![\w$])tools(?![\w$])")  # also `x.tools`, `this.tools`, `x?.tools`
 _ALLOWED_TOOLS_REF = re.compile(r"tools\s*\.\s*(?:(ToolSearch)|northstar\s*\.\s*([A-Za-z_$][\w$]*))\s*\(")
+# Checked on the raw source, string contents included (conservative, as before).
 _FORBIDDEN = re.compile(
     r"\b(eval|Function|import|require|globalThis|process|Deno|Bun|fetch|XMLHttpRequest|WebSocket|Worker|"
-    r"constructor|prototype|__proto__|__defineGetter__|__lookupGetter__|Reflect|Proxy|child_process)\b"
+    r"constructor|prototype|__proto__|__defineGetter__|__defineSetter__|__lookupGetter__|__lookupSetter__|"
+    r"Reflect|Proxy|child_process)\b"
 )
+# Checked on code only (string contents removed), because these are also ordinary English words that a
+# rationale string may contain. Each one is a route to the global object, a prototype or a code string.
+_FORBIDDEN_CODE = re.compile(
+    r"(?<![\w$])(this|self|window|global|top|parent|frames|opener|with|arguments|callee|caller|class|super|"
+    r"getPrototypeOf|setPrototypeOf|getOwnPropertyDescriptors?|getOwnPropertyNames|getOwnPropertySymbols|"
+    r"defineProperty|defineProperties|prepareStackTrace|captureStackTrace|setTimeout|setInterval|"
+    r"setImmediate|importScripts|postMessage|navigator|location|document|WebAssembly|SharedArrayBuffer|"
+    r"Atomics|EventSource)(?![\w$])"
+)
+_ESCAPE = re.compile(r"\\[uUxX0-9]")
+_SAFE_KEY = re.compile(r"[A-Za-z_$][\w$]*|[\w .:-]*")
+_SAFE_INDEX = re.compile(r"\s*(?:\d+|\"(\d+)\")\s*")
+_LINE_TERMINATORS = "\n\r  "
+# After these words a `/` starts a regular expression and a `[` starts an array literal.
+_EXPRESSION_KEYWORDS = frozenset({"return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw",
+                                  "case", "do", "else", "yield", "await", "extends"})
+_PAREN_KEYWORDS = frozenset({"if", "while", "for", "with"})
+
+
+class _Refused(Exception):
+    pass
+
+
+def _is_ident_char(c: str) -> bool:
+    return c.isalnum() or c in "_$"
+
+
+def _lex(code: str) -> tuple[str, list[str], list[tuple[int, int, bool]]]:
+    """A small JS lexer, enough to separate code from string text. Returns (code with every string /
+    template chunk replaced by a `"N"` placeholder and comments blanked, the raw string contents, and every
+    `[...]` as (start, end, is_member_access) in the returned code). Anything it cannot classify for sure
+    (regular-expression literals, HTML-like comments, unbalanced brackets, unterminated literals) refuses
+    the script: being wrong about where a string ends could hide code from the checks."""
+    out: list[str] = []
+    length = 0
+    strings: list[str] = []
+    brackets: list[tuple[int, int, bool]] = []
+    open_brackets: list[tuple[int, bool]] = []
+    braces: list[str] = []  # "block" for `{`, "template" for `${`
+    parens: list[bool] = []  # True when the `(` follows if / while / for / with
+    prev: tuple[str, str] = ("punct", "")  # (kind, value) of the last significant token
+    n = len(code)
+
+    def emit(s: str) -> None:
+        nonlocal length
+        out.append(s)
+        length += len(s)
+
+    def keyword(tok: tuple[str, str], words: frozenset[str]) -> bool:
+        return tok[0] == "word" and tok[1] in words
+
+    def template_chunk(j: int) -> int:
+        """Scan template text from j; emit its placeholder; return the index after `` ` `` or `${`."""
+        nonlocal prev
+        buf: list[str] = []
+        while True:
+            if j >= n:
+                raise _Refused("unterminated template literal")
+            c = code[j]
+            if c == "\\":
+                buf.append(code[j:j + 2])
+                j += 2
+                continue
+            if c == "`":
+                strings.append("".join(buf))
+                emit(f'"{len(strings) - 1}")')
+                prev = ("str", "")
+                return j + 1
+            if c == "$" and code[j + 1:j + 2] == "{":
+                strings.append("".join(buf))
+                emit(f'"{len(strings) - 1}"+(')
+                braces.append("template")
+                prev = ("punct", "(")
+                return j + 2
+            buf.append(c)
+            j += 1
+
+    i = 0
+    while i < n:
+        ch = code[i]
+        if ch.isspace() or ch == "﻿":
+            emit(ch)
+            i += 1
+            continue
+        if code.startswith("<!--", i) or code.startswith("-->", i):
+            raise _Refused("HTML-like comments are not allowed")
+        if ch == "/":
+            nxt = code[i + 1:i + 2]
+            if nxt == "/":
+                while i < n and code[i] not in _LINE_TERMINATORS:
+                    i += 1
+                emit(" ")
+                continue
+            if nxt == "*":
+                end = code.find("*/", i + 2)
+                if end < 0:
+                    raise _Refused("unterminated comment")
+                emit(" ")
+                i = end + 2
+                continue
+            division = (prev[0] in ("str", "num") or prev == ("punct", ")") or prev == ("punct", "]")
+                        or (prev[0] == "word" and prev[1] not in _EXPRESSION_KEYWORDS) or prev[0] == "prop")
+            if not division:
+                raise _Refused("regular-expression literals are not allowed")
+            emit("/")
+            prev = ("punct", "/")
+            i += 1
+            continue
+        if ch in "'\"":
+            j, buf = i + 1, []
+            while True:
+                if j >= n or code[j] in "\n\r":
+                    raise _Refused("unterminated string literal")
+                c = code[j]
+                if c == "\\":
+                    buf.append(code[j:j + 2])
+                    j += 2
+                    continue
+                if c == ch:
+                    break
+                buf.append(c)
+                j += 1
+            strings.append("".join(buf))
+            emit(f'"{len(strings) - 1}"')
+            prev = ("str", "")
+            i = j + 1
+            continue
+        if ch == "`":
+            emit("(")
+            i = template_chunk(i + 1)
+            continue
+        if _is_ident_char(ch):
+            j = i
+            while j < n and _is_ident_char(code[j]):
+                j += 1
+            word = code[i:j]
+            emit(word)
+            if ch.isdigit():
+                prev = ("num", word)
+            else:
+                prev = ("prop", word) if prev == ("punct", ".") else ("word", word)
+            i = j
+            continue
+        if ch == "{":
+            braces.append("block")
+        elif ch == "}":
+            if not braces:
+                raise _Refused("unbalanced braces")
+            if braces.pop() == "template":
+                emit(")+")
+                i = template_chunk(i + 1)
+                continue
+        elif ch == "(":
+            parens.append(keyword(prev, _PAREN_KEYWORDS))
+        elif ch == ")":
+            if not parens:
+                raise _Refused("unbalanced parentheses")
+            if parens.pop():
+                emit(ch)
+                prev = ("punct", "kw)")
+                i += 1
+                continue
+        elif ch == "[":
+            member = (prev[0] in ("str", "num", "prop") or prev[1] in (")", "]", "}", ".")
+                      or (prev[0] == "word" and prev[1] not in _EXPRESSION_KEYWORDS))
+            open_brackets.append((length, member))
+        elif ch == "]":
+            if not open_brackets:
+                raise _Refused("unbalanced brackets")
+            start, member = open_brackets.pop()
+            brackets.append((start, length, member))
+        emit(ch)
+        prev = ("punct", ch)
+        i += 1
+    if braces or parens or open_brackets:
+        raise _Refused("unbalanced brackets")
+    return "".join(out), strings, brackets
 
 
 def check_script(code: Any) -> tuple[bool, str]:
     """Static allowlist for a code-mode Script. Conservative: anything unrecognised is refused.
 
-    Allowed: `tools.ToolSearch(...)`, `tools.northstar.<known tool>(...)`, `text(...)`, `JSON`, plain JS.
+    Allowed: `tools.ToolSearch(...)`, `tools.northstar.<known tool>(...)`, `text(...)`, `JSON`, plain JS
+    (variables, loops, string and array methods, fixed property names).
     Refused: any other use of `tools` (other servers, built-ins such as `tools.Execute`, computed access
-    `tools[...]`, aliasing `const t = tools`), and escape hatches (fetch, import, eval, constructor, ...).
+    `tools[...]`, aliasing `const t = tools`, member forms such as `this.tools`), escape hatches (fetch,
+    import, eval, constructor, prototype, ...), every route to the global object (`this`, `self`,
+    `window`, `globalThis`, `with`, `arguments`, ...), `\\u` / `\\x` escapes (which can spell any
+    identifier), computed member access with anything but a number or a plain string key, and regular
+    expression literals (the lexer refuses rather than guess where they end).
     """
     if not isinstance(code, str) or not code.strip():
         return False, "script source missing"
     if len(code) > MAX_SCRIPT_CHARS:
         return False, f"script longer than {MAX_SCRIPT_CHARS} characters"
+    if _ESCAPE.search(code):
+        return False, "script uses a \\u, \\x or numeric escape sequence"
     bad = _FORBIDDEN.search(code)
     if bad:
         return False, f"script uses forbidden identifier {bad.group(1)!r}"
-    for ref in _TOOLS_REF.finditer(code):
-        m = _ALLOWED_TOOLS_REF.match(code, ref.start())
+    try:
+        stripped, strings, brackets = _lex(code)
+    except _Refused as exc:
+        return False, f"script refused: {exc}"
+    if "\\" in stripped:
+        return False, "script uses a backslash outside a string"
+    bad = _FORBIDDEN_CODE.search(stripped)
+    if bad:
+        return False, f"script uses forbidden identifier {bad.group(1)!r}"
+    for start, end, member in brackets:
+        computed_key = member or stripped[end + 1:].lstrip()[:1] in (":", "(")
+        if not computed_key:
+            continue
+        m = _SAFE_INDEX.fullmatch(stripped[start + 1:end])
+        key = strings[int(m.group(1))] if m and m.group(1) is not None else None
+        if m is None or (key is not None and (not _SAFE_KEY.fullmatch(key) or _FORBIDDEN.search(key)
+                                              or _FORBIDDEN_CODE.search(key) or _TOOLS_REF.search(key))):
+            return False, "script uses computed member access (only a number or a plain string key is allowed)"
+    for ref in _TOOLS_REF.finditer(stripped):
+        m = _ALLOWED_TOOLS_REF.match(stripped, ref.start())
         if m is None:
             return False, "script reaches `tools` other than tools.ToolSearch / tools.northstar.<tool>"
         if m.group(2) is not None and m.group(2) not in TOOL_NAMES:

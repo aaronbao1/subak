@@ -289,7 +289,7 @@ def test_runner_crash_is_recorded_as_failed(tmp_path, clock, id_factory):
     app.state.engine.dispose()
 
 
-def _toolbox(app, run_id="run_t"):
+def _toolbox(app, run_id="run_t", rebase_target=None):
     from app.db.models import AgentRun
     from app.db.session import transaction
 
@@ -298,7 +298,7 @@ def _toolbox(app, run_id="run_t"):
                        started_at=app.state.clock.now()))
     return BackendToolbox(session_factory=app.state.session_factory, run_id=run_id, source="fake_runner",
                           runner_kind="fake", clock=app.state.clock, ids=app.state.id_factory,
-                          forecast_provider=app.state.forecast_provider)
+                          forecast_provider=app.state.forecast_provider, rebase_target=rebase_target)
 
 
 def test_toolbox_refuses_invented_quote_and_records_failed_step(seeded):

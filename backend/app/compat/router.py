@@ -245,9 +245,12 @@ def get_documents(session: Session = Depends(get_session)):
     return [mappers.document(d) for d in docs]
 
 
-@router.get("/documents/{document_id}", response_model=S.CompanyDocument, **JSON_OPTS)
+# DataClient.getDocument / getProposal resolve to `T | undefined`, and HttpDataClient throws on any non-2xx,
+# so an unknown id answers 200 `null` (the frontend's "not found" branch), not 404.
+@router.get("/documents/{document_id}", response_model=S.CompanyDocument | None, **JSON_OPTS)
 def get_document(document_id: str, session: Session = Depends(get_session)):
-    return mappers.document(corpus_svc.get_document(session, document_id))
+    doc = session.get(CorpusDocument, document_id)
+    return mappers.document(doc) if doc is not None else None
 
 
 @router.get("/proposals", response_model=list[S.AllocationProposal], **JSON_OPTS)
@@ -255,9 +258,10 @@ def get_proposals(session: Session = Depends(get_session)):
     return [_proposal(session, p) for p in reversed(proposal_svc.list_proposals(session))]
 
 
-@router.get("/proposals/{proposal_id}", response_model=S.AllocationProposal, **JSON_OPTS)
+@router.get("/proposals/{proposal_id}", response_model=S.AllocationProposal | None, **JSON_OPTS)
 def get_proposal(proposal_id: str, session: Session = Depends(get_session)):
-    return _proposal(session, proposal_svc.get_proposal(session, proposal_id))
+    p = session.get(Proposal, proposal_id)
+    return _proposal(session, p) if p is not None else None
 
 
 @router.get("/decisions", response_model=list[S.Decision], **JSON_OPTS)

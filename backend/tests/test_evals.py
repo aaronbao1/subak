@@ -210,6 +210,41 @@ def test_sdk_live_runs_are_logged_and_limited(tmp_path):
     assert live_count(log) == 13
 
 
+class MidStreamFailure(FakeDroidRunner):
+    """Mimics SdkDroidRunner when the Droid process dies after turns were already paid for: the
+    DroidProcessError is mapped to RunnerUnavailable, so the run ends `unavailable`."""
+
+    kind = "sdk"
+
+    def run(self, task, tools):
+        from app.agent.runner import RunnerUnavailable
+
+        tools.get_budgets()
+        raise RunnerUnavailable("droid process exited mid-stream", reason="droid_process_error")
+
+
+def test_sdk_runs_that_fail_mid_stream_are_still_logged_against_the_cap(tmp_path):
+    log = tmp_path / "live_runs.log"
+    res = run_suite("sdk", workdir=tmp_path / "db", runner=MidStreamFailure(), live_log=log, max_live=1)
+    ctx = res.fixtures[LIVE_PRIORITY[0]]
+    assert ctx.run["status"] == "unavailable"
+    assert res.live_runs_used == 1 and live_count(log) == 1
+    assert log.read_text().split(" | ")[2] == "unavailable"
+    assert [n for n, c in res.fixtures.items() if c.ran] == [LIVE_PRIORITY[0]]  # max_live stopped the rest
+
+
+def test_live_attempt_counts_a_request_that_raised_but_not_a_preflight_refusal():
+    from evals.harness import live_attempt
+    from evals.scenarios import RunCtx
+
+    assert live_attempt(RunCtx(fixture="f", runner="sdk", posted=True, error="ReadTimeout: x"))
+    assert not live_attempt(RunCtx(fixture="f", runner="sdk"))
+    assert not live_attempt(RunCtx(fixture="f", runner="sdk", posted=True, http_status=503,
+                                   response={"error": {"code": "runner_unavailable"}}))
+    assert live_attempt(RunCtx(fixture="f", runner="sdk", posted=True, http_status=201,
+                               run={"status": "unavailable"}))
+
+
 def test_sdk_unavailable_runner_is_not_logged_as_a_live_run(tmp_path):
     log = tmp_path / "live_runs.log"
     res = run_suite("sdk", workdir=tmp_path / "db", live_log=log, scenario_ids=["unsupported_question_limited"])
