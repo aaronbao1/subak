@@ -124,8 +124,10 @@ TOOLS: tuple[ToolDef, ...] = (
     ToolDef("draft_proposal", "draft",
             "Draft an allocation proposal for finance review: action_type `addition` (new money enters "
             "the envelope) or `transfer` (existing money moves between teams; envelope unchanged). The "
-            "backend computes before/after and validates arithmetic. The result is pending_review and is "
-            "NOT applied; only a finance approver can apply it.",
+            "backend computes before/after and validates arithmetic. Each evidence_refs item is "
+            "{kind: signal|document|forecast_snapshot|spend_summary, id, version?, note?}; a spend_summary "
+            "ref uses the period id (e.g. 2026-P1) as its id. The result is pending_review and is NOT "
+            "applied; only a finance approver can apply it.",
             DraftProposalIn),
 )
 

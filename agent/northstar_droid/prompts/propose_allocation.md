@@ -14,6 +14,9 @@ Request parameters: {params}
      its funds; never move a team below its recorded spend.
 4. `draft_proposal` with `base_version` = the `state_version` you read, a rationale that cites the
    signals and the forecast snapshot, and `evidence_refs` for each (`signal`, `forecast_snapshot`,
-   `spend_summary`). The backend computes before/after and validates arithmetic. If it refuses with
-   `stale_base_version`, re-read the budget once and draft again; otherwise report the refusal.
+   `spend_summary`). Every ref is `{"kind": ..., "id": ...}` (optional `version`, `note`): a signal id,
+   the forecast snapshot id, and for the spend summary the period id (for example `2026-P1`). The backend computes before/after and validates arithmetic. If it refuses with
+   `stale_base_version`, re-read the budget once and draft again. If it refuses with
+   `invalid_arguments`, read `details.errors`, correct the arguments and draft once more; otherwise
+   report the refusal.
 5. Report the drafted proposal as pending finance review. Do not claim it is saved or applied.

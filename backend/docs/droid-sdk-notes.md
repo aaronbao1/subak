@@ -150,3 +150,15 @@ model `gpt-6.1-sol`, reasoning `high`, mode `auto`. The SDK added its own tag `s
 
 ### Next options (untested)
 Autonomy `MEDIUM`/`HIGH` may auto-approve the `Script` call (still bounded by `restrict_tools`, since Script can only reach allowed tools, and our toolbox has no apply/approve tool); or an SDK release that parses Script permission requests; or an external HTTP MCP server with `skip_permissions` semantics. Each needs a live check before relying on it.
+
+### Resolved by the SDK runner (2026-10-24, see `droid-live-log.md`)
+- The raw `Script` permission request has `details.type = "script"`, which is missing from SDK 0.5.0's
+  `ToolConfirmationType`, so `permission_request_from_wire` fails. The MCP call inside the script then
+  raises a second request with `details.type = "mcp_tool"`, `serverName = "northstar"` and
+  `toolName = "northstar___<tool>"`, which the SDK can parse. `toolUse.input.script` carries the full
+  script source.
+- `SdkDroidRunner` replaces `session._dispatcher` with its own `PermissionGate`. The gate takes the raw
+  params and returns `{"selectedOption": ...}`, and it statically checks the script source, so
+  Autonomy can stay LOW. With this in place our tools execute: 39 of 39 live requests were approved
+  correctly. This relies on a private attribute of the pinned 0.5.0, and the runner refuses to start
+  (`sdk_api_mismatch`) if that attribute is missing.

@@ -153,9 +153,11 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output["signal_ids"] = list(toolbox.signal_ids)
     output["applied_changes"] = False
     _finish(factory, clock, run_id, "succeeded", output, None)
-    toolbox.emit("run_finished", {"status": "succeeded", "summary": out.summary, "applied_changes": False,
-                                  "proposal_ids": output["proposal_ids"], "signal_ids": output["signal_ids"]},
-                 source="backend")
+    finished = {"status": "succeeded", "summary": out.summary, "applied_changes": False,
+                "proposal_ids": output["proposal_ids"], "signal_ids": output["signal_ids"]}
+    if out.usage:
+        finished["usage"] = out.usage  # provider-reported (SDK); the fake runner reports none
+    toolbox.emit("run_finished", finished, source="backend")
 
 
 def _finish(factory, clock, run_id: str, status: str, output: dict | None, error: str | None) -> None:

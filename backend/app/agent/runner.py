@@ -32,6 +32,7 @@ EVENT_TYPES = (
     "signal_recorded",
     "proposal_drafted",
     "assistant_text",
+    "permission",  # SDK runner: the permission gate's decision on a Droid tool request
     "warning",
     "error",
     "run_finished",

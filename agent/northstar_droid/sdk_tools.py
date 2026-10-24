@@ -7,7 +7,8 @@ backend service layer in the same process. `build_mcp_server(toolbox)` wraps the
 imported only inside `build_mcp_server`, so this module imports fine without it.
 
 Names and descriptions come from `app.agent.tools.TOOLS` (the same definitions the fake runner uses).
-There is no apply / approve / decide tool.
+There is no apply / approve / decide tool. Droid sees them as `northstar___<tool>` (the ids the runner
+passes to `restrict_tools`).
 """
 
 from __future__ import annotations
@@ -16,10 +17,20 @@ import json
 from typing import Any, Callable
 
 from app.agent.runner import ToolError
-from app.agent.tools import TOOLS
+from app.agent.tools import TOOL_NAMES, TOOLS
 
 SERVER_NAME = "northstar"
 MAX_RESULT_CHARS = 60_000
+# Live-verified (droid CLI 0.249.0, droid-sdk 0.5.0): SDK MCP tools are listed as `<server>___<tool>`
+# (three underscores) and are reachable from Droid's code-mode `Script` tool as `tools.<server>.<tool>`.
+TOOL_ID_SEPARATOR = "___"
+
+
+def tool_id(name: str) -> str:
+    return f"{SERVER_NAME}{TOOL_ID_SEPARATOR}{name}"
+
+
+NORTHSTAR_TOOL_IDS: frozenset[str] = frozenset(tool_id(n) for n in TOOL_NAMES)
 
 
 def _respond(fn: Callable[[], dict]) -> str:

@@ -56,23 +56,47 @@ Not a model: a fixed playbook that does real work through the toolbox.
   re-read once. The run reports the draft as pending finance review, never as saved.
 - `answer_question`: read-only per-team comparison.
 
-**SdkDroidRunner** (`DROID_RUNNER=sdk`). Uses `droid-sdk` (Python, import `droid_sdk`): a `Session` per
-run with the in-process `northstar` MCP server, autonomy LOW, built-in skills disabled, an empty temp
-directory as cwd, a permission handler that proceeds only for MCP tool actions on `northstar` and
-cancels everything else, and an attempt to `restrict_tools` to the discovered Northstar tool ids (it
-fails closed if they are not visible). Streamed SDK events map onto the same activity events.
-Provider-reported usage is stored as such.
+**SdkDroidRunner** (`DROID_RUNNER=sdk`, events `source=droid_sdk`, signals `produced_by=droid_sdk`).
+Uses `droid-sdk` (Python, import `droid_sdk`). Each run gets its own `Session`, set up like this:
+- the in-process `northstar` MCP server, whose tools Droid sees as `northstar___<tool>`;
+- `restrict_tools` set to exactly those eight ids;
+- Autonomy LOW, built-in skills disabled, and an empty temp directory as cwd.
 
-Requirements: `FACTORY_API_KEY` in the backend environment (read by the SDK; never stored or logged),
-`pip install 'droid-sdk[mcp]==0.5.0'` into `backend/.venv`, and the `droid` CLI on PATH (or
-`DROID_EXECUTABLE`). If any is missing, `POST /api/agent/runs` returns 503 `runner_unavailable` with a
-`reason` (`missing_api_key`, `sdk_not_installed`, `droid_cli_missing`, `sdk_api_mismatch`, ...) and the
-run is recorded as `unavailable`. There is no silent fallback to the fake runner.
+Before the prompt is sent, the runner calls `list_tools()`. It refuses to run
+(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our eight ids plus
+`Script`, `ToolSearch` and `WaitForScript`. Those three are code-mode meta tools that the allowlist
+cannot remove.
 
-**Status: the SDK runner is unverified.** No Factory key or `droid` CLI was available when it was
-written; it follows `backend/docs/droid-sdk-notes.md`. Points to confirm live are marked `verify` in
-`sdk_runner.py` (permission-request attribute names, tool-id strings for `restrict_tools`, question
-handler response, `tags` type).
+Droid calls our tools from a `Script` (`await tools.northstar.<tool>({...})`). SDK 0.5.0 cannot parse
+the `Script` permission request, so the runner replaces the session's interaction dispatcher with its
+own `PermissionGate`, which decides on the raw request:
+- It proceeds once for an `mcp_tool` confirmation on `northstar` for a known tool.
+- It proceeds once for a `Script` whose source only uses `tools.ToolSearch` and
+  `tools.northstar.<known tool>`, and contains no `fetch`, `import`, `require`, `eval`, `Function`,
+  `process`, `globalThis`, constructor/prototype access, `tools[...]` or aliasing.
+- Everything else is cancelled: edit, exec, create, apply_patch, other servers. Questions are
+  cancelled too.
+
+Every decision is a `permission` event. The startup check guarantees that the Droid process sees no
+apply, approve or decide tool, and the gate refuses any script that names one. Provider-reported
+usage (`factory_credits` and token counts) is stored on the run as `output.usage.provider_reported`
+and repeated in `run_finished`.
+
+Requirements:
+- `FACTORY_API_KEY` in the backend environment. The SDK reads it; we never store or log it.
+- `pip install -e "backend[sdk]"`, which pins `droid-sdk[mcp]==0.5.0`.
+- The `droid` CLI on PATH, or set `DROID_EXECUTABLE`. `DROID_TIMEOUT_S` defaults to 120. Live
+  interpret runs took about 95 s, so use 300 or more for the demo.
+
+If any requirement is missing, `POST /api/agent/runs` returns 503 `runner_unavailable` with a `reason`
+(`missing_api_key`, `sdk_not_installed`, `droid_cli_missing`, `sdk_api_mismatch`, ...) and the run is
+recorded as `unavailable`. There is no silent fallback to the fake runner.
+
+**Status: live-verified on 2026-10-24** with `droid` 0.249.0 and droid-sdk 0.5.0. See
+`backend/docs/droid-live-log.md`:
+- An interpret run recorded 6 cited signals and flagged the superseded research thread.
+- A +50k propose run left one `pending_review` draft, and the budget was unchanged.
+- Tests use a fake `droid_sdk` stub (`backend/tests/fake_droid_sdk.py`) and never call Factory.
 
 ## Activity stream
 
@@ -89,5 +113,12 @@ unchanged; Droid's decision attempt is 403 while a finance approver can apply; t
 decide capability and matches the manifest; step log equals tool calls; forecast-unavailable
 behaviour; runner output cannot claim unrecorded work; crashes are recorded as failed; SSE order,
 resume and background runs; SDK gating (no key, no SDK) and the permission filter.
+
+`backend/tests/test_sdk_runner.py` covers the SDK runner against the fake SDK stub:
+- end-to-end runs through the API (real toolbox steps, permission events, usage, budget unchanged);
+- session scoping;
+- refusal when the allowlist does not match;
+- failure and question handling;
+- the gate's allow and refuse cases for scripts and confirmation types.
 
 Regenerate the manifest after changing a tool: `cd backend && .venv/bin/python -m app.agent.tools`.
