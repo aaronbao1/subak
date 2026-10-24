@@ -1,6 +1,6 @@
 /**
  * SHARED COMPANY EXAMPLE — matches docs/frontend-plan.md exactly. Demo data, clearly fictional.
- * Company: Northstar Software. Teams: Research, Product, Engineering. Unit: USD. One planning period (Q4 2026).
+ * Company: Northstar Software. Teams: Research, Product, Engineering. Unit: USD. One planning period (horizon TBD by forecasting).
  *
  *   Team         Allocation   Spent so far   Projection
  *   Research       60,000       45,000        85,000
@@ -19,7 +19,9 @@ import type {
   SpendingRecord, Team,
 } from "@/lib/contracts";
 
-export const period: Period = { start: "2026-10-01", end: "2026-12-31", label: "Q4 2026 planning period" };
+// The plan leaves the forecasting horizon open. Dates here are placeholders so charts have an axis;
+// the label deliberately does not name a quarter. Forecasting supplies the real period.
+export const period: Period = { start: "2026-10-01", end: "2026-12-31", label: "Current planning period" };
 export const asOf = "2026-10-22"; // last day with recorded spending
 const BUDGET_VERSION = "v1";
 
@@ -91,24 +93,27 @@ export const spending: SpendingRecord[] = [
 
 export const forecasts: Forecast[] = [
   {
-    teamId: "research", period, status: "available", unit: "usd",
+    id: "fc-research-1", teamId: "research", period, status: "available", unit: "usd",
+    basis: "full_period", kind: "forecast", origin: "placeholder",
     projected: 85_000, low: 76_000, high: 96_000,
-    assumptions: ["Approved Q4 Research Plan: evaluation runs expand from Oct 14 through the end of the period", "Provider pricing unchanged"],
-    limitations: ["Shared illustrative projection, not the output of a selected model", "Oct 22 data is partial"],
+    assumptions: ["Approved Q4 Research Plan: evaluation runs expand from Oct 14 through the end of the planning period", "Provider pricing unchanged"],
+    limitations: ["Shared placeholder projection, not the output of a selected model", "Oct 22 data is partial"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
   {
-    teamId: "product", period, status: "available", unit: "usd",
+    id: "fc-product-1", teamId: "product", period, status: "available", unit: "usd",
+    basis: "full_period", kind: "forecast", origin: "placeholder",
     projected: 50_000, low: 44_000, high: 58_000,
     assumptions: ["v4 launch milestone moved to Q1 2027; near-term feature work reduced"],
-    limitations: ["Shared illustrative projection", "Cursor overage is an estimate until the invoice arrives"],
+    limitations: ["Shared placeholder projection", "Cursor overage is an estimate until the invoice arrives"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
   {
-    teamId: "engineering", period, status: "available", unit: "usd",
+    id: "fc-engineering-1", teamId: "engineering", period, status: "available", unit: "usd",
+    basis: "full_period", kind: "forecast", origin: "placeholder",
     projected: 65_000, low: 60_000, high: 71_000,
     assumptions: ["Observability migration continues at the current pace through December"],
-    limitations: ["Shared illustrative projection"],
+    limitations: ["Shared placeholder projection"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
 ];
@@ -224,7 +229,11 @@ export function scriptedReply(
   const b = (id: string) => state.budgets.find((x) => x.teamId === id)!.allocated;
   const total = state.budgets.reduce((s, x) => s + x.allocated, 0);
   const now = new Date().toISOString();
-  const base = { unit: "usd" as const, period, createdAt: now, status: "proposed" as const, basedOnBudgetVersion: state.budgetVersion };
+  const base = {
+    unit: "usd" as const, period, createdAt: now, status: "proposed" as const,
+    basedOnBudgetVersion: state.budgetVersion,
+    forecastsReviewed: structuredClone(forecasts),
+  };
 
   if (/50[, ]?000|50k|\badd|additional|more (credits|budget|funding)/.test(text)) {
     const proposal: AllocationProposal = {

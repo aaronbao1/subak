@@ -95,6 +95,8 @@ export class MockDataClient implements DataClient {
       note,
       lines: p.lines,
       unit: p.unit,
+      forecastsReviewed: p.forecastsReviewed,
+      rationale: p.rationale,
     };
     this.decisions.unshift(d);
     return d;
@@ -108,6 +110,7 @@ export class MockDataClient implements DataClient {
     this.decisions.unshift({
       id: newId("dec"), proposalId, action: "rejected", kind: p.kind,
       appliedAt: new Date().toISOString(), appliedBy: "finance@demo", lines: p.lines, unit: p.unit,
+      forecastsReviewed: p.forecastsReviewed, rationale: p.rationale,
     });
     return p;
   }

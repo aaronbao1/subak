@@ -58,9 +58,20 @@ export interface Budget {
 
 /** Handoff 4: Forecast (forecasting → agent, frontend). Period comes from forecasting, never hard-coded. */
 export interface Forecast {
+  id?: string;
   teamId: string;
   period: Period;
   status: "available" | "unavailable";
+  /**
+   * full_period: projected total for the whole period, INCLUDING spend already incurred.
+   * remaining: expected spend from now to period end, EXCLUDING incurred spend.
+   * The dashboard must never add incurred spend to a full_period number.
+   */
+  basis?: "full_period" | "remaining";
+  /** A forecast is unconditional; a scenario is conditional on the stated assumptions. */
+  kind?: "forecast" | "scenario";
+  /** placeholder = shared fixture number, must stay labeled as such; forecasting_service = produced by the real component. */
+  origin?: "placeholder" | "forecasting_service";
   projected?: number;
   low?: number;
   high?: number;
@@ -143,6 +154,8 @@ export interface AllocationProposal {
   /** Budget version this proposal was computed against (for staleness checks). */
   basedOnBudgetVersion?: string;
   failureReason?: string;
+  /** Snapshot of the projections finance actually reviewed, so the saved explanation never substitutes a later result. */
+  forecastsReviewed?: Forecast[];
 }
 
 /** Handoff 6: Saved results (backend → frontend/agent). The finance decision and what changed. */
@@ -157,6 +170,9 @@ export interface Decision {
   note?: string;
   lines: AllocationLine[];
   unit: Unit;
+  /** Copied from the proposal at decision time. */
+  forecastsReviewed?: Forecast[];
+  rationale?: string;
 }
 
 export interface ToolCallSummary {

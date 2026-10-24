@@ -1,6 +1,6 @@
 # AI Spend Planner — frontend
 
-Finance workspace for an enterprise FP&A team: AI token spending, projections, company context, and an assistant that proposes internal budget allocations. Read `../docs/frontend-plan.md` first (the frontend plan of record), then `../docs/ai-spend-master-plan.md`. This folder is the frontend workstream only.
+Finance workspace for an enterprise FP&A team: AI token spending, projections, company context, and an assistant that proposes internal budget allocations. Read `../docs/frontend-plan.md` first (the frontend plan of record), then `../docs/forecasting-plan.md` (how to present projections), then `../docs/ai-spend-master-plan.md`. This folder is the frontend workstream only.
 
 ## Stack
 Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`src/components/ui`), Recharts, Zustand, lucide-react. `npm run dev` → http://localhost:3000.
@@ -33,7 +33,10 @@ If you need a shared component, put it in your own folder first and flag it; don
 - **Superseded context is distinguishable.** A `ContextItem` with `supersededBy` is visibly outdated and never cited as current. `claimType` separates a stated plan from an observed event from an assistant interpretation.
 - **Proposal states are distinct.** proposed / pending / applied / rejected / revised / stale / failed each look different. Success shows only after the DataClient confirms. A double-click cannot apply twice (disable the button while pending).
 - **A receipt follows every applied decision**: what changed, when, why, who. History lives at /decisions.
-- **Forecast periods come from the Forecast object.** Never hard-code dates.
+- **Forecast periods come from the Forecast object.** Never hard-code dates or name a quarter the data doesn't name.
+- **Never double count.** `Forecast.basis === "full_period"` already includes incurred spend; do not add spent + projected. Only a `remaining` basis is added to spent.
+- **Placeholder projections stay labeled.** `Forecast.origin === "placeholder"` renders a visible "placeholder projection" tag. `kind === "scenario"` is labeled as conditional on its assumptions, never as a forecast.
+- **Receipts cite the projection reviewed.** A decision shows `forecastsReviewed` from the moment of review, not the current forecast.
 - **Citations are reachable** from any context card or proposal, but the main dashboard is not a tool-execution console.
 - **Demo label stays on.** `company.isDemo` shows a badge.
 - Calm design: restrained status colors, clear hierarchy, details on demand. No neon dashboards.
