@@ -1,7 +1,14 @@
 # Northstar backend
 
-FastAPI + SQLite backend for the Northstar AI-spend planning workspace. Design:
-[`docs/design.md`](docs/design.md). Droid SDK notes: [`docs/droid-sdk-notes.md`](docs/droid-sdk-notes.md).
+FastAPI + SQLite backend for the Northstar AI-spend planning workspace.
+
+- **Start here:** [`docs/morning-runbook.md`](docs/morning-runbook.md). It covers running with the real
+  Droid, the demo journey, evals, pointing the frontend at `/compat`, and the 60-second judge explanation.
+- Droid integration (tools, bounds, live results): [`../agent/README.md`](../agent/README.md)
+- Design: [`docs/design.md`](docs/design.md). Droid SDK notes: [`docs/droid-sdk-notes.md`](docs/droid-sdk-notes.md).
+  Live Droid runs: [`docs/droid-live-log.md`](docs/droid-live-log.md). Evals: [`evals/README.md`](evals/README.md).
+- Frontend mapping: [`docs/frontend-alignment.md`](docs/frontend-alignment.md). Edge cases:
+  [`docs/edge-cases.md`](docs/edge-cases.md). Overnight report: [`docs/overnight-report.md`](docs/overnight-report.md).
 Product plans live in the repo-level `docs/` folder and are authoritative.
 
 This workstream only touches `backend/` and `agent/`. No UI code, no forecasting models.
@@ -22,6 +29,7 @@ cd backend
 .venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded)
 .venv/bin/python -m app.seed --check-planted   # verify the planted-error pack against seed/answer_key.md
 .venv/bin/python -m app.main          # serves http://127.0.0.1:8787
+.venv/bin/python -m app.demo          # walk the demo journey against the running server (3 Droid runs)
 # or, with reload:
 .venv/bin/uvicorn app.main:create_app --factory --port 8787 --reload
 ```
@@ -161,5 +169,5 @@ judge feedback, and how it is handled or why it is out of scope, is listed in
 | Northstar spend, budgets, corpus | simulated (`value_kind=simulated`, `is_simulated=true`) |
 | Codex session parser | real format; real samples import as `measured` tokens, `unpriced_usage` unless priced |
 | Projections | placeholder, not a model; `unavailable` mode available |
-| Droid | `FakeDroidRunner` (deterministic) until a Factory key exists; `runner_kind` always reported |
+| Droid | `FakeDroidRunner` (deterministic) by default; `DROID_RUNNER=sdk` runs real Factory Droid (live-verified 2026-10-24); `runner_kind` always reported |
 | Identity | demo headers, not authentication; authority rules themselves are enforced |

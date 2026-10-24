@@ -1,8 +1,77 @@
 # Northstar Droid agent
 
-Where and how Factory Droid is used at runtime in the Northstar AI-spend workspace. Droid does product
-work inside the running backend: it reads the company corpus, connects facts across documents, records
-cited context signals, and drafts allocation proposals for finance review. It never applies a change.
+Northstar is an AI-spend planning workspace for finance teams. Factory Droid runs **inside the running
+backend** as the analyst that reads the company's documents and drafts budget changes. It works only
+through tools the backend implements, and it cannot apply anything: every change waits for a human
+finance approver.
+
+## For the Factory track judges
+
+**Where Droid runs in the product.** Three product moments start a Droid run (`POST /api/agent/runs`,
+or a chat message in the Next.js app through `/compat/api/threads/{id}/messages`):
+
+| Moment | Task | What Droid does |
+|---|---|---|
+| "What changed?" | `interpret_corpus` | reads plans, emails and launch docs; records cited context signals; flags documents that a newer one supersedes |
+| "Add 50k, prioritize research" / "rebalance toward research" | `propose_allocation` (`addition` / `transfer`) | reads signals, budget, spend and forecast; drafts a proposal for finance review |
+| An approval refused as stale (409 `stale_proposal`) | `propose_allocation` + `stale_proposal_id` | re-drafts the same lines on the current budget and explains what moved it |
+| Any other question, optionally with a chart | `answer_question` | read-only answer with backend-built Vega-Lite chart specs |
+
+**Which tools, and why read + draft only.** Ten tools, all served by the backend's own service layer
+under role `droid_agent`: seven read tools (`search_corpus`, `read_document`, `get_spend_summary`,
+`get_budgets`, `get_forecast`, `list_signals`, `build_chart_spec`) and three draft tools
+(`record_signal`, `draft_proposal`, `rebase_proposal`). Moving money between teams is a finance
+decision, so the authority to decide stays with a person. Droid's job is the slow part: reading
+everything, connecting facts across documents, and doing arithmetic the backend can check. There is
+no apply, approve, decide or reject tool.
+
+**How access is bounded** (each layer is enforced in code, and the first three were checked on live runs):
+1. `restrict_tools` allowlist set to exactly the ten `northstar___*` ids; before sending the prompt the
+   runner calls `list_tools()` and refuses to run if anything else is allowed (except the three
+   code-mode meta tools the SDK cannot remove).
+2. A raw-request permission gate approves only `northstar` MCP calls and `Script`s that call nothing but
+   `tools.northstar.<known tool>`; edit, shell, file creation, `fetch`/`import`/`eval` and other servers
+   are cancelled.
+3. Empty temp cwd, Autonomy LOW, built-in skills disabled; the Factory key comes from the environment
+   and is never stored or logged.
+4. The backend checks every write: quotes must match the stored document version verbatim, proposal
+   arithmetic is recomputed, a stale `base_version` is refused, and per-run caps limit tool calls (80),
+   signals (20) and drafts (3).
+5. Approval is `POST /api/proposals/{id}/decision` and needs `finance_approver`. Droid's role gets 403,
+   and the attempt is logged. Requesters cannot approve their own drafts.
+
+**How its activity is shown.** Each run stores ordered events and a step log (one row per tool call
+that actually ran). `GET /api/agent/runs/{id}/events` streams them over SSE: `tool_call`,
+`tool_result`, `evidence_found`, `supersession_detected`, `signal_recorded`, `proposal_drafted`,
+`permission`, `run_finished` and more. In the frontend, each chat reply carries the run's tool calls,
+its citations (document, date and the verbatim quote with its character range) and the id of
+the drafted proposal, which the app shows with per-team before/after figures.
+`runner_kind` and `source` label every run and event as fake or real Droid, and Factory's reported
+usage (`factory_credits`, tokens) is stored on the run.
+
+**Real vs fake runner.** `DROID_RUNNER=fake` (default, and every test) is a deterministic scripted
+playbook that uses the same toolbox; it is not a model. `DROID_RUNNER=sdk` runs a real Factory Droid
+session per run through `droid-sdk` 0.5.0. If the key, SDK or CLI is missing it returns 503
+`runner_unavailable` and never quietly falls back to the fake.
+
+**Live results (2026-10-24, `droid` 0.249.0).** 13 live runs in total, 388,909 `factory_credits`
+reported by Factory:
+- 3 scoping probes (18,942 credits): proved the allowlist and gate on the real wire format.
+- 5 product runs through the backend API (120,315 credits; `../backend/docs/droid-live-log.md`):
+  interpret (6 cited signals, superseded thread flagged), +50k addition (one `pending_review` draft,
+  budget unchanged; the first attempt exposed a ref-shape bug, which was fixed), stale-proposal
+  recovery (a rebased draft on v2 that explains the transfer that moved the budget) and a chart answer.
+  Over 39 permission requests the gate made no false refusal and nothing outside `northstar` was requested.
+- 5 eval runs (249,652 credits; `../backend/evals/results/sdk.md`): **7 pass, 3 fail, 1 not run** of
+  11 scenarios. Passes: superseded thread, informal/cancelled documents, product timing shift citing
+  v2, no invented token cost, unsupported question limited, never claims saved, forecast unavailable.
+  Failures: Droid put the whole +50k into research instead of the answer key's 35k/15k split (a valid
+  draft, but a different judgment), and the transfer run ended its turn without drafting (two
+  scenarios). The fake runner passes 11/11.
+- Credits per run ranged from 13,661 (stale recovery) to 72,548 (interpret in evals). The credit unit
+  is not documented by Factory.
+
+How to run all of this: [`../backend/docs/morning-runbook.md`](../backend/docs/morning-runbook.md).
 
 ## Pieces
 
