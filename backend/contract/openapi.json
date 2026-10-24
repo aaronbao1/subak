@@ -808,6 +808,184 @@
         "title": "CategoryBreakdown",
         "type": "object"
       },
+      "ChartKindList": {
+        "properties": {
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/ChartKindOut"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "vega_lite_schema": {
+            "title": "Vega Lite Schema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vega_lite_schema",
+          "kinds"
+        ],
+        "title": "ChartKindList",
+        "type": "object"
+      },
+      "ChartKindOut": {
+        "properties": {
+          "default_metric": {
+            "title": "Default Metric",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "extra_teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Extra Teams",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "spend_vs_allocation",
+              "projection_vs_allocation",
+              "spend_by_cost_category",
+              "budget_history"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Metrics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "description",
+          "metrics",
+          "default_metric",
+          "extra_teams"
+        ],
+        "title": "ChartKindOut",
+        "type": "object"
+      },
+      "ChartSpecOut": {
+        "properties": {
+          "coverage_status": {
+            "title": "Coverage Status",
+            "type": "string"
+          },
+          "data_labels": {
+            "$ref": "#/components/schemas/DataLabels"
+          },
+          "forecast_availability": {
+            "anyOf": [
+              {
+                "enum": [
+                  "available",
+                  "partial",
+                  "unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Availability"
+          },
+          "kind": {
+            "enum": [
+              "spend_vs_allocation",
+              "projection_vs_allocation",
+              "spend_by_cost_category",
+              "budget_history"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "title": "Spec",
+            "type": "object"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Value Kinds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "metric",
+          "team",
+          "period",
+          "unit",
+          "title",
+          "value_kinds",
+          "data_labels",
+          "coverage_status",
+          "forecast_availability",
+          "row_count",
+          "notes",
+          "sources",
+          "spec"
+        ],
+        "title": "ChartSpecOut",
+        "type": "object"
+      },
       "CitationIn": {
         "additionalProperties": false,
         "properties": {
@@ -5027,6 +5205,133 @@
         "summary": "Get Budget History",
         "tags": [
           "budget"
+        ]
+      }
+    },
+    "/api/charts": {
+      "get": {
+        "description": "Chart kinds, their metrics and defaults.",
+        "operationId": "list_chart_kinds_api_charts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartKindList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Chart Kinds",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
+    "/api/charts/{kind}": {
+      "get": {
+        "description": "A Vega-Lite v5 spec with the data inline, labeled with value kinds and simulated data. Writes nothing\n(a projection chart does not persist a forecast snapshot).",
+        "operationId": "get_chart_api_charts__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartSpecOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `unknown_period`, `no_budget`, `no_periods`, `unknown_chart_kind`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_metric`, `unknown_team`, `team_not_applicable`"
+          }
+        },
+        "summary": "Get Chart",
+        "tags": [
+          "charts"
         ]
       }
     },

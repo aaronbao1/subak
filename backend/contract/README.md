@@ -41,7 +41,8 @@ not join ids across scenarios.
 | `incomplete` | Unmapped account + Codex counter reset: coverage `partial`, `unattributed` bucket |
 | `forecast_partial` | A fourth active team with no projection: `availability: partial`, `missing_teams`, projected `null` |
 | `revision` | A reviewer revises Droid's draft: original `revised` (cannot be decided), replacement approved |
-| `agent` | FakeDroidRunner runs: interpret, propose addition / transfer, answer a question |
+| `agent` | FakeDroidRunner runs: interpret, propose addition / transfer, answer a question (also with a chart) |
+| `charts` | Vega-Lite chart specs for every kind; budget history after outcome A is applied; chart errors |
 
 ## Conventions the fixtures rely on
 
@@ -73,6 +74,42 @@ not join ids across scenarios.
   `partial`, never a complete zero.
 - **Citations** in signals point at a specific document version with exact offsets;
   `citation_currency: "superseded"` means a newer version exists.
+
+## Charts (Vega-Lite v5)
+
+`GET /api/charts/{kind}?team=&metric=&period=` returns a `ChartSpecOut`: metadata plus `spec`, a
+complete Vega-Lite v5 spec with the data inline. The backend builds it only from its own data and
+writes nothing (a projection chart does not save a forecast snapshot). Render `spec` as it is, for
+example with `vegaEmbed(el, fx.response.spec)`, and don't recompute the numbers. `GET /api/charts`
+lists the kinds and their metrics.
+
+| Kind | Default metric (other) | Fixture(s) |
+|---|---|---|
+| `spend_vs_allocation` | `recorded_spend`: grouped bars, allocation vs recorded spend to date (`remaining`) | `chart_spend_vs_allocation`, `chart_spend_vs_allocation_remaining`, `chart_spend_vs_allocation_incomplete` |
+| `projection_vs_allocation` | `projected`: allocation vs placeholder projection (`gap` = projected minus allocation) | `chart_projection_vs_allocation`, `chart_projection_unavailable` |
+| `spend_by_cost_category` | `recorded_spend`: bars stacked by cost category (`record_count`) | `chart_spend_by_cost_category` |
+| `budget_history` | `allocation`: one line per team across saved versions (`envelope_total`) | `chart_budget_history` |
+
+- **Money:** `spec.data.values[].amount` is a decimal string. The spec turns it into the plotted
+  `value` with a `toNumber` calculate transform, so the backend never emits a float.
+- **Labels:** the title, subtitle, `description` and `usermeta.northstar` carry the plotted value kinds
+  and a simulated/real label; keep them when you show the chart. Each row has `value_kind` (`planned`
+  means an internal allocation, which is not spend) and `simulated`.
+- **What isn't plotted:**
+  - Included usage and unpriced usage are never plotted as spend; their notional value and token
+    counts are in `notes`.
+  - When the forecast is unavailable, the projection chart has no projection rows at all, never
+    zeros. Check `forecast_availability`.
+  - Unattributed spend is its own `unattributed` column, with no allocation.
+- **Team filter:** `team` narrows a chart to one team. `spend_by_cost_category` also accepts
+  `unattributed`.
+- **Errors:**
+  - 404 `unknown_chart_kind` (`details.kinds` lists the valid kinds).
+  - 422 `validation_failed` with reasons `unknown_metric`, `unknown_team` or `team_not_applicable`
+    (see `error_unknown_chart_kind` and `error_chart_invalid_request`).
+- **Droid:** the same specs come from the read-only Droid tool `build_chart_spec(kind, team?, metric?)`.
+  `answer_question` takes `params.chart = {kind, team?, metric?}`, and every chart the toolbox actually
+  built is attached as `output.charts[]` (`agent_run_answer_with_chart`).
 
 ## Mocking against it
 

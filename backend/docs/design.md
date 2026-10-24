@@ -283,6 +283,7 @@ Supporting: `ImportResult`, `MetaOut` (`period`, `unit`, `runner_kind`, `forecas
 | POST | `/proposals/{id}/decision` | finance_approver only | header `Idempotency-Key` required; approve applies atomically, reject leaves state |
 | POST | `/proposals/{id}/rebase` | droid_agent, finance_* | for `stale`: new `pending_review` proposal on current version, same intent |
 | POST | `/proposals/{id}/revise` | finance_* | new proposal with changed lines; original -> `revised` |
+| GET | `/charts`, `/charts/{kind}?team=&metric=` | any | read-only Vega-Lite v5 specs from backend data (also the Droid tool `build_chart_spec`); see `contract/README.md` |
 | GET | `/decisions`, `/decisions/{id}` | any | decision history: who, when, why, evidence, before/after, version |
 | POST | `/agent/runs` | finance_* | start a Droid task (fake by default); 503 `runner_unavailable` if sdk lacks credentials |
 | GET | `/agent/runs/{id}` | any | output + step log |

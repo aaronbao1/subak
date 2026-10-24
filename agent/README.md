@@ -25,7 +25,10 @@ when `DROID_RUNNER=sdk`; tests get it via `pythonpath = [".", "../agent"]`.
 ## Tools (read + draft only)
 
 `search_corpus`, `read_document`, `get_spend_summary`, `get_budgets`, `get_forecast` (persists a
-citable snapshot), `list_signals`, `record_signal` (backend verifies every quote verbatim against the
+citable snapshot), `list_signals`, `build_chart_spec` (read-only Vega-Lite v5 spec from backend data:
+spend vs allocation, projection vs allocation, spend by cost category, budget history; labeled with
+value kinds and simulated data; persists nothing; specs the toolbox built are attached to the run as
+`output.charts[]`), `record_signal` (backend verifies every quote verbatim against the
 stored document version), `draft_proposal` (backend computes before/after, validates arithmetic,
 rejects a stale `base_version`; result is `pending_review`), `rebase_proposal` (stale-proposal
 recovery: re-drafts a stale proposal's same lines on the current budget as a NEW `pending_review`
@@ -63,16 +66,18 @@ Not a model: a fixed playbook that does real work through the toolbox.
   per-team changes and the decision(s) that moved the budget, and reports the rebased draft as
   `pending_review` needing a fresh review. Not stale -> `proposal_not_stale`, nothing drafted. Lines no
   longer fit -> the validation reasons plus what changed, nothing drafted.
-- `answer_question`: read-only per-team comparison.
+- `answer_question`: read-only per-team comparison. With `params.chart = {kind, team?, metric?}` it
+  also calls `build_chart_spec` and reports the chart's title; a refused chart is a `chart_not_built`
+  warning.
 
 **SdkDroidRunner** (`DROID_RUNNER=sdk`, events `source=droid_sdk`, signals `produced_by=droid_sdk`).
 Uses `droid-sdk` (Python, import `droid_sdk`). Each run gets its own `Session`, set up like this:
 - the in-process `northstar` MCP server, whose tools Droid sees as `northstar___<tool>`;
-- `restrict_tools` set to exactly those nine ids;
+- `restrict_tools` set to exactly those ten ids;
 - Autonomy LOW, built-in skills disabled, and an empty temp directory as cwd.
 
 Before the prompt is sent, the runner calls `list_tools()`. It refuses to run
-(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our nine ids plus
+(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our ten ids plus
 `Script`, `ToolSearch` and `WaitForScript`. Those three are code-mode meta tools that the allowlist
 cannot remove.
 

@@ -5,7 +5,10 @@ only draft (never apply).
 1. Decide which data the question needs and read it: `get_budgets` (allocations, recorded spend,
    state_version), `get_spend_summary` (period, as-of date, coverage, unattributed spend),
    `get_forecast` (projections, availability, method label), `list_signals` and, for anything about
-   plans or timing, `search_corpus` + `read_document`.
+   plans or timing, `search_corpus` + `read_document`. When a chart is requested (or clearly helps),
+   call `build_chart_spec` (read-only; kinds `spend_vs_allocation`, `projection_vs_allocation`,
+   `spend_by_cost_category`, `budget_history`). Never build a chart from numbers you computed yourself;
+   keep the spec's title and its value-kind / simulated labels when you describe it.
 2. Answer with the numbers the tools returned, in the unit they report, with the period and as-of
    date. Keep apart:
    - recorded spend (to date) vs. allocation vs. projection (placeholder / simulated / unavailable);

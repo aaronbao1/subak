@@ -150,7 +150,7 @@ def test_droid_cannot_apply_its_draft_only_finance_can(seeded, client):
 def test_toolbox_has_no_decide_capability(seeded, client):
     names = set(tool_defs.TOOL_NAMES)
     assert names == {"search_corpus", "read_document", "get_spend_summary", "get_budgets", "get_forecast",
-                     "list_signals", "record_signal", "draft_proposal", "rebase_proposal"}
+                     "list_signals", "build_chart_spec", "record_signal", "draft_proposal", "rebase_proposal"}
     assert {t.name for t in tool_defs.TOOLS if t.kind == "draft"} == {"record_signal", "draft_proposal",
                                                                       "rebase_proposal"}
     for container in (BackendToolbox, AgentToolbox):

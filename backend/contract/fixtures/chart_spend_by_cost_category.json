@@ -1,0 +1,201 @@
+{
+  "description": "stacked bars by cost category; included usage is not plotted (notional in notes)",
+  "name": "chart_spend_by_cost_category",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/spend_by_cost_category"
+  },
+  "response": {
+    "coverage_status": "complete",
+    "data_labels": {
+      "real_sample": false,
+      "simulated": true
+    },
+    "forecast_availability": null,
+    "kind": "spend_by_cost_category",
+    "metric": "recorded_spend",
+    "notes": [
+      "included usage and unpriced usage are never spend and are not plotted.",
+      "included usage notional value 5500.00 USD is display-only."
+    ],
+    "period": "2026-P1",
+    "row_count": 6,
+    "sources": [
+      "/api/spend/summary?period=2026-P1"
+    ],
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "northstar",
+        "values": [
+          {
+            "amount": "4000.00",
+            "cost_category": "subscription_fee",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "engineering",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "26000.00",
+            "cost_category": "direct_api",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "engineering",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "4000.00",
+            "cost_category": "subscription_fee",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "product",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "16000.00",
+            "cost_category": "billable_overage",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "product",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "5000.00",
+            "cost_category": "subscription_fee",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "research",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "40000.00",
+            "cost_category": "direct_api",
+            "counts_toward_spend": true,
+            "record_count": 1,
+            "simulated": true,
+            "team": "research",
+            "value_kind": "simulated"
+          }
+        ]
+      },
+      "description": "Recorded spend by cost category for planning period 2026-P1 in USD, all teams. Value kinds: simulated; simulated data (fictional Northstar example). Spend coverage complete. Built by the Northstar backend from /api/spend/summary?period=2026-P1; data inline, nothing estimated by the chart. included usage and unpriced usage are never spend and are not plotted. included usage notional value 5500.00 USD is display-only.",
+      "encoding": {
+        "color": {
+          "field": "cost_category",
+          "scale": {
+            "domain": [
+              "subscription_fee",
+              "billable_overage",
+              "direct_api"
+            ]
+          },
+          "title": "Cost category",
+          "type": "nominal"
+        },
+        "tooltip": [
+          {
+            "field": "team",
+            "title": "Team",
+            "type": "nominal"
+          },
+          {
+            "field": "cost_category",
+            "title": "Cost category",
+            "type": "nominal"
+          },
+          {
+            "field": "amount",
+            "title": "Amount",
+            "type": "nominal"
+          },
+          {
+            "field": "record_count",
+            "title": "Records",
+            "type": "quantitative"
+          },
+          {
+            "field": "value_kind",
+            "title": "Value kind",
+            "type": "nominal"
+          },
+          {
+            "field": "counts_toward_spend",
+            "title": "Counts toward spend",
+            "type": "nominal"
+          }
+        ],
+        "x": {
+          "field": "team",
+          "sort": null,
+          "title": "Team",
+          "type": "nominal"
+        },
+        "y": {
+          "axis": {
+            "format": ",.2f"
+          },
+          "field": "value",
+          "stack": "zero",
+          "title": "USD",
+          "type": "quantitative"
+        }
+      },
+      "height": 300,
+      "mark": {
+        "tooltip": true,
+        "type": "bar"
+      },
+      "title": {
+        "subtitle": [
+          "value kinds: simulated (planned = internal allocation, not spend)",
+          "spend coverage: complete; all teams"
+        ],
+        "text": "Recorded spend by cost category | 2026-P1 | USD | simulated data (fictional Northstar example)"
+      },
+      "transform": [
+        {
+          "as": "value",
+          "calculate": "toNumber(datum.amount)"
+        }
+      ],
+      "usermeta": {
+        "northstar": {
+          "coverage_status": "complete",
+          "data_labels": {
+            "real_sample": false,
+            "simulated": true
+          },
+          "forecast_availability": null,
+          "kind": "spend_by_cost_category",
+          "metric": "recorded_spend",
+          "money_field": "amount (decimal string)",
+          "period": "2026-P1",
+          "sources": [
+            "/api/spend/summary?period=2026-P1"
+          ],
+          "team": null,
+          "unit": "USD",
+          "value_kinds": [
+            "simulated"
+          ]
+        }
+      },
+      "width": "container"
+    },
+    "team": null,
+    "title": "Recorded spend by cost category | 2026-P1 | USD | simulated data (fictional Northstar example)",
+    "unit": "USD",
+    "value_kinds": [
+      "simulated"
+    ]
+  },
+  "scenario": "charts",
+  "schema": "ChartSpecOut",
+  "status": 200
+}

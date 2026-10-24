@@ -20,6 +20,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.charts import ChartKind
 from app.schemas.proposals import AdditionCreate, TransferCreate
 from app.schemas.signals import ContextSignalIn, SignalStatus
 
@@ -46,6 +47,12 @@ class NoArgsIn(_In):
 class ListSignalsIn(_In):
     status: SignalStatus | None = None
     team: str | None = None
+
+
+class BuildChartSpecIn(_In):
+    kind: ChartKind
+    team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
+    metric: Annotated[str, Field(min_length=1, max_length=50)] | None = None
 
 
 class RecordSignalIn(_In):
@@ -122,6 +129,14 @@ TOOLS: tuple[ToolDef, ...] = (
     ToolDef("list_signals", "read",
             "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
             ListSignalsIn),
+    ToolDef("build_chart_spec", "read",
+            "Build a Vega-Lite v5 chart spec from backend data only (data inline; nothing estimated). kind: "
+            "spend_vs_allocation (metric recorded_spend | remaining), projection_vs_allocation (projected | gap; "
+            "no projection rows when the forecast is unavailable), spend_by_cost_category (recorded_spend | "
+            "record_count; team may be `unattributed`), budget_history (allocation | envelope_total). Optional "
+            "team narrows to one team. Title, subtitle and description carry the value kinds and simulated "
+            "labels; keep them when you show or describe the chart. Read-only: persists nothing.",
+            BuildChartSpecIn),
     ToolDef("record_signal", "draft",
             "Record a cited context signal (what is planned/changing, team, timing, status current|"
             "superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored "

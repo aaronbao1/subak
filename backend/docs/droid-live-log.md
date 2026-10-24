@@ -22,6 +22,7 @@ the night's cap of 15 runs.
 | 2 | `run_a3801169-…` | `propose_allocation` addition 50000.00, prioritize research | succeeded, but no draft (see below) | 5 | 3 / 0 | 37.2 s | 22083.0 |
 | 3 | `run_866ee1ba-…` | same as #2, after the prompt fix | succeeded, 1 pending draft | 5 | 3 / 0 | 23.6 s | 20175.0 |
 | 4 | `run_498d1800-…` | `propose_allocation` with `stale_proposal_id` (stale-proposal recovery) | succeeded, 1 rebased pending draft | 1 | 1 / 0 | 22.5 s | 13661.0 |
+| 5 | in-process app, temp DB | `answer_question` with `params.chart = {kind: spend_vs_allocation}` | succeeded, 1 chart attached | 3 | 1 / 0 | 18.3 s | 14475.0 |
 
 The credit unit is not documented. Usage comes from the SDK's `RunSuccess.usage` and is stored on
 the run as `output.usage.provider_reported`.
@@ -91,6 +92,23 @@ the run as `output.usage.provider_reported`.
   ended with limitations: no business need established, and no documents or forecast checked.
 - The budget stayed at v2 (85k / 50k / 65k, 200k). B stayed `stale`.
 
+### Run 5: answer_question with a chart
+
+- This run was made in-process (`create_app` + `TestClient`, `DROID_RUNNER=sdk`, `DROID_TIMEOUT_S=300`, fresh
+  seeded temp DB) rather than against a running server.
+- It used the ten-tool allowlist, which adds `northstar___build_chart_spec`. The startup scope check passed:
+  `list_tools()` reported exactly the ten ids plus `Script`, `ToolSearch` and `WaitForScript`.
+- The steps were `get_budgets`, `get_spend_summary` and `build_chart_spec` (`spend_vs_allocation`,
+  6 rows). The gate allowed one Script and cancelled none.
+- `output.charts[0]` is the spec the toolbox built. Its title is "Recorded spend vs allocation by
+  team | 2026-P1 | USD | simulated data (fictional Northstar example)".
+- The summary:
+  - repeated the chart's title and its value-kind labels (`planned` = internal allocation,
+    `simulated` = recorded spend);
+  - gave the period and the as-of date;
+  - ended with limitations.
+- No proposal or signal was created, and the budget stayed at v1.
+
 ## What the live runs showed that the fake could not
 
 1. **The gate works on the real wire format.** The `Script` permission request has
@@ -106,7 +124,7 @@ the run as `output.usage.provider_reported`.
 
 ## Bounded authority, as exercised
 
-- The Droid process saw only the read and draft tools (eight, then nine with `rebase_proposal`, which only creates a new pending draft). The startup check refuses to run if
+- The Droid process saw only the read and draft tools (eight, then nine with `rebase_proposal`, which only creates a new pending draft, then ten with the read-only `build_chart_spec`). The startup check refuses to run if
   `list_tools()` shows anything else allowed besides the three code-mode meta tools.
 - No apply, approve, decide or reject tool exists. A script that names one is refused by the gate,
   and the toolbox has no such method.

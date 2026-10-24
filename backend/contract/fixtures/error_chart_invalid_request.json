@@ -1,0 +1,29 @@
+{
+  "description": "metric not supported by the kind: 422 validation_failed, reason unknown_metric",
+  "name": "error_chart_invalid_request",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/budget_history",
+    "query": {
+      "metric": "spend"
+    }
+  },
+  "response": {
+    "error": {
+      "code": "validation_failed",
+      "details": {
+        "reasons": [
+          {
+            "code": "unknown_metric",
+            "field": "metric",
+            "message": "budget_history supports metric allocation, envelope_total; got 'spend'"
+          }
+        ]
+      },
+      "message": "chart request is invalid: unknown_metric"
+    }
+  },
+  "scenario": "charts",
+  "schema": "ErrorBody",
+  "status": 422
+}

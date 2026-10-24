@@ -85,6 +85,8 @@ ROUTE_ERRORS: dict[tuple[str, str], dict[int, list[str]]] = {
     },
     ("post", "/api/admin/reset"): {403: ["reset_disabled"]},
     ("post", "/api/forecasts/snapshots"): {404: ["unknown_period"]},
+    ("get", "/api/charts/{kind}"): {404: ["unknown_chart_kind"], 422: ["unknown_metric", "unknown_team",
+                                                                     "team_not_applicable"]},
 }
 
 # (method, path) -> {status: (description, component name)} for success codes besides the default one.

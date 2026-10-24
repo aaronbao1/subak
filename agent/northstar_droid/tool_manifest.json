@@ -147,6 +147,59 @@
       "name": "list_signals"
     },
     {
+      "description": "Build a Vega-Lite v5 chart spec from backend data only (data inline; nothing estimated). kind: spend_vs_allocation (metric recorded_spend | remaining), projection_vs_allocation (projected | gap; no projection rows when the forecast is unavailable), spend_by_cost_category (recorded_spend | record_count; team may be `unattributed`), budget_history (allocation | envelope_total). Optional team narrows to one team. Title, subtitle and description carry the value kinds and simulated labels; keep them when you show or describe the chart. Read-only: persists nothing.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "spend_vs_allocation",
+              "projection_vs_allocation",
+              "spend_by_cost_category",
+              "budget_history"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metric"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Team"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BuildChartSpecIn",
+        "type": "object"
+      },
+      "kind": "read",
+      "name": "build_chart_spec"
+    },
+    {
       "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. Does not change any budget.",
       "input_schema": {
         "$defs": {

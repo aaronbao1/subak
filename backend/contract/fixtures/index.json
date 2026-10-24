@@ -11,6 +11,16 @@
       "status": 201
     },
     {
+      "description": "answer_question with params.chart: the read-only build_chart_spec tool runs and the Vega-Lite spec is attached as output.charts[0]",
+      "file": "agent_run_answer_with_chart.json",
+      "method": "POST",
+      "name": "agent_run_answer_with_chart",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRunOut",
+      "status": 201
+    },
+    {
       "description": "one run by id with its step log, events and findings",
       "file": "agent_run_detail.json",
       "method": "GET",
@@ -108,6 +118,86 @@
       "path": "/api/budget",
       "scenario": "main",
       "schema": "BudgetState",
+      "status": 200
+    },
+    {
+      "description": "lines per team across versions 1 -> 2, each point linked to the decision that saved it",
+      "file": "chart_budget_history.json",
+      "method": "GET",
+      "name": "chart_budget_history",
+      "path": "/api/charts/budget_history",
+      "scenario": "charts",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "chart kinds with their metrics and defaults",
+      "file": "chart_kinds.json",
+      "method": "GET",
+      "name": "chart_kinds",
+      "path": "/api/charts",
+      "scenario": "charts",
+      "schema": "ChartKindList",
+      "status": 200
+    },
+    {
+      "description": "forecast unavailable: allocation rows only, no projection rows (never zero), title and notes say projections are unavailable",
+      "file": "chart_projection_unavailable.json",
+      "method": "GET",
+      "name": "chart_projection_unavailable",
+      "path": "/api/charts/projection_vs_allocation",
+      "scenario": "forecast_unavailable",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "grouped bars: allocation vs placeholder projection (simulated, not a model); no forecast snapshot is persisted",
+      "file": "chart_projection_vs_allocation.json",
+      "method": "GET",
+      "name": "chart_projection_vs_allocation",
+      "path": "/api/charts/projection_vs_allocation",
+      "scenario": "charts",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "stacked bars by cost category; included usage is not plotted (notional in notes)",
+      "file": "chart_spend_by_cost_category.json",
+      "method": "GET",
+      "name": "chart_spend_by_cost_category",
+      "path": "/api/charts/spend_by_cost_category",
+      "scenario": "charts",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "grouped bars: allocation (planned) vs recorded spend (simulated) per team",
+      "file": "chart_spend_vs_allocation.json",
+      "method": "GET",
+      "name": "chart_spend_vs_allocation",
+      "path": "/api/charts/spend_vs_allocation",
+      "scenario": "charts",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "partial coverage: unattributed spend is its own column (no allocation); plotted dollars are simulated; real sample token rows noted, not plotted",
+      "file": "chart_spend_vs_allocation_incomplete.json",
+      "method": "GET",
+      "name": "chart_spend_vs_allocation_incomplete",
+      "path": "/api/charts/spend_vs_allocation",
+      "scenario": "incomplete",
+      "schema": "ChartSpecOut",
+      "status": 200
+    },
+    {
+      "description": "one team, metric remaining: allocation minus recorded spend (15k for research)",
+      "file": "chart_spend_vs_allocation_remaining.json",
+      "method": "GET",
+      "name": "chart_spend_vs_allocation_remaining",
+      "path": "/api/charts/spend_vs_allocation",
+      "scenario": "charts",
+      "schema": "ChartSpecOut",
       "status": 200
     },
     {
@@ -271,6 +361,16 @@
       "status": 200
     },
     {
+      "description": "metric not supported by the kind: 422 validation_failed, reason unknown_metric",
+      "file": "error_chart_invalid_request.json",
+      "method": "GET",
+      "name": "error_chart_invalid_request",
+      "path": "/api/charts/budget_history",
+      "scenario": "charts",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
       "description": "quote does not occur verbatim in the cited document",
       "file": "error_citation_not_found.json",
       "method": "POST",
@@ -359,6 +459,16 @@
       "scenario": "main",
       "schema": "ErrorBody",
       "status": 409
+    },
+    {
+      "description": "unknown chart kind: 404 unknown_chart_kind with the supported kinds",
+      "file": "error_unknown_chart_kind.json",
+      "method": "GET",
+      "name": "error_unknown_chart_kind",
+      "path": "/api/charts/burn_rate",
+      "scenario": "charts",
+      "schema": "ErrorBody",
+      "status": 404
     },
     {
       "description": "addition whose lines do not sum to the envelope increase",

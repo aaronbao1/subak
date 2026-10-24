@@ -16,7 +16,8 @@ the same scoped toolbox the SDK runner gets, so every claim it makes is verified
   with 409 `stale_proposal`. Calls `rebase_proposal`, explains what changed since the original's base
   version (per-team changes and the decisions that moved the budget) and offers the rebased draft as a
   NEW `pending_review` proposal. If the same intent no longer fits, it says why and drafts nothing.
-- answer_question: a read-only per-team comparison of allocation, recorded spend and projection.
+- answer_question: a read-only per-team comparison of allocation, recorded spend and projection. With
+  `params.chart` it also calls the read-only `build_chart_spec` tool; the spec lands in `output.charts`.
 """
 
 from __future__ import annotations
@@ -452,6 +453,20 @@ class FakeDroidRunner:
             if forecast["availability"] == "partial":
                 label += f"; partial: no projection for {', '.join(forecast.get('missing_teams') or [])}"
             parts.append(label + ".")
+        chart_findings: list[dict] = []
+        if task.params.get("chart"):
+            try:
+                chart = tools.build_chart_spec(**task.params["chart"])
+            except ToolError as exc:
+                msg = f"Chart not built: {exc.code}: {exc.message}"
+                parts.append(msg + ".")
+                warnings.append({"code": "chart_not_built", "message": msg, "details": exc.as_dict()})
+            else:
+                chart_findings.append({"type": "chart", "kind": chart["kind"], "metric": chart["metric"],
+                                       "team": chart["team"], "title": chart["title"],
+                                       "row_count": chart["row_count"], "value_kinds": chart["value_kinds"]})
+                parts.append(f"Chart built from backend data only: \"{chart['title']}\" "
+                             f"({chart['row_count']} row(s); Vega-Lite v5 spec in output.charts).")
         if task.instruction.strip():
             # The fake runner is a fixed playbook: it never pretends to have understood a free-text
             # question or to have run an analysis it does not support (token multipliers, new scenarios).
@@ -465,7 +480,7 @@ class FakeDroidRunner:
         tools.emit("assistant_text", {"text": summary})
         for w in warnings:
             tools.emit("warning", w)
-        return AgentRunOutput(summary=summary, findings=rows + [coverage_row], warnings=warnings)
+        return AgentRunOutput(summary=summary, findings=rows + [coverage_row] + chart_findings, warnings=warnings)
 
 
 # ---- helpers -----------------------------------------------------------------------------------

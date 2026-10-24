@@ -1,0 +1,477 @@
+{
+  "description": "answer_question with params.chart: the read-only build_chart_spec tool runs and the Vega-Lite spec is attached as output.charts[0]",
+  "name": "agent_run_answer_with_chart",
+  "request": {
+    "body": {
+      "params": {
+        "chart": {
+          "kind": "spend_vs_allocation"
+        }
+      },
+      "task_type": "answer_question"
+    },
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "POST",
+    "path": "/api/agent/runs"
+  },
+  "response": {
+    "applied_changes": false,
+    "error": null,
+    "events": [
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "params": {
+            "chart": {
+              "kind": "spend_vs_allocation"
+            }
+          },
+          "runner_kind": "fake",
+          "simulated": true,
+          "task_type": "answer_question"
+        },
+        "seq": 1,
+        "source": "backend",
+        "type": "run_started"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "args": {},
+          "step": 1,
+          "tool": "get_budgets"
+        },
+        "seq": 2,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "is_error": false,
+          "step": 1,
+          "summary": "envelope 200000.00 USD, version 1",
+          "tool": "get_budgets"
+        },
+        "seq": 3,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "args": {},
+          "step": 2,
+          "tool": "get_spend_summary"
+        },
+        "seq": 4,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "is_error": false,
+          "step": 2,
+          "summary": "company total 95000.00 USD, coverage complete",
+          "tool": "get_spend_summary"
+        },
+        "seq": 5,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "args": {},
+          "step": 3,
+          "tool": "get_forecast"
+        },
+        "seq": 6,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "is_error": false,
+          "step": 3,
+          "summary": "available (placeholder), snapshot fcs_000004",
+          "tool": "get_forecast"
+        },
+        "seq": 7,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "args": {
+            "kind": "spend_vs_allocation",
+            "metric": null,
+            "team": null
+          },
+          "step": 4,
+          "tool": "build_chart_spec"
+        },
+        "seq": 8,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "is_error": false,
+          "step": 4,
+          "summary": "spend_vs_allocation chart (recorded_spend), 6 row(s), value kinds planned, simulated",
+          "tool": "build_chart_spec"
+        },
+        "seq": 9,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "text": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts)."
+        },
+        "seq": 10,
+        "source": "fake_runner",
+        "type": "assistant_text"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "applied_changes": false,
+          "proposal_ids": [],
+          "signal_ids": [],
+          "status": "succeeded",
+          "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts)."
+        },
+        "seq": 11,
+        "source": "backend",
+        "type": "run_finished"
+      }
+    ],
+    "events_url": "/api/agent/runs/run_000005/events",
+    "finished_at": "2026-10-24T12:07:00Z",
+    "id": "run_000005",
+    "initiated_by": {
+      "id": "fin-analyst-ana",
+      "role": "finance_analyst"
+    },
+    "instruction": "",
+    "output": {
+      "applied_changes": false,
+      "charts": [
+        {
+          "coverage_status": "complete",
+          "data_labels": {
+            "real_sample": false,
+            "simulated": true
+          },
+          "forecast_availability": null,
+          "kind": "spend_vs_allocation",
+          "metric": "recorded_spend",
+          "notes": [
+            "budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:07:00Z)."
+          ],
+          "period": "2026-P1",
+          "row_count": 6,
+          "sources": [
+            "/api/budget?period=2026-P1",
+            "/api/spend/summary?period=2026-P1"
+          ],
+          "spec": {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "data": {
+              "name": "northstar",
+              "values": [
+                {
+                  "amount": "60000.00",
+                  "coverage_status": "complete",
+                  "series": "allocation",
+                  "simulated": null,
+                  "state_version": 1,
+                  "team": "engineering",
+                  "value_kind": "planned"
+                },
+                {
+                  "amount": "30000.00",
+                  "coverage_status": "complete",
+                  "series": "recorded_spend",
+                  "simulated": true,
+                  "state_version": 1,
+                  "team": "engineering",
+                  "value_kind": "simulated"
+                },
+                {
+                  "amount": "80000.00",
+                  "coverage_status": "complete",
+                  "series": "allocation",
+                  "simulated": null,
+                  "state_version": 1,
+                  "team": "product",
+                  "value_kind": "planned"
+                },
+                {
+                  "amount": "20000.00",
+                  "coverage_status": "complete",
+                  "series": "recorded_spend",
+                  "simulated": true,
+                  "state_version": 1,
+                  "team": "product",
+                  "value_kind": "simulated"
+                },
+                {
+                  "amount": "60000.00",
+                  "coverage_status": "complete",
+                  "series": "allocation",
+                  "simulated": null,
+                  "state_version": 1,
+                  "team": "research",
+                  "value_kind": "planned"
+                },
+                {
+                  "amount": "45000.00",
+                  "coverage_status": "complete",
+                  "series": "recorded_spend",
+                  "simulated": true,
+                  "state_version": 1,
+                  "team": "research",
+                  "value_kind": "simulated"
+                }
+              ]
+            },
+            "description": "Recorded spend vs allocation by team for planning period 2026-P1 in USD, all teams. Value kinds: planned, simulated; simulated data (fictional Northstar example). Spend coverage complete. Built by the Northstar backend from /api/budget?period=2026-P1, /api/spend/summary?period=2026-P1; data inline, nothing estimated by the chart. budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:07:00Z).",
+            "encoding": {
+              "color": {
+                "field": "series",
+                "scale": {
+                  "domain": [
+                    "allocation",
+                    "recorded_spend"
+                  ]
+                },
+                "title": "Series",
+                "type": "nominal"
+              },
+              "tooltip": [
+                {
+                  "field": "team",
+                  "title": "Team",
+                  "type": "nominal"
+                },
+                {
+                  "field": "series",
+                  "title": "Series",
+                  "type": "nominal"
+                },
+                {
+                  "field": "amount",
+                  "title": "Amount",
+                  "type": "nominal"
+                },
+                {
+                  "field": "value_kind",
+                  "title": "Value kind",
+                  "type": "nominal"
+                },
+                {
+                  "field": "coverage_status",
+                  "title": "Spend coverage",
+                  "type": "nominal"
+                }
+              ],
+              "x": {
+                "field": "team",
+                "sort": null,
+                "title": "Team",
+                "type": "nominal"
+              },
+              "xOffset": {
+                "field": "series",
+                "sort": [
+                  "allocation",
+                  "recorded_spend"
+                ],
+                "type": "nominal"
+              },
+              "y": {
+                "axis": {
+                  "format": ",.2f"
+                },
+                "field": "value",
+                "title": "USD",
+                "type": "quantitative"
+              }
+            },
+            "height": 300,
+            "mark": {
+              "tooltip": true,
+              "type": "bar"
+            },
+            "title": {
+              "subtitle": [
+                "value kinds: planned, simulated (planned = internal allocation, not spend)",
+                "spend coverage: complete; all teams"
+              ],
+              "text": "Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)"
+            },
+            "transform": [
+              {
+                "as": "value",
+                "calculate": "toNumber(datum.amount)"
+              }
+            ],
+            "usermeta": {
+              "northstar": {
+                "coverage_status": "complete",
+                "data_labels": {
+                  "real_sample": false,
+                  "simulated": true
+                },
+                "forecast_availability": null,
+                "kind": "spend_vs_allocation",
+                "metric": "recorded_spend",
+                "money_field": "amount (decimal string)",
+                "period": "2026-P1",
+                "sources": [
+                  "/api/budget?period=2026-P1",
+                  "/api/spend/summary?period=2026-P1"
+                ],
+                "team": null,
+                "unit": "USD",
+                "value_kinds": [
+                  "planned",
+                  "simulated"
+                ]
+              }
+            },
+            "width": "container"
+          },
+          "team": null,
+          "title": "Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)",
+          "unit": "USD",
+          "value_kinds": [
+            "planned",
+            "simulated"
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "allocation": "60000.00",
+          "coverage_status": "complete",
+          "projected": "65000.00",
+          "recorded_spend": "30000.00",
+          "team": "engineering",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "allocation": "80000.00",
+          "coverage_status": "complete",
+          "projected": "50000.00",
+          "recorded_spend": "20000.00",
+          "team": "product",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "allocation": "60000.00",
+          "coverage_status": "complete",
+          "projected": "85000.00",
+          "recorded_spend": "45000.00",
+          "team": "research",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "as_of": "2026-10-24T12:07:00Z",
+          "company_total": "95000.00",
+          "notes": [
+            "period in progress (ends 2026-12-31); totals are to date"
+          ],
+          "period": "2026-P1",
+          "status": "complete",
+          "type": "spend_coverage",
+          "unattributed_records": 0,
+          "unattributed_spend": "0.00",
+          "unit": "USD"
+        },
+        {
+          "kind": "spend_vs_allocation",
+          "metric": "recorded_spend",
+          "row_count": 6,
+          "team": null,
+          "title": "Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)",
+          "type": "chart",
+          "value_kinds": [
+            "planned",
+            "simulated"
+          ]
+        }
+      ],
+      "proposal_ids": [],
+      "session_id": null,
+      "signal_ids": [],
+      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).",
+      "usage": null,
+      "warnings": []
+    },
+    "params": {
+      "chart": {
+        "kind": "spend_vs_allocation"
+      }
+    },
+    "proposals": [],
+    "runner_kind": "fake",
+    "signal_ids": [],
+    "simulated": true,
+    "started_at": "2026-10-24T12:07:00Z",
+    "status": "succeeded",
+    "steps": [
+      {
+        "args": {},
+        "at": "2026-10-24T12:07:00Z",
+        "result_summary": "envelope 200000.00 USD, version 1",
+        "seq": 1,
+        "tool": "get_budgets"
+      },
+      {
+        "args": {},
+        "at": "2026-10-24T12:07:00Z",
+        "result_summary": "company total 95000.00 USD, coverage complete",
+        "seq": 2,
+        "tool": "get_spend_summary"
+      },
+      {
+        "args": {},
+        "at": "2026-10-24T12:07:00Z",
+        "result_summary": "available (placeholder), snapshot fcs_000004",
+        "seq": 3,
+        "tool": "get_forecast"
+      },
+      {
+        "args": {
+          "kind": "spend_vs_allocation",
+          "metric": null,
+          "team": null
+        },
+        "at": "2026-10-24T12:07:00Z",
+        "result_summary": "spend_vs_allocation chart (recorded_spend), 6 row(s), value kinds planned, simulated",
+        "seq": 4,
+        "tool": "build_chart_spec"
+      }
+    ],
+    "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).",
+    "task_type": "answer_question"
+  },
+  "scenario": "agent",
+  "schema": "AgentRunOut",
+  "status": 201
+}

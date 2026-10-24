@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from app.schemas.charts import ChartRequest
 from app.schemas.common import InModel, MoneyStr, OutModel
 
 TaskType = Literal["interpret_corpus", "propose_allocation", "answer_question"]
@@ -21,6 +22,12 @@ class ProposeParams(InModel):
     # Droid explains what changed since its base version and offers a rebased draft. Not combinable
     # with mode/amount/prioritize.
     stale_proposal_id: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class AnswerParams(InModel):
+    # Optional: also build this chart with the read-only `build_chart_spec` tool; the spec is attached to
+    # the run output as `output.charts[]` (only charts the toolbox actually built).
+    chart: ChartRequest | None = None
 
 
 class AgentRunCreate(InModel):

@@ -371,3 +371,21 @@ def test_sdk_mode_without_cli_is_503_never_fake(fake_sdk, tmp_path, clock, id_fa
         assert r.json()["error"]["details"]["reason"] == "droid_cli_missing"
         assert client.get("/api/signals").json()["items"] == []
     app.state.engine.dispose()
+
+
+def test_sdk_answer_with_chart_attaches_only_the_chart_the_toolbox_built(fake_sdk, sdk_client):
+    fake_sdk.SCENARIO = [
+        Step(LOAD),
+        Step("text(await tools.northstar.build_chart_spec({kind: 'spend_vs_allocation'}));",
+             lambda call: call("build_chart_spec", kind="spend_vs_allocation")),
+    ]
+    r = sdk_client.post("/api/agent/runs", headers=ANALYST,
+                        json={"task_type": "answer_question", "params": {"chart": {"kind": "spend_vs_allocation"}}})
+    assert r.status_code == 201, r.text
+    out = r.json()
+    assert out["status"] == "succeeded", out["error"]
+    assert [s["tool"] for s in out["steps"]] == ["build_chart_spec"]
+    (spec,) = out["output"]["charts"]
+    assert spec["kind"] == "spend_vs_allocation" and spec["spec"]["$schema"].endswith("vega-lite/v5.json")
+    assert "build_chart_spec" in fake_droid_sdk.STATE["prompt"]
+    assert allocations(sdk_client) == INITIAL

@@ -30,6 +30,7 @@ from app.core.clock import FrozenClock, SequentialIdFactory
 from app.main import create_app
 from app.schemas.agent import AgentRunList, AgentRunOut
 from app.schemas.budget import BudgetHistory, BudgetState
+from app.schemas.charts import ChartKindList, ChartSpecOut
 from app.schemas.common import ErrorBody
 from app.schemas.decisions import DecisionEventOut, DecisionOut
 from app.schemas.documents import DocumentDetail, DocumentIngestResult, DocumentList, DocumentVersions
@@ -74,6 +75,7 @@ SCHEMAS: dict[str, Any] = {
     "ProposalOut[]": list[ProposalOut], "DecisionOut": DecisionOut, "DecisionOut[]": list[DecisionOut],
     "DecisionEventOut[]": list[DecisionEventOut], "ErrorBody": ErrorBody,
     "AgentRunOut": AgentRunOut, "AgentRunList": AgentRunList, "NoContent": None,
+    "ChartSpecOut": ChartSpecOut, "ChartKindList": ChartKindList,
 }
 
 
@@ -389,6 +391,11 @@ def scenario_agent(r: Recorder) -> None:
            description="recent runs, newest first, each with its step log and events")
     r.call("agent_run_detail", "GET", f"/api/agent/runs/{answer['id']}", schema="AgentRunOut", expect=200,
            description="one run by id with its step log, events and findings")
+    r.call("agent_run_answer_with_chart", "POST", "/api/agent/runs", headers=ANALYST,
+           json_body={"task_type": "answer_question", "params": {"chart": {"kind": "spend_vs_allocation"}}},
+           schema="AgentRunOut", expect=201,
+           description="answer_question with params.chart: the read-only build_chart_spec tool runs and the "
+                       "Vega-Lite spec is attached as output.charts[0]")
 
 
 def scenario_agent_sdk_unavailable(r: Recorder) -> None:
@@ -426,6 +433,9 @@ def scenario_forecast_unavailable(r: Recorder) -> None:
            description="spend and budget still present; projected fields null")
     r.call("spend_summary_forecast_unavailable", "GET", "/api/spend/summary", schema="SpendSummary",
            expect=200, description="spend summary is unaffected by the forecast provider")
+    r.call("chart_projection_unavailable", "GET", "/api/charts/projection_vs_allocation", schema="ChartSpecOut",
+           expect=200, description="forecast unavailable: allocation rows only, no projection rows (never zero), "
+                                   "title and notes say projections are unavailable")
 
 
 def scenario_imports(r: Recorder) -> None:
@@ -478,6 +488,9 @@ def scenario_incomplete(r: Recorder) -> None:
            description="unattributed bucket + counter reset -> coverage partial; company total includes unattributed")
     r.call("coverage_incomplete", "GET", "/api/coverage", schema="CoverageReport", expect=200,
            description="partial coverage with notes")
+    r.call("chart_spend_vs_allocation_incomplete", "GET", "/api/charts/spend_vs_allocation", schema="ChartSpecOut",
+           expect=200, description="partial coverage: unattributed spend is its own column (no allocation); "
+                                   "plotted dollars are simulated; real sample token rows noted, not plotted")
 
 
 def scenario_revision(r: Recorder) -> None:
@@ -518,6 +531,35 @@ def scenario_forecast_partial(r: Recorder) -> None:
            description="partial forecast: marketing projected null; projected_total null (not a partial sum)")
 
 
+def scenario_charts(r: Recorder) -> None:
+    """Vega-Lite v5 chart specs built from backend data; budget history after outcome A is applied."""
+    r.call("chart_kinds", "GET", "/api/charts", schema="ChartKindList", expect=200,
+           description="chart kinds with their metrics and defaults")
+    r.call("chart_spend_vs_allocation", "GET", "/api/charts/spend_vs_allocation", schema="ChartSpecOut",
+           expect=200, description="grouped bars: allocation (planned) vs recorded spend (simulated) per team")
+    r.call("chart_spend_vs_allocation_remaining", "GET", "/api/charts/spend_vs_allocation",
+           params={"team": "research", "metric": "remaining"}, schema="ChartSpecOut", expect=200,
+           description="one team, metric remaining: allocation minus recorded spend (15k for research)")
+    r.call("chart_projection_vs_allocation", "GET", "/api/charts/projection_vs_allocation", schema="ChartSpecOut",
+           expect=200, description="grouped bars: allocation vs placeholder projection (simulated, not a model); "
+                                   "no forecast snapshot is persisted")
+    r.call("chart_spend_by_cost_category", "GET", "/api/charts/spend_by_cost_category", schema="ChartSpecOut",
+           expect=200, description="stacked bars by cost category; included usage is not plotted (notional in notes)")
+    p = r.call(None, "POST", "/api/proposals", headers=DROID, schema="ProposalOut", expect=201, description="",
+               json_body=_transfer("Shift product headroom to research evaluation and engineering continuation."))
+    r.call(None, "POST", f"/api/proposals/{p['id']}/decision",
+           headers={**APPROVER, "Idempotency-Key": "chart-approve-transfer-1"},
+           json_body={"outcome": "approve", "rationale": "Matches the approved research plan and the launch update."},
+           schema="DecisionOut", expect=201, description="")
+    r.call("chart_budget_history", "GET", "/api/charts/budget_history", schema="ChartSpecOut", expect=200,
+           description="lines per team across versions 1 -> 2, each point linked to the decision that saved it")
+    r.call("error_unknown_chart_kind", "GET", "/api/charts/burn_rate", schema="ErrorBody", expect=404,
+           description="unknown chart kind: 404 unknown_chart_kind with the supported kinds")
+    r.call("error_chart_invalid_request", "GET", "/api/charts/budget_history",
+           params={"metric": "spend"}, schema="ErrorBody", expect=422,
+           description="metric not supported by the kind: 422 validation_failed, reason unknown_metric")
+
+
 SCENARIOS: list[tuple[str, Scenario, dict]] = [
     ("main", scenario_main, {}),
     ("addition", scenario_addition, {}),
@@ -528,6 +570,7 @@ SCENARIOS: list[tuple[str, Scenario, dict]] = [
     ("imports", scenario_imports, {"seed_kwargs": {"include_spend": False}}),
     ("incomplete", scenario_incomplete, {}),
     ("agent", scenario_agent, {}),
+    ("charts", scenario_charts, {}),
     ("agent_sdk_unavailable", scenario_agent_sdk_unavailable, {"droid_runner": "sdk"}),
 ]
 

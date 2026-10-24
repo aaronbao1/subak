@@ -25,7 +25,7 @@ from app.core.actors import Actor
 from app.core.errors import DomainError
 from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, Proposal, Team
 from app.db.session import transaction
-from app.schemas.agent import AgentRunCreate, ProposeParams
+from app.schemas.agent import AgentRunCreate, AnswerParams, ProposeParams
 
 MAX_BACKGROUND_RUNS = 2
 _background = threading.BoundedSemaphore(MAX_BACKGROUND_RUNS)
@@ -63,6 +63,14 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
         params = {"mode": p.mode, "prioritize": p.prioritize}
         if amount is not None:
             params["amount"] = str(amount)
+    elif body.task_type == "answer_question" and body.params:
+        try:
+            a = AnswerParams.model_validate(body.params)
+        except ValidationError as exc:
+            raise _validation([{"code": "invalid_params", "message": e["msg"], "field": ".".join(map(str, e["loc"]))}
+                               for e in exc.errors()]) from exc
+        if a.chart is not None:
+            params = {"chart": a.chart.model_dump(exclude_none=True)}
     elif body.params:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
@@ -166,6 +174,8 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output = out.model_dump(mode="json")
     output["proposal_ids"] = list(toolbox.proposal_ids)
     output["signal_ids"] = list(toolbox.signal_ids)
+    if toolbox.charts:  # charts the toolbox actually built (a runner cannot claim one it did not build)
+        output["charts"] = list(toolbox.charts)
     output["applied_changes"] = False
     _finish(factory, clock, run_id, "succeeded", output, None)
     finished = {"status": "succeeded", "summary": out.summary, "applied_changes": False,

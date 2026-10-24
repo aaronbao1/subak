@@ -31,12 +31,14 @@ from app.core.errors import DomainError
 from app.db.models import AgentRunEvent, AgentRunStep, ContextSignal, Decision, Proposal
 from app.db.session import transaction
 from app.schemas.budget import BudgetState
+from app.schemas.charts import ChartSpecOut
 from app.schemas.documents import DocumentDetail, DocumentSearchItem
 from app.schemas.forecasts import ForecastSnapshotOut
 from app.schemas.proposals import ProposalCreate, ProposalOut, RebaseIn
 from app.schemas.signals import ContextSignalIn, ContextSignalOut
 from app.schemas.spending import SpendSummary
 from app.services import budget as budget_svc
+from app.services import charts as chart_svc
 from app.services import corpus as corpus_svc
 from app.services import coverage as coverage_svc
 from app.services import forecasts as forecast_svc
@@ -83,6 +85,7 @@ class BackendToolbox:
         self._step_seq = 0
         self.signal_ids: list[str] = []
         self.proposal_ids: list[str] = []
+        self.charts: list[dict] = []  # every chart spec actually built, attached to the run output
         self._writes = {"record_signal": 0, "draft_proposal": 0}  # draft_proposal also counts rebases
 
     # ---- activity stream ---------------------------------------------------------------------
@@ -210,6 +213,21 @@ class BackendToolbox:
             return {"count": len(items), "items": items}
 
         return self._invoke("list_signals", {"status": status, "team": team}, fn, lambda r: f"{r['count']} signal(s)")
+
+    def build_chart_spec(self, kind: str, team: str | None = None, metric: str | None = None) -> dict:
+        """Read-only: a Vega-Lite v5 spec from backend data (no forecast snapshot is persisted)."""
+        args = {"kind": kind, "team": team, "metric": metric}
+
+        def fn(s: Session) -> dict:
+            out = chart_svc.build_chart(s, kind, team=team, metric=metric, provider=self._provider,
+                                        clock=self._clock)
+            return ChartSpecOut.model_validate(out).model_dump(mode="json")
+
+        result = self._invoke("build_chart_spec", args, fn,
+                              lambda r: f"{r['kind']} chart ({r['metric']}), {r['row_count']} row(s), "
+                                        f"value kinds {', '.join(r['value_kinds'])}")
+        self.charts.append(result)
+        return result
 
     # ---- draft-level writes ------------------------------------------------------------------
 

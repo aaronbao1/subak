@@ -68,6 +68,9 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
     def list_signals(status: str | None = None, team: str | None = None) -> str:
         return _respond(lambda: toolbox.call("list_signals", {"status": status, "team": team}))
 
+    def build_chart_spec(kind: str, team: str | None = None, metric: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("build_chart_spec", {"kind": kind, "team": team, "metric": metric}))
+
     def record_signal(summary: str, change_type: str, status: str, uncertainty: str,
                       citations: list[dict[str, Any]], team: str | None = None, project: str | None = None,
                       applies_from: str | None = None, applies_to: str | None = None,
@@ -90,7 +93,7 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
         return _respond(lambda: toolbox.call("rebase_proposal", {"proposal_id": proposal_id, "rationale": rationale}))
 
     fns = {f.__name__: f for f in (search_corpus, read_document, get_spend_summary, get_budgets, get_forecast,
-                                   list_signals, record_signal, draft_proposal, rebase_proposal)}
+                                   list_signals, build_chart_spec, record_signal, draft_proposal, rebase_proposal)}
     return [(t.name, t.description, fns[t.name]) for t in TOOLS]
 
 
