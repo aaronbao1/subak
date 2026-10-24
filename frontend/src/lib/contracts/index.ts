@@ -1,0 +1,166 @@
+/**
+ * SHARED CONTRACTS — the six handoffs from the master plan, as TypeScript.
+ * These are the frontend's view of what backend / forecasting / agent produce.
+ * Do NOT change shapes here without the integration owner. Add optional fields if you must.
+ */
+
+export type Unit = "credits" | "usd" | "tokens";
+
+/** Fixed seat fees, usage bundled with seats, billable overage on coding tools, and direct API charges. */
+export type CostComponent = "subscription" | "included_usage" | "extra_usage" | "api";
+
+/** Where a number came from. Never present an estimate as a bill. */
+export type Provenance = "reported_charge" | "estimate" | "usage_only";
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  lead?: string;
+  /** CSS color token or hex used consistently across charts. */
+  color: string;
+}
+
+export interface Period {
+  /** ISO date, inclusive */
+  start: string;
+  /** ISO date, inclusive */
+  end: string;
+  label?: string;
+}
+
+/** Handoff 1: Spending history (backend → everyone). One row per team/day/component/provider. */
+export interface SpendingRecord {
+  id: string;
+  teamId: string;
+  /** ISO date (YYYY-MM-DD) */
+  date: string;
+  component: CostComponent;
+  provider: string; // e.g. "anthropic", "openai", "cursor"
+  amount: number;
+  unit: Unit;
+  provenance: Provenance;
+  /** Human-readable source, e.g. "Anthropic cost report export 2026-10-20" */
+  source: string;
+  /** false when the source is known to be partial for this day */
+  complete: boolean;
+}
+
+/** Current internal allocation for a team in a period. Planning number, not a provider limit. */
+export interface Budget {
+  teamId: string;
+  period: Period;
+  allocated: number;
+  unit: Unit;
+}
+
+/** Handoff 4: Forecast (forecasting → agent, frontend). Period comes from forecasting, never hard-coded. */
+export interface Forecast {
+  teamId: string;
+  period: Period;
+  status: "available" | "unavailable";
+  projected?: number;
+  low?: number;
+  high?: number;
+  unit: Unit;
+  assumptions: string[];
+  limitations: string[];
+  generatedAt: string; // ISO datetime
+  unavailableReason?: string;
+}
+
+export interface SourceRef {
+  documentId: string;
+  title: string;
+  /** Short quoted passage supporting the claim */
+  excerpt?: string;
+  /** Page, section, message timestamp, etc. */
+  locator?: string;
+  date?: string;
+  kind?: ContextKind;
+}
+
+export type ContextKind = "plan" | "project_doc" | "research_note" | "correspondence";
+
+/** Handoff 3: Relevant context (Droid → forecasting, frontend). What is planned or changing. */
+export interface ContextItem {
+  id: string;
+  teamIds: string[];
+  title: string;
+  summary: string;
+  kind: ContextKind;
+  /** When the change starts/stops applying, if known */
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  expectedEffect: "increase" | "decrease" | "neutral" | "unknown";
+  confidence: "high" | "medium" | "low";
+  sources: SourceRef[];
+  /** What is still unresolved about this item */
+  uncertainty?: string;
+}
+
+/** Adding to the overall budget and redistributing the existing budget are DIFFERENT actions. */
+export type ProposalKind = "redistribute" | "add_budget";
+
+export interface AllocationLine {
+  teamId: string;
+  before: number;
+  after: number;
+}
+
+/** Handoff 5: Budgets and proposed changes (backend ↔ agent/frontend). */
+export interface AllocationProposal {
+  id: string;
+  kind: ProposalKind;
+  unit: Unit;
+  period: Period;
+  totalBefore: number;
+  totalAfter: number;
+  /** Only for add_budget */
+  addedAmount?: number;
+  lines: AllocationLine[];
+  rationale: string;
+  citations: SourceRef[];
+  createdAt: string;
+  status: "proposed" | "applied" | "rejected" | "revised";
+  /** If this proposal revises an earlier one */
+  revisesProposalId?: string;
+}
+
+/** Handoff 6: Saved results (backend → frontend/agent). The finance decision and what changed. */
+export interface Decision {
+  id: string;
+  proposalId: string;
+  kind: ProposalKind;
+  appliedAt: string;
+  appliedBy: string;
+  note?: string;
+  lines: AllocationLine[];
+  unit: Unit;
+}
+
+export interface ToolCallSummary {
+  name: string; // e.g. "get_spending", "run_forecast", "search_documents"
+  summary: string; // one line, human readable
+}
+
+export interface AssistantMessage {
+  id: string;
+  threadId: string;
+  role: "user" | "assistant";
+  content: string; // markdown allowed
+  createdAt: string;
+  /** Set when the assistant produced a proposal in this message */
+  proposalId?: string;
+  citations?: SourceRef[];
+  toolCalls?: ToolCallSummary[];
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  /** Explicit label so demo data is never mistaken for real data */
+  isDemo: boolean;
+  budgetUnit: Unit;
+  currentPeriod: Period;
+}
