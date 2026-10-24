@@ -51,6 +51,7 @@ Every test uses its own temporary SQLite file, a frozen clock, and sequential id
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos |
+| `BACKEND_COMPAT` | on | `0` unmounts the frontend compat layer under `/compat/api` (see below) |
 
 No credentials are stored in this repo or requested by the backend. The Factory SDK reads its own
 key from the environment only when `DROID_RUNNER=sdk`.
@@ -102,6 +103,15 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 
 Regenerate the contract after any schema or seed change:
 `.venv/bin/python -m app.contract.export` (`--check` to verify; `tests/test_contract.py` enforces it).
+
+## Frontend compat layer
+
+The Next.js app's `HttpDataClient` works against this backend with no frontend changes:
+`NEXT_PUBLIC_API_URL=http://localhost:8787/compat`. `app/compat/` serves its 15 paths under
+`/compat/api/*` in the exact TypeScript shapes (camelCase, money as numbers, errors as
+`{"error": "<plain English>"}`) by translating the services above; decisions still go through the real
+decision service. Not part of `openapi.json`. Mapping, gaps and open questions:
+[`docs/frontend-alignment.md`](docs/frontend-alignment.md).
 
 ## Droid agent runs
 

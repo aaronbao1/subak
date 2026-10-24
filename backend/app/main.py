@@ -97,6 +97,11 @@ def create_app(
         routes_admin,
     ):
         app.include_router(module.router)
+    if settings.compat:
+        from app.compat.router import router as compat_router
+
+        # Kept out of openapi.json: the main contract and its --check stay unchanged.
+        app.include_router(compat_router, include_in_schema=False)
     install_openapi(app)
 
     return app

@@ -33,6 +33,8 @@ class Settings:
     forecast_provider: str = "placeholder"
     droid_runner: str = "fake"
     allow_reset: bool = False
+    # Frontend compatibility layer under /compat/api (app/compat). On unless BACKEND_COMPAT=0.
+    compat: bool = True
 
     @property
     def database_url(self) -> str:
@@ -69,4 +71,5 @@ class Settings:
             forecast_provider=forecast_provider,
             droid_runner=droid_runner,
             allow_reset=_truthy(env.get("BACKEND_ALLOW_RESET")),
+            compat=_truthy(env.get("BACKEND_COMPAT") or "1"),
         )

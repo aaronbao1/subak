@@ -25,6 +25,7 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "BACKEND_PORT",
         "BACKEND_CORS_ORIGIN_REGEX",
         "BACKEND_ALLOW_RESET",
+        "BACKEND_COMPAT",
         "FORECAST_PROVIDER",
         "DROID_RUNNER",
         "FACTORY_API_KEY",

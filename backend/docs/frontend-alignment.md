@@ -1,6 +1,7 @@
 # Frontend alignment: Next.js app vs backend API
 
-Status: analysis and compat-layer design, 2026-10-24. Nothing here is implemented yet.
+Status: compat layer implemented, 2026-10-24 (`backend/app/compat/`, served under `/compat/api`). §5 lists
+what is served and how it differs from the design below; §6 lists what the frontend owner still has to decide.
 
 Sources compared:
 - Frontend (on `origin/main`, read via `git show`): `docs/frontend-integration.md`,
@@ -86,7 +87,7 @@ team x day x component x provider. Compat groups `usage_records` for the current
 | `provider` | `provider` or `"unknown"` | |
 | `amount` | sum of `amount` where `counts_toward_spend`; **`0` for `included_usage`** | the frontend sums every component into "spent" (`derive.ts::summarizeTeams`); emitting `notional_value` would double count (G1) |
 | `unit` | `"usd"` | |
-| `provenance` | `value_kind`: `reported`->`reported_charge`, `estimated`->`estimate`, `simulated`->`reported_charge`, `measured`->`usage_only` | a group mixing kinds takes the weakest (`estimate` over `reported_charge`); `simulated` has no frontend value (G7) |
+| `provenance` | `value_kind`: `reported`->`reported_charge`, `estimated`->`estimate`, `simulated`->`reported_charge`, `measured`->`usage_only`; **included usage rows are always `usage_only`** (no charge of their own) | a group mixing kinds takes the weakest (`estimate` > `usage_only` > `reported_charge`); `simulated` has no frontend value (G7) |
 | `source` | `import_batch.source_label`/`filename` + `"(simulated)"` when `value_kind=simulated`; included usage adds `"notional value $X not counted"` | human readable |
 | `complete` | team coverage `status == "complete"` and no `counter_reset` in the group | backend coverage is per team, not per day (G4) |
 
@@ -313,7 +314,7 @@ Thread store: a new table `assistant_messages` (`id`, `thread_id`, `role`, `cont
 `proposal_id`, `citations` JSON, `tool_calls` JSON, `created_at`), created on startup like the other
 tables and wiped by `/api/admin/reset`. `GET /compat/api/threads/{id}` returns it oldest first, or `[]`.
 
-### 4.4 Tests (planned, `backend/tests/test_compat.py`, FakeDroidRunner only)
+### 4.4 Tests (implemented: `backend/tests/test_compat.py`, `backend/tests/test_compat_contract.py`, FakeDroidRunner only)
 - Every compat route validates against `compat/schemas.py`.
 - Seed totals through compat: spent 45000/20000/30000, allocated 60000/80000/60000, projected
   85000/50000/65000.
@@ -325,3 +326,79 @@ tables and wiped by `/api/admin/reset`. `GET /compat/api/threads/{id}` returns i
 - Reject -> `rejected` with a `Decision{action:"rejected"}` and allocations unchanged.
 - The compat chat actor cannot approve through `/api/proposals/{id}/decision` (self-approval still enforced).
 - `/api/*` contract unchanged (`app.contract.export --check`).
+
+## 5. What is served (implemented)
+
+Run the backend (`python -m app.seed && python -m app.main`) and start the frontend with
+`NEXT_PUBLIC_API_URL=http://localhost:8787/compat`. All 15 paths in §1 answer under `/compat/api/*`
+with the exact TypeScript shapes. CORS already allows any `localhost` / `127.0.0.1` port.
+
+| Piece | File | Notes |
+|---|---|---|
+| Routes | `app/compat/router.py` | `CompatRoute` renders errors as `{"error": "<plain English>", "code"}`; an unknown `/compat/api/*` path is a plain 404. Mounted only when `BACKEND_COMPAT` is on (default `1`), with `include_in_schema=False`, so `contract/openapi.json` is unchanged (`export --check` passes) |
+| Mappers | `app/compat/mappers.py` | Pure functions. `num()` is the only place money becomes a JSON number |
+| Contract models | `app/compat/schemas.py` | Pydantic mirrors of all 14 interfaces and 6 string unions, `extra="forbid"`, used as `response_model` with `exclude_none`. Optional fields the backend cannot fill are omitted, never `null` |
+| Drift check | `tests/test_compat_contract.py` + `tests/vendored/frontend_contracts.ts` | Parses a verbatim copy of `frontend/src/lib/contracts/index.ts` (origin/main 9442db9) and fails on any missing or extra field, optionality change, or literal-union change. `COMPAT_UPSTREAM_CHECK=1` also checks live `origin/main`. It is opt-in so a frontend push cannot turn the backend suite red |
+| Chat | `app/compat/intent.py`, `app/compat/threads.py` | New table `assistant_messages`, created on startup and wiped by `/api/admin/reset` |
+| Errors | `app/compat/errors.py` | Per-code plain-English table. Uses the frontend mock's wording for stale ("Budgets changed since this proposal was prepared. Ask for a refreshed proposal.") and for a second apply ("This proposal was already applied.") |
+
+Changes from the design above, all made to avoid showing a number or claim the backend does not have:
+- **Included usage** rows are `amount: 0`, `provenance: "usage_only"`, and their `source` names the notional value
+  ("included in the subscription fee, notional value $3,000.00 is not counted as spend"). Before, these rows
+  were labeled `reported_charge`, which claimed a $0 bill.
+- **Unattributed** pseudo-team also has a `description` saying the spend has no team mapping yet. Its
+  rows are always `complete: false`.
+- **Forecast `limitations`** adds "simulated projection for the demo company" when the provider's
+  `value_kind` is `simulated`. `generatedAt` is the response time when the provider gives none, or the
+  snapshot's `fetched_at` inside `forecastsReviewed`.
+- **Citation `locator`** reads `chars a-b (superseded version)` when the cited document version has been replaced.
+- **Chat intents** (§4.3) also cover *refresh / rebase* plus a stale proposal. That runs
+  `propose_allocation {stale_proposal_id}`, Droid rebases the proposal, and the new proposal has
+  `revisesProposalId` set to the stale one, so the stale error's advice works from the drawer. The
+  parser asks a question, and starts no run, when an addition has no amount, or when no team is
+  named and no projection exists to choose one. Message `citations` are the proposal's evidence
+  signals, or the run's recorded signals when there is no proposal. Fake-runner replies end with a
+  "Simulated: ..." line.
+- **Errors** add two compat-only codes, `already_applied` and `already_rejected`. A settled proposal is
+  checked before `decide` is called. A replayed idempotency key also becomes 409 `already_applied`.
+- **Identity**: `dashboard-analyst` (`finance_analyst`) sends chat and `dashboard-approver`
+  (`finance_approver`) applies and rejects. Both are constants in `router.py`. `X-Actor-Id` and
+  `X-Actor-Role` together override them, and sending only one of the two is a 401. Tests show that
+  `dashboard-analyst` acting as an approver gets 403 `self_approval_forbidden` on both `/api` and
+  `/compat`, and that `finance_analyst` and `droid_agent` get `role_forbidden`.
+- **Not done:** the separate compat fixture snapshots under `contract/compat/` (§4.1). The vendored-TS
+  drift test plus `response_model` validation cover the contract instead.
+
+Verified by tests: seed numbers (spent 45k/20k/30k, allocated 60k/80k/60k, projected 85k/50k/65k);
+chat "add 50k prioritizing research" -> `add_budget` 95k/80k/75k, total 250k; apply -> `Decision`,
+budgets at version "2"; a second apply returns 409 with a string error; a stale transfer returns 409
+with the stale text and its status becomes `stale`, and "refresh" produces a new proposal on
+version 2; reject -> `rejected` plus a rejected `Decision` with budgets unchanged; read routes write
+nothing (no forecast snapshots, no runs); runner unavailable -> an assistant reply instead of a 5xx;
+`FORECAST_PROVIDER=unavailable` -> every forecast `unavailable` with a reason; `BACKEND_COMPAT=0`
+unmounts the router; CORS preflight from `localhost:3000` works.
+
+## 6. Still open for the frontend owner
+
+1. **Included usage (G1).** The dashboard's "Included usage" bar reads $0, while the frontend fixture
+   counts included usage as cost. Decide whether the UI shows notional value separately (we have it,
+   but only as text in `source` today), or whether a `notional` field gets added to `SpendingRecord`.
+2. **Token telemetry (G2).** Unpriced Codex token rows are not sent, because the UI adds `amount` without
+   checking `unit`. If the UI is changed to filter on `unit`, compat can send them with `unit: "tokens"`.
+3. **Unattributed pseudo-team (G3).** It shows up in `/teams` only when such spend exists, and it has no
+   budget and no forecast. Confirm the team grid handles a team without either.
+4. **Daily series (G4).** The seed is 8 lump records on 4 dates. Completeness is per team, so a
+   partial team marks all of its days partial.
+5. **Context fields (G5).** `title` and `confidence` are derived (rules in §2 #6), and a timing shift
+   comes through as `expectedEffect: "unknown"`, not `"decrease"`. Signals exist only after a chat
+   that interprets the documents (or any proposal request, which interprets first). There is no
+   seed option yet.
+6. **No low/high range (G6).** Forecasts have no range, so the UI's band stays empty.
+7. **Identity (G9).** One browser acts as both analyst and approver, so separation of duties in the
+   dashboard is nominal. Real per-user identity needs the UI to send `X-Actor-*` (or real auth).
+8. **Chat latency (G12).** Under `DROID_RUNNER=sdk` a reply can take up to `DROID_TIMEOUT_S` (120 s).
+   The drawer shows nothing until then. Streaming (`/api/agent/runs/{id}/events`) is available, but
+   the frontend contract has no streaming path.
+9. **`failed` / `pending` proposal statuses** are never sent. The backend validates when the proposal
+   is drafted and applies synchronously.
+10. **Port (G14).** Use `http://localhost:8787/compat`, not `:8000`.

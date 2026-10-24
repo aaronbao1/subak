@@ -514,3 +514,29 @@ class AgentRunEvent(_IdMixin, Base):
         UniqueConstraint("run_id", "seq"),
         CheckConstraint(_in("source", AGENT_EVENT_SOURCES), name="source"),
     )
+
+
+# ---- frontend compat: assistant threads (app/compat) -----------------------------------------
+
+ASSISTANT_ROLES = ("user", "assistant")
+
+
+class AssistantMessage(_IdMixin, Base):
+    """One chat message in a dashboard assistant thread. Compat-layer state only: the run it triggered
+    (`agent_run_id`) is the audit record; nothing here can change a budget."""
+
+    __tablename__ = "assistant_messages"
+
+    thread_id: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    agent_run_id: Mapped[str | None] = mapped_column(ForeignKey("agent_runs.id"))
+    proposal_id: Mapped[str | None] = mapped_column(String(64))
+    citations: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    tool_calls: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("thread_id", "seq"),
+        CheckConstraint(_in("role", ASSISTANT_ROLES), name="role"),
+    )
