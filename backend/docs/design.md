@@ -505,3 +505,31 @@ that is not already superseded (`supersedes_newer_document`, `already_superseded
 Search: all terms must match (title, content, tags, doc_key), "quoted phrases" supported, results carry
 `is_current` and exact `char_start/char_end` offsets into stored content for citations.
 `parse_markdown_document` reads `---` front matter (`supersedes: key@version`) for the seed corpus.
+
+## 12. Budgets, proposals and decisions (as built)
+
+Code: `services/budget.py`, `services/proposals.py`, `services/decisions.py`, routes `routes_budget.py`,
+`routes_proposals.py`, `routes_decisions.py`. Differences from and additions to §3.6-§3.8 / §5:
+- `services/budget.py::create_envelope` creates the v1 state + snapshot (for the seed module); there is no
+  HTTP endpoint for it. `BudgetState` also carries `allocated_total` and per-team `remaining`
+  (allocation minus recorded spend; included/unpriced usage never counts).
+- Drafting with `base_version` older than the current version is refused up front with 409
+  `stale_base_version` (details: current version and figures), so a draft always starts from a state
+  that can be applied. `base_version` newer than current is the 422 reason `base_version_in_future`.
+- Extra 422 reason codes: `invalid_amount` (NaN/empty/non-numeric), `duplicate_line`,
+  `addition_line_has_source`, `rationale_required`, `unknown_evidence` (cited document/signal/forecast
+  snapshot must exist; a document `version` must match), `unknown_agent_run`. Non-blocking warnings:
+  `allocation_below_recorded_spend`, `cites_superseded_document`, `cites_non_current_signal`,
+  `forecast_unavailable`, `no_evidence_cited`, `team_both_debited_and_credited`.
+- Decision check order: role (recorded as `role_blocked`) runs before the idempotency lookup, so a
+  non-approver can never obtain a decision through the decision route. The request fingerprint also
+  includes the deciding actor id.
+- Separation of duties covers lineage: nobody who drafted the proposal or any proposal it was revised or
+  rebased from may approve it. The rebasing/revising actor is the requester of the new draft.
+- Rebase accepts a `stale` proposal or a `pending_review` one whose base is outdated (the original is then
+  marked `stale`). If the intent no longer fits the current state, rebase returns the usual 422 reasons
+  and creates nothing. Revise (finance only) accepts `pending_review` or `stale`; original -> `revised`.
+- `GET /api/decision-events?proposal_id=` lists blocked attempts; `ProposalOut.blocked_attempts`,
+  `replaced_by_proposal_id` and `decision_id` make each proposal's history readable on its own.
+- A replayed decision returns 200 with `replayed: true`; `budget_state` in any decision response is the
+  current saved state when the response was produced (`after` holds the post-decision values).
