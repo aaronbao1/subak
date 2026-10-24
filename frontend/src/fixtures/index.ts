@@ -15,14 +15,12 @@
  * Fixtures owner may enrich (more days, more docs, more scripted replies) but these totals are fixed.
  */
 import type {
-  AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast, Period,
+  AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast,
   SpendingRecord, Team,
 } from "@/lib/contracts";
+import { dailySeries, period, asOf, type Dataset, type ScriptedReplyFn } from "./generate";
 
-// The plan leaves the forecasting horizon open. Dates here are placeholders so charts have an axis;
-// the label deliberately does not name a quarter. Forecasting supplies the real period.
-export const period: Period = { start: "2026-10-01", end: "2026-12-31", label: "Current planning period" };
-export const asOf = "2026-10-22"; // last day with recorded spending
+export { period, asOf, generateCompany, MAX_TEAMS, type Dataset } from "./generate";
 const BUDGET_VERSION = "v1";
 
 export const company: Company = {
@@ -45,50 +43,13 @@ export const budgets: Budget[] = [
   { teamId: "engineering", period, allocated: 60_000, unit: "usd", version: BUDGET_VERSION },
 ];
 
-/** Generate daily records Oct 1–22 whose sum equals `target` exactly. Component mix and provider vary by team. */
-function dailySeries(
-  teamId: string,
-  target: number,
-  mix: Record<SpendingRecord["component"], number>,
-  provider: string,
-  ramp: (day: number) => number = () => 1,
-): SpendingRecord[] {
-  const days = 22;
-  const weekends = new Set([3, 4, 10, 11, 17, 18]);
-  const raw: Omit<SpendingRecord, "amount">[] = [];
-  const weights: number[] = [];
-  for (let d = 1; d <= days; d++) {
-    const date = `2026-10-${String(d).padStart(2, "0")}`;
-    for (const [component, w] of Object.entries(mix) as [SpendingRecord["component"], number][]) {
-      const fixed = component === "subscription";
-      const activity = fixed ? 1 : (weekends.has(d) ? 0.3 : 1) * ramp(d) * (0.9 + ((d * 7 + teamId.length) % 10) / 45);
-      weights.push(w * activity);
-      raw.push({
-        id: `${teamId}-${date}-${component}`,
-        teamId, date, component, provider,
-        unit: "usd",
-        provenance: component === "api" ? "reported_charge" : component === "included_usage" ? "usage_only" : component === "subscription" ? "reported_charge" : "estimate",
-        source: component === "api"
-          ? `${provider === "anthropic" ? "Anthropic" : "OpenAI"} cost report export ${asOf}`
-          : `Cursor Admin API export ${asOf}`,
-        complete: d <= 21, // Oct 22 is partial
-      });
-    }
-  }
-  const total = weights.reduce((a, b) => a + b, 0);
-  const out = raw.map((r, i) => ({ ...r, amount: Math.round((weights[i] / total) * target) }));
-  const residual = target - out.reduce((s, r) => s + r.amount, 0);
-  out[out.length - 1].amount += residual; // keep exact total
-  return out;
-}
-
 export const spending: SpendingRecord[] = [
   // Research ramps up after Oct 14 (eval expansion). API-heavy.
-  ...dailySeries("research", 45_000, { subscription: 1, included_usage: 1.2, extra_usage: 1.5, api: 5 }, "anthropic", (d) => (d >= 14 ? 1.6 : 1)),
+  ...dailySeries("research", 45_000, { subscription: 1, included_usage: 1.2, extra_usage: 1.5, api: 5 }, "anthropic", (d) => (d >= 14 ? 1.6 : 1), 11),
   // Product cools after Oct 15 (launch moved). Seat-heavy.
-  ...dailySeries("product", 20_000, { subscription: 2.5, included_usage: 2, extra_usage: 0.4, api: 1.2 }, "anthropic", (d) => (d >= 15 ? 0.6 : 1)),
+  ...dailySeries("product", 20_000, { subscription: 2.5, included_usage: 2, extra_usage: 0.4, api: 1.2 }, "anthropic", (d) => (d >= 15 ? 0.6 : 1), 12),
   // Engineering steady.
-  ...dailySeries("engineering", 30_000, { subscription: 1.5, included_usage: 1.2, extra_usage: 0.8, api: 2.2 }, "openai"),
+  ...dailySeries("engineering", 30_000, { subscription: 1.5, included_usage: 1.2, extra_usage: 0.8, api: 2.2 }, "openai", () => 1, 13),
 ];
 
 export const forecasts: Forecast[] = [
@@ -221,10 +182,7 @@ const allSources = () => context.filter((c) => !c.supersededBy).flatMap((c) => c
  * Scripted assistant replies for the mock, pattern-matched on the finance message.
  * Fixtures owner: add cases (e.g. "why is research over?", "compare research and product").
  */
-export function scriptedReply(
-  content: string,
-  state: { proposals: AllocationProposal[]; budgets: Budget[]; budgetVersion: string },
-): { message: Omit<AssistantMessage, "id" | "threadId" | "role" | "createdAt">; proposal?: AllocationProposal } {
+export const scriptedReply: ScriptedReplyFn = (content, state) => {
   const text = content.toLowerCase();
   const b = (id: string) => state.budgets.find((x) => x.teamId === id)!.allocated;
   const total = state.budgets.reduce((s, x) => s + x.allocated, 0);
@@ -317,4 +275,9 @@ export function scriptedReply(
       content: "I can help with two kinds of changes: **redistribute** the existing $200,000 envelope between teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under. What would you like?",
     },
   };
-}
+};
+
+/** The plan's canonical 3-team example as a Dataset (default when no ?teams= override). */
+export const northstar: Dataset = {
+  company, teams, budgets, spending, forecasts, context, documents, proposals, decisions, threads, scriptedReply,
+};

@@ -1,24 +1,46 @@
 import type { DataClient, SpendingFilter } from "./client";
 import type { AllocationProposal, AssistantMessage, Budget, Decision } from "@/lib/contracts";
-import * as fx from "@/fixtures";
+import { northstar, generateCompany, MAX_TEAMS, type Dataset } from "@/fixtures";
 
 const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 const newId = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
+const TEAMS_KEY = "aisp.teams";
+
+/**
+ * Pick the dataset. `?teams=N` (0..16) selects a generated company and is remembered in localStorage
+ * so navigation and reloads keep it. `?teams=default` (or `northstar`) returns to the plan's example.
+ */
+function selectDataset(): Dataset {
+  if (typeof window === "undefined") return northstar;
+  try {
+    const q = new URLSearchParams(window.location.search).get("teams");
+    if (q === "default" || q === "northstar") { window.localStorage.removeItem(TEAMS_KEY); return northstar; }
+    const raw = q ?? window.localStorage.getItem(TEAMS_KEY);
+    if (raw == null || raw === "") return northstar;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > MAX_TEAMS) return northstar;
+    window.localStorage.setItem(TEAMS_KEY, String(n));
+    return generateCompany(n);
+  } catch {
+    return northstar;
+  }
+}
 
 /** In-memory mock. State resets on reload. Fixture owner may extend scripted replies in src/fixtures. */
 export class MockDataClient implements DataClient {
-  private budgets: Budget[] = structuredClone(fx.budgets);
-  private proposals: AllocationProposal[] = structuredClone(fx.proposals);
-  private decisions: Decision[] = structuredClone(fx.decisions);
+  private fx: Dataset = selectDataset();
+  private budgets: Budget[] = structuredClone(this.fx.budgets);
+  private proposals: AllocationProposal[] = structuredClone(this.fx.proposals);
+  private decisions: Decision[] = structuredClone(this.fx.decisions);
   private threads = new Map<string, AssistantMessage[]>(
-    Object.entries(fx.threads).map(([k, v]) => [k, structuredClone(v)]),
+    Object.entries(this.fx.threads).map(([k, v]) => [k, structuredClone(v)]),
   );
 
-  async getCompany() { await wait(); return fx.company; }
-  async getTeams() { await wait(); return fx.teams; }
+  async getCompany() { await wait(); return this.fx.company; }
+  async getTeams() { await wait(); return this.fx.teams; }
   async getSpending(filter?: SpendingFilter) {
     await wait();
-    return fx.spending.filter(
+    return this.fx.spending.filter(
       (r) =>
         (!filter?.teamId || r.teamId === filter.teamId) &&
         (!filter?.from || r.date >= filter.from) &&
@@ -26,13 +48,13 @@ export class MockDataClient implements DataClient {
     );
   }
   async getBudgets() { await wait(); return this.budgets; }
-  async getForecasts() { await wait(); return fx.forecasts; }
+  async getForecasts() { await wait(); return this.fx.forecasts; }
   async getContext(teamId?: string) {
     await wait();
-    return teamId ? fx.context.filter((c) => c.teamIds.includes(teamId)) : fx.context;
+    return teamId ? this.fx.context.filter((c) => c.teamIds.includes(teamId)) : this.fx.context;
   }
-  async getDocuments() { await wait(); return fx.documents; }
-  async getDocument(id: string) { await wait(); return fx.documents.find((d) => d.id === id); }
+  async getDocuments() { await wait(); return this.fx.documents; }
+  async getDocument(id: string) { await wait(); return this.fx.documents.find((d) => d.id === id); }
   async getProposals() { await wait(); return this.proposals; }
   async getProposal(id: string) { await wait(); return this.proposals.find((p) => p.id === id); }
   async getDecisions() { await wait(); return this.decisions; }
@@ -43,7 +65,7 @@ export class MockDataClient implements DataClient {
     const thread = this.threads.get(threadId) ?? [];
     const now = new Date().toISOString();
     const user: AssistantMessage = { id: newId("msg"), threadId, role: "user", content, createdAt: now };
-    const scripted = fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets, budgetVersion: this.budgetVersion });
+    const scripted = this.fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets, budgetVersion: this.budgetVersion });
     if (scripted.proposal) this.proposals.unshift(scripted.proposal);
     const assistant: AssistantMessage = {
       id: newId("msg"),
@@ -57,7 +79,7 @@ export class MockDataClient implements DataClient {
     return [user, assistant];
   }
 
-  private budgetVersion = fx.budgets[0]?.version ?? "v1";
+  private budgetVersion = this.fx.budgets[0]?.version ?? "v1";
 
   async applyProposal(proposalId: string, note?: string) {
     await wait(300);
