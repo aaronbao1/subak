@@ -1,9 +1,9 @@
 """The DroidRunner interface (design.md §6): what a runner gets, what it returns, how it fails.
 
 A runner never touches the database or HTTP directly. It receives an `AgentToolbox`, which is the ONLY
-set of capabilities it has: read tools plus two draft-level writes (record a cited signal, draft a
-proposal in `pending_review`). There is no decide/apply/approve capability anywhere in this interface;
-approval is a finance-only HTTP endpoint the runner cannot reach (bounded authority).
+set of capabilities it has: read tools plus draft-level writes (record a cited signal, draft a proposal
+in `pending_review`, rebase a stale proposal into a new `pending_review` draft). There is no decide/apply/approve
+capability anywhere in this interface; approval is a finance-only HTTP endpoint the runner cannot reach (bounded authority).
 
 Two implementations:
 - `app.agent.fake_runner.FakeDroidRunner` - deterministic scripted investigation (default, tests).
@@ -103,6 +103,7 @@ class AgentToolbox(Protocol):
     # draft-level writes (never change allocations)
     def record_signal(self, signal: dict) -> dict: ...
     def draft_proposal(self, proposal: dict) -> dict: ...
+    def rebase_proposal(self, proposal_id: str, rationale: str | None = None) -> dict: ...  # new draft only
 
     # activity stream
     def emit(self, type: str, data: dict | None = None) -> None: ...

@@ -12,7 +12,7 @@ the night's cap of 15 runs.
 | Server | `DROID_RUNNER=sdk DROID_TIMEOUT_S=600 BACKEND_PORT=8791 python -m app.main`, started through `zsh -ic` so `FACTORY_API_KEY` comes from `~/.zshrc` |
 | Data | fresh SQLite DB seeded with `python -m app.seed` (Northstar seed: budget v1, 6 documents, simulated spend) |
 | Calls | `POST /api/agent/runs` as `finance_analyst`, `wait: true` |
-| Scope (checked at startup on every run) | `restrict_tools` = the eight `northstar___*` ids. `list_tools()` reported exactly those plus `Script`, `ToolSearch`, `WaitForScript` as allowed. Autonomy LOW, built-in skills disabled, empty temp cwd. The raw-request permission gate was installed as the session's interaction dispatcher |
+| Scope (checked at startup on every run) | `restrict_tools` = the eight `northstar___*` ids (nine from run 4, with `rebase_proposal`). `list_tools()` reported exactly those plus `Script`, `ToolSearch`, `WaitForScript` as allowed. Autonomy LOW, built-in skills disabled, empty temp cwd. The raw-request permission gate was installed as the session's interaction dispatcher |
 
 ## Runs
 
@@ -21,6 +21,7 @@ the night's cap of 15 runs.
 | 1 | `run_16200471-…` | `interpret_corpus` | succeeded | 33 | 33 / 0 | 94.4 s | 49921.0 |
 | 2 | `run_a3801169-…` | `propose_allocation` addition 50000.00, prioritize research | succeeded, but no draft (see below) | 5 | 3 / 0 | 37.2 s | 22083.0 |
 | 3 | `run_866ee1ba-…` | same as #2, after the prompt fix | succeeded, 1 pending draft | 5 | 3 / 0 | 23.6 s | 20175.0 |
+| 4 | `run_498d1800-…` | `propose_allocation` with `stale_proposal_id` (stale-proposal recovery) | succeeded, 1 rebased pending draft | 1 | 1 / 0 | 22.5 s | 13661.0 |
 
 The credit unit is not documented. Usage comes from the SDK's `RunSuccess.usage` and is stored on
 the run as `output.usage.provider_reported`.
@@ -69,6 +70,27 @@ the run as `output.usage.provider_reported`.
   product and engineering at 60000.00 / 80000.00 / 60000.00, before and after.
 - The summary says "pending finance review" and "Nothing has been applied or approved."
 
+### Run 4: stale-proposal recovery
+
+- Setup over HTTP, with no Droid involved: finance drafted outcome A (a transfer: product → research
+  25k, product → engineering 5k) and outcome B (an addition: +50k, research 35k / engineering 15k),
+  both on v1. `fin-alice` applied A, and the budget moved to v2. Approving B then returned 409
+  `stale_proposal`.
+- The run used the nine-tool allowlist, now including `northstar___rebase_proposal`. The startup
+  scope check passed. The gate allowed one Script and cancelled none.
+- Droid made one `rebase_proposal` call. It created `prop_0624ade6-…`: `pending_review`, an addition,
+  `base_version` 2, `rebased_from_proposal_id` = B, requester `droid:<run>`. Its rationale is Droid's
+  note followed by the original rationale.
+- The summary, taken from `stale_context`:
+  - v1 → v2, with a per-team table: base, current, and the result if the draft is approved;
+  - the transfer that moved the budget, who applied it, and that the envelope stayed unchanged;
+  - the new draft is an addition of new money;
+  - the backend's `no_evidence_cited` warning;
+  - that research and engineering would get the new money on top of the transfer already applied.
+  It said "pending_review", that a fresh finance review is needed and that nothing was applied. It
+  ended with limitations: no business need established, and no documents or forecast checked.
+- The budget stayed at v2 (85k / 50k / 65k, 200k). B stayed `stale`.
+
 ## What the live runs showed that the fake could not
 
 1. **The gate works on the real wire format.** The `Script` permission request has
@@ -84,7 +106,7 @@ the run as `output.usage.provider_reported`.
 
 ## Bounded authority, as exercised
 
-- The Droid process saw only the eight read and draft tools. The startup check refuses to run if
+- The Droid process saw only the read and draft tools (eight, then nine with `rebase_proposal`, which only creates a new pending draft). The startup check refuses to run if
   `list_tools()` shows anything else allowed besides the three code-mode meta tools.
 - No apply, approve, decide or reject tool exists. A script that names one is refused by the gate,
   and the toolbox has no such method.

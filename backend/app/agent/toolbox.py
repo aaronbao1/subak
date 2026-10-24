@@ -7,6 +7,8 @@
 - Each tool runs in its own transaction: a refused call rolls back completely and comes back to the
   runner as a `ToolError` with the backend's error code.
 - Per-run budgets cap tool calls and draft writes so a misbehaving model cannot flood the workspace.
+- `rebase_proposal` only creates a NEW `pending_review` draft from a stale one (the HTTP rebase route,
+  which `droid_agent` may already call); it shares the draft budget with `draft_proposal`.
 - There is no method that decides, applies, approves or rejects a proposal.
 """
 
@@ -26,12 +28,12 @@ from app.api.routes_documents import summary_dict
 from app.core.actors import Actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import AgentRunEvent, AgentRunStep, ContextSignal, Proposal
+from app.db.models import AgentRunEvent, AgentRunStep, ContextSignal, Decision, Proposal
 from app.db.session import transaction
 from app.schemas.budget import BudgetState
 from app.schemas.documents import DocumentDetail, DocumentSearchItem
 from app.schemas.forecasts import ForecastSnapshotOut
-from app.schemas.proposals import ProposalCreate, ProposalOut
+from app.schemas.proposals import ProposalCreate, ProposalOut, RebaseIn
 from app.schemas.signals import ContextSignalIn, ContextSignalOut
 from app.schemas.spending import SpendSummary
 from app.services import budget as budget_svc
@@ -81,7 +83,7 @@ class BackendToolbox:
         self._step_seq = 0
         self.signal_ids: list[str] = []
         self.proposal_ids: list[str] = []
-        self._writes = {"record_signal": 0, "draft_proposal": 0}
+        self._writes = {"record_signal": 0, "draft_proposal": 0}  # draft_proposal also counts rebases
 
     # ---- activity stream ---------------------------------------------------------------------
 
@@ -211,8 +213,8 @@ class BackendToolbox:
 
     # ---- draft-level writes ------------------------------------------------------------------
 
-    def _check_write_budget(self, tool: str, limit: int) -> None:
-        if self._writes[tool] >= limit:
+    def _check_write_budget(self, tool: str, limit: int, *, counter: str | None = None) -> None:
+        if self._writes[counter or tool] >= limit:
             err = ToolError(tool, "write_budget_exhausted", f"a run may make at most {limit} {tool} calls")
             self.emit("error", err.as_dict())
             raise err
@@ -261,6 +263,72 @@ class BackendToolbox:
         if result["id"] not in self.proposal_ids:
             self.proposal_ids.append(result["id"])
         return result
+
+    def rebase_proposal(self, proposal_id: str, rationale: str | None = None) -> dict:
+        """Re-draft a stale proposal's same lines on the current budget as a NEW pending_review proposal.
+
+        Returns `stale_context` (what changed since the original's base version) and `proposal` (the new
+        draft). A refusal (not stale, intent no longer fits, unknown id) carries `stale_context` in its
+        details whenever the original exists, so Droid can still explain what changed.
+        """
+        self._check_write_budget("rebase_proposal", MAX_PROPOSALS, counter="draft_proposal")
+        args = {"proposal_id": proposal_id, "rationale": rationale}
+
+        def fn(s: Session) -> dict:
+            original = proposal_svc.get_proposal(s, proposal_id)
+            context = stale_context(s, original)
+            note = (rationale or "").strip()
+            text = f"{note}\n\nOriginal rationale ({original.id}): {original.rationale}"[:10_000] if note else None
+            try:
+                new = proposal_svc.rebase(s, proposal_id, RebaseIn(rationale=text), actor=self.actor,
+                                          clock=self._clock, ids=self._ids)
+            except DomainError as exc:
+                raise DomainError(exc.code, exc.status, exc.message,
+                                  {**(exc.details or {}), "stale_context": context}) from exc
+            out = ProposalOut.model_validate(proposal_svc.proposal_out(s, new)).model_dump(mode="json")
+            return {"stale_context": context, "proposal": out}
+
+        result = self._invoke("rebase_proposal", args, fn,
+                              lambda r: f"proposal {r['proposal']['id']} rebased from {proposal_id} onto version "
+                                        f"{r['proposal']['base_version']}; {r['proposal']['status']}; not applied")
+        self._writes["draft_proposal"] += 1
+        if result["proposal"]["id"] not in self.proposal_ids:
+            self.proposal_ids.append(result["proposal"]["id"])
+        return result
+
+
+def stale_context(s: Session, p: Proposal) -> dict:
+    """What changed between a proposal's base version and the current budget (read-only)."""
+    env = budget_svc.require_envelope(s, p.period_id)
+    base_total, base = budget_svc.figures_to_decimal(p.before)
+    current = budget_svc.current_figures(env)
+    now_total, now = budget_svc.figures_to_decimal(current)
+    changes = [{"team": t, "at_base": str(base.get(t, Decimal("0.00"))), "now": str(now.get(t, Decimal("0.00"))),
+                "change": str(now.get(t, Decimal("0.00")) - base.get(t, Decimal("0.00")))}
+               for t in sorted(set(base) | set(now))]
+    decided = s.scalars(select(Decision).where(Decision.to_version.is_not(None),
+                                               Decision.from_version >= p.base_version)
+                        .order_by(Decision.to_version)).all()
+    moves = []
+    for d in decided:
+        if d.proposal_id == p.id:
+            continue
+        src = s.get(Proposal, d.proposal_id)
+        moves.append({"decision_id": d.id, "proposal_id": d.proposal_id,
+                      "action_type": src.action_type if src else None,
+                      "lines": src.lines if src else [],
+                      "envelope_increase": str(src.envelope_increase) if src else None,
+                      "from_version": d.from_version, "to_version": d.to_version,
+                      "decided_by": d.actor_id, "decided_at": d.decided_at.isoformat()})
+    return {
+        "original": {"id": p.id, "status": p.status, "action_type": p.action_type, "base_version": p.base_version,
+                     "envelope_increase": str(p.envelope_increase), "lines": p.lines, "rationale": p.rationale},
+        "base_version": p.base_version, "current_version": env.state_version,
+        "is_outdated": p.base_version < env.state_version,
+        "at_base": p.before, "current": current,
+        "total_change": str(now_total - base_total), "changes": changes,
+        "decisions_since_base": moves,
+    }
 
 
 def _same_signal(s: Session, body: ContextSignalIn) -> ContextSignal | None:

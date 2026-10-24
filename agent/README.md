@@ -15,7 +15,7 @@ cited context signals, and drafts allocation proposals for finance review. It ne
 | Runner selection | `backend/app/agent/loader.py` | `DROID_RUNNER=fake` (default) or `sdk` |
 | `SdkDroidRunner` | `agent/northstar_droid/sdk_runner.py` | real Droid SDK session; lazy import |
 | SDK MCP tools | `agent/northstar_droid/sdk_tools.py` | same tools as in-process MCP tools on the SDK's loopback server |
-| Prompts | `agent/northstar_droid/prompts/` | system rules (bounded authority, honesty) and task prompts |
+| Prompts | `agent/northstar_droid/prompts/` | `system.md` (bounded authority, evidence and honesty rules) and one prompt per task: `interpret_corpus`, `propose_allocation`, `recover_stale_proposal`, `answer_question` |
 | HTTP | `backend/app/api/routes_agent.py` | `POST /api/agent/runs`, `GET /api/agent/runs/{id}`, SSE `GET /api/agent/runs/{id}/events`, `GET /api/agent/tools` |
 
 `agent/` imports `app.*`: the SDK runner runs inside the backend process (the tool functions call the
@@ -27,12 +27,16 @@ when `DROID_RUNNER=sdk`; tests get it via `pythonpath = [".", "../agent"]`.
 `search_corpus`, `read_document`, `get_spend_summary`, `get_budgets`, `get_forecast` (persists a
 citable snapshot), `list_signals`, `record_signal` (backend verifies every quote verbatim against the
 stored document version), `draft_proposal` (backend computes before/after, validates arithmetic,
-rejects a stale `base_version`; result is `pending_review`).
+rejects a stale `base_version`; result is `pending_review`), `rebase_proposal` (stale-proposal
+recovery: re-drafts a stale proposal's same lines on the current budget as a NEW `pending_review`
+proposal through the same service as `POST /api/proposals/{id}/rebase`; returns `stale_context`,
+i.e. base vs current figures, per-team changes and the decisions applied since; a refusal carries the
+same context in `details.stale_context`; shares the per-run draft budget).
 
 There is no apply / approve / decide / reject tool. Approval is `POST /api/proposals/{id}/decision`,
 which requires `finance_approver`; Droid's role gets 403 `role_forbidden` there, and the attempt is
 recorded in decision events. Only finance roles can start a run. Per run, the toolbox caps tool calls
-(80), signals (20) and drafts (3); identical signals and identical pending drafts are reused instead of
+(80), signals (20) and drafts plus rebases (3); identical signals and identical pending drafts are reused instead of
 stacked when an investigation is re-run.
 
 ## Runners
@@ -54,16 +58,21 @@ Not a model: a fixed playbook that does real work through the toolbox.
   Forecast unavailable: addition goes to the prioritized team with a `forecast_unavailable` warning; a
   transfer is not drafted (recorded spend alone is not evidence of underspend). A stale base version is
   re-read once. The run reports the draft as pending finance review, never as saved.
+- `propose_allocation` with `params.stale_proposal_id` (stale-proposal recovery, after finance's
+  approval was refused with 409 `stale_proposal`): calls `rebase_proposal`, explains the version step,
+  per-team changes and the decision(s) that moved the budget, and reports the rebased draft as
+  `pending_review` needing a fresh review. Not stale -> `proposal_not_stale`, nothing drafted. Lines no
+  longer fit -> the validation reasons plus what changed, nothing drafted.
 - `answer_question`: read-only per-team comparison.
 
 **SdkDroidRunner** (`DROID_RUNNER=sdk`, events `source=droid_sdk`, signals `produced_by=droid_sdk`).
 Uses `droid-sdk` (Python, import `droid_sdk`). Each run gets its own `Session`, set up like this:
 - the in-process `northstar` MCP server, whose tools Droid sees as `northstar___<tool>`;
-- `restrict_tools` set to exactly those eight ids;
+- `restrict_tools` set to exactly those nine ids;
 - Autonomy LOW, built-in skills disabled, and an empty temp directory as cwd.
 
 Before the prompt is sent, the runner calls `list_tools()`. It refuses to run
-(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our eight ids plus
+(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our nine ids plus
 `Script`, `ToolSearch` and `WaitForScript`. Those three are code-mode meta tools that the allowlist
 cannot remove.
 
@@ -96,6 +105,8 @@ recorded as `unavailable`. There is no silent fallback to the fake runner.
 `backend/docs/droid-live-log.md`:
 - An interpret run recorded 6 cited signals and flagged the superseded research thread.
 - A +50k propose run left one `pending_review` draft, and the budget was unchanged.
+- A stale-proposal recovery run rebased the refused addition into a new `pending_review` draft on
+  version 2, explained the transfer that moved the budget, and left the budget unchanged.
 - Tests use a fake `droid_sdk` stub (`backend/tests/fake_droid_sdk.py`) and never call Factory.
 
 ## Activity stream

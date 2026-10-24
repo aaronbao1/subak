@@ -119,7 +119,11 @@ curl -N http://127.0.0.1:8787/api/agent/runs/<run id>/events
 ```
 
 Task types: `interpret_corpus`, `propose_allocation` (`params.mode` `addition` | `transfer`, `amount`,
-`prioritize`), `answer_question`. SSE frames are `id: <seq>`, `event: <type>`, `data: <json>`; event
+`prioritize`), `answer_question`. Stale-proposal recovery: after a decision returns 409 `stale_proposal`,
+start `propose_allocation` with `params: {"stale_proposal_id": "<id>"}` (nothing else). Droid calls
+`rebase_proposal`, explains what changed since the proposal's base version (per-team changes and the
+decisions that moved the budget) and leaves a NEW `pending_review` draft (`rebased_from_proposal_id`)
+that needs a fresh finance review; if the same lines no longer fit, it says why and drafts nothing. SSE frames are `id: <seq>`, `event: <type>`, `data: <json>`; event
 types: `run_started`, `tool_call`, `tool_result`, `evidence_found`, `supersession_detected`,
 `conflict_detected`, `signal_recorded`, `proposal_drafted`, `assistant_text`, `warning`, `error`,
 `run_finished`. The stream replays stored events, follows a running run, and ends after

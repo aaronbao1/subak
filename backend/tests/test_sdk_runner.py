@@ -204,6 +204,70 @@ def test_sdk_typed_mcp_confirmation_is_allowed_only_for_northstar(fake_sdk, sdk_
     assert [e["data"]["decision"] for e in out["events"] if e["type"] == "permission"] == ["proceed_once", "cancel"]
 
 
+# ---- stale-proposal recovery and prompts ----------------------------------------------------------
+
+
+def test_sdk_stale_recovery_rebases_into_a_new_pending_draft(fake_sdk, sdk_client):
+    from budget_helpers import APPROVER, addition_body, decide, draft, transfer_body
+
+    a = draft(sdk_client, transfer_body()).json()
+    b = draft(sdk_client, addition_body()).json()
+    assert decide(sdk_client, a["id"], headers=APPROVER).status_code == 201
+    assert decide(sdk_client, b["id"], headers=APPROVER).json()["error"]["code"] == "stale_proposal"
+    after_a = allocations(sdk_client)
+    fake_sdk.SCENARIO = [
+        Step(LOAD),
+        Step(f"text(await tools.northstar.rebase_proposal({{proposal_id: '{b['id']}', rationale: 'stale'}}));",
+             lambda call: call("rebase_proposal", proposal_id=b["id"], rationale="Approval refused as stale.")),
+    ]
+    r = post_run(sdk_client, params={"stale_proposal_id": b["id"]})
+    assert r.status_code == 201, r.text
+    out = r.json()
+    assert out["status"] == "succeeded" and out["applied_changes"] is False
+    assert [s["tool"] for s in out["steps"]] == ["rebase_proposal"]
+    assert len(out["proposals"]) == 1 and out["proposals"][0]["status"] == "pending_review"
+    new = sdk_client.get(f"/api/proposals/{out['proposals'][0]['id']}").json()
+    assert new["rebased_from_proposal_id"] == b["id"] and new["base_version"] == 2
+    assert allocations(sdk_client) == after_a
+    prompt = fake_droid_sdk.STATE["prompt"]
+    assert "Stale-proposal recovery" in prompt and b["id"] in prompt and "northstar___rebase_proposal" in prompt
+    assert "{proposal_id}" not in prompt
+
+
+@pytest.mark.parametrize("task", [
+    {"type": "interpret_corpus"},
+    {"type": "propose_allocation", "params": {"mode": "transfer", "prioritize": "research"}},
+    {"type": "propose_allocation", "params": {"stale_proposal_id": "prop_x"}},
+    {"type": "answer_question", "instruction": "What will research spend next year?"},
+])
+def test_task_prompts_carry_the_honesty_rules(task):
+    from app.agent.runner import AgentTask
+
+    prompt = sdk_runner.task_prompt(AgentTask(**task))
+    for placeholder in ("{params}", "{proposal_id}", "{tool_ids}", "{{"):
+        assert placeholder not in prompt
+    low = " ".join(prompt.lower().split())
+    assert "never" in low and "limitation" in low
+    if task["type"] == "interpret_corpus":
+        assert "exactly" in low and "superseded" in low and "informal" in low and "cancelled" in low
+        assert "conflicting" in low
+    elif task.get("params", {}).get("stale_proposal_id"):
+        assert "rebase_proposal" in prompt and "stale_context" in prompt and "pending_review" in prompt
+        assert "decisions_since_base" in prompt and "never say it is saved" in low
+    elif task["type"] == "propose_allocation":
+        assert "addition" in low and "transfer" in low and "envelope total is unchanged" in low
+        assert "token prices" in low and "do not claim it is saved" in low
+    else:
+        assert "never estimate" in low and "changed nothing" in low and "What will research spend" in prompt
+
+
+def test_system_prompt_bounds_authority_and_forbids_invented_costs():
+    system = " ".join(sdk_runner.load_prompt("system").lower().split())
+    assert "never invent token volumes" in system and "never say a change is saved" in system
+    assert "quote it exactly" in system and "addition" in system and "transfer" in system
+    assert "rebase" in system and "limitations" in system
+
+
 # ---- the gate as a pure function -----------------------------------------------------------------
 
 
@@ -221,6 +285,7 @@ def _script(code, ctype="script"):
     "for (const id of ['a','b']) { text(await tools . northstar . read_document({document_id: id})); }",
     LOAD,
     "const r = JSON.parse(await tools.northstar.get_forecast({})); text(r.availability);",
+    "text(await tools.northstar.rebase_proposal({proposal_id: 'prop_1', rationale: 'budget moved'}))",
 ])
 def test_gate_allows_scripts_that_only_call_northstar_tools(code):
     assert check_script(code)[0], check_script(code)

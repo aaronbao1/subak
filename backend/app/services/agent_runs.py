@@ -44,6 +44,9 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
         except ValidationError as exc:
             raise _validation([{"code": "invalid_params", "message": e["msg"], "field": ".".join(map(str, e["loc"]))}
                                for e in exc.errors()]) from exc
+        if p.stale_proposal_id is not None:
+            return AgentTask(type=body.task_type, instruction=body.instruction,
+                             params=_recovery_params(session, body.params, p.stale_proposal_id))
         reasons = []
         team = session.get(Team, p.prioritize)
         if team is None or not team.active:
@@ -64,6 +67,18 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
     return AgentTask(type=body.task_type, instruction=body.instruction, params=params)
+
+
+def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) -> dict[str, Any]:
+    extra = sorted(k for k in raw if k != "stale_proposal_id")
+    if extra:
+        raise _validation([{"code": "conflicting_params",
+                            "message": "stale_proposal_id recovers an existing proposal; it cannot be combined "
+                                       f"with {', '.join(extra)}", "field": "params"}])
+    if session.get(Proposal, proposal_id) is None:
+        raise _validation([{"code": "unknown_proposal", "message": f"proposal {proposal_id!r} not found",
+                            "field": "params.stale_proposal_id"}])
+    return {"stale_proposal_id": proposal_id}
 
 
 def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[str, bool]:

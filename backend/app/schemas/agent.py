@@ -17,6 +17,10 @@ class ProposeParams(InModel):
     # addition: new money entering the envelope (default 50000.00); transfer: optional cap on funds moved.
     amount: MoneyStr | None = None
     prioritize: str = "research"
+    # Stale-proposal recovery: finance's approval of this proposal was refused (409 stale_proposal).
+    # Droid explains what changed since its base version and offers a rebased draft. Not combinable
+    # with mode/amount/prioritize.
+    stale_proposal_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class AgentRunCreate(InModel):

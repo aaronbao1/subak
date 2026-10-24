@@ -5,8 +5,9 @@ SDK runner (`agent/northstar_droid/sdk_tools.py`) exposes the same names and inp
 in-process MCP tools. `agent/northstar_droid/tool_manifest.json` is generated from this module
 (`python -m app.agent.tools`) and a test keeps them in sync.
 
-Read tools plus two draft-level writes. There is deliberately NO apply / approve / decide / reject
-tool: a drafted proposal is `pending_review` until a finance approver decides it over HTTP.
+Read tools plus three draft-level writes (record a cited signal, draft a proposal, rebase a stale
+proposal into a NEW draft). There is deliberately NO apply / approve / decide / reject tool: a drafted
+or rebased proposal is `pending_review` until a finance approver decides it over HTTP.
 """
 
 from __future__ import annotations
@@ -57,6 +58,12 @@ class DraftProposalIn(_In):
     """An AdditionCreate | TransferCreate without `agent_run_id`: the toolbox stamps the run id."""
 
     proposal: dict[str, Any]
+
+
+class RebaseProposalIn(_In):
+    proposal_id: Annotated[str, Field(min_length=1, max_length=200)]
+    # A note on why it was rebased / what changed; the original rationale is kept after it.
+    rationale: Annotated[str, Field(max_length=4_000)] | None = None
 
 
 Kind = Literal["read", "draft"]
@@ -129,6 +136,17 @@ TOOLS: tuple[ToolDef, ...] = (
             "ref uses the period id (e.g. 2026-P1) as its id. The result is pending_review and is NOT "
             "applied; only a finance approver can apply it.",
             DraftProposalIn),
+    ToolDef("rebase_proposal", "draft",
+            "Recover a stale proposal (finance's approval was refused with 409 stale_proposal because the "
+            "budget moved after it was drafted). Re-drafts the SAME lines against the current budget as a NEW "
+            "pending_review proposal that needs its own fresh review; the original is never applied and stays "
+            "`stale`. The result has `stale_context` (the original's base version and figures, the current "
+            "version and figures, per-team changes since, and the decisions that moved the budget) and "
+            "`proposal` (the new draft with before/after). If the same intent no longer fits the current "
+            "budget it is refused with the validation reasons and nothing is created; draft a fresh proposal "
+            "instead. `rationale` is an optional note (what changed, why rebase) placed before the original "
+            "rationale. Changes no allocation.",
+            RebaseProposalIn),
 )
 
 TOOL_NAMES: tuple[str, ...] = tuple(t.name for t in TOOLS)

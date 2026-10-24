@@ -12,6 +12,10 @@ the same scoped toolbox the SDK runner gets, so every claim it makes is verified
 - propose_allocation: reads budgets, spend, forecast (snapshot) and current signals (interpreting the
   corpus first if no current signal exists) and drafts outcome B (addition, prioritize research) or
   outcome A (transfer). The proposal stays `pending_review`; the runner never reports it as saved.
+- propose_allocation with `stale_proposal_id` (stale-proposal recovery): finance's approval was refused
+  with 409 `stale_proposal`. Calls `rebase_proposal`, explains what changed since the original's base
+  version (per-team changes and the decisions that moved the budget) and offers the rebased draft as a
+  NEW `pending_review` proposal. If the same intent no longer fits, it says why and drafts nothing.
 - answer_question: a read-only per-team comparison of allocation, recorded spend and projection.
 """
 
@@ -90,6 +94,8 @@ class FakeDroidRunner:
         if task.type == "interpret_corpus":
             out = self._interpret(tools)
             return AgentRunOutput(summary=out["summary"], findings=out["findings"], warnings=out["warnings"])
+        if task.type == "propose_allocation" and task.params.get("stale_proposal_id"):
+            return self._recover_stale(task.params["stale_proposal_id"], tools)
         if task.type == "propose_allocation":
             return self._propose(task, tools)
         return self._answer(task, tools)
@@ -338,6 +344,58 @@ class FakeDroidRunner:
         tools.emit("assistant_text", {"text": summary})
         return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
 
+    # ---- stale-proposal recovery ---------------------------------------------------------------
+
+    def _recover_stale(self, proposal_id: str, tools: AgentToolbox) -> AgentRunOutput:
+        tools.emit("assistant_text", {"text": f"Finance's approval of {proposal_id} was refused as stale; checking "
+                                              "what changed and re-drafting it on the current budget."})
+        warnings: list[dict[str, Any]] = []
+        findings: list[dict[str, Any]] = []
+        rationale = (f"Rebased by Droid after finance's approval of {proposal_id} was refused as stale (the budget "
+                     "moved after it was drafted). Same lines; the backend recomputed before/after on the current "
+                     "budget version. Needs a fresh finance review.")
+        try:
+            result = tools.rebase_proposal(proposal_id=proposal_id, rationale=rationale)
+        except ToolError as exc:
+            ctx = exc.details.get("stale_context")
+            if ctx:
+                findings.append({"type": "stale_context", **ctx})
+            what = _changes_text(ctx) if ctx else ""
+            if exc.code == "proposal_not_stale":
+                reason = (f"{proposal_id} is not stale ({exc.details.get('status')}, base version "
+                          f"{exc.details.get('base_version', ctx['base_version'] if ctx else '?')}); nothing to rebase")
+            elif exc.code == "validation_failed":
+                codes = ", ".join(sorted({r["code"] for r in exc.details.get("reasons", [])})) or exc.code
+                reason = (f"the same lines no longer fit the current budget ({codes}). {what}A fresh proposal "
+                          "against the current state is needed; finance can start a new propose_allocation run")
+            else:
+                reason = f"rebase refused ({exc.code}): {exc.message}"
+            return self._no_proposal(tools, reason.rstrip(". "), warnings, findings, details=_err_details(exc))
+
+        ctx = result["stale_context"]
+        new = result["proposal"]
+        findings.append({"type": "stale_context", **ctx})
+        tools.emit("proposal_drafted", {
+            "proposal_id": new["id"], "action_type": new["action_type"], "status": new["status"],
+            "applied": False, "requires_finance_approval": True, "base_version": new["base_version"],
+            "rebased_from_proposal_id": new["rebased_from_proposal_id"],
+            "envelope_increase": new["envelope_increase"], "before": new["before"], "after": new["after"],
+            "deltas": new["deltas"], "warnings": new["warnings"], "already_drafted": False,
+        })
+        kind = "addition to the envelope" if new["action_type"] == "addition" else "transfer between teams"
+        after = new["after"]
+        summary = (f"{proposal_id} was drafted against budget version {ctx['base_version']} and was not applied: "
+                   f"the budget is now at version {ctx['current_version']}. {_changes_text(ctx)}"
+                   f"Rebased draft {new['id']} ({kind}, same lines) on version {new['base_version']}: "
+                   + ", ".join(f"{t} {a}" for t, a in sorted(after["allocations"].items()))
+                   + f"; envelope {after['total']} {new['unit']}. It is pending_review and needs a fresh finance "
+                   f"review; nothing has been applied and saved allocations remain at version {new['base_version']}.")
+        if new["warnings"]:
+            summary += " Warnings: " + "; ".join(w.get("message", w.get("code", "")) for w in new["warnings"]) + "."
+        tools.emit("assistant_text", {"text": summary})
+        warnings.extend(new["warnings"])
+        return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
+
     # ---- answer ------------------------------------------------------------------------------
 
     def _answer(self, task: AgentTask, tools: AgentToolbox) -> AgentRunOutput:
@@ -411,6 +469,25 @@ class FakeDroidRunner:
 
 
 # ---- helpers -----------------------------------------------------------------------------------
+
+
+def _changes_text(ctx: dict) -> str:
+    moved = [c for c in ctx["changes"] if Decimal(c["change"]) != 0]
+    parts = []
+    if moved:
+        parts.append("Since then: " + ", ".join(f"{c['team']} {c['at_base']} -> {c['now']}" for c in moved)
+                     + f" (envelope {ctx['at_base']['total']} -> {ctx['current']['total']}).")
+    for d in ctx["decisions_since_base"]:
+        lines = ", ".join((f"{ln['from_team']} -> {ln['to_team']} {ln['amount']}" if ln.get("from_team")
+                           else f"+{ln['amount']} to {ln['to_team']}") for ln in d["lines"])
+        parts.append(f"{d['proposal_id']} ({d['action_type']}: {lines}) was applied by {d['decided_by']} "
+                     f"(version {d['from_version']} -> {d['to_version']}).")
+    return (" ".join(parts) + " ") if parts else ""
+
+
+def _err_details(exc: ToolError) -> dict:
+    return {k: v for k, v in exc.as_dict().items() if k != "details"} | {
+        "details": {k: v for k, v in exc.details.items() if k != "stale_context"}}
 
 
 def _ref(d: dict) -> dict:

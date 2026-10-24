@@ -7,7 +7,7 @@ backend service layer in the same process. `build_mcp_server(toolbox)` wraps the
 imported only inside `build_mcp_server`, so this module imports fine without it.
 
 Names and descriptions come from `app.agent.tools.TOOLS` (the same definitions the fake runner uses).
-There is no apply / approve / decide tool. Droid sees them as `northstar___<tool>` (the ids the runner
+There is no apply / approve / decide tool (`rebase_proposal` only creates a new pending draft). Droid sees them as `northstar___<tool>` (the ids the runner
 passes to `restrict_tools`).
 """
 
@@ -86,8 +86,11 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
             proposal["envelope_increase"] = envelope_increase
         return _respond(lambda: toolbox.call("draft_proposal", {"proposal": proposal}))
 
+    def rebase_proposal(proposal_id: str, rationale: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("rebase_proposal", {"proposal_id": proposal_id, "rationale": rationale}))
+
     fns = {f.__name__: f for f in (search_corpus, read_document, get_spend_summary, get_budgets, get_forecast,
-                                   list_signals, record_signal, draft_proposal)}
+                                   list_signals, record_signal, draft_proposal, rebase_proposal)}
     return [(t.name, t.description, fns[t.name]) for t in TOOLS]
 
 
