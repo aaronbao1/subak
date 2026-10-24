@@ -40,6 +40,9 @@ cd backend
 
 Every test uses its own temporary SQLite file, a frozen clock, and sequential ids.
 
+Droid scenario evals (answer key, fake and live runners, live-run cap): see [`evals/README.md`](evals/README.md).
+`.venv/bin/python -m evals.run --runner fake` scores every scenario in a few seconds.
+
 ## Configuration (environment variables)
 
 | Variable | Default | Meaning |

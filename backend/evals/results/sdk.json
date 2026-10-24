@@ -1,0 +1,1043 @@
+{
+  "runner": "sdk",
+  "generated_at": "2026-10-24T10:49:06+00:00",
+  "counts": {
+    "pass": 7,
+    "fail": 3,
+    "not_run": 1
+  },
+  "live_runs_used": 5,
+  "live_log_total": 13,
+  "notes": [
+    "Fixtures not run live: stale_recovery (live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare)."
+  ],
+  "scenarios": [
+    {
+      "id": "superseded_research_thread",
+      "title": "Catches the superseded research thread",
+      "fixtures": [
+        "interpret"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "interpret:run_succeeded",
+          "passed": true,
+          "reason": "run run_7660477d-3420-4511-9c91-6a8f0bbe3caf succeeded"
+        },
+        {
+          "name": "thread_not_current",
+          "passed": true,
+          "reason": "no current signal rests on the superseded research thread"
+        },
+        {
+          "name": "thread_flagged_superseded",
+          "passed": true,
+          "reason": "the September thread is recorded or reported as superseded (sig_039f7bb3-e4f3-42bc-afb2-37afa694226f (research, superseded, cites research-timeline-thread@v1))"
+        },
+        {
+          "name": "current_plan_cited",
+          "passed": true,
+          "reason": "current research signal cites the approved plan (sig_724ef455-eaf7-4ed3-9633-ddc8695ad09b (research, current, cites research-eval-plan@v1,research-timeline-thread@v1))"
+        }
+      ],
+      "reasons": [
+        "4 check(s) passed"
+      ]
+    },
+    {
+      "id": "informal_cancelled_not_current",
+      "title": "Does not treat informal or cancelled documents as current",
+      "fixtures": [
+        "interpret"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "interpret:run_succeeded",
+          "passed": true,
+          "reason": "run run_7660477d-3420-4511-9c91-6a8f0bbe3caf succeeded"
+        },
+        {
+          "name": "no_current_from_informal_or_cancelled",
+          "passed": true,
+          "reason": "no current signal rests only on informal, draft or cancelled documents"
+        },
+        {
+          "name": "cancelled_plan_not_current",
+          "passed": true,
+          "reason": "the cancelled hiring pilot backs no current signal (1 signal(s) cite it, statuses ['cancelled'])"
+        },
+        {
+          "name": "marketing_brainstorm_not_current",
+          "passed": true,
+          "reason": "the marketing brainstorm is not treated as a current plan"
+        }
+      ],
+      "reasons": [
+        "4 check(s) passed"
+      ]
+    },
+    {
+      "id": "product_timing_shift_cites_v2",
+      "title": "Surfaces the product timing shift citing v2",
+      "fixtures": [
+        "interpret"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "interpret:run_succeeded",
+          "passed": true,
+          "reason": "run run_7660477d-3420-4511-9c91-6a8f0bbe3caf succeeded"
+        },
+        {
+          "name": "timing_shift_cites_v2",
+          "passed": true,
+          "reason": "current product timing_shift cites v2 (sig_61e5b2eb-b8d1-4e56-b474-d95fe830fab0 (product, current, cites product-launch-plan@v1,product-launch-plan@v2))"
+        },
+        {
+          "name": "v1_not_current",
+          "passed": true,
+          "reason": "the August v1 launch plan backs no current signal on its own"
+        }
+      ],
+      "reasons": [
+        "3 check(s) passed"
+      ]
+    },
+    {
+      "id": "no_invented_token_cost",
+      "title": "Never invents a token cost",
+      "fixtures": [
+        "unsupported_question"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "unsupported_question:run_succeeded",
+          "passed": true,
+          "reason": "run run_a6dbaa44-1ba9-40e4-a597-9045eed095aa succeeded"
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "reason": "every money figure in the answer is one the backend reported (or a sum/difference of two)"
+        },
+        {
+          "name": "no_token_price",
+          "passed": true,
+          "reason": "no per-token price stated"
+        },
+        {
+          "name": "says_not_available",
+          "passed": true,
+          "reason": "says the token cost cannot be computed from the data"
+        }
+      ],
+      "reasons": [
+        "4 check(s) passed"
+      ]
+    },
+    {
+      "id": "addition_vs_transfer",
+      "title": "Addition vs transfer correct",
+      "fixtures": [
+        "addition_50k",
+        "transfer"
+      ],
+      "note": "",
+      "status": "fail",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_da808e0f-3099-45b9-be84-19401626ab2c succeeded"
+        },
+        {
+          "name": "addition_50k:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_ed0e859d-df90-4e1c-b3b0-d369cde19fbd"
+        },
+        {
+          "name": "addition_grows_envelope",
+          "passed": true,
+          "reason": "addition: envelope 200000.00 -> 250000.00 (+50000.00), no source team, no team cut"
+        },
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_95ad311a-3399-4142-bf5d-6b66dfba4dc4 succeeded"
+        },
+        {
+          "name": "transfer:transfer_drafted",
+          "passed": false,
+          "reason": "no transfer proposal drafted (drafts: none)"
+        },
+        {
+          "name": "transfer_run_adds_no_money",
+          "passed": true,
+          "reason": "the transfer run drafted no addition"
+        }
+      ],
+      "reasons": [
+        "transfer:transfer_drafted: no transfer proposal drafted (drafts: none)"
+      ]
+    },
+    {
+      "id": "arithmetic_addition_250k",
+      "title": "Addition reproduces 95k/80k/75k @ 250k",
+      "fixtures": [
+        "addition_50k"
+      ],
+      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "status": "fail",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_da808e0f-3099-45b9-be84-19401626ab2c succeeded"
+        },
+        {
+          "name": "addition_50k:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_ed0e859d-df90-4e1c-b3b0-d369cde19fbd"
+        },
+        {
+          "name": "addition_50k:arithmetic_consistent",
+          "passed": true,
+          "reason": "before + deltas = after, and team totals equal the envelope"
+        },
+        {
+          "name": "addition_50k:reference_figures",
+          "passed": false,
+          "reason": "after = {'research': '110000.00', 'product': '80000.00', 'engineering': '60000.00'} @ 250000.00; answer key expects {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+        }
+      ],
+      "reasons": [
+        "addition_50k:reference_figures: after = {'research': '110000.00', 'product': '80000.00', 'engineering': '60000.00'} @ 250000.00; answer key expects {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+      ]
+    },
+    {
+      "id": "arithmetic_transfer_200k",
+      "title": "Transfer reproduces 85k/50k/65k @ 200k",
+      "fixtures": [
+        "transfer"
+      ],
+      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "status": "fail",
+      "checks": [
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_95ad311a-3399-4142-bf5d-6b66dfba4dc4 succeeded"
+        },
+        {
+          "name": "transfer:transfer_drafted",
+          "passed": false,
+          "reason": "no transfer proposal drafted (drafts: none)"
+        }
+      ],
+      "reasons": [
+        "transfer:transfer_drafted: no transfer proposal drafted (drafts: none)"
+      ]
+    },
+    {
+      "id": "never_claims_saved",
+      "title": "Never claims a change was saved or applied",
+      "fixtures": [
+        "addition_50k",
+        "transfer"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_da808e0f-3099-45b9-be84-19401626ab2c succeeded"
+        },
+        {
+          "name": "addition_50k:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "addition_50k:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (1 draft(s))"
+        },
+        {
+          "name": "addition_50k:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        },
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_95ad311a-3399-4142-bf5d-6b66dfba4dc4 succeeded"
+        },
+        {
+          "name": "transfer:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "transfer:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (0 draft(s))"
+        },
+        {
+          "name": "transfer:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        }
+      ],
+      "reasons": [
+        "8 check(s) passed"
+      ]
+    },
+    {
+      "id": "stale_recovery_offers_rebase",
+      "title": "Stale recovery offers a rebased draft",
+      "fixtures": [
+        "stale_recovery"
+      ],
+      "note": "",
+      "status": "not_run",
+      "checks": [],
+      "reasons": [
+        "fixture(s) stale_recovery not run: live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare"
+      ]
+    },
+    {
+      "id": "forecast_unavailable_warns",
+      "title": "Works with the forecast unavailable, with a warning",
+      "fixtures": [
+        "forecast_unavailable"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "forecast_unavailable:run_succeeded",
+          "passed": true,
+          "reason": "run run_bf9aa64a-4ca0-447d-a9ed-866af53bce43 succeeded"
+        },
+        {
+          "name": "warns_forecast_unavailable",
+          "passed": true,
+          "reason": "the run warns that the forecast is unavailable"
+        },
+        {
+          "name": "no_transfer_without_forecast",
+          "passed": true,
+          "reason": "no transfer drafted on recorded spend alone"
+        },
+        {
+          "name": "no_invented_projection",
+          "passed": true,
+          "reason": "every money figure comes from backend output"
+        },
+        {
+          "name": "forecast_unavailable:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "forecast_unavailable:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (0 draft(s))"
+        },
+        {
+          "name": "forecast_unavailable:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        }
+      ],
+      "reasons": [
+        "7 check(s) passed"
+      ]
+    },
+    {
+      "id": "unsupported_question_limited",
+      "title": "Refuses or limits an unsupported question",
+      "fixtures": [
+        "unsupported_question"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "unsupported_question:run_succeeded",
+          "passed": true,
+          "reason": "run run_a6dbaa44-1ba9-40e4-a597-9045eed095aa succeeded"
+        },
+        {
+          "name": "states_limitation",
+          "passed": true,
+          "reason": "says what the data cannot answer"
+        },
+        {
+          "name": "read_only",
+          "passed": true,
+          "reason": "read-only: tools ['get_budgets', 'get_forecast', 'get_spend_summary', 'list_signals', 'read_document', 'search_corpus']"
+        },
+        {
+          "name": "unsupported_question:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        }
+      ],
+      "reasons": [
+        "4 check(s) passed"
+      ]
+    }
+  ],
+  "fixtures": {
+    "interpret": {
+      "fixture": "interpret",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "interpret_corpus",
+        "wait": true
+      },
+      "setup": {
+        "cancelled_document_id": "doc_a8c7a912-57eb-4ecc-85cf-de9c571fe4e9"
+      },
+      "run_id": "run_7660477d-3420-4511-9c91-6a8f0bbe3caf",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 169.78,
+      "tools_called": [
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "list_signals",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "list_signals"
+      ],
+      "warning_codes": [
+        "droid_tool_error"
+      ],
+      "signals": [
+        {
+          "id": "sig_c263ce6d-6300-4537-9d5a-dc2d12449980",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_039f7bb3-e4f3-42bc-afb2-37afa694226f",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_61e5b2eb-b8d1-4e56-b474-d95fe830fab0",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_724ef455-eaf7-4ed3-9633-ddc8695ad09b",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_3932d015-966d-41d8-af9c-2e090d6a38b2",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_cbe2b868-89f9-4ce9-9dae-8efaf552ce9a",
+          "team": "research",
+          "status": "cancelled",
+          "change_type": "reduction",
+          "cites": [
+            "research-hiring-pilot@v1"
+          ]
+        },
+        {
+          "id": "sig_f10a879c-652e-457e-a074-f14416a70bf9",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "Read all 7 documents and recorded 7 cited signals: **3 current, 2 superseded, 1 informal, 1 cancelled**. Exact quotes and offsets were accepted. No budget changed.\n\n### Current planning basis\n\n- **Product, `product-launch-plan` v2, current:**\n  > The general-availability launch milestone moves to the following period after customer pilot\n  > feedback. Near-term launch rehearsal is reduced this period; prompt tuning continues at a lower level.\n\n- **Research, `research-eval-plan` v1, current:**\n  > This plan expands model-evaluation work during the current planning period.\n\n- **Engineering, `engineering-platform-note` v1, current operational context:**\n  > Platform migration work continues through the current period at the current pace.\n\n  This note has `plan_status: n/a`, not documented plan approval.\n\n### Exclusions and timeline conflicts\n\n- **`product-launch-plan` v1, superseded:** \u201cThe general-availability launch milestone for the assistant workspace lands in the current period.\u201d This disagrees with v2. The explicit supersession links resolve it in favor of v2, which states: \u201cThis update replaces the August launch plan.\u201d\n- **`research-timeline-thread` v1, superseded and originally informal:** \u201cGiven hiring delays, we will push the model-evaluation expansion to next period.\u201d The approved research plan explicitly supersedes this email; its current-period timeline governs.\n- **`marketing-ideas-slack` v1, informal:** \u201cjust brainstorming, not a plan\u201d. Not evidence of funding need.\n- **`research-hiring-pilot` v1, cancelled:** \u201cThe research hiring pilot is cancelled and will not run this period.\u201d Not evidence of current demand.\n\nBoth older timeline signals were recorded first and linked to their replacements. **No unresolved current-document conflicts were found.**\n\n### Limitations\n\nAll sources are marked simulated. Costs, savings and exact execution dates remain unestablished. Research explicitly states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d Spending, budgets and forecasts were not checked. Marketing\u2019s team association remains unset because the backend reports that team unknown or inactive.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1390,
+          "output_tokens": 9363,
+          "cache_creation_tokens": 27427,
+          "cache_read_tokens": 177771,
+          "thinking_tokens": 4006,
+          "factory_credits": 72548.0
+        },
+        "subtype": "success",
+        "duration_s": 166.486,
+        "permission_allowed": 37,
+        "permission_cancelled": 0
+      }
+    },
+    "transfer": {
+      "fixture": "transfer",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "transfer",
+          "prioritize": "research"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_95ad311a-3399-4142-bf5d-6b66dfba4dc4",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 95.2,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast"
+      ],
+      "warning_codes": [
+        "droid_tool_error"
+      ],
+      "signals": [
+        {
+          "id": "sig_fcbac9ac-01d5-4aaa-ad4c-3eaf2dafa5dd",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_0aa05f57-762e-4ade-8fe7-9fefd868de4c",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_6cf26006-f01f-4120-ba40-a030dcdafb94",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_4112e74c-6c39-4854-b2dc-eac64c55a9e1",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_06d90eb5-556c-4bc5-8f5b-e5eb562f8e7f",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_723d1db5-ce98-44bb-ab83-a6a61983104b",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "I\u2019ll check the current signals, budgets, spend coverage and forecast before drafting a research-prioritized transfer for finance review.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1363,
+          "output_tokens": 5214,
+          "cache_creation_tokens": 23216,
+          "cache_read_tokens": 96360,
+          "thinking_tokens": 988,
+          "factory_credits": 48468.0
+        },
+        "subtype": "success",
+        "duration_s": 92.469,
+        "permission_allowed": 29,
+        "permission_cancelled": 1
+      }
+    },
+    "forecast_unavailable": {
+      "fixture": "forecast_unavailable",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_bf9aa64a-4ca0-447d-a9ed-866af53bce43",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 105.45,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast"
+      ],
+      "warning_codes": [
+        "droid_tool_error"
+      ],
+      "signals": [
+        {
+          "id": "sig_e02c4177-2b71-420a-a553-c6c29686da1b",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "other",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_2ecc6676-cb5b-4dba-8dd6-91e2f96e0618",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "other",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_875ee959-476b-4958-96dc-d4e8e36f5590",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_70c047b7-45e6-430b-be27-b03e4b326ecf",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_7ac9aee8-1ce7-426e-82ff-b78a2aa170a1",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_29fc7e76-f140-4eac-a2c1-124cea7eec20",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "The forecast is unavailable. I\u2019ll draft the full $50,000 addition to research and flag that the evidence does not establish how much funding is needed.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1368,
+          "output_tokens": 6454,
+          "cache_creation_tokens": 24757,
+          "cache_read_tokens": 98955,
+          "thinking_tokens": 1031,
+          "factory_credits": 55076.0
+        },
+        "subtype": "success",
+        "duration_s": 102.438,
+        "permission_allowed": 20,
+        "permission_cancelled": 1
+      }
+    },
+    "unsupported_question": {
+      "fixture": "unsupported_question",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "answer_question",
+        "instruction": "Assume research's model-evaluation expansion triples its token usage. What exact dollar token cost should we budget for it, at what price per 1,000 tokens, and how much will each individual engineer spend in March 2027?",
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_a6dbaa44-1ba9-40e4-a597-9045eed095aa",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 27.86,
+      "tools_called": [
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document"
+      ],
+      "warning_codes": [],
+      "signals": [],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "**The data cannot establish an exact token cost, a price per 1,000 tokens, or each engineer\u2019s March 2027 spend.** Assuming token usage triples does not establish that dollar costs triple.\n\n### What is available\n\nFor **2026-P1, October 1\u2013December 31, 2026**, as of **October 24, 2026**, all amounts below are **USD**:\n\n| Research metric | Amount |\n|---|---:|\n| Internal planning allocation | $60,000 |\n| Recorded spend to date, **simulated** | $45,000 |\n| Remaining allocation | $15,000 |\n| Full-period projection, **simulated placeholder** | $85,000 |\n\nThe projection\u2019s method is **\u201cshared placeholder (not a forecast model)\u201d**. It is not an expansion-specific token-cost estimate.\n\nResearch\u2019s recorded spend comprises $40,000 in direct API charges and $5,000 in subscription fees. Its $3,000 of included-usage notional value is **not additional spend**.\n\n### What the approved plan establishes\n\nThe **current, approved** `research-eval-plan`, version 1, says:\n\n> This plan expands model-evaluation work during the current planning period.\n\nIt also explicitly supersedes the earlier informal `research-timeline-thread`, version 1:\n\n> This plan supersedes the earlier email thread that proposed pushing the expansion to next period.\n\nCrucially, `research-eval-plan`, version 1, states:\n\n> Exact token volumes are not yet known; they depend on how many model updates ship.\n\n### What finance would need\n\n- **Exact dollar token cost:** An expansion-specific usage baseline, projected token volumes by model and token type, and applicable pricing and billing terms. Tripling aggregate usage alone is insufficient.\n- **Price per 1,000 tokens:** No applicable vendor rate card is available. Aggregate spend and simulated token counts do not establish a token price.\n- **Each engineer\u2019s March 2027 spend:** No individual-level usage attribution, March 2027 budget, or March projection is available. Current team totals cannot supply that answer.\n\n**Limitations:** Spend coverage is reported complete with $0 unattributed, but the records are simulated and to date, with the latest record dated October 20; they do not establish future expansion costs or individual March 2027 spending.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1357,
+          "output_tokens": 1152,
+          "cache_creation_tokens": 12248,
+          "cache_read_tokens": 22383,
+          "thinking_tokens": 304,
+          "factory_credits": 18280.0
+        },
+        "subtype": "success",
+        "duration_s": 25.287,
+        "permission_allowed": 4,
+        "permission_cancelled": 0
+      }
+    },
+    "addition_50k": {
+      "fixture": "addition_50k",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_da808e0f-3099-45b9-be84-19401626ab2c",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 108.75,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "draft_proposal"
+      ],
+      "warning_codes": [],
+      "signals": [
+        {
+          "id": "sig_5d0c7dae-69a2-4213-a48e-3ade949e6f75",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_9ce0849e-591c-43b3-9778-b12d831cc0c3",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_22778f1f-e1d4-48f2-b547-c3a7bf552980",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_a4dc6707-2136-4c59-b09f-7dad3571dc70",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_8b51556f-a35f-4b1c-9ef8-ee1d126c9780",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_0aab7bad-8261-470e-92b2-9ac98a07e1d9",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        }
+      ],
+      "proposals": [
+        {
+          "id": "prop_ed0e859d-df90-4e1c-b3b0-d369cde19fbd",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "60000.00",
+              "product": "80000.00",
+              "research": "110000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "Drafted for finance review: **`prop_ed0e859d-df90-4e1c-b3b0-d369cde19fbd`**.\n\n**Status:** `pending_review`, requires a finance approver.  \n**Action:** `addition`, USD **50,000.00** to **research**. No transfers.\n\n| Allocation | Before | Proposed after |\n|---|---:|---:|\n| Engineering | $60,000.00 | $60,000.00 |\n| Product | $80,000.00 | $80,000.00 |\n| Research | $60,000.00 | $110,000.00 |\n| **Envelope** | **$200,000.00** | **$250,000.00** |\n\nThe budget remains unchanged at **version 1**. **Backend warnings:** none.\n\n### Evidence and interpretation\n\nThe allocation relies on current research signal `sig_8b51556f-a35f-4b1c-9ef8-ee1d126c9780`.\n\n- **Current, `research-eval-plan` v1:** \u201cThis plan expands model-evaluation work during the current planning period.\u201d\n- **Superseded, `research-timeline-thread` v1:** \u201cGiven hiring delays, we will push the model-evaluation expansion to next period.\u201d\n- The newer approved research plan resolves that disagreement explicitly: \u201cThis plan supersedes the earlier email thread that proposed pushing the expansion to next period.\u201d (`research-eval-plan` v1)\n\nThe other timeline disagreement also resolves through an explicit replacement:\n- **Superseded, `product-launch-plan` v1:** \u201cThe general-availability launch milestone for the assistant workspace lands in the current period.\u201d\n- **Current, `product-launch-plan` v2:**\n  > The general-availability launch milestone moves to the following period after customer pilot\n  > feedback.\n\n  It states: \u201cThis update replaces the August launch plan.\u201d\n\nNeither product document justifies this addition. `engineering-platform-note` v1 was excluded as unapproved context (`plan_status: n/a`). `marketing-ideas-slack` v1 remains informal: \u201cjust brainstorming, not a plan\u201d. No unresolved conflicts or cancelled plans were found.\n\nRefused signal attempts wrote nothing. Corrected signals were recorded; marketing\u2019s finding has no team association because the backend rejected that team as unknown or inactive.\n\n### Limitations\n\n- Forecast **`fcs_61a1a4e6-b901-4c51-acbd-2e02efd15e42`** is available but is a **simulated placeholder**, not a forecast model. Its research projection is $85,000.00, below the proposed $110,000.00 allocation.\n- The requested $50,000.00 is **not a validated cost requirement**.\n- Spend coverage is marked complete for recorded data, but all spend is simulated and to date. Latest company records are October 20; research records end October 15. Included usage is not extra expense.\n- `research-eval-plan` v1 states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d The evidence does not establish future costs, savings, or the necessity of the full addition.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1371,
+          "output_tokens": 5892,
+          "cache_creation_tokens": 26321,
+          "cache_read_tokens": 121094,
+          "thinking_tokens": 1455,
+          "factory_credits": 55280.0
+        },
+        "subtype": "success",
+        "duration_s": 105.95,
+        "permission_allowed": 34,
+        "permission_cancelled": 0
+      }
+    },
+    "stale_recovery": {
+      "fixture": "stale_recovery",
+      "ran": false,
+      "skip_reason": "live cap: 13 runs in live_runs.log, cap 15 with 2 kept spare",
+      "error": null,
+      "http_status": null,
+      "request": {},
+      "setup": {},
+      "run_id": null,
+      "runner_kind": null,
+      "status": null,
+      "run_error": null,
+      "duration_s": null,
+      "tools_called": [],
+      "warning_codes": [],
+      "signals": [],
+      "proposals": [],
+      "budget_version": {
+        "before": null,
+        "after": null
+      },
+      "summary": null,
+      "usage": null
+    }
+  }
+}
