@@ -1,0 +1,36 @@
+{
+  "description": "same key with a different request body",
+  "name": "error_idempotency_key_reused",
+  "request": {
+    "body": {
+      "evidence_refs": [
+        {
+          "id": "sig_000001",
+          "kind": "signal"
+        }
+      ],
+      "outcome": "approve",
+      "rationale": "different rationale"
+    },
+    "headers": {
+      "Idempotency-Key": "approve-transfer-1",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "error": {
+      "code": "idempotency_key_reused",
+      "details": {
+        "decision_id": "dec_000001",
+        "proposal_id": "prop_000001"
+      },
+      "message": "this Idempotency-Key was already used for a different decision request"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 409
+}

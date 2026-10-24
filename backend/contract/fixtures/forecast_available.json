@@ -1,0 +1,54 @@
+{
+  "description": "placeholder projections 85k/50k/65k, full_period_total, simulated (not a model)",
+  "name": "forecast_available",
+  "request": {
+    "method": "GET",
+    "path": "/api/forecasts"
+  },
+  "response": {
+    "availability": "available",
+    "basis": "full_period_total",
+    "generated_at": "2026-10-24T12:08:00Z",
+    "method_label": "shared placeholder (not a forecast model)",
+    "missing_teams": [],
+    "projections": [
+      {
+        "amount": "65000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "engineering",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      },
+      {
+        "amount": "50000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "product",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      },
+      {
+        "amount": "85000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "research",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      }
+    ],
+    "provider": "placeholder",
+    "reason": null,
+    "target_period": "2026-P1",
+    "value_kind": "simulated"
+  },
+  "scenario": "main",
+  "schema": "ForecastResult",
+  "status": 200
+}

@@ -1,0 +1,200 @@
+{
+  "description": "six seeded documents with supersedes links and is_current",
+  "name": "documents",
+  "request": {
+    "method": "GET",
+    "path": "/api/documents"
+  },
+  "response": {
+    "count": 6,
+    "filters": {
+      "doc_type": null,
+      "include_superseded": true,
+      "origin": null,
+      "project": null,
+      "team": null
+    },
+    "items": [
+      {
+        "author": "Product planning (simulated)",
+        "authored_at": "2026-08-20T00:00:00Z",
+        "content_hash": "95505f454e824151eac4029bc414a48de239a1edd7d4103aef92391b5abbe1fb",
+        "doc_key": "product-launch-plan",
+        "doc_type": "plan",
+        "effective_from": "2026-10-01",
+        "effective_to": "2026-12-31",
+        "id": "doc_000001",
+        "is_current": false,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "plan_status": "approved",
+        "project_tags": [
+          "workspace-launch"
+        ],
+        "score": 0,
+        "superseded_by": {
+          "doc_key": "product-launch-plan",
+          "id": "doc_000005",
+          "title": "Product launch plan update - milestone moved",
+          "version": 2
+        },
+        "supersedes": null,
+        "team_tags": [
+          "product"
+        ],
+        "title": "Product launch plan - assistant workspace GA",
+        "version": 1
+      },
+      {
+        "author": "Research leads (simulated email export)",
+        "authored_at": "2026-09-03T00:00:00Z",
+        "content_hash": "4a2e8fff346288de44876e80c5feb50e59eb9267e8451a5e70c03a627c0b09e2",
+        "doc_key": "research-timeline-thread",
+        "doc_type": "correspondence",
+        "effective_from": null,
+        "effective_to": null,
+        "id": "doc_000002",
+        "is_current": false,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "email_export",
+        "plan_status": "informal",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 0,
+        "superseded_by": {
+          "doc_key": "research-eval-plan",
+          "id": "doc_000003",
+          "title": "Approved research plan - model-evaluation expansion",
+          "version": 1
+        },
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "Re: model-evaluation timeline",
+        "version": 1
+      },
+      {
+        "author": "Research leadership (simulated)",
+        "authored_at": "2026-10-08T00:00:00Z",
+        "content_hash": "2c30bb9b79152f7702f4084dc6c0c6821ef855693b1754ada09d91c4412bc89d",
+        "doc_key": "research-eval-plan",
+        "doc_type": "plan",
+        "effective_from": "2026-10-01",
+        "effective_to": "2026-12-31",
+        "id": "doc_000003",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "plan_status": "approved",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": {
+          "doc_key": "research-timeline-thread",
+          "id": "doc_000002",
+          "title": "Re: model-evaluation timeline",
+          "version": 1
+        },
+        "team_tags": [
+          "research"
+        ],
+        "title": "Approved research plan - model-evaluation expansion",
+        "version": 1
+      },
+      {
+        "author": "Engineering management (simulated)",
+        "authored_at": "2026-10-12T00:00:00Z",
+        "content_hash": "519002b48ac2f165a455f99376a5a5ed573535ea9f6e112e5e13bd59be373407",
+        "doc_key": "engineering-platform-note",
+        "doc_type": "note",
+        "effective_from": null,
+        "effective_to": null,
+        "id": "doc_000004",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "plan_status": "n/a",
+        "project_tags": [
+          "platform"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "engineering"
+        ],
+        "title": "Engineering platform note - code assistant rollout",
+        "version": 1
+      },
+      {
+        "author": "Product planning (simulated)",
+        "authored_at": "2026-10-14T00:00:00Z",
+        "content_hash": "236df658924d17c1b5081b4ad549f09d32d0e40d4b44a7a768b6b0c424629cb2",
+        "doc_key": "product-launch-plan",
+        "doc_type": "update",
+        "effective_from": "2026-10-01",
+        "effective_to": "2027-03-31",
+        "id": "doc_000005",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "plan_status": "approved",
+        "project_tags": [
+          "workspace-launch"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": {
+          "doc_key": "product-launch-plan",
+          "id": "doc_000001",
+          "title": "Product launch plan - assistant workspace GA",
+          "version": 1
+        },
+        "team_tags": [
+          "product"
+        ],
+        "title": "Product launch plan update - milestone moved",
+        "version": 2
+      },
+      {
+        "author": "Marketing channel (simulated Slack export)",
+        "authored_at": "2026-10-16T00:00:00Z",
+        "content_hash": "7fc768c6f70ca7f59c8a362832ef0f0805e7852409479c27b3ca8a121e224e4b",
+        "doc_key": "marketing-ideas-slack",
+        "doc_type": "correspondence",
+        "effective_from": null,
+        "effective_to": null,
+        "id": "doc_000006",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "plan_status": "informal",
+        "project_tags": [
+          "campaigns"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "marketing"
+        ],
+        "title": "#marketing-ideas: AI campaign brainstorm",
+        "version": 1
+      }
+    ],
+    "query": null
+  },
+  "scenario": "main",
+  "schema": "DocumentList",
+  "status": 200
+}

@@ -12,6 +12,7 @@ from app.config import Settings
 from app.core.clock import Clock, IdFactory, SystemClock, UuidIdFactory
 from app.core.errors import install_error_handlers
 from app.db.base import create_all, make_engine, make_session_factory
+from app.providers.forecast import ForecastProvider, provider_from_settings
 
 
 def create_app(
@@ -19,6 +20,7 @@ def create_app(
     *,
     clock: Clock | None = None,
     id_factory: IdFactory | None = None,
+    forecast_provider: ForecastProvider | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
 
@@ -36,6 +38,7 @@ def create_app(
     app.state.id_factory = id_factory or UuidIdFactory()
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
+    app.state.forecast_provider = forecast_provider or provider_from_settings(settings.forecast_provider)
 
     app.add_middleware(
         CORSMiddleware,
@@ -57,15 +60,32 @@ def create_app(
     app.include_router(health, prefix="/api")
 
     from app.api import (
+        routes_admin,
         routes_budget,
         routes_decisions,
         routes_documents,
+        routes_forecasts,
         routes_imports,
+        routes_meta,
         routes_proposals,
+        routes_signals,
+        routes_spending,
         routes_teams,
     )
 
-    for module in (routes_teams, routes_imports, routes_documents, routes_budget, routes_proposals, routes_decisions):
+    for module in (
+        routes_meta,
+        routes_teams,
+        routes_imports,
+        routes_spending,
+        routes_budget,
+        routes_forecasts,
+        routes_documents,
+        routes_signals,
+        routes_proposals,
+        routes_decisions,
+        routes_admin,
+    ):
         app.include_router(module.router)
 
     return app

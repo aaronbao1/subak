@@ -1,0 +1,28 @@
+{
+  "description": "three Northstar teams",
+  "name": "teams",
+  "request": {
+    "method": "GET",
+    "path": "/api/teams"
+  },
+  "response": [
+    {
+      "active": true,
+      "id": "engineering",
+      "name": "Engineering"
+    },
+    {
+      "active": true,
+      "id": "product",
+      "name": "Product"
+    },
+    {
+      "active": true,
+      "id": "research",
+      "name": "Research"
+    }
+  ],
+  "scenario": "main",
+  "schema": "TeamList",
+  "status": 200
+}

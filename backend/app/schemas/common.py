@@ -50,3 +50,15 @@ class Coverage(OutModel):
 class DataLabels(OutModel):
     simulated: bool
     real_sample: bool
+
+
+class ErrorDetail(OutModel):
+    code: str
+    message: str
+    details: dict[str, Any]
+
+
+class ErrorBody(OutModel):
+    """Every 4xx/5xx response: {"error": {"code", "message", "details"}}. Branch on `code`."""
+
+    error: ErrorDetail

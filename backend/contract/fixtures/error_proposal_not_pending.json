@@ -1,0 +1,36 @@
+{
+  "description": "a second decision on an applied proposal",
+  "name": "error_proposal_not_pending",
+  "request": {
+    "body": {
+      "evidence_refs": [
+        {
+          "id": "sig_000001",
+          "kind": "signal"
+        }
+      ],
+      "outcome": "approve",
+      "rationale": "Matches the approved research plan and the launch update."
+    },
+    "headers": {
+      "Idempotency-Key": "approve-transfer-2",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "error": {
+      "code": "proposal_not_pending",
+      "details": {
+        "decision_id": "dec_000001",
+        "status": "applied"
+      },
+      "message": "proposal is applied; it can no longer be decided"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 409
+}

@@ -1,0 +1,508 @@
+{
+  "fixtures": [
+    {
+      "description": "immutable snapshots v1 (seed) and v2 linked to the decision",
+      "file": "budget_history.json",
+      "method": "GET",
+      "name": "budget_history",
+      "path": "/api/budget/history",
+      "scenario": "main",
+      "schema": "BudgetHistory",
+      "status": 200
+    },
+    {
+      "description": "version 2 after outcome B",
+      "file": "budget_state_after_addition.json",
+      "method": "GET",
+      "name": "budget_state_after_addition",
+      "path": "/api/budget",
+      "scenario": "addition",
+      "schema": "BudgetState",
+      "status": 200
+    },
+    {
+      "description": "unchanged version 1 after a rejection",
+      "file": "budget_state_after_rejection.json",
+      "method": "GET",
+      "name": "budget_state_after_rejection",
+      "path": "/api/budget",
+      "scenario": "rejection",
+      "schema": "BudgetState",
+      "status": 200
+    },
+    {
+      "description": "version 2 after outcome A",
+      "file": "budget_state_after_transfer.json",
+      "method": "GET",
+      "name": "budget_state_after_transfer",
+      "path": "/api/budget",
+      "scenario": "main",
+      "schema": "BudgetState",
+      "status": 200
+    },
+    {
+      "description": "version 1: research 60k, product 80k, engineering 60k; envelope 200k",
+      "file": "budget_state_initial.json",
+      "method": "GET",
+      "name": "budget_state_initial",
+      "path": "/api/budget",
+      "scenario": "main",
+      "schema": "BudgetState",
+      "status": 200
+    },
+    {
+      "description": "coverage per team and company for the seeded data",
+      "file": "coverage.json",
+      "method": "GET",
+      "name": "coverage",
+      "path": "/api/coverage",
+      "scenario": "main",
+      "schema": "CoverageReport",
+      "status": 200
+    },
+    {
+      "description": "partial coverage with notes",
+      "file": "coverage_incomplete.json",
+      "method": "GET",
+      "name": "coverage_incomplete",
+      "path": "/api/coverage",
+      "scenario": "incomplete",
+      "schema": "CoverageReport",
+      "status": 200
+    },
+    {
+      "description": "approved addition: 95k/80k/75k, total 250k, version 1 -> 2",
+      "file": "decision_applied_addition.json",
+      "method": "POST",
+      "name": "decision_applied_addition",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "addition",
+      "schema": "Decision",
+      "status": 201
+    },
+    {
+      "description": "approved and applied: 85k/50k/65k, total 200k, version 1 -> 2",
+      "file": "decision_applied_transfer.json",
+      "method": "POST",
+      "name": "decision_applied_transfer",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "main",
+      "schema": "Decision",
+      "status": 201
+    },
+    {
+      "description": "blocked attempts: Droid decide (role), stale apply",
+      "file": "decision_events.json",
+      "method": "GET",
+      "name": "decision_events",
+      "path": "/api/decision-events",
+      "scenario": "main",
+      "schema": "DecisionEventList",
+      "status": 200
+    },
+    {
+      "description": "who, when, why, evidence, before/after, version for each decision",
+      "file": "decision_history.json",
+      "method": "GET",
+      "name": "decision_history",
+      "path": "/api/decisions",
+      "scenario": "main",
+      "schema": "DecisionList",
+      "status": 200
+    },
+    {
+      "description": "rejected; budget stays version 1 at 60k/80k/60k",
+      "file": "decision_rejected.json",
+      "method": "POST",
+      "name": "decision_rejected",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "rejection",
+      "schema": "Decision",
+      "status": 201
+    },
+    {
+      "description": "same Idempotency-Key and body: stored decision, replayed=true, applied once",
+      "file": "decision_replayed.json",
+      "method": "POST",
+      "name": "decision_replayed",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "main",
+      "schema": "Decision",
+      "status": 200
+    },
+    {
+      "description": "full content of the approved research plan",
+      "file": "document_detail_research_plan.json",
+      "method": "GET",
+      "name": "document_detail_research_plan",
+      "path": "/api/documents/doc_000003",
+      "scenario": "main",
+      "schema": "DocumentDetail",
+      "status": 200
+    },
+    {
+      "description": "product launch plan v1 -> v2 chain",
+      "file": "document_versions_product_launch.json",
+      "method": "GET",
+      "name": "document_versions_product_launch",
+      "path": "/api/documents/by-key/product-launch-plan/versions",
+      "scenario": "main",
+      "schema": "DocumentVersions",
+      "status": 200
+    },
+    {
+      "description": "six seeded documents with supersedes links and is_current",
+      "file": "documents.json",
+      "method": "GET",
+      "name": "documents",
+      "path": "/api/documents",
+      "scenario": "main",
+      "schema": "DocumentList",
+      "status": 200
+    },
+    {
+      "description": "keyword search with exact match offsets; superseded thread still listed, marked",
+      "file": "documents_search_model_evaluation.json",
+      "method": "GET",
+      "name": "documents_search_model_evaluation",
+      "path": "/api/documents",
+      "scenario": "main",
+      "schema": "DocumentList",
+      "status": 200
+    },
+    {
+      "description": "quote does not occur verbatim in the cited document",
+      "file": "error_citation_not_found.json",
+      "method": "POST",
+      "name": "error_citation_not_found",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
+      "description": "same key with a different request body",
+      "file": "error_idempotency_key_reused.json",
+      "method": "POST",
+      "name": "error_idempotency_key_reused",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 409
+    },
+    {
+      "description": "a second decision on an applied proposal",
+      "file": "error_proposal_not_pending.json",
+      "method": "POST",
+      "name": "error_proposal_not_pending",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 409
+    },
+    {
+      "description": "Droid can draft but never decide",
+      "file": "error_role_forbidden_droid_decides.json",
+      "method": "POST",
+      "name": "error_role_forbidden_droid_decides",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 403
+    },
+    {
+      "description": "the requester cannot approve its own proposal",
+      "file": "error_self_approval.json",
+      "method": "POST",
+      "name": "error_self_approval",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "rejection",
+      "schema": "ErrorBody",
+      "status": 403
+    },
+    {
+      "description": "a current signal resting only on a superseded document is refused",
+      "file": "error_signal_cites_superseded_only.json",
+      "method": "POST",
+      "name": "error_signal_cites_superseded_only",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
+      "description": "outcome B was drafted against version 1; budget is now version 2 -> not applied",
+      "file": "error_stale_proposal.json",
+      "method": "POST",
+      "name": "error_stale_proposal",
+      "path": "/api/proposals/prop_000002/decision",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 409
+    },
+    {
+      "description": "addition whose lines do not sum to the envelope increase",
+      "file": "error_validation_addition_mismatch.json",
+      "method": "POST",
+      "name": "error_validation_addition_mismatch",
+      "path": "/api/proposals",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
+      "description": "transfer exceeding the source allocation",
+      "file": "error_validation_negative_allocation.json",
+      "method": "POST",
+      "name": "error_validation_negative_allocation",
+      "path": "/api/proposals",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
+      "description": "placeholder projections 85k/50k/65k, full_period_total, simulated (not a model)",
+      "file": "forecast_available.json",
+      "method": "GET",
+      "name": "forecast_available",
+      "path": "/api/forecasts",
+      "scenario": "main",
+      "schema": "ForecastResult",
+      "status": 200
+    },
+    {
+      "description": "persisted forecast that proposals and decisions can cite",
+      "file": "forecast_snapshot.json",
+      "method": "POST",
+      "name": "forecast_snapshot",
+      "path": "/api/forecasts/snapshots",
+      "scenario": "main",
+      "schema": "ForecastSnapshot",
+      "status": 201
+    },
+    {
+      "description": "availability unavailable, empty projections (never zero), reason given",
+      "file": "forecast_unavailable.json",
+      "method": "GET",
+      "name": "forecast_unavailable",
+      "path": "/api/forecasts",
+      "scenario": "forecast_unavailable",
+      "schema": "ForecastResult",
+      "status": 200
+    },
+    {
+      "description": "real Codex format: repeated snapshot adds 0, a counter decrease is flagged as reset",
+      "file": "import_codex_counter_reset.json",
+      "method": "POST",
+      "name": "import_codex_counter_reset",
+      "path": "/api/imports",
+      "scenario": "incomplete",
+      "schema": "ImportResult",
+      "status": 201
+    },
+    {
+      "description": "same bytes again: status duplicate, nothing added",
+      "file": "import_duplicate.json",
+      "method": "POST",
+      "name": "import_duplicate",
+      "path": "/api/imports",
+      "scenario": "imports",
+      "schema": "ImportResult",
+      "status": 200
+    },
+    {
+      "description": "first import of the simulated billing export",
+      "file": "import_result.json",
+      "method": "POST",
+      "name": "import_result",
+      "path": "/api/imports",
+      "scenario": "imports",
+      "schema": "ImportResult",
+      "status": 201
+    },
+    {
+      "description": "record from an account with no team mapping -> unattributed + warning",
+      "file": "import_unmapped_account.json",
+      "method": "POST",
+      "name": "import_unmapped_account",
+      "path": "/api/imports",
+      "scenario": "incomplete",
+      "schema": "ImportResult",
+      "status": 201
+    },
+    {
+      "description": "modes and real-vs-simulated labels",
+      "file": "meta.json",
+      "method": "GET",
+      "name": "meta",
+      "path": "/api/meta",
+      "scenario": "main",
+      "schema": "Meta",
+      "status": 200
+    },
+    {
+      "description": "spend + budget + forecast combined, per-team comparison",
+      "file": "overview.json",
+      "method": "GET",
+      "name": "overview",
+      "path": "/api/overview",
+      "scenario": "main",
+      "schema": "Overview",
+      "status": 200
+    },
+    {
+      "description": "spend and budget still present; projected fields null",
+      "file": "overview_forecast_unavailable.json",
+      "method": "GET",
+      "name": "overview_forecast_unavailable",
+      "path": "/api/overview",
+      "scenario": "forecast_unavailable",
+      "schema": "Overview",
+      "status": 200
+    },
+    {
+      "description": "outcome B drafted at the same base version: +50k envelope, research +35k, engineering +15k",
+      "file": "proposal_addition_pending.json",
+      "method": "POST",
+      "name": "proposal_addition_pending",
+      "path": "/api/proposals",
+      "scenario": "main",
+      "schema": "Proposal",
+      "status": 201
+    },
+    {
+      "description": "same intent re-drafted on version 2; needs a fresh review",
+      "file": "proposal_rebased.json",
+      "method": "POST",
+      "name": "proposal_rebased",
+      "path": "/api/proposals/prop_000002/rebase",
+      "scenario": "main",
+      "schema": "Proposal",
+      "status": 201
+    },
+    {
+      "description": "the stale proposal with is_stale=true and its blocked attempt",
+      "file": "proposal_stale.json",
+      "method": "GET",
+      "name": "proposal_stale",
+      "path": "/api/proposals/prop_000002",
+      "scenario": "main",
+      "schema": "Proposal",
+      "status": 200
+    },
+    {
+      "description": "outcome A drafted by Droid: product->research 25k, product->engineering 5k",
+      "file": "proposal_transfer_pending.json",
+      "method": "POST",
+      "name": "proposal_transfer_pending",
+      "path": "/api/proposals",
+      "scenario": "main",
+      "schema": "Proposal",
+      "status": 201
+    },
+    {
+      "description": "review queue",
+      "file": "proposals_pending.json",
+      "method": "GET",
+      "name": "proposals_pending",
+      "path": "/api/proposals",
+      "scenario": "main",
+      "schema": "ProposalList",
+      "status": 200
+    },
+    {
+      "description": "verified signal: exact quote from the approved research plan",
+      "file": "signal_created.json",
+      "method": "POST",
+      "name": "signal_created",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ContextSignal",
+      "status": 201
+    },
+    {
+      "description": "product timing shift citing v2 (current) and v1 (superseded)",
+      "file": "signal_detail_product.json",
+      "method": "GET",
+      "name": "signal_detail_product",
+      "path": "/api/signals/sig_000003",
+      "scenario": "main",
+      "schema": "ContextSignal",
+      "status": 200
+    },
+    {
+      "description": "current / superseded / informal signals with citation currency",
+      "file": "signals.json",
+      "method": "GET",
+      "name": "signals",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "SignalList",
+      "status": 200
+    },
+    {
+      "description": "research drill-down incl. included_usage with counts_toward_spend=false",
+      "file": "spend_records_research.json",
+      "method": "GET",
+      "name": "spend_records_research",
+      "path": "/api/spend/records",
+      "scenario": "main",
+      "schema": "SpendRecordList",
+      "status": 200
+    },
+    {
+      "description": "recorded spend 45k/20k/30k = 95k; included usage notional only; coverage complete",
+      "file": "spend_summary.json",
+      "method": "GET",
+      "name": "spend_summary",
+      "path": "/api/spend/summary",
+      "scenario": "main",
+      "schema": "SpendSummary",
+      "status": 200
+    },
+    {
+      "description": "spend summary is unaffected by the forecast provider",
+      "file": "spend_summary_forecast_unavailable.json",
+      "method": "GET",
+      "name": "spend_summary_forecast_unavailable",
+      "path": "/api/spend/summary",
+      "scenario": "forecast_unavailable",
+      "schema": "SpendSummary",
+      "status": 200
+    },
+    {
+      "description": "unattributed bucket + counter reset -> coverage partial; company total includes unattributed",
+      "file": "spend_summary_incomplete.json",
+      "method": "GET",
+      "name": "spend_summary_incomplete",
+      "path": "/api/spend/summary",
+      "scenario": "incomplete",
+      "schema": "SpendSummary",
+      "status": 200
+    },
+    {
+      "description": "explicit source account -> team mappings",
+      "file": "team_mappings.json",
+      "method": "GET",
+      "name": "team_mappings",
+      "path": "/api/team-mappings",
+      "scenario": "main",
+      "schema": "TeamMappingList",
+      "status": 200
+    },
+    {
+      "description": "three Northstar teams",
+      "file": "teams.json",
+      "method": "GET",
+      "name": "teams",
+      "path": "/api/teams",
+      "scenario": "main",
+      "schema": "TeamList",
+      "status": 200
+    }
+  ],
+  "generated_with": {
+    "frozen_clock": "2026-10-24T12:00:00+00:00",
+    "ids": "sequential per scenario"
+  }
+}

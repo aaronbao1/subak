@@ -1,0 +1,38 @@
+{
+  "description": "Droid can draft but never decide",
+  "name": "error_role_forbidden_droid_decides",
+  "request": {
+    "body": {
+      "evidence_refs": [
+        {
+          "id": "sig_000001",
+          "kind": "signal"
+        }
+      ],
+      "outcome": "approve",
+      "rationale": "Matches the approved research plan and the launch update."
+    },
+    "headers": {
+      "Idempotency-Key": "droid-attempt-1",
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "error": {
+      "code": "role_forbidden",
+      "details": {
+        "allowed_roles": [
+          "finance_approver"
+        ],
+        "role": "droid_agent"
+      },
+      "message": "role 'droid_agent' cannot decide proposals; only finance_approver can"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 403
+}

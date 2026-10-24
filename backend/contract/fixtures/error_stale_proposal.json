@@ -1,0 +1,47 @@
+{
+  "description": "outcome B was drafted against version 1; budget is now version 2 -> not applied",
+  "name": "error_stale_proposal",
+  "request": {
+    "body": {
+      "outcome": "approve",
+      "rationale": "add funds"
+    },
+    "headers": {
+      "Idempotency-Key": "approve-addition-1",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000002/decision"
+  },
+  "response": {
+    "error": {
+      "code": "stale_proposal",
+      "details": {
+        "base_version": 1,
+        "current": {
+          "allocations": {
+            "engineering": "65000.00",
+            "product": "50000.00",
+            "research": "85000.00"
+          },
+          "total": "200000.00"
+        },
+        "current_version": 2,
+        "proposal_before": {
+          "allocations": {
+            "engineering": "60000.00",
+            "product": "80000.00",
+            "research": "60000.00"
+          },
+          "total": "200000.00"
+        },
+        "proposal_id": "prop_000002"
+      },
+      "message": "proposal was drafted against budget version 1 but the budget is now at version 2; it was not applied. Rebase it onto the current state and review it again."
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 409
+}

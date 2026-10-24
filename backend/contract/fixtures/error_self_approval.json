@@ -1,0 +1,30 @@
+{
+  "description": "the requester cannot approve its own proposal",
+  "name": "error_self_approval",
+  "request": {
+    "body": {
+      "outcome": "approve",
+      "rationale": "approving my own request"
+    },
+    "headers": {
+      "Idempotency-Key": "self-approve-1",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "error": {
+      "code": "self_approval_forbidden",
+      "details": {
+        "actor_id": "fin-approver-alice",
+        "requester": "fin-approver-alice"
+      },
+      "message": "a requester cannot approve its own request; another finance approver must decide"
+    }
+  },
+  "scenario": "rejection",
+  "schema": "ErrorBody",
+  "status": 403
+}

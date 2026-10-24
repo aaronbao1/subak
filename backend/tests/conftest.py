@@ -73,3 +73,16 @@ def session(app) -> Iterator[Session]:
     finally:
         s.rollback()
         s.close()
+
+
+@pytest.fixture
+def seeded(app):
+    """The full Northstar seed (period, teams, mappings, budget v1, spend, corpus)."""
+    from app.seed.northstar import seed
+
+    s = app.state.session_factory()
+    try:
+        assert seed(s, clock=app.state.clock, ids=app.state.id_factory)
+    finally:
+        s.close()
+    return app

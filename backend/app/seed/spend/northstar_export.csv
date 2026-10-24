@@ -1,0 +1,9 @@
+record_id,occurred_at,source_account,provider,model,cost_category,value_kind,amount,unit,notional_value,input_tokens,output_tokens,description
+ns-2026p1-001,2026-10-01T00:00:00Z,ws-research,anthropic,,subscription_fee,simulated,5000.00,USD,,,,research team plan seats
+ns-2026p1-002,2026-10-01T00:00:00Z,ws-product,openai,,subscription_fee,simulated,4000.00,USD,,,,product team plan seats
+ns-2026p1-003,2026-10-01T00:00:00Z,ws-engineering,anthropic,,subscription_fee,simulated,4000.00,USD,,,,coding assistant seats
+ns-2026p1-004,2026-10-10T00:00:00Z,ws-research,anthropic,claude,included_usage,simulated,,USD,3000.00,500000,100000,usage covered by research seats
+ns-2026p1-005,2026-10-15T00:00:00Z,ws-research,anthropic,claude,direct_api,simulated,40000.00,USD,,1000000,200000,evaluation harness API usage
+ns-2026p1-006,2026-10-15T00:00:00Z,ws-product,openai,gpt,billable_overage,simulated,16000.00,USD,,,,launch tuning beyond included usage
+ns-2026p1-007,2026-10-15T00:00:00Z,ws-engineering,anthropic,claude,included_usage,simulated,,USD,2500.00,400000,80000,usage covered by coding seats
+ns-2026p1-008,2026-10-20T00:00:00Z,ws-engineering,anthropic,claude,direct_api,simulated,26000.00,USD,,,,platform migration API usage

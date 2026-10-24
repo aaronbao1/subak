@@ -1,0 +1,75 @@
+{
+  "description": "product launch plan v1 -> v2 chain",
+  "name": "document_versions_product_launch",
+  "request": {
+    "method": "GET",
+    "path": "/api/documents/by-key/product-launch-plan/versions"
+  },
+  "response": {
+    "current_version": 2,
+    "doc_key": "product-launch-plan",
+    "versions": [
+      {
+        "author": "Product planning (simulated)",
+        "authored_at": "2026-08-20T00:00:00Z",
+        "content_hash": "95505f454e824151eac4029bc414a48de239a1edd7d4103aef92391b5abbe1fb",
+        "doc_key": "product-launch-plan",
+        "doc_type": "plan",
+        "effective_from": "2026-10-01",
+        "effective_to": "2026-12-31",
+        "id": "doc_000001",
+        "is_current": false,
+        "is_simulated": true,
+        "origin": "seed",
+        "plan_status": "approved",
+        "project_tags": [
+          "workspace-launch"
+        ],
+        "superseded_by": {
+          "doc_key": "product-launch-plan",
+          "id": "doc_000005",
+          "title": "Product launch plan update - milestone moved",
+          "version": 2
+        },
+        "supersedes": null,
+        "team_tags": [
+          "product"
+        ],
+        "title": "Product launch plan - assistant workspace GA",
+        "version": 1
+      },
+      {
+        "author": "Product planning (simulated)",
+        "authored_at": "2026-10-14T00:00:00Z",
+        "content_hash": "236df658924d17c1b5081b4ad549f09d32d0e40d4b44a7a768b6b0c424629cb2",
+        "doc_key": "product-launch-plan",
+        "doc_type": "update",
+        "effective_from": "2026-10-01",
+        "effective_to": "2027-03-31",
+        "id": "doc_000005",
+        "is_current": true,
+        "is_simulated": true,
+        "origin": "seed",
+        "plan_status": "approved",
+        "project_tags": [
+          "workspace-launch"
+        ],
+        "superseded_by": null,
+        "supersedes": {
+          "doc_key": "product-launch-plan",
+          "id": "doc_000001",
+          "title": "Product launch plan - assistant workspace GA",
+          "version": 1
+        },
+        "team_tags": [
+          "product"
+        ],
+        "title": "Product launch plan update - milestone moved",
+        "version": 2
+      }
+    ]
+  },
+  "scenario": "main",
+  "schema": "DocumentVersions",
+  "status": 200
+}

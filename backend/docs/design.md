@@ -533,3 +533,36 @@ Code: `services/budget.py`, `services/proposals.py`, `services/decisions.py`, ro
   `replaced_by_proposal_id` and `decision_id` make each proposal's history readable on its own.
 - A replayed decision returns 200 with `replayed: true`; `budget_state` in any decision response is the
   current saved state when the response was produced (`after` holds the post-decision values).
+
+## 13. API, forecasts, signals, seed and contract (as built)
+
+Code: `api/routes_{meta,spending,forecasts,signals,admin}.py`, `services/{spending,forecasts,overview,signals}.py`,
+`providers/forecast.py`, `seed/`, `contract/export.py`. Differences from and additions to §4-§7:
+- Spend: `SpendSummary.teams[]` embed their `coverage`; `attributed_total` (teams) and `company_total`
+  (teams + unattributed + any inactive-team spend) are both given. `by_cost_category[cat].amount` is `null`
+  for included/unpriced usage; `included_usage_notional` and `unpriced_tokens` are display-only.
+  `/spend/records` validates filters (422 `unknown_team|unknown_value_kind|unknown_cost_category|unknown_batch`;
+  `team=unattributed` selects unmapped records) and paginates (`offset`, `limit` <= 5000, `total`).
+- Forecasts: `GET /forecasts` never writes. `POST /forecasts/snapshots` (droid_agent, finance_*) persists the
+  current result as citable evidence; `GET /forecasts/snapshots/{id}`. `services/forecasts.get_forecast` runs the
+  provider with a 5 s timeout and converts exceptions, timeouts, malformed output (incl. float money) and a
+  wrong `target_period` into `unavailable`; unknown/duplicate/negative team projections are dropped and the
+  result becomes `partial` with `missing_teams`. `create_app(forecast_provider=...)` injects a provider.
+- Overview: `teams[]` gives `allocation`, `recorded_spend`, `remaining`, `projected`, `projected_minus_allocation`
+  (null when unknown, never 0); `company.projected_total` only when every team is projected; a missing budget
+  envelope yields `budget: null` + `budget_unavailable_reason` instead of an error.
+- Signals: at least one citation is required; offsets are optional and corrected to the first exact occurrence
+  (`offsets_corrected: true`); unknown document -> 422 `unknown_document`. `produced_by` is derived from the
+  caller (finance roles -> `finance`; droid -> its agent run's runner kind, else the configured runner) and
+  cannot be sent. `supersedes_signal_id` on create marks the older signal `superseded`. `PATCH` (finance only)
+  changes `status`, `uncertainty`, `superseded_by_signal_id`; content/citations are immutable. `DELETE`
+  (finance only) is refused with 409 `signal_in_use` once a proposal cites it or it is part of a supersede chain.
+  `needs_review` flags a `current` signal whose cited documents have all since been superseded.
+- Seed: `python -m app.seed` seeds an empty DB (idempotent). Spend goes through the normal import pipeline from
+  `seed/spend/northstar_export.csv` (subscriptions + direct API + overage + included usage); the six corpus
+  documents are ingested in authored order from `seed/corpus/*.md`. `POST /admin/reset` drops, recreates and
+  reseeds only when `BACKEND_ALLOW_RESET=1` (else 403 `reset_disabled`).
+- Contract: fixture files carry `name`, `scenario`, `description`, `schema` in addition to
+  `request/status/response`; `fixtures/index.json` lists them. Six scenarios (main, addition, rejection,
+  forecast_unavailable, imports, incomplete) each run against their own seeded DB, so ids restart per scenario.
+  Agent-run fixtures are deferred to the Droid module. `ErrorBody` lives in `schemas/common.py`.

@@ -1,0 +1,63 @@
+{
+  "description": "verified signal: exact quote from the approved research plan",
+  "name": "signal_created",
+  "request": {
+    "body": {
+      "applies_from": "2026-10-01",
+      "applies_to": "2026-12-31",
+      "change_type": "expansion",
+      "citations": [
+        {
+          "document_id": "doc_000003",
+          "quote": "This plan expands model-evaluation work during the current planning period."
+        }
+      ],
+      "project": "model-evaluation",
+      "status": "current",
+      "summary": "Approved plan expands model-evaluation work in the current period.",
+      "team": "research",
+      "uncertainty": "token volume depends on how many model updates ship; plan is not measured usage"
+    },
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "agent_run_id": null,
+    "applies_from": "2026-10-01",
+    "applies_to": "2026-12-31",
+    "change_type": "expansion",
+    "citations": [
+      {
+        "char_end": 186,
+        "char_start": 111,
+        "citation_currency": "current",
+        "doc_key": "research-eval-plan",
+        "document_id": "doc_000003",
+        "id": "cit_000001",
+        "offsets_corrected": false,
+        "quote": "This plan expands model-evaluation work during the current planning period.",
+        "superseded_by_document_id": null,
+        "title": "Approved research plan - model-evaluation expansion",
+        "version": 1
+      }
+    ],
+    "created_at": "2026-10-24T12:21:00Z",
+    "id": "sig_000001",
+    "needs_review": false,
+    "produced_by": "finance",
+    "project": "model-evaluation",
+    "status": "current",
+    "summary": "Approved plan expands model-evaluation work in the current period.",
+    "superseded_by_signal_id": null,
+    "supersedes_signal_ids": [],
+    "team": "research",
+    "uncertainty": "token volume depends on how many model updates ship; plan is not measured usage"
+  },
+  "scenario": "main",
+  "schema": "ContextSignal",
+  "status": 201
+}

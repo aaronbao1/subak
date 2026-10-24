@@ -13,3 +13,7 @@ def get_clock(request: Request) -> Clock:
 
 def get_ids(request: Request) -> IdFactory:
     return request.app.state.id_factory
+
+
+def get_forecast_provider(request: Request):
+    return request.app.state.forecast_provider

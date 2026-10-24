@@ -19,6 +19,7 @@ backend/.venv/bin/pip install -e "backend[dev]"
 
 ```bash
 cd backend
+.venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded)
 .venv/bin/python -m app.main          # serves http://127.0.0.1:8787
 # or, with reload:
 .venv/bin/uvicorn app.main:create_app --factory --port 8787 --reload
@@ -71,6 +72,28 @@ curl 'http://127.0.0.1:8787/api/documents?q=model-evaluation&include_superseded=
 
 Re-posting identical bytes returns `status: "duplicate"` and adds nothing; overlapping files are
 deduplicated per record key; cumulative token counters are converted to deltas. See design §11.
+
+## API
+
+All routes are under `/api`; the full spec is [`contract/openapi.json`](contract/openapi.json) and
+example responses are in [`contract/fixtures/`](contract/fixtures/) (see
+[`contract/README.md`](contract/README.md) for mocking). Main read routes:
+
+| Route | Returns |
+|---|---|
+| `GET /api/meta` | period, unit, runner/provider modes, real-vs-simulated labels |
+| `GET /api/spend/summary`, `GET /api/spend/records` | team/company spend by cost category and value kind, coverage, drill-down |
+| `GET /api/coverage` | completeness per team, unattributed bucket, contributing batches |
+| `GET /api/budget`, `GET /api/budget/history` | current allocations + version, immutable snapshots |
+| `GET /api/forecasts`, `POST /api/forecasts/snapshots` | ForecastProvider result (200 even when unavailable), citable snapshot |
+| `GET /api/overview` | spend + budget + forecast; each section degrades independently |
+| `GET /api/documents[?q=]`, `GET /api/documents/{id}`, `.../by-key/{key}/versions` | corpus search/read |
+| `GET/POST /api/signals`, `GET/PATCH/DELETE /api/signals/{id}` | context signals with verified citations |
+| `POST /api/proposals`, `.../{id}/decision`, `.../rebase`, `.../revise` | drafting and finance decisions |
+| `GET /api/decisions`, `GET /api/decision-events` | decision history and blocked attempts |
+
+Regenerate the contract after any schema or seed change:
+`.venv/bin/python -m app.contract.export` (`--check` to verify; `tests/test_contract.py` enforces it).
 
 ## Real vs simulated
 

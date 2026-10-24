@@ -1,0 +1,107 @@
+{
+  "description": "same intent re-drafted on version 2; needs a fresh review",
+  "name": "proposal_rebased",
+  "request": {
+    "body": {},
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000002/rebase"
+  },
+  "response": {
+    "action_type": "addition",
+    "after": {
+      "allocations": {
+        "engineering": "80000.00",
+        "product": "50000.00",
+        "research": "120000.00"
+      },
+      "total": "250000.00"
+    },
+    "agent_run_id": null,
+    "base_version": 2,
+    "before": {
+      "allocations": {
+        "engineering": "65000.00",
+        "product": "50000.00",
+        "research": "85000.00"
+      },
+      "total": "200000.00"
+    },
+    "blocked_attempts": [],
+    "created_at": "2026-10-24T12:43:00Z",
+    "current_version": 2,
+    "decision_id": null,
+    "deltas": {
+      "engineering": "15000.00",
+      "product": "0.00",
+      "research": "35000.00"
+    },
+    "envelope_increase": "50000.00",
+    "evidence_refs": [
+      {
+        "id": "sig_000001",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "sig_000003",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "sig_000004",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "fcs_000001",
+        "kind": "forecast_snapshot",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "doc_000003",
+        "kind": "document",
+        "note": null,
+        "version": 1
+      }
+    ],
+    "id": "prop_000003",
+    "is_stale": false,
+    "lines": [
+      {
+        "amount": "35000.00",
+        "from_team": null,
+        "to_team": "research"
+      },
+      {
+        "amount": "15000.00",
+        "from_team": null,
+        "to_team": "engineering"
+      }
+    ],
+    "origin": "finance_manual",
+    "period": "2026-P1",
+    "rationale": "Add 50k prioritizing research evaluation and engineering continuation.",
+    "rebased_from_proposal_id": "prop_000002",
+    "replaced_by_proposal_id": null,
+    "requester": {
+      "id": "fin-analyst-ana",
+      "role": "finance_analyst"
+    },
+    "revises_proposal_id": null,
+    "status": "pending_review",
+    "unit": "USD",
+    "updated_at": "2026-10-24T12:43:00Z",
+    "warnings": []
+  },
+  "scenario": "main",
+  "schema": "Proposal",
+  "status": 201
+}

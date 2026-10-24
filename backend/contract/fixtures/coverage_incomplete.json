@@ -1,0 +1,133 @@
+{
+  "description": "partial coverage with notes",
+  "name": "coverage_incomplete",
+  "request": {
+    "method": "GET",
+    "path": "/api/coverage"
+  },
+  "response": {
+    "company": {
+      "counter_resets": 1,
+      "last_record_at": "2026-10-20T00:00:00Z",
+      "notes": [
+        "1 record(s) from unmapped source accounts are unattributed; add team mappings",
+        "1 cumulative counter reset(s) detected",
+        "period in progress (ends 2026-12-31); totals are to date"
+      ],
+      "record_count": 12,
+      "source_kinds": [
+        "codex_sessions",
+        "northstar_billing"
+      ],
+      "status": "partial",
+      "unmapped_records": 1,
+      "value_kinds": [
+        "measured",
+        "simulated"
+      ]
+    },
+    "data_labels": {
+      "real_sample": true,
+      "simulated": true
+    },
+    "period": {
+      "ends_on": "2026-12-31",
+      "id": "2026-P1",
+      "label": "Northstar planning period",
+      "starts_on": "2026-10-01"
+    },
+    "sources": [
+      {
+        "batch_id": "imp_000001",
+        "filename": "northstar_export.csv",
+        "imported_at": "2026-10-24T12:00:00Z",
+        "source_kind": "northstar_billing",
+        "source_label": "Northstar billing export (simulated)"
+      },
+      {
+        "batch_id": "imp_000002",
+        "filename": "sandbox.csv",
+        "imported_at": "2026-10-24T12:01:00Z",
+        "source_kind": "northstar_billing",
+        "source_label": null
+      },
+      {
+        "batch_id": "imp_000003",
+        "filename": "rollout.jsonl",
+        "imported_at": "2026-10-24T12:02:00Z",
+        "source_kind": "codex_sessions",
+        "source_label": null
+      }
+    ],
+    "teams": [
+      {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "notes": [
+          "1 unattributed record(s) in the period may belong to this team"
+        ],
+        "record_count": 3,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "partial",
+        "team": "engineering",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      },
+      {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-15T00:00:00Z",
+        "notes": [
+          "1 unattributed record(s) in the period may belong to this team"
+        ],
+        "record_count": 2,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "partial",
+        "team": "product",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      },
+      {
+        "counter_resets": 1,
+        "last_record_at": "2026-10-19T09:30:00Z",
+        "notes": [
+          "1 cumulative counter reset(s); usage may be understated",
+          "1 unattributed record(s) in the period may belong to this team"
+        ],
+        "record_count": 6,
+        "source_kinds": [
+          "codex_sessions",
+          "northstar_billing"
+        ],
+        "status": "partial",
+        "team": "research",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "measured",
+          "simulated"
+        ]
+      }
+    ],
+    "unattributed": {
+      "record_count": 1,
+      "recorded_spend": "1200.00",
+      "source_accounts": [
+        {
+          "record_count": 1,
+          "source": "northstar_billing:ws-shared-sandbox"
+        }
+      ],
+      "unit": "USD"
+    }
+  },
+  "scenario": "incomplete",
+  "schema": "CoverageReport",
+  "status": 200
+}

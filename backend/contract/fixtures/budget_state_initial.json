@@ -1,0 +1,46 @@
+{
+  "description": "version 1: research 60k, product 80k, engineering 60k; envelope 200k",
+  "name": "budget_state_initial",
+  "request": {
+    "method": "GET",
+    "path": "/api/budget"
+  },
+  "response": {
+    "allocated_total": "200000.00",
+    "allocations": [
+      {
+        "amount": "60000.00",
+        "recorded_spend": "30000.00",
+        "remaining": "30000.00",
+        "team": "engineering"
+      },
+      {
+        "amount": "80000.00",
+        "recorded_spend": "20000.00",
+        "remaining": "60000.00",
+        "team": "product"
+      },
+      {
+        "amount": "60000.00",
+        "recorded_spend": "45000.00",
+        "remaining": "15000.00",
+        "team": "research"
+      }
+    ],
+    "envelope_total": "200000.00",
+    "last_decision_id": null,
+    "note": "internal planning allocations; no provider credits are transferred or enforced",
+    "period": {
+      "ends_on": "2026-12-31",
+      "id": "2026-P1",
+      "label": "Northstar planning period",
+      "starts_on": "2026-10-01"
+    },
+    "state_version": 1,
+    "unit": "USD",
+    "updated_at": "2026-10-24T12:00:00Z"
+  },
+  "scenario": "main",
+  "schema": "BudgetState",
+  "status": 200
+}

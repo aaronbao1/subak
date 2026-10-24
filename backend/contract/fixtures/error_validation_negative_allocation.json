@@ -1,0 +1,44 @@
+{
+  "description": "transfer exceeding the source allocation",
+  "name": "error_validation_negative_allocation",
+  "request": {
+    "body": {
+      "action_type": "transfer",
+      "base_version": 1,
+      "evidence_refs": [],
+      "lines": [
+        {
+          "amount": "90000.00",
+          "from_team": "product",
+          "to_team": "research"
+        }
+      ],
+      "rationale": "move more than product has"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/proposals"
+  },
+  "response": {
+    "error": {
+      "code": "validation_failed",
+      "details": {
+        "base_version": 1,
+        "reasons": [
+          {
+            "code": "negative_allocation_result",
+            "field": "product",
+            "message": "product would be left with -10000.00 (has 80000.00)"
+          }
+        ]
+      },
+      "message": "proposal is invalid: negative_allocation_result"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 422
+}

@@ -1,0 +1,101 @@
+{
+  "description": "coverage per team and company for the seeded data",
+  "name": "coverage",
+  "request": {
+    "method": "GET",
+    "path": "/api/coverage"
+  },
+  "response": {
+    "company": {
+      "counter_resets": 0,
+      "last_record_at": "2026-10-20T00:00:00Z",
+      "notes": [
+        "period in progress (ends 2026-12-31); totals are to date"
+      ],
+      "record_count": 8,
+      "source_kinds": [
+        "northstar_billing"
+      ],
+      "status": "complete",
+      "unmapped_records": 0,
+      "value_kinds": [
+        "simulated"
+      ]
+    },
+    "data_labels": {
+      "real_sample": false,
+      "simulated": true
+    },
+    "period": {
+      "ends_on": "2026-12-31",
+      "id": "2026-P1",
+      "label": "Northstar planning period",
+      "starts_on": "2026-10-01"
+    },
+    "sources": [
+      {
+        "batch_id": "imp_000001",
+        "filename": "northstar_export.csv",
+        "imported_at": "2026-10-24T12:00:00Z",
+        "source_kind": "northstar_billing",
+        "source_label": "Northstar billing export (simulated)"
+      }
+    ],
+    "teams": [
+      {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "notes": [],
+        "record_count": 3,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "complete",
+        "team": "engineering",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      },
+      {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-15T00:00:00Z",
+        "notes": [],
+        "record_count": 2,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "complete",
+        "team": "product",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      },
+      {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-15T00:00:00Z",
+        "notes": [],
+        "record_count": 3,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "complete",
+        "team": "research",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      }
+    ],
+    "unattributed": {
+      "record_count": 0,
+      "recorded_spend": "0.00",
+      "source_accounts": [],
+      "unit": "USD"
+    }
+  },
+  "scenario": "main",
+  "schema": "CoverageReport",
+  "status": 200
+}

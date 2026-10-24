@@ -1,0 +1,46 @@
+{
+  "description": "first import of the simulated billing export",
+  "name": "import_result",
+  "request": {
+    "headers": {
+      "X-Actor-Id": "importer-1",
+      "X-Actor-Role": "importer"
+    },
+    "method": "POST",
+    "multipart": {
+      "file": "northstar_export.csv",
+      "form": {
+        "source_kind": "northstar_billing",
+        "source_label": "Northstar billing export (simulated)"
+      }
+    },
+    "path": "/api/imports"
+  },
+  "response": {
+    "content_hash": "1b1dd7f8d4afb63fa5c7a51d8ccd9b42ba7533582e27208676f29b17537a719e",
+    "created_at": "2026-10-24T12:01:00Z",
+    "duplicate_of_batch_id": null,
+    "errors": [],
+    "filename": "northstar_export.csv",
+    "id": "imp_000001",
+    "imported_by": "importer-1",
+    "record_count": 8,
+    "skipped_duplicate_records": 0,
+    "source_kind": "northstar_billing",
+    "source_label": "Northstar billing export (simulated)",
+    "spend_added": "95000.00",
+    "stats": {
+      "conflicting_records": 0,
+      "out_of_period_skipped": 0
+    },
+    "status": "imported",
+    "unit": "USD",
+    "unmapped_accounts": {},
+    "unmapped_record_count": 0,
+    "value_kind_default": "simulated",
+    "warnings": []
+  },
+  "scenario": "imports",
+  "schema": "ImportResult",
+  "status": 201
+}

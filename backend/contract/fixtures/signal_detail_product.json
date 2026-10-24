@@ -1,0 +1,56 @@
+{
+  "description": "product timing shift citing v2 (current) and v1 (superseded)",
+  "name": "signal_detail_product",
+  "request": {
+    "method": "GET",
+    "path": "/api/signals/sig_000003"
+  },
+  "response": {
+    "agent_run_id": null,
+    "applies_from": null,
+    "applies_to": null,
+    "change_type": "timing_shift",
+    "citations": [
+      {
+        "char_end": 215,
+        "char_start": 117,
+        "citation_currency": "superseded",
+        "doc_key": "product-launch-plan",
+        "document_id": "doc_000001",
+        "id": "cit_000004",
+        "offsets_corrected": false,
+        "quote": "The general-availability launch milestone for the assistant workspace lands in the current period.",
+        "superseded_by_document_id": "doc_000005",
+        "title": "Product launch plan - assistant workspace GA",
+        "version": 1
+      },
+      {
+        "char_end": 180,
+        "char_start": 109,
+        "citation_currency": "current",
+        "doc_key": "product-launch-plan",
+        "document_id": "doc_000005",
+        "id": "cit_000003",
+        "offsets_corrected": false,
+        "quote": "The general-availability launch milestone moves to the following period",
+        "superseded_by_document_id": null,
+        "title": "Product launch plan update - milestone moved",
+        "version": 2
+      }
+    ],
+    "created_at": "2026-10-24T12:23:00Z",
+    "id": "sig_000003",
+    "needs_review": false,
+    "produced_by": "finance",
+    "project": "workspace-launch",
+    "status": "current",
+    "summary": "Launch milestone moved to the following period; near-term launch work reduced.",
+    "superseded_by_signal_id": null,
+    "supersedes_signal_ids": [],
+    "team": "product",
+    "uncertainty": "pilot feedback could move the milestone again"
+  },
+  "scenario": "main",
+  "schema": "ContextSignal",
+  "status": 200
+}

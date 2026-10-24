@@ -1,0 +1,431 @@
+{
+  "description": "spend + budget + forecast combined, per-team comparison",
+  "name": "overview",
+  "request": {
+    "method": "GET",
+    "path": "/api/overview"
+  },
+  "response": {
+    "as_of": "2026-10-24T12:10:00Z",
+    "budget": {
+      "allocated_total": "200000.00",
+      "allocations": [
+        {
+          "amount": "60000.00",
+          "recorded_spend": "30000.00",
+          "remaining": "30000.00",
+          "team": "engineering"
+        },
+        {
+          "amount": "80000.00",
+          "recorded_spend": "20000.00",
+          "remaining": "60000.00",
+          "team": "product"
+        },
+        {
+          "amount": "60000.00",
+          "recorded_spend": "45000.00",
+          "remaining": "15000.00",
+          "team": "research"
+        }
+      ],
+      "envelope_total": "200000.00",
+      "last_decision_id": null,
+      "note": "internal planning allocations; no provider credits are transferred or enforced",
+      "period": {
+        "ends_on": "2026-12-31",
+        "id": "2026-P1",
+        "label": "Northstar planning period",
+        "starts_on": "2026-10-01"
+      },
+      "state_version": 1,
+      "unit": "USD",
+      "updated_at": "2026-10-24T12:00:00Z"
+    },
+    "budget_unavailable_reason": null,
+    "company": {
+      "envelope_total": "200000.00",
+      "projected_total": "200000.00",
+      "recorded_spend": "95000.00",
+      "unattributed_spend": "0.00"
+    },
+    "forecast": {
+      "availability": "available",
+      "basis": "full_period_total",
+      "generated_at": "2026-10-24T12:10:00Z",
+      "method_label": "shared placeholder (not a forecast model)",
+      "missing_teams": [],
+      "projections": [
+        {
+          "amount": "65000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "engineering",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        },
+        {
+          "amount": "50000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "product",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        },
+        {
+          "amount": "85000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "research",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        }
+      ],
+      "provider": "placeholder",
+      "reason": null,
+      "target_period": "2026-P1",
+      "value_kind": "simulated"
+    },
+    "notes": [
+      "projections are simulated (shared placeholder (not a forecast model)), basis full_period_total"
+    ],
+    "period": {
+      "ends_on": "2026-12-31",
+      "id": "2026-P1",
+      "label": "Northstar planning period",
+      "starts_on": "2026-10-01"
+    },
+    "spend": {
+      "as_of": "2026-10-24T12:10:00Z",
+      "attributed_total": "95000.00",
+      "company_total": "95000.00",
+      "coverage": {
+        "counter_resets": 0,
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "notes": [
+          "period in progress (ends 2026-12-31); totals are to date"
+        ],
+        "record_count": 8,
+        "source_kinds": [
+          "northstar_billing"
+        ],
+        "status": "complete",
+        "unmapped_records": 0,
+        "value_kinds": [
+          "simulated"
+        ]
+      },
+      "data_labels": {
+        "real_sample": false,
+        "simulated": true
+      },
+      "notes": [
+        "recorded_spend counts subscription fees, billable overage and direct API charges only",
+        "included usage is covered by its subscription fee: shown as notional value, never added to spend",
+        "unpriced usage is token volume without a known cost; it is not converted to dollars"
+      ],
+      "period": {
+        "ends_on": "2026-12-31",
+        "id": "2026-P1",
+        "label": "Northstar planning period",
+        "starts_on": "2026-10-01"
+      },
+      "teams": [
+        {
+          "by_cost_category": {
+            "billable_overage": {
+              "amount": "0.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 0
+            },
+            "direct_api": {
+              "amount": "26000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "included_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": "2500.00",
+              "record_count": 1
+            },
+            "subscription_fee": {
+              "amount": "4000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "unpriced_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": null,
+              "record_count": 0
+            }
+          },
+          "by_value_kind": {
+            "estimated": "0.00",
+            "measured": "0.00",
+            "reported": "0.00",
+            "simulated": "30000.00"
+          },
+          "coverage": {
+            "counter_resets": 0,
+            "last_record_at": "2026-10-20T00:00:00Z",
+            "notes": [],
+            "record_count": 3,
+            "source_kinds": [
+              "northstar_billing"
+            ],
+            "status": "complete",
+            "team": "engineering",
+            "unmapped_records": 0,
+            "value_kinds": [
+              "simulated"
+            ]
+          },
+          "included_usage_notional": "2500.00",
+          "last_record_at": "2026-10-20T00:00:00Z",
+          "record_count": 3,
+          "recorded_spend": "30000.00",
+          "team": "engineering",
+          "tokens": {
+            "cached_input_tokens": 0,
+            "input_tokens": 400000,
+            "output_tokens": 80000,
+            "reasoning_tokens": 0
+          },
+          "unpriced_tokens": 0
+        },
+        {
+          "by_cost_category": {
+            "billable_overage": {
+              "amount": "16000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "direct_api": {
+              "amount": "0.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 0
+            },
+            "included_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": "0.00",
+              "record_count": 0
+            },
+            "subscription_fee": {
+              "amount": "4000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "unpriced_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": null,
+              "record_count": 0
+            }
+          },
+          "by_value_kind": {
+            "estimated": "0.00",
+            "measured": "0.00",
+            "reported": "0.00",
+            "simulated": "20000.00"
+          },
+          "coverage": {
+            "counter_resets": 0,
+            "last_record_at": "2026-10-15T00:00:00Z",
+            "notes": [],
+            "record_count": 2,
+            "source_kinds": [
+              "northstar_billing"
+            ],
+            "status": "complete",
+            "team": "product",
+            "unmapped_records": 0,
+            "value_kinds": [
+              "simulated"
+            ]
+          },
+          "included_usage_notional": "0.00",
+          "last_record_at": "2026-10-15T00:00:00Z",
+          "record_count": 2,
+          "recorded_spend": "20000.00",
+          "team": "product",
+          "tokens": {
+            "cached_input_tokens": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0
+          },
+          "unpriced_tokens": 0
+        },
+        {
+          "by_cost_category": {
+            "billable_overage": {
+              "amount": "0.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 0
+            },
+            "direct_api": {
+              "amount": "40000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "included_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": "3000.00",
+              "record_count": 1
+            },
+            "subscription_fee": {
+              "amount": "5000.00",
+              "counts_toward_spend": true,
+              "notional_value": null,
+              "record_count": 1
+            },
+            "unpriced_usage": {
+              "amount": null,
+              "counts_toward_spend": false,
+              "notional_value": null,
+              "record_count": 0
+            }
+          },
+          "by_value_kind": {
+            "estimated": "0.00",
+            "measured": "0.00",
+            "reported": "0.00",
+            "simulated": "45000.00"
+          },
+          "coverage": {
+            "counter_resets": 0,
+            "last_record_at": "2026-10-15T00:00:00Z",
+            "notes": [],
+            "record_count": 3,
+            "source_kinds": [
+              "northstar_billing"
+            ],
+            "status": "complete",
+            "team": "research",
+            "unmapped_records": 0,
+            "value_kinds": [
+              "simulated"
+            ]
+          },
+          "included_usage_notional": "3000.00",
+          "last_record_at": "2026-10-15T00:00:00Z",
+          "record_count": 3,
+          "recorded_spend": "45000.00",
+          "team": "research",
+          "tokens": {
+            "cached_input_tokens": 0,
+            "input_tokens": 1500000,
+            "output_tokens": 300000,
+            "reasoning_tokens": 0
+          },
+          "unpriced_tokens": 0
+        }
+      ],
+      "unattributed": {
+        "by_cost_category": {
+          "billable_overage": {
+            "amount": "0.00",
+            "counts_toward_spend": true,
+            "notional_value": null,
+            "record_count": 0
+          },
+          "direct_api": {
+            "amount": "0.00",
+            "counts_toward_spend": true,
+            "notional_value": null,
+            "record_count": 0
+          },
+          "included_usage": {
+            "amount": null,
+            "counts_toward_spend": false,
+            "notional_value": "0.00",
+            "record_count": 0
+          },
+          "subscription_fee": {
+            "amount": "0.00",
+            "counts_toward_spend": true,
+            "notional_value": null,
+            "record_count": 0
+          },
+          "unpriced_usage": {
+            "amount": null,
+            "counts_toward_spend": false,
+            "notional_value": null,
+            "record_count": 0
+          }
+        },
+        "by_value_kind": {
+          "estimated": "0.00",
+          "measured": "0.00",
+          "reported": "0.00",
+          "simulated": "0.00"
+        },
+        "included_usage_notional": "0.00",
+        "last_record_at": null,
+        "record_count": 0,
+        "recorded_spend": "0.00",
+        "source_accounts": [],
+        "team": "unattributed",
+        "tokens": {
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0
+        },
+        "unpriced_tokens": 0
+      },
+      "unit": "USD"
+    },
+    "teams": [
+      {
+        "allocation": "60000.00",
+        "coverage_status": "complete",
+        "projected": "65000.00",
+        "projected_minus_allocation": "5000.00",
+        "recorded_spend": "30000.00",
+        "remaining": "30000.00",
+        "team": "engineering"
+      },
+      {
+        "allocation": "80000.00",
+        "coverage_status": "complete",
+        "projected": "50000.00",
+        "projected_minus_allocation": "-30000.00",
+        "recorded_spend": "20000.00",
+        "remaining": "60000.00",
+        "team": "product"
+      },
+      {
+        "allocation": "60000.00",
+        "coverage_status": "complete",
+        "projected": "85000.00",
+        "projected_minus_allocation": "25000.00",
+        "recorded_spend": "45000.00",
+        "remaining": "15000.00",
+        "team": "research"
+      }
+    ],
+    "unit": "USD"
+  },
+  "scenario": "main",
+  "schema": "Overview",
+  "status": 200
+}

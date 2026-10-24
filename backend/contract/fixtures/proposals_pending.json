@@ -1,0 +1,198 @@
+{
+  "description": "review queue",
+  "name": "proposals_pending",
+  "request": {
+    "method": "GET",
+    "path": "/api/proposals",
+    "query": {
+      "status": "pending_review"
+    }
+  },
+  "response": [
+    {
+      "action_type": "transfer",
+      "after": {
+        "allocations": {
+          "engineering": "65000.00",
+          "product": "50000.00",
+          "research": "85000.00"
+        },
+        "total": "200000.00"
+      },
+      "agent_run_id": null,
+      "base_version": 1,
+      "before": {
+        "allocations": {
+          "engineering": "60000.00",
+          "product": "80000.00",
+          "research": "60000.00"
+        },
+        "total": "200000.00"
+      },
+      "blocked_attempts": [],
+      "created_at": "2026-10-24T12:30:00Z",
+      "current_version": 1,
+      "decision_id": null,
+      "deltas": {
+        "engineering": "5000.00",
+        "product": "-30000.00",
+        "research": "25000.00"
+      },
+      "envelope_increase": "0.00",
+      "evidence_refs": [
+        {
+          "id": "sig_000001",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "sig_000003",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "sig_000004",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "fcs_000001",
+          "kind": "forecast_snapshot",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "doc_000003",
+          "kind": "document",
+          "note": null,
+          "version": 1
+        }
+      ],
+      "id": "prop_000001",
+      "is_stale": false,
+      "lines": [
+        {
+          "amount": "25000.00",
+          "from_team": "product",
+          "to_team": "research"
+        },
+        {
+          "amount": "5000.00",
+          "from_team": "product",
+          "to_team": "engineering"
+        }
+      ],
+      "origin": "droid_run",
+      "period": "2026-P1",
+      "rationale": "Research expands model evaluation this period while the product launch moved to next period; move 30k of product's allocation.",
+      "rebased_from_proposal_id": null,
+      "replaced_by_proposal_id": null,
+      "requester": {
+        "id": "droid-northstar",
+        "role": "droid_agent"
+      },
+      "revises_proposal_id": null,
+      "status": "pending_review",
+      "unit": "USD",
+      "updated_at": "2026-10-24T12:30:00Z",
+      "warnings": []
+    },
+    {
+      "action_type": "addition",
+      "after": {
+        "allocations": {
+          "engineering": "75000.00",
+          "product": "80000.00",
+          "research": "95000.00"
+        },
+        "total": "250000.00"
+      },
+      "agent_run_id": null,
+      "base_version": 1,
+      "before": {
+        "allocations": {
+          "engineering": "60000.00",
+          "product": "80000.00",
+          "research": "60000.00"
+        },
+        "total": "200000.00"
+      },
+      "blocked_attempts": [],
+      "created_at": "2026-10-24T12:31:00Z",
+      "current_version": 1,
+      "decision_id": null,
+      "deltas": {
+        "engineering": "15000.00",
+        "product": "0.00",
+        "research": "35000.00"
+      },
+      "envelope_increase": "50000.00",
+      "evidence_refs": [
+        {
+          "id": "sig_000001",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "sig_000003",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "sig_000004",
+          "kind": "signal",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "fcs_000001",
+          "kind": "forecast_snapshot",
+          "note": null,
+          "version": null
+        },
+        {
+          "id": "doc_000003",
+          "kind": "document",
+          "note": null,
+          "version": 1
+        }
+      ],
+      "id": "prop_000002",
+      "is_stale": false,
+      "lines": [
+        {
+          "amount": "35000.00",
+          "from_team": null,
+          "to_team": "research"
+        },
+        {
+          "amount": "15000.00",
+          "from_team": null,
+          "to_team": "engineering"
+        }
+      ],
+      "origin": "droid_run",
+      "period": "2026-P1",
+      "rationale": "Add 50k prioritizing research evaluation and engineering continuation.",
+      "rebased_from_proposal_id": null,
+      "replaced_by_proposal_id": null,
+      "requester": {
+        "id": "droid-northstar",
+        "role": "droid_agent"
+      },
+      "revises_proposal_id": null,
+      "status": "pending_review",
+      "unit": "USD",
+      "updated_at": "2026-10-24T12:31:00Z",
+      "warnings": []
+    }
+  ],
+  "scenario": "main",
+  "schema": "ProposalList",
+  "status": 200
+}

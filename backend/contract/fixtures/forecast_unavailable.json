@@ -1,0 +1,27 @@
+{
+  "description": "availability unavailable, empty projections (never zero), reason given",
+  "name": "forecast_unavailable",
+  "request": {
+    "method": "GET",
+    "path": "/api/forecasts"
+  },
+  "response": {
+    "availability": "unavailable",
+    "basis": "full_period_total",
+    "generated_at": "2026-10-24T12:01:00Z",
+    "method_label": "unavailable",
+    "missing_teams": [
+      "engineering",
+      "product",
+      "research"
+    ],
+    "projections": [],
+    "provider": "placeholder",
+    "reason": "forecast provider not connected",
+    "target_period": "2026-P1",
+    "value_kind": "simulated"
+  },
+  "scenario": "forecast_unavailable",
+  "schema": "ForecastResult",
+  "status": 200
+}
