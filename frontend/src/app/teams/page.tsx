@@ -1,4 +1,5 @@
-/** PLACEHOLDER — team workstream owns /teams and /teams/[teamId] and src/components/team. */
+import { TeamList } from "@/components/team/team-list";
+
 export default function TeamsPage() {
-  return <div className="text-sm text-muted-foreground">Team list goes here.</div>;
+  return <TeamList />;
 }

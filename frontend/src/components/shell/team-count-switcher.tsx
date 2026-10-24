@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const OPTIONS = [
@@ -12,19 +12,33 @@ const OPTIONS = [
   { value: "16", label: "16 teams" },
 ];
 
-/** Demo-only: switches the mock dataset via ?teams=N and reloads so the data client re-selects it. */
+function readCurrent(): string {
+  try {
+    const q = new URLSearchParams(window.location.search).get("teams");
+    const stored = window.localStorage.getItem("aisp.teams");
+    const v = q === "default" ? "default" : (q ?? stored ?? "default");
+    return OPTIONS.some((o) => o.value === v) ? v : "default";
+  } catch {
+    return "default";
+  }
+}
+const noop = () => () => {};
+
+/** Demo-only: switches the mock dataset via ?teams=N and hard-reloads so the data client re-selects it. */
 export function TeamCountSwitcher() {
-  const [value, setValue] = useState("default");
-  useEffect(() => {
-    try {
-      const q = new URLSearchParams(window.location.search).get("teams");
-      const stored = window.localStorage.getItem("aisp.teams");
-      const v: string = q === "default" ? "default" : (q ?? stored ?? "default");
-      setValue(OPTIONS.some((o) => o.value === v) ? v : "default");
-    } catch { /* ignore */ }
-  }, []);
+  const value = useSyncExternalStore(noop, readCurrent, () => "default");
   return (
-    <Select value={value} onValueChange={(v) => { if (!v) return; setValue(v); window.location.assign(`/?teams=${v}`); }}>
+    <Select
+      items={OPTIONS}
+      value={value}
+      onValueChange={(v) => {
+        if (!v) return;
+        // Full reload on purpose: the mock DataClient is a module singleton that reads ?teams= on construction.
+        const url = new URL(window.location.origin + "/");
+        url.searchParams.set("teams", v);
+        window.location.href = url.toString();
+      }}
+    >
       <SelectTrigger size="sm" className="w-[190px] text-xs" aria-label="Demo dataset">
         <SelectValue />
       </SelectTrigger>

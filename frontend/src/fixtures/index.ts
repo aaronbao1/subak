@@ -18,7 +18,7 @@ import type {
   AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast,
   SpendingRecord, Team,
 } from "@/lib/contracts";
-import { dailySeries, period, asOf, type Dataset, type ScriptedReplyFn } from "./generate";
+import { dailySeries, period, type Dataset, type ScriptedReplyFn } from "./generate";
 
 export { period, asOf, generateCompany, MAX_TEAMS, type Dataset } from "./generate";
 const BUDGET_VERSION = "v1";

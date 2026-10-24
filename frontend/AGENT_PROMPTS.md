@@ -1,6 +1,6 @@
 # Frontend sub-agent prompts
 
-Open four terminals. In each: `cd ~/Code/calhacks13.0unicorns62/frontend && claude`, then paste ONE prompt below.
+Open a terminal per remaining agent (A and D). In each: `cd ~/Code/calhacks13.0unicorns62/frontend && claude`, then paste ONE prompt below.
 All four work in the same checkout on disjoint folders. Nobody commits; the integration owner commits.
 Each agent runs its own dev server on its own port so they don't collide.
 
@@ -22,35 +22,9 @@ When done: `npx tsc --noEmit` and `npm run lint` must pass. Run `PORT=3001 npm r
 
 ---
 
-## Agent B — Overview dashboard (port 3002)
+## Agents B and C — DONE
 
-You are building the company overview page for an AI-spend planning tool used by an enterprise FP&A team. Read `CLAUDE.md` in this folder, then `../docs/frontend-plan.md` sections "Company and team overview" and "Acceptance checks", then `../docs/forecasting-plan.md` section "Shared inputs, outputs, and ownership". Your lane is ONLY `src/app/page.tsx` and `src/components/dashboard/**`. Do not edit anything else. Get all data from `useAppStore()` in `src/lib/store.ts`; never import fixtures. Use `formatAmount`/`pct` from `src/lib/format.ts`. Use shadcn components from `src/components/ui` and Recharts for charts. Team colors come from `team.color`.
-
-The page must let finance understand, without a developer explaining anything:
-1. A top strip: company envelope (sum of budgets), recorded spending to date, projected spend for the period (sum of available forecasts; forecasts have `basis: "full_period"` so NEVER add spent to them; note if any team's forecast is unavailable; show a small "placeholder projections" tag when any forecast has `origin: "placeholder"`), the period label from the forecast/budget `period`, and an "as of" date derived from the latest `complete: true` spending record. Show the `isDemo` state subtly.
-2. A team comparison: one row or card per team with allocation, spent so far, projection with low/high, and a restrained status (on track / watch / likely over / forecast unavailable). "Likely over" only when projected exceeds allocated; never present uncertainty as certainty. Each team links to `/teams/[teamId]`. Include an "Ask assistant" button per team that calls `askAssistant("Why is <team> tracking <over/under> its allocation?")`.
-3. Spend over time: stacked by team, daily, Oct 1 to latest. Days where any record has `complete: false` are visually marked as partial (hatched, lighter, or a reference area) and explained in a caption.
-4. Cost components: a small breakdown of subscription / included usage / extra usage / API across the company, with a one-line caption that included usage is informational and not billed on top of the subscription.
-5. A provenance legend somewhere visible: reported charge vs estimate vs usage-only.
-6. Loading skeletons while `loaded` is false. Empty and unavailable states must be explicit text, never zero.
-
-Calm design: neutral surfaces, one accent, status colors muted. No gradients, no neon. Phone width must not horizontally scroll. When done: `npx tsc --noEmit`, `npm run lint`, and smoke test with `PORT=3002 npm run dev`. Reply with a short summary and anything in `NEEDS.md` (create under "Agent B" if you need a shared component or data field).
-
----
-
-## Agent C — Team drilldown and evidence (port 3003)
-
-You are building the team pages for an AI-spend planning tool used by an enterprise FP&A team. Read `CLAUDE.md` in this folder, then `../docs/frontend-plan.md` sections "Finance investigation" and "Context and evidence". Your lane is ONLY `src/app/teams/**` and `src/components/team/**`. Do not edit anything else. Get data from `useAppStore()` (`src/lib/store.ts`) and, for a single document body, `getDataClient().getDocument(id)` from `src/lib/data`. Never import fixtures. Use `formatAmount`/`pct` from `src/lib/format.ts`, shadcn from `src/components/ui`, Recharts for charts. Note `src/app/teams/[teamId]/page.tsx` is a server component that awaits `params`; render a client component inside it.
-
-Deliver:
-1. `/teams`: a simple list of teams with allocation, spent, projection, linking to each team.
-2. `/teams/[teamId]` header: team name, lead, allocation vs spent vs projection (with low/high band; `basis: "full_period"` includes spent, so show projection as a total, never spent + projection), the forecast `period.label`, `generatedAt`, a "placeholder" tag when `origin === "placeholder"`, a "scenario" tag when `kind === "scenario"`, and expandable "Assumptions" and "Limitations" lists straight from the Forecast. If `status === "unavailable"`, show the `unavailableReason` prominently and keep spending and budget fully usable.
-3. Spend over time for this team stacked by cost component (subscription / included usage / extra usage / API). Partial days (`complete: false`) marked and captioned. Each component gets a provenance badge (reported charge / estimate / usage-only) in the legend or tooltip.
-4. Context and evidence: a card per `ContextItem` for this team showing title, summary, `claimType` as a small label (stated plan / observed event / interpretation), expected effect and confidence, effective dates, and `uncertainty`. An item with `supersededBy` is visibly outdated (muted, "Superseded by …" link to the newer item) and sorted last. Each source renders its excerpt and a "View source" action that opens a Sheet with the full `CompanyDocument` body rendered with `react-markdown`, plus origin and date. If the document itself has `supersededBy`, say so in the sheet.
-5. An "Ask the assistant about this team" button that calls `askAssistant(...)` with a sensible prompt.
-6. Loading skeletons; a clear not-found state for an unknown teamId.
-
-Calm design, restrained status colors, phone width works. When done: `npx tsc --noEmit`, `npm run lint`, smoke test with `PORT=3003 npm run dev`. Reply with a short summary and anything in `NEEDS.md` (create under "Agent C").
+The Overview dashboard (`src/components/dashboard/**`) and team pages (`src/components/team/**`) are built. Do not re-run these prompts. Remaining work for those lanes goes through the integration owner.
 
 ---
 

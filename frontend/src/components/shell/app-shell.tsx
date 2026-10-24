@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col">
+      <aside className="hidden md:flex w-56 shrink-0 border-r bg-sidebar text-sidebar-foreground flex-col">
         <div className="px-4 py-4 border-b">
           <div className="font-semibold tracking-tight">AI Spend Planner</div>
           <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
@@ -58,7 +58,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </header>
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <nav className="md:hidden flex gap-1 border-b px-3 py-2 overflow-x-auto">
+          {nav.map(({ href, label, icon: Icon }) => {
+            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link key={href} href={href}
+                className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs whitespace-nowrap hover:bg-accent", active && "bg-accent font-medium")}>
+                <Icon className="size-3.5" /> {label}
+              </Link>
+            );
+          })}
+        </nav>
+        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
       </div>
 
       <AssistantDrawer />
