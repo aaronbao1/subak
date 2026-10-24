@@ -10,6 +10,6 @@ Interpret the company corpus for the current planning period.
 4. `record_signal` for each relevant finding. Every citation quotes the stored `content` of a specific
    document version EXACTLY (copy the characters; include char_start/char_end from the text). Use
    status `current` only for signals backed by a current document; record the older timeline as
-   `superseded` (and pass `supersedes_signal_id` on the newer signal), informal ideas as `informal`.
+   `superseded` (and pass `supersedes_signal_id` on the newer signal), informal ideas as `informal`, cancelled plans as `cancelled`.
    `uncertainty` is required: say what the documents do not establish.
 5. Finish with a short summary that names the documents you relied on and the one you did not.

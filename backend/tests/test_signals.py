@@ -150,3 +150,27 @@ def test_delete_refused_once_cited_by_a_proposal(docs, client):
     assert client.delete(f"/api/signals/{spare['id']}", headers=DROID).status_code == 403
     assert client.delete(f"/api/signals/{spare['id']}", headers=ANALYST).status_code == 204
     assert client.get(f"/api/signals/{spare['id']}").status_code == 404
+
+
+def test_cancelled_plan_is_distinguishable_and_cannot_back_a_current_signal(docs, client):
+    cancelled = {"doc_key": "research-hiring-pilot", "title": "Research hiring pilot (cancelled)",
+                 "origin": "upload", "doc_type": "plan", "plan_status": "cancelled", "team_tags": ["research"],
+                 "project_tags": ["hiring-pilot"], "is_simulated": True, "authored_at": "2026-10-15T00:00:00Z",
+                 "content": "The research hiring pilot is cancelled and will not run this period."}
+    r = client.post("/api/documents", json=cancelled, headers=IMPORTER)
+    assert r.status_code == 201, r.text
+    cid = r.json()["document"]["id"]
+    quote = "The research hiring pilot is cancelled"
+    r = client.post("/api/signals", json=body(cid, quote, project="hiring-pilot"), headers=DROID)
+    assert r.status_code == 422 and r.json()["error"]["code"] == "signal_cites_cancelled_only"
+    r = client.post("/api/signals", json=body(cid, quote, project="hiring-pilot", status="cancelled"), headers=DROID)
+    assert r.status_code == 201 and r.json()["status"] == "cancelled"
+    statuses = {s["status"] for s in client.get("/api/signals").json()["items"]}
+    assert "cancelled" in statuses
+    budget = client.get("/api/budget").json()
+    draft = {"action_type": "transfer", "base_version": budget["state_version"], "rationale": "test",
+             "lines": [{"from_team": "product", "to_team": "research", "amount": "1000.00"}],
+             "evidence_refs": [{"kind": "document", "id": cid}]}
+    p = client.post("/api/proposals", json=draft, headers=ANALYST)
+    assert p.status_code == 201, p.text
+    assert "cites_cancelled_document" in {w["code"] for w in p.json()["warnings"]}

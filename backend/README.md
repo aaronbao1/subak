@@ -28,6 +28,9 @@ cd backend
 
 Health check: `curl http://127.0.0.1:8787/health` (also `/api/health`).
 
+There are no migrations: tables are created on startup. After pulling a schema change, delete
+`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`.
+
 ## Test
 
 ```bash

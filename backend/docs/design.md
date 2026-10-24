@@ -214,7 +214,7 @@ Northstar seed corpus (all `is_simulated = true`):
 ### 3.10 `context_signals` and `signal_citations`
 - `context_signals`: `team_id` nullable, `project`, `summary`, `change_type`
   (`expansion|reduction|continuation|timing_shift|other`), `applies_from`/`applies_to`,
-  `status` (`current|superseded|conflicting|informal`), `uncertainty` text (required),
+  `status` (`current|superseded|conflicting|informal|cancelled`), `uncertainty` text (required),
   `produced_by` (`droid_fake|droid_sdk|finance`), `agent_run_id` nullable, `superseded_by_signal_id`.
 - `signal_citations`: `signal_id`, `document_id` (a specific version), `quote` text,
   `char_start`, `char_end`. On ingest the backend verifies `content[char_start:char_end] == quote`

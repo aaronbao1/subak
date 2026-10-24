@@ -117,9 +117,9 @@ TOOLS: tuple[ToolDef, ...] = (
             ListSignalsIn),
     ToolDef("record_signal", "draft",
             "Record a cited context signal (what is planned/changing, team, timing, status current|"
-            "superseded|conflicting|informal, uncertainty). Every citation must quote a stored document "
-            "version exactly; the backend verifies it. A current signal may not rest only on superseded "
-            "documents. Does not change any budget.",
+            "superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored "
+            "document version exactly; the backend verifies it. A current signal may not rest only on "
+            "superseded or only on cancelled documents. Does not change any budget.",
             RecordSignalIn),
     ToolDef("draft_proposal", "draft",
             "Draft an allocation proposal for finance review: action_type `addition` (new money enters "

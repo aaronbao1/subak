@@ -115,7 +115,8 @@
                   "current",
                   "superseded",
                   "conflicting",
-                  "informal"
+                  "informal",
+                  "cancelled"
                 ],
                 "type": "string"
               },
@@ -146,7 +147,7 @@
       "name": "list_signals"
     },
     {
-      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded documents. Does not change any budget.",
+      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. Does not change any budget.",
       "input_schema": {
         "$defs": {
           "CitationIn": {
@@ -265,7 +266,8 @@
               "current",
               "superseded",
               "conflicting",
-              "informal"
+              "informal",
+              "cancelled"
             ],
             "title": "Status",
             "type": "string"

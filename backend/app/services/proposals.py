@@ -235,6 +235,9 @@ def check_evidence(session: Session, refs: list[EvidenceRef]) -> tuple[list[dict
                 warnings.append({"code": "cites_superseded_document",
                                  "message": f"{doc.doc_key} v{doc.version} has been superseded; "
                                             "check the newer document before relying on it"})
+            if doc.plan_status == "cancelled":
+                warnings.append({"code": "cites_cancelled_document",
+                                 "message": f"{doc.doc_key} v{doc.version} is a cancelled plan, not current work"})
         elif ref.kind == "signal":
             sig = session.get(ContextSignal, ref.id)
             if sig is None:

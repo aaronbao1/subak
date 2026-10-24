@@ -10,7 +10,7 @@ from pydantic import Field, field_validator, model_validator
 from app.schemas.common import InModel, OutModel
 
 ChangeType = Literal["expansion", "reduction", "continuation", "timing_shift", "other"]
-SignalStatus = Literal["current", "superseded", "conflicting", "informal"]
+SignalStatus = Literal["current", "superseded", "conflicting", "informal", "cancelled"]
 Producer = Literal["droid_fake", "droid_sdk", "finance"]
 
 

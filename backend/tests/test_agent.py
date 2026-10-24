@@ -509,3 +509,13 @@ def test_answer_question_with_forecast_unavailable_is_not_labeled_simulated(tmp_
         assert "simulated unavailable" not in summary and "projections are simulated" not in summary.lower()
         assert "forecast_unavailable" in {w["code"] for w in out["output"]["warnings"]}
     app.state.engine.dispose()
+
+
+def test_answer_question_states_limitation_for_free_text_it_cannot_interpret(seeded, client):
+    out = run(client, task_type="answer_question",
+              instruction="What token multiplier should research expect next year?").json()
+    assert out["status"] == "succeeded" and out["applied_changes"] is False
+    assert "Limitation:" in out["summary"] and "not computed" in out["summary"]
+    assert "question_not_interpreted" in {w["code"] for w in out["output"]["warnings"]}
+    plain = run(client, task_type="answer_question").json()
+    assert "question_not_interpreted" not in {w["code"] for w in plain["output"]["warnings"]}

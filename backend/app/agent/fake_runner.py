@@ -92,7 +92,7 @@ class FakeDroidRunner:
             return AgentRunOutput(summary=out["summary"], findings=out["findings"], warnings=out["warnings"])
         if task.type == "propose_allocation":
             return self._propose(task, tools)
-        return self._answer(tools)
+        return self._answer(task, tools)
 
     # ---- interpret ---------------------------------------------------------------------------
 
@@ -146,7 +146,12 @@ class FakeDroidRunner:
                 tools.emit("warning", warnings[-1])
                 continue
             rules = PLAYBOOK[key]
-            status = "informal" if doc["plan_status"] in ("informal", "draft") else "current"
+            if doc["plan_status"] == "cancelled":
+                status = "cancelled"
+            elif doc["plan_status"] in ("informal", "draft"):
+                status = "informal"
+            else:
+                status = "current"
             older_doc = None
             if rules.get("older_quotes") and doc.get("supersedes"):
                 older_doc = by_id.get(doc["supersedes"]["id"])
@@ -335,7 +340,7 @@ class FakeDroidRunner:
 
     # ---- answer ------------------------------------------------------------------------------
 
-    def _answer(self, tools: AgentToolbox) -> AgentRunOutput:
+    def _answer(self, task: AgentTask, tools: AgentToolbox) -> AgentRunOutput:
         """Allocation vs recorded vs projected per team, keeping units, dates and uncertainty visible:
         the period and as-of date, that totals are to date, spend coverage (partial / missing data and
         unattributed spend are called out, never hidden), and how projections are labeled."""
@@ -389,6 +394,15 @@ class FakeDroidRunner:
             if forecast["availability"] == "partial":
                 label += f"; partial: no projection for {', '.join(forecast.get('missing_teams') or [])}"
             parts.append(label + ".")
+        if task.instruction.strip():
+            # The fake runner is a fixed playbook: it never pretends to have understood a free-text
+            # question or to have run an analysis it does not support (token multipliers, new scenarios).
+            msg = ("Limitation: the deterministic fake runner does not interpret free-text questions; this is "
+                   "the standard per-team comparison. Analyses beyond it (for example token multipliers or "
+                   "scenarios the forecast provider does not supply) are not computed.")
+            parts.append(msg)
+            warnings.append({"code": "question_not_interpreted", "message": msg,
+                             "details": {"instruction": task.instruction[:500]}})
         summary = " ".join(parts)
         tools.emit("assistant_text", {"text": summary})
         for w in warnings:

@@ -111,6 +111,13 @@ def create_signal(
                       "version": d.version, "superseded_by_document_id": d.superseded_by_document_id,
                       "message": f"{d.doc_key} v{d.version} has been superseded"} for d, *_ in verified])
 
+    if body.status == "current" and all(d.plan_status == "cancelled" for d, *_ in verified):
+        raise _fail("signal_cites_cancelled_only",
+                    "a current signal cannot rest only on cancelled documents; record it as cancelled",
+                    [{"code": "signal_cites_cancelled_only", "document_id": d.id, "doc_key": d.doc_key,
+                      "version": d.version, "plan_status": d.plan_status,
+                      "message": f"{d.doc_key} v{d.version} is cancelled"} for d, *_ in verified])
+
     now = clock.now()
     sig = ContextSignal(
         id=ids.new_id("sig_"), created_at=now, team_id=body.team, project=body.project, summary=body.summary,

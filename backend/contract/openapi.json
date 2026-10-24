@@ -1121,7 +1121,8 @@
               "current",
               "superseded",
               "conflicting",
-              "informal"
+              "informal",
+              "cancelled"
             ],
             "title": "Status",
             "type": "string"
@@ -1264,7 +1265,8 @@
               "current",
               "superseded",
               "conflicting",
-              "informal"
+              "informal",
+              "cancelled"
             ],
             "title": "Status",
             "type": "string"
@@ -1339,7 +1341,8 @@
                   "current",
                   "superseded",
                   "conflicting",
-                  "informal"
+                  "informal",
+                  "cancelled"
                 ],
                 "type": "string"
               },
