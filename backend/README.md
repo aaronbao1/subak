@@ -20,6 +20,7 @@ backend/.venv/bin/pip install -e "backend[dev]"
 ```bash
 cd backend
 .venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded)
+.venv/bin/python -m app.seed --check-planted   # verify the planted-error pack against seed/answer_key.md
 .venv/bin/python -m app.main          # serves http://127.0.0.1:8787
 # or, with reload:
 .venv/bin/uvicorn app.main:create_app --factory --port 8787 --reload
@@ -122,6 +123,16 @@ types: `run_started`, `tool_call`, `tool_result`, `evidence_found`, `supersessio
 `run_finished`; reconnect with `Last-Event-ID` or `?after=<seq>`. In the browser use `EventSource`.
 Every event carries `source` (`fake_runner` | `droid_sdk` | `backend`) and every run `runner_kind` and
 `simulated`, so the UI can label simulated activity honestly.
+
+## Seed, planted errors and edge cases
+
+The default seed reproduces the shared Northstar table exactly. A separate planted-error pack in
+[`seed/`](seed/README.md) contains a duplicate import, a cumulative-counter trap, an unmapped provider
+project, a proposal on outdated budgets, and conflicting documents. Each one has an
+[answer key](seed/answer_key.md) that `--check-planted` and `tests/test_planted.py` verify.
+`--with-planted` loads the data traps into your DB for a demo. Every edge case from the plans and the
+judge feedback, and how it is handled or why it is out of scope, is listed in
+[`docs/edge-cases.md`](docs/edge-cases.md).
 
 ## Real vs simulated
 

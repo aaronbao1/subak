@@ -588,3 +588,18 @@ Differences from and additions to §3.12 / §5 / §6:
   `input.initiated_by` but is not the proposal's requester, so separation of duties does not block them
   from approving Droid's draft (open product decision).
 - `create_app(droid_runner=...)` injects a runner (tests); otherwise the runner is resolved per run.
+
+## 15. Seed planted-error pack and edge cases (as built)
+
+Code: `app/seed/planted.py`, `app/seed/__main__.py` (`--with-planted`, `--check-planted`). Data: `backend/seed/planted/`;
+expected outcomes: `backend/seed/answer_key.md`; edge-case catalogue: `docs/edge-cases.md`.
+- The default seed and contract fixtures are unchanged (six documents, 95k spend). The pack is opt-in, so the
+  frontend contract does not move.
+- `load_planted` uses the normal import and corpus services (idempotent). `run_planted_checks` replays checks
+  P0-P6 through the HTTP API on a temporary DB and compares them with the answer key. It never touches
+  `BACKEND_DB_PATH`.
+- The two planted documents are outside the fake runner's playbook. It reports `document_not_interpreted`
+  for them instead of inventing signals.
+- Tests: `tests/test_planted.py` (answer key, labels, CLI idempotency, edge-case doc references) and
+  `tests/test_seed_e2e.py` (seed CLI twice -> totals unchanged; fake Droid outcome B -> approve -> 95k/80k/75k,
+  envelope 250k, persisted).

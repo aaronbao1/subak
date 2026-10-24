@@ -1,0 +1,2 @@
+record_id,occurred_at,source_account,team,provider,model,cost_category,value_kind,amount,unit,description
+ns-2026p1-101,2026-10-17T00:00:00Z,proj-fable-eval-sandbox,research,anthropic,fable,direct_api,simulated,1800.00,USD,sandbox provider project created outside the mapped workspaces

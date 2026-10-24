@@ -1,0 +1,13 @@
+{
+  "description": "Transfer drafted by a finance analyst on 2026-10-10 from budget state v1 (product 80,000.00). It is planted to be reviewed only after another decision has changed the budget, so it is built on outdated budgets.",
+  "drafted_by": {"X-Actor-Id": "fin-carol", "X-Actor-Role": "finance_analyst"},
+  "request": {
+    "action_type": "transfer",
+    "base_version": 1,
+    "rationale": "Drafted 2026-10-10 from budget v1: product shows 60,000.00 of headroom against 20,000.00 recorded spend, so move 30,000.00 to research for the model-evaluation expansion.",
+    "lines": [
+      {"from_team": "product", "to_team": "research", "amount": "30000.00"}
+    ],
+    "evidence_refs": []
+  }
+}
