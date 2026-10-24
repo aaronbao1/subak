@@ -112,3 +112,47 @@ def test_original_requester_cannot_approve_a_revision_of_their_request(app, clie
     assert allocations(client) == INITIAL
     third = {"X-Actor-Id": "fin-carol", "X-Actor-Role": "finance_approver"}
     assert decide(client, new["id"], headers=third).status_code == 201
+
+
+def _start_run(client, headers, **params):
+    body = {"task_type": "propose_allocation",
+            "params": {"mode": "transfer", "amount": "30000.00", "prioritize": "research", **params}}
+    r = client.post("/api/agent/runs", json=body, headers=headers)
+    assert r.status_code in (200, 201), r.text
+    return r.json()
+
+
+def test_approver_cannot_approve_a_droid_draft_from_a_run_they_started(seeded, client):
+    out = _start_run(client, APPROVER)
+    pid = out["proposals"][0]["id"]
+    r = decide(client, pid, headers=APPROVER)
+    assert r.status_code == 403
+    err = r.json()["error"]
+    assert err["code"] == "self_approval_forbidden" and err["details"]["via_agent_run"] is True
+    assert allocations(client) == INITIAL
+    events = client.get("/api/decision-events", params={"proposal_id": pid}).json()
+    assert [e["event"] for e in events] == ["self_approval_blocked"]
+    # The requester may still reject it, and a different approver may approve it.
+    assert decide(client, pid, headers=APPROVER_2).status_code == 201
+
+
+def test_approver_who_reran_droid_onto_an_existing_draft_is_also_a_requester(seeded, client):
+    first = _start_run(client, ANALYST)
+    again = _start_run(client, APPROVER)  # identical intent: the pending draft is reused
+    pid = first["proposals"][0]["id"]
+    assert again["proposals"][0]["id"] == pid
+    r = decide(client, pid, headers=APPROVER)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "self_approval_forbidden"
+    assert decide(client, pid, headers=APPROVER_2).status_code == 201
+
+
+def test_rebased_droid_draft_still_blocks_the_run_initiator(seeded, client):
+    out = _start_run(client, APPROVER)
+    pid = out["proposals"][0]["id"]
+    # Another change lands first, so the Droid draft goes stale and an analyst rebases it.
+    other = draft(client, addition_body(base_version=1), headers=ANALYST).json()
+    assert decide(client, other["id"], headers=APPROVER_2).status_code == 201
+    rebased = client.post(f"/api/proposals/{pid}/rebase", headers=ANALYST, json={})
+    assert rebased.status_code == 201, rebased.text
+    r = decide(client, rebased.json()["id"], headers=APPROVER)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "self_approval_forbidden"

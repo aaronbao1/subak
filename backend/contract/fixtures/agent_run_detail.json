@@ -1,0 +1,211 @@
+{
+  "description": "one run by id with its step log, events and findings",
+  "name": "agent_run_detail",
+  "request": {
+    "method": "GET",
+    "path": "/api/agent/runs/run_000004"
+  },
+  "response": {
+    "applied_changes": false,
+    "error": null,
+    "events": [
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "params": {},
+          "runner_kind": "fake",
+          "simulated": true,
+          "task_type": "answer_question"
+        },
+        "seq": 1,
+        "source": "backend",
+        "type": "run_started"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "args": {},
+          "step": 1,
+          "tool": "get_budgets"
+        },
+        "seq": 2,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "is_error": false,
+          "step": 1,
+          "summary": "envelope 200000.00 USD, version 1",
+          "tool": "get_budgets"
+        },
+        "seq": 3,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "args": {},
+          "step": 2,
+          "tool": "get_spend_summary"
+        },
+        "seq": 4,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "is_error": false,
+          "step": 2,
+          "summary": "company total 95000.00 USD, coverage complete",
+          "tool": "get_spend_summary"
+        },
+        "seq": 5,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "args": {},
+          "step": 3,
+          "tool": "get_forecast"
+        },
+        "seq": 6,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "is_error": false,
+          "step": 3,
+          "summary": "available (placeholder), snapshot fcs_000003",
+          "tool": "get_forecast"
+        },
+        "seq": 7,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "text": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:04:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend."
+        },
+        "seq": 8,
+        "source": "fake_runner",
+        "type": "assistant_text"
+      },
+      {
+        "at": "2026-10-24T12:04:00Z",
+        "data": {
+          "applied_changes": false,
+          "proposal_ids": [],
+          "signal_ids": [],
+          "status": "succeeded",
+          "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:04:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend."
+        },
+        "seq": 9,
+        "source": "backend",
+        "type": "run_finished"
+      }
+    ],
+    "events_url": "/api/agent/runs/run_000004/events",
+    "finished_at": "2026-10-24T12:04:00Z",
+    "id": "run_000004",
+    "initiated_by": {
+      "id": "fin-analyst-ana",
+      "role": "finance_analyst"
+    },
+    "instruction": "",
+    "output": {
+      "applied_changes": false,
+      "findings": [
+        {
+          "allocation": "60000.00",
+          "coverage_status": "complete",
+          "projected": "65000.00",
+          "recorded_spend": "30000.00",
+          "team": "engineering",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "allocation": "80000.00",
+          "coverage_status": "complete",
+          "projected": "50000.00",
+          "recorded_spend": "20000.00",
+          "team": "product",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "allocation": "60000.00",
+          "coverage_status": "complete",
+          "projected": "85000.00",
+          "recorded_spend": "45000.00",
+          "team": "research",
+          "type": "team_comparison",
+          "unit": "USD"
+        },
+        {
+          "as_of": "2026-10-24T12:04:00Z",
+          "company_total": "95000.00",
+          "notes": [
+            "period in progress (ends 2026-12-31); totals are to date"
+          ],
+          "period": "2026-P1",
+          "status": "complete",
+          "type": "spend_coverage",
+          "unattributed_records": 0,
+          "unattributed_spend": "0.00",
+          "unit": "USD"
+        }
+      ],
+      "proposal_ids": [],
+      "session_id": null,
+      "signal_ids": [],
+      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:04:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend.",
+      "usage": null,
+      "warnings": []
+    },
+    "params": {},
+    "proposals": [],
+    "runner_kind": "fake",
+    "signal_ids": [],
+    "simulated": true,
+    "started_at": "2026-10-24T12:04:00Z",
+    "status": "succeeded",
+    "steps": [
+      {
+        "args": {},
+        "at": "2026-10-24T12:04:00Z",
+        "result_summary": "envelope 200000.00 USD, version 1",
+        "seq": 1,
+        "tool": "get_budgets"
+      },
+      {
+        "args": {},
+        "at": "2026-10-24T12:04:00Z",
+        "result_summary": "company total 95000.00 USD, coverage complete",
+        "seq": 2,
+        "tool": "get_spend_summary"
+      },
+      {
+        "args": {},
+        "at": "2026-10-24T12:04:00Z",
+        "result_summary": "available (placeholder), snapshot fcs_000003",
+        "seq": 3,
+        "tool": "get_forecast"
+      }
+    ],
+    "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:04:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend.",
+    "task_type": "answer_question"
+  },
+  "scenario": "agent",
+  "schema": "AgentRunOut",
+  "status": 200
+}

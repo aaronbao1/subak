@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import Settings
 from app.core.clock import Clock, IdFactory, SystemClock, UuidIdFactory
 from app.core.errors import install_error_handlers
+from app.core.openapi import install_openapi
 from app.db.base import create_all, make_engine, make_session_factory
 from app.providers.forecast import ForecastProvider, provider_from_settings
 
@@ -94,6 +95,7 @@ def create_app(
         routes_admin,
     ):
         app.include_router(module.router)
+    install_openapi(app)
 
     return app
 

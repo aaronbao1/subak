@@ -140,6 +140,6 @@
     "warnings": []
   },
   "scenario": "main",
-  "schema": "Proposal",
+  "schema": "ProposalOut",
   "status": 201
 }

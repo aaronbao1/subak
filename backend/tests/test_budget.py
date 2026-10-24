@@ -99,3 +99,24 @@ def test_history_snapshots_link_to_decisions(app, client):
     assert v2["decision"]["actor_id"] == APPROVER["X-Actor-Id"]
     assert v2["decision"]["rationale"] == "approved research plan supersedes old thread"
     assert client.get("/api/budget").json()["last_decision_id"] == d["id"]
+
+
+def test_budget_state_marks_partial_coverage_and_unattributed_spend(app, client):
+    from budget_helpers import seed_budget
+    from reference_data import NORTHSTAR_CSV, upload
+
+    seed_budget(app)
+    upload(client, NORTHSTAR_CSV)
+    state = client.get("/api/budget").json()
+    assert state["spend_coverage"]["status"] == "complete"
+    assert {a["coverage_status"] for a in state["allocations"]} == {"complete"}
+    upload(client, NORTHSTAR_CSV + "u1,2026-10-10,legacy-shared-key,,,direct_api,,750.00,USD,,,\n",
+           filename="with-unmapped.csv")
+    state = client.get("/api/budget").json()
+    cov = state["spend_coverage"]
+    assert cov["status"] == "partial"
+    assert cov["unattributed_spend"] == "750.00" and cov["unattributed_records"] == 1
+    assert any("unattributed" in n for n in cov["notes"])
+    assert {a["coverage_status"] for a in state["allocations"]} == {"partial"}
+    research = next(a for a in state["allocations"] if a["team"] == "research")
+    assert research["remaining"] == "15000.00"  # attributed figures, now visibly marked as partial

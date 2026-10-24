@@ -19,6 +19,7 @@
         "codex_sessions",
         "northstar_billing"
       ],
+      "spend_record_count": 7,
       "status": "partial",
       "unmapped_records": 1,
       "value_kinds": [
@@ -70,6 +71,7 @@
         "source_kinds": [
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "partial",
         "team": "engineering",
         "unmapped_records": 0,
@@ -87,6 +89,7 @@
         "source_kinds": [
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "partial",
         "team": "product",
         "unmapped_records": 0,
@@ -106,6 +109,7 @@
           "codex_sessions",
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "partial",
         "team": "research",
         "unmapped_records": 0,

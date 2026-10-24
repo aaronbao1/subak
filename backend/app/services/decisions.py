@@ -7,12 +7,17 @@
 3. `Idempotency-Key` lookup: same fingerprint -> stored decision with `replayed: true`; a different
    fingerprint -> 409 `idempotency_key_reused`. The fingerprint covers proposal, outcome, rationale and
    deciding actor.
-4. Approve by anyone who drafted this proposal or any proposal it was revised/rebased from ->
+4. Approve by anyone who drafted this proposal or any proposal it was revised/rebased from, or who
+   started the Droid run that drafted any of them (`AgentRun.input.initiated_by`) ->
    403 `self_approval_forbidden` (recorded). A requester may still reject its own proposal.
 5. Status must be `pending_review` (409 `proposal_not_pending`).
 6. Reject: decision row, status `rejected`, budget untouched.
 7. Approve: optimistic lock `UPDATE budget_envelopes SET state_version = base+1 WHERE state_version = base`.
-   0 rows -> proposal `stale`, `stale_rejected` event, 409 `stale_proposal`. Otherwise the lines are
+   0 rows -> proposal `stale` (only if it is still `pending_review`; a proposal that a concurrent
+   approver already applied is reported as `proposal_not_pending`), `stale_rejected` event, 409
+   `stale_proposal`. The proposal's own status is moved with a compare-and-set
+   (`UPDATE proposals SET status=... WHERE status='pending_review'`), so a concurrent revise or other
+   status change makes the decision fail as `proposal_not_pending`. Otherwise the lines are
    re-evaluated against the locked state, allocations written, snapshot + decision stored, invariant
    asserted, committed in one transaction. The unique constraints on `decisions.proposal_id` and
    `decisions.idempotency_key` make a concurrent second apply impossible at the database level.
@@ -31,6 +36,7 @@ from app.core.actors import Actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
 from app.db.models import (
+    AgentRun,
     BudgetAllocation,
     BudgetEnvelope,
     BudgetSnapshot,
@@ -82,13 +88,26 @@ def _lookup_key(session: Session, key: str, fp: str) -> Decision | None:
     return existing
 
 
+def _not_pending(session: Session, p: Proposal) -> DomainError:
+    decision_id = session.scalar(select(Decision.id).where(Decision.proposal_id == p.id))
+    return DomainError("proposal_not_pending", 409, f"proposal is {p.status}; it can no longer be decided",
+                       {"status": p.status, "decision_id": decision_id})
+
+
 def _mark_stale(session: Session, p: Proposal, actor: Actor, *, clock: Clock, ids: IdFactory) -> DomainError:
     session.rollback()
     p = session.get(Proposal, p.id)
+    session.refresh(p)
     env = budget_svc.require_envelope(session, p.period_id)
     session.refresh(env)
-    p.status = "stale"
-    p.updated_at = clock.now()
+    # A concurrent approver may have applied this very proposal (that is why the lock failed). Never
+    # overwrite `applied` (or any other settled status) with `stale`: that would contradict the
+    # decision history and let a rebase apply the same intent a second time.
+    if not proposal_svc.claim_status(session, p, "stale", from_statuses=("pending_review",), now=clock.now()):
+        session.rollback()
+        p = session.get(Proposal, p.id)
+        session.refresh(p)
+        return _not_pending(session, p)
     _record_event(session, p, "stale_rejected", actor,
                   {"base_version": p.base_version, "current_version": env.state_version}, clock=clock, ids=ids)
     return _stale_error(p, env)
@@ -126,18 +145,18 @@ def decide(
         return existing, True
 
     if body.outcome == "approve":
-        authors = {q.created_by_actor for q in proposal_svc.lineage(session, p)}
+        authors = requesters(session, p)
         if actor.id in authors:
+            via_run = actor.id not in {q.created_by_actor for q in proposal_svc.lineage(session, p)}
             _record_event(session, p, "self_approval_blocked", actor,
-                          {"requester": p.created_by_actor}, clock=clock, ids=ids)
+                          {"requester": p.created_by_actor, "via_agent_run": via_run}, clock=clock, ids=ids)
             raise DomainError("self_approval_forbidden", 403,
-                              "a requester cannot approve its own request; another finance approver must decide",
-                              {"actor_id": actor.id, "requester": p.created_by_actor})
+                              "a requester cannot approve its own request; another finance approver must decide"
+                              + (" (you started the Droid run that drafted this proposal)" if via_run else ""),
+                              {"actor_id": actor.id, "requester": p.created_by_actor, "via_agent_run": via_run})
 
     if p.status != "pending_review":
-        decision_id = session.scalar(select(Decision.id).where(Decision.proposal_id == p.id))
-        raise DomainError("proposal_not_pending", 409, f"proposal is {p.status}; it can no longer be decided",
-                          {"status": p.status, "decision_id": decision_id})
+        raise _not_pending(session, p)
 
     env = budget_svc.require_envelope(session, p.period_id)
     now = clock.now()
@@ -149,9 +168,9 @@ def decide(
                 idempotency_key=key, request_fingerprint=fp, from_version=env.state_version, to_version=None,
                 before=budget_svc.current_figures(env), after=None, decided_at=now, created_at=now,
             )
+            if not proposal_svc.claim_status(session, p, "rejected", from_statuses=("pending_review",), now=now):
+                raise _Moved()
             session.add(decision)
-            p.status = "rejected"
-            p.updated_at = now
             session.commit()
             return decision, False
 
@@ -160,6 +179,11 @@ def decide(
         return decision, False
     except _Stale:
         raise _mark_stale(session, p, actor, clock=clock, ids=ids) from None
+    except _Moved:
+        session.rollback()
+        p = proposal_svc.get_proposal(session, proposal_id)
+        session.refresh(p)
+        raise _not_pending(session, p) from None
     except IntegrityError:
         # A concurrent request won the race for this key or this proposal.
         session.rollback()
@@ -176,6 +200,27 @@ def decide(
 
 class _Stale(Exception):
     pass
+
+
+class _Moved(Exception):
+    """The proposal left `pending_review` (revised, decided, ...) while this decision was in flight."""
+
+
+def requesters(session: Session, p: Proposal) -> set[str]:
+    """Everyone who asked for this change: the author of each proposal in the revise/rebase lineage,
+    plus the human who started the Droid run that drafted any of them."""
+    chain = proposal_svc.lineage(session, p)
+    ids = {q.id for q in chain}
+    run_ids = {q.agent_run_id for q in chain if q.agent_run_id}
+    out: set[str] = {q.created_by_actor for q in chain}
+    # A later run that re-asked for an identical pending draft reuses it instead of drafting again;
+    # whoever started that run asked for this change too.
+    for run in session.scalars(select(AgentRun)):
+        if run.id in run_ids or ids & set((run.output or {}).get("proposal_ids") or []):
+            initiated = (run.input or {}).get("initiated_by") or {}
+            if initiated.get("id"):
+                out.add(initiated["id"])
+    return out
 
 
 def _evidence(session: Session, body: DecisionCreate) -> list[dict]:
@@ -200,6 +245,9 @@ def _apply(session: Session, p: Proposal, env: BudgetEnvelope, body: DecisionCre
     )
     if result.rowcount != 1:
         raise _Stale()
+    # Compare-and-set the proposal itself: a concurrent revise does not bump the budget version.
+    if not proposal_svc.claim_status(session, p, "applied", from_statuses=("pending_review",), now=now):
+        raise _Moved()
     session.refresh(env)
 
     current = {a.team_id: a.amount for a in env.allocations}
@@ -238,8 +286,6 @@ def _apply(session: Session, p: Proposal, env: BudgetEnvelope, body: DecisionCre
         id=ids.new_id("snap_"), envelope_id=env.id, state_version=p.base_version + 1,
         total_amount=env.total_amount, allocations=ev.after["allocations"], decision_id=decision.id, created_at=now,
     ))
-    p.status = "applied"
-    p.updated_at = now
     session.flush()
     session.refresh(env)
     budget_svc.assert_invariant(env)

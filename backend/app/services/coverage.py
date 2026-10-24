@@ -2,8 +2,10 @@
 
 Rules:
 - A team with no records in the period is `missing` (never reported as a complete zero).
-- A team with records is `partial` if any of its counter streams reset, or if unattributed records
-  exist in the period (they could belong to any team, so no team total can be called complete).
+- A team with records is `partial` if any of its counter streams reset, if unattributed records
+  exist in the period (they could belong to any team, so no team total can be called complete), or
+  if none of its records carry dollars (only unpriced token telemetry or included-usage notional
+  rows): its 0.00 recorded spend is missing billing data, not a confirmed zero.
 - Company status is `missing` with no records, `partial` if any team is not complete, else `complete`.
 """
 
@@ -49,6 +51,7 @@ def coverage_report(session: Session, period: PlanningPeriod, now: datetime) -> 
         return {
             "record_count": len(recs),
             "counter_resets": sum(1 for r in recs if r.counter_reset),
+            "spend_record_count": sum(1 for r in recs if r.counts_toward_spend),
             "last_record_at": max((r.occurred_at for r in recs), default=None),
             "source_kinds": sorted({r.source_kind for r in recs}),
             "value_kinds": sorted({r.value_kind for r in recs}),
@@ -72,6 +75,10 @@ def coverage_report(session: Session, period: PlanningPeriod, now: datetime) -> 
                 notes.append(
                     f"{len(unattributed)} unattributed record(s) in the period may belong to this team"
                 )
+            if not s["spend_record_count"]:
+                status = "partial"
+                notes.append("no billing records with dollars for this team (only unpriced or included usage); "
+                             "recorded spend 0.00 is not a confirmed zero")
         team_rows.append({
             "team": t.id,
             "status": status,

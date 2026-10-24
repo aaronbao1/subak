@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Iterable
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.actors import Actor
@@ -365,6 +365,33 @@ def create_proposal(
     return p
 
 
+def claim_status(session: Session, p: Proposal, new_status: str, *, from_statuses: tuple[str, ...],
+                 now: Any) -> bool:
+    """Compare-and-set a proposal's status inside the current transaction.
+
+    `UPDATE proposals SET status=:new WHERE id=:id AND status IN (:from)`; False (nothing written)
+    when a concurrent request already moved the proposal on. Every status transition that retires
+    or settles a proposal goes through this so two writers can never both win.
+    """
+    result = session.execute(
+        update(Proposal)
+        .where(Proposal.id == p.id, Proposal.status.in_(from_statuses))
+        .values(status=new_status, updated_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        return False
+    session.refresh(p)
+    return True
+
+
+def _moved_error(session: Session, p: Proposal) -> DomainError:
+    session.refresh(p)
+    return DomainError("proposal_not_pending", 409,
+                       f"proposal is {p.status}; it changed while this request was in flight",
+                       {"status": p.status})
+
+
 def get_proposal(session: Session, proposal_id: str) -> Proposal:
     p = session.get(Proposal, proposal_id)
     if p is None:
@@ -405,6 +432,11 @@ def rebase(session: Session, proposal_id: str, body: RebaseIn, *, actor: Actor, 
     """
     p = get_proposal(session, proposal_id)
     env = budget_svc.require_envelope(session, p.period_id)
+    decided = session.scalar(select(Decision.id).where(Decision.proposal_id == p.id))
+    if decided is not None:
+        # Defensive: a decided proposal is never stale, whatever its status column says.
+        raise DomainError("proposal_not_stale", 409, f"proposal already has decision {decided}; it cannot be rebased",
+                          {"status": p.status, "decision_id": decided})
     outdated_pending = p.status == "pending_review" and p.base_version < env.state_version
     if p.status != "stale" and not outdated_pending:
         raise DomainError("proposal_not_stale", 409,
@@ -415,9 +447,8 @@ def rebase(session: Session, proposal_id: str, body: RebaseIn, *, actor: Actor, 
     draft.base_version = env.state_version
     new = create_proposal(session, draft, actor=actor, clock=clock, ids=ids, rebased_from=p,
                           extra_warnings=[w for w in p.warnings if w.get("code") == "forecast_unavailable"])
-    if outdated_pending:
-        p.status = "stale"
-    p.updated_at = clock.now()
+    if not claim_status(session, p, "stale", from_statuses=("pending_review", "stale"), now=clock.now()):
+        raise _moved_error(session, p)
     return new
 
 
@@ -429,8 +460,8 @@ def revise(session: Session, proposal_id: str, body: AdditionCreate | TransferCr
         raise DomainError("proposal_not_pending", 409, f"proposal is {p.status}; only pending or stale proposals "
                           "can be revised", {"status": p.status})
     new = create_proposal(session, body, actor=actor, clock=clock, ids=ids, revises=p)
-    p.status = "revised"
-    p.updated_at = clock.now()
+    if not claim_status(session, p, "revised", from_statuses=REVISABLE_STATUSES, now=clock.now()):
+        raise _moved_error(session, p)
     return new
 
 

@@ -19,7 +19,7 @@ a placeholder provider, not a forecasting model.
   "name": "budget_state_initial",
   "scenario": "main",
   "description": "version 1: research 60k, product 80k, engineering 60k; envelope 200k",
-  "schema": "BudgetState",
+  "schema": "BudgetState",           // an OpenAPI component name; "X[]" = array of X
   "request": {"method": "GET", "path": "/api/budget", "headers": {...}, "body": {...}, "query": {...}},
   "status": 200,
   "response": { ...exact JSON the API returned... }
@@ -39,13 +39,17 @@ not join ids across scenarios.
 | `forecast_unavailable` | Provider in `unavailable` mode: spend/budget still served, projections null |
 | `imports` | First import of the billing export, then the identical file again (`duplicate`) |
 | `incomplete` | Unmapped account + Codex counter reset: coverage `partial`, `unattributed` bucket |
+| `forecast_partial` | A fourth active team with no projection: `availability: partial`, `missing_teams`, projected `null` |
+| `revision` | A reviewer revises Droid's draft: original `revised` (cannot be decided), replacement approved |
+| `agent` | FakeDroidRunner runs: interpret, propose addition / transfer, answer a question |
 
 ## Conventions the fixtures rely on
 
 - **Money is a string** with exactly two decimals (`"60000.00"`). Never parse it into a JS float for
   arithmetic; display it or use a decimal library. Requests must send strings too: floats and more
   than two decimals are rejected.
-- **Errors** are always `{"error": {"code", "message", "details"}}`. Branch on `code`
+- **Errors** are always `{"error": {"code", "message", "details"}}` (component `ErrorBody` in
+  `openapi.json`; each route lists its error statuses and the `code` values it can return). Branch on `code`
   (`stale_proposal`, `self_approval_forbidden`, `role_forbidden`, `validation_failed`,
   `idempotency_key_reused`, `citation_not_found`, ...). `validation_failed` carries
   `details.reasons[] = {code, message, line?, field?}`.
@@ -63,6 +67,10 @@ not join ids across scenarios.
 - **Included usage** is never spend: `by_cost_category.included_usage.amount` is `null` and its list
   value is in `included_usage_notional`. `unpriced_tokens` is a token count, not dollars.
 - **Coverage** (`complete | partial | missing`) and `data_labels` tell you how far to trust totals.
+  `GET /api/budget` carries it too: `spend_coverage` (status, `unattributed_spend`, notes) and a
+  per-team `coverage_status`, because `recorded_spend` / `remaining` use attributed spend to date. A
+  team whose records carry no dollars (`spend_record_count: 0`, e.g. token telemetry only) is
+  `partial`, never a complete zero.
 - **Citations** in signals point at a specific document version with exact offsets;
   `citation_currency: "superseded"` means a newer version exists.
 
@@ -79,7 +87,10 @@ return new Response(JSON.stringify(fx.response), { status: fx.status });
 ```
 
 Types: generate them from `openapi.json` (for example `npx openapi-typescript
-backend/contract/openapi.json -o src/api-types.ts`), or read `schema` in each fixture.
+backend/contract/openapi.json -o src/api-types.ts`). Each fixture's `schema` is the matching
+`components["schemas"][name]` (`ProposalOut[]` is an array of `ProposalOut`; `NoContent` is an empty
+204). Alternate success codes are declared too: 200 for a decision replay, a duplicate import or a
+duplicate document, 202 for a background agent run.
 
 Forecasting: your provider must return the `ForecastResult` shape in `forecast_available.json`
 (`provider`, `availability`, `reason`, `target_period`, `basis`, `projections[{team, amount, unit,
@@ -106,7 +117,8 @@ cd backend
 `tests/test_contract.py` fails when the committed files drift from what the code produces. A changed
 fixture shape is an integration change: tell the frontend owner before merging it.
 
-Agent runs: `agent_run_interpret`, `agent_run_propose_addition`, `agent_run_propose_transfer` and
-`agent_runs` are real FakeDroidRunner runs (scenario `agent`); `error_runner_unavailable` is the 503
+Agent runs: `agent_run_interpret`, `agent_run_propose_addition`, `agent_run_propose_transfer`,
+`agent_run_answer_question`, `agent_run_detail` and `agent_runs` are real FakeDroidRunner runs (scenario `agent`); `error_runner_unavailable` is the 503
 for `DROID_RUNNER=sdk` without a key. Each run embeds its `steps` and `events`; the same events are
-streamed live by `GET /api/agent/runs/{id}/events` (SSE, see `backend/README.md`).
+streamed live by `GET /api/agent/runs/{id}/events` (SSE, see `backend/README.md`); each SSE `data:`
+line is an `AgentEventOut`.

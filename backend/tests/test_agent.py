@@ -460,3 +460,52 @@ def test_sdk_tool_functions_wrap_the_same_tools(seeded):
     assert budget["state_version"] == 1
     refused = json.loads(by_name["read_document"]("doc_missing"))
     assert refused["error"]["code"] == "not_found"
+
+
+# ---- answer_question (Factory milestone 3: units, dates, uncertainty) ----------------------------
+
+
+def test_answer_question_reports_period_units_and_complete_coverage(seeded, client):
+    out = run(client, task_type="answer_question").json()
+    assert out["status"] == "succeeded" and out["applied_changes"] is False
+    summary = out["summary"]
+    assert "2026-P1" in summary and "USD" in summary and "to date" in summary
+    assert "research: allocation 60000.00, recorded 45000.00, projected 85000.00" in summary
+    assert "Spend coverage is complete" in summary
+    assert "simulated" in summary and "not measured spend" in summary
+    cov = next(f for f in out["output"]["findings"] if f["type"] == "spend_coverage")
+    assert cov["status"] == "complete" and cov["unattributed_spend"] == "0.00"
+
+
+def test_answer_question_says_when_spend_is_partial_and_unattributed(seeded, client):
+    from app.config import BACKEND_ROOT
+    raw = (BACKEND_ROOT / "seed" / "planted" / "04_unmapped_provider_project.csv").read_bytes()
+    r = client.post("/api/imports", data={"source_kind": "northstar_billing"},
+                    files={"file": ("04.csv", raw, "text/csv")},
+                    headers={"X-Actor-Id": "importer-1", "X-Actor-Role": "importer"})
+    assert r.status_code == 201, r.text
+    out = run(client, task_type="answer_question").json()
+    summary = out["summary"]
+    assert "Spend coverage is partial" in summary
+    assert "1800.00 USD from 1 unattributed record(s)" in summary and "96800.00" in summary
+    assert "[spend data partial]" in summary
+    assert "spend_coverage_incomplete" in {w["code"] for w in out["output"]["warnings"]}
+    rows = [f for f in out["output"]["findings"] if f["type"] == "team_comparison"]
+    assert {r["coverage_status"] for r in rows} == {"partial"}
+
+
+def test_answer_question_with_forecast_unavailable_is_not_labeled_simulated(tmp_path, clock, id_factory):
+    app = create_app(Settings(db_path=tmp_path / "u.db", forecast_provider="unavailable"), clock=clock,
+                     id_factory=id_factory)
+    from app.seed.northstar import seed
+
+    s = app.state.session_factory()
+    seed(s, clock=clock, ids=id_factory)
+    s.close()
+    with TestClient(app) as client:
+        out = run(client, task_type="answer_question").json()
+        summary = out["summary"]
+        assert "Projections are unavailable" in summary and "projected unavailable" in summary
+        assert "simulated unavailable" not in summary and "projections are simulated" not in summary.lower()
+        assert "forecast_unavailable" in {w["code"] for w in out["output"]["warnings"]}
+    app.state.engine.dispose()

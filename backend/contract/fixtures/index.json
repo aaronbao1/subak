@@ -1,13 +1,33 @@
 {
   "fixtures": [
     {
+      "description": "fake runner compares allocation, recorded spend and projections with period, units, coverage and projection labels",
+      "file": "agent_run_answer_question.json",
+      "method": "POST",
+      "name": "agent_run_answer_question",
+      "path": "/api/agent/runs",
+      "scenario": "agent",
+      "schema": "AgentRunOut",
+      "status": 201
+    },
+    {
+      "description": "one run by id with its step log, events and findings",
+      "file": "agent_run_detail.json",
+      "method": "GET",
+      "name": "agent_run_detail",
+      "path": "/api/agent/runs/run_000004",
+      "scenario": "agent",
+      "schema": "AgentRunOut",
+      "status": 200
+    },
+    {
       "description": "fake runner reads the corpus, flags the superseded research thread, records cited signals",
       "file": "agent_run_interpret.json",
       "method": "POST",
       "name": "agent_run_interpret",
       "path": "/api/agent/runs",
       "scenario": "agent",
-      "schema": "AgentRun",
+      "schema": "AgentRunOut",
       "status": 201
     },
     {
@@ -17,7 +37,7 @@
       "name": "agent_run_propose_addition",
       "path": "/api/agent/runs",
       "scenario": "agent",
-      "schema": "AgentRun",
+      "schema": "AgentRunOut",
       "status": 201
     },
     {
@@ -27,7 +47,7 @@
       "name": "agent_run_propose_transfer",
       "path": "/api/agent/runs",
       "scenario": "agent",
-      "schema": "AgentRun",
+      "schema": "AgentRunOut",
       "status": 201
     },
     {
@@ -117,7 +137,17 @@
       "name": "decision_applied_addition",
       "path": "/api/proposals/prop_000001/decision",
       "scenario": "addition",
-      "schema": "Decision",
+      "schema": "DecisionOut",
+      "status": 201
+    },
+    {
+      "description": "the replacement approved: research 80k, product 60k",
+      "file": "decision_applied_revised.json",
+      "method": "POST",
+      "name": "decision_applied_revised",
+      "path": "/api/proposals/prop_000002/decision",
+      "scenario": "revision",
+      "schema": "DecisionOut",
       "status": 201
     },
     {
@@ -127,8 +157,18 @@
       "name": "decision_applied_transfer",
       "path": "/api/proposals/prop_000001/decision",
       "scenario": "main",
-      "schema": "Decision",
+      "schema": "DecisionOut",
       "status": 201
+    },
+    {
+      "description": "one decision by id: who, when, why, evidence, before/after",
+      "file": "decision_detail.json",
+      "method": "GET",
+      "name": "decision_detail",
+      "path": "/api/decisions/dec_000001",
+      "scenario": "main",
+      "schema": "DecisionOut",
+      "status": 200
     },
     {
       "description": "blocked attempts: Droid decide (role), stale apply",
@@ -137,7 +177,7 @@
       "name": "decision_events",
       "path": "/api/decision-events",
       "scenario": "main",
-      "schema": "DecisionEventList",
+      "schema": "DecisionEventOut[]",
       "status": 200
     },
     {
@@ -147,7 +187,7 @@
       "name": "decision_history",
       "path": "/api/decisions",
       "scenario": "main",
-      "schema": "DecisionList",
+      "schema": "DecisionOut[]",
       "status": 200
     },
     {
@@ -157,7 +197,7 @@
       "name": "decision_rejected",
       "path": "/api/proposals/prop_000001/decision",
       "scenario": "rejection",
-      "schema": "Decision",
+      "schema": "DecisionOut",
       "status": 201
     },
     {
@@ -167,7 +207,7 @@
       "name": "decision_replayed",
       "path": "/api/proposals/prop_000001/decision",
       "scenario": "main",
-      "schema": "Decision",
+      "schema": "DecisionOut",
       "status": 200
     },
     {
@@ -179,6 +219,26 @@
       "scenario": "main",
       "schema": "DocumentDetail",
       "status": 200
+    },
+    {
+      "description": "identical content and metadata again: created=false, nothing changes",
+      "file": "document_duplicate.json",
+      "method": "POST",
+      "name": "document_duplicate",
+      "path": "/api/documents",
+      "scenario": "main",
+      "schema": "DocumentIngestResult",
+      "status": 200
+    },
+    {
+      "description": "new corpus document stored as version 1",
+      "file": "document_ingested.json",
+      "method": "POST",
+      "name": "document_ingested",
+      "path": "/api/documents",
+      "scenario": "main",
+      "schema": "DocumentIngestResult",
+      "status": 201
     },
     {
       "description": "product launch plan v1 -> v2 chain",
@@ -219,6 +279,16 @@
       "scenario": "main",
       "schema": "ErrorBody",
       "status": 422
+    },
+    {
+      "description": "a revised proposal can no longer be decided (proposal_not_pending)",
+      "file": "error_decide_revised_original.json",
+      "method": "POST",
+      "name": "error_decide_revised_original",
+      "path": "/api/proposals/prop_000001/decision",
+      "scenario": "revision",
+      "schema": "ErrorBody",
+      "status": 409
     },
     {
       "description": "same key with a different request body",
@@ -321,13 +391,23 @@
       "status": 200
     },
     {
+      "description": "availability partial: projections for three teams, missing_teams [marketing], reason",
+      "file": "forecast_partial.json",
+      "method": "GET",
+      "name": "forecast_partial",
+      "path": "/api/forecasts",
+      "scenario": "forecast_partial",
+      "schema": "ForecastResult",
+      "status": 200
+    },
+    {
       "description": "persisted forecast that proposals and decisions can cite",
       "file": "forecast_snapshot.json",
       "method": "POST",
       "name": "forecast_snapshot",
       "path": "/api/forecasts/snapshots",
       "scenario": "main",
-      "schema": "ForecastSnapshot",
+      "schema": "ForecastSnapshotOut",
       "status": 201
     },
     {
@@ -387,7 +467,7 @@
       "name": "meta",
       "path": "/api/meta",
       "scenario": "main",
-      "schema": "Meta",
+      "schema": "MetaOut",
       "status": 200
     },
     {
@@ -397,6 +477,16 @@
       "name": "overview",
       "path": "/api/overview",
       "scenario": "main",
+      "schema": "Overview",
+      "status": 200
+    },
+    {
+      "description": "partial forecast: marketing projected null; projected_total null (not a partial sum)",
+      "file": "overview_forecast_partial.json",
+      "method": "GET",
+      "name": "overview_forecast_partial",
+      "path": "/api/overview",
+      "scenario": "forecast_partial",
       "schema": "Overview",
       "status": 200
     },
@@ -417,7 +507,7 @@
       "name": "proposal_addition_pending",
       "path": "/api/proposals",
       "scenario": "main",
-      "schema": "Proposal",
+      "schema": "ProposalOut",
       "status": 201
     },
     {
@@ -427,8 +517,28 @@
       "name": "proposal_rebased",
       "path": "/api/proposals/prop_000002/rebase",
       "scenario": "main",
-      "schema": "Proposal",
+      "schema": "ProposalOut",
       "status": 201
+    },
+    {
+      "description": "replacement draft (pending_review) with revises_proposal_id -> the original",
+      "file": "proposal_revised.json",
+      "method": "POST",
+      "name": "proposal_revised",
+      "path": "/api/proposals/prop_000001/revise",
+      "scenario": "revision",
+      "schema": "ProposalOut",
+      "status": 201
+    },
+    {
+      "description": "the original: status revised, replaced_by_proposal_id -> the replacement",
+      "file": "proposal_revised_original.json",
+      "method": "GET",
+      "name": "proposal_revised_original",
+      "path": "/api/proposals/prop_000001",
+      "scenario": "revision",
+      "schema": "ProposalOut",
+      "status": 200
     },
     {
       "description": "the stale proposal with is_stale=true and its blocked attempt",
@@ -437,7 +547,7 @@
       "name": "proposal_stale",
       "path": "/api/proposals/prop_000002",
       "scenario": "main",
-      "schema": "Proposal",
+      "schema": "ProposalOut",
       "status": 200
     },
     {
@@ -447,7 +557,7 @@
       "name": "proposal_transfer_pending",
       "path": "/api/proposals",
       "scenario": "main",
-      "schema": "Proposal",
+      "schema": "ProposalOut",
       "status": 201
     },
     {
@@ -457,7 +567,7 @@
       "name": "proposals_pending",
       "path": "/api/proposals",
       "scenario": "main",
-      "schema": "ProposalList",
+      "schema": "ProposalOut[]",
       "status": 200
     },
     {
@@ -467,8 +577,18 @@
       "name": "signal_created",
       "path": "/api/signals",
       "scenario": "main",
-      "schema": "ContextSignal",
+      "schema": "ContextSignalOut",
       "status": 201
+    },
+    {
+      "description": "an uncited signal removed (204, empty body); cited signals return 409",
+      "file": "signal_deleted.json",
+      "method": "DELETE",
+      "name": "signal_deleted",
+      "path": "/api/signals/sig_000005",
+      "scenario": "main",
+      "schema": "NoContent",
+      "status": 204
     },
     {
       "description": "product timing shift citing v2 (current) and v1 (superseded)",
@@ -477,7 +597,17 @@
       "name": "signal_detail_product",
       "path": "/api/signals/sig_000003",
       "scenario": "main",
-      "schema": "ContextSignal",
+      "schema": "ContextSignalOut",
+      "status": 200
+    },
+    {
+      "description": "finance curation: uncertainty updated; content and citations stay immutable",
+      "file": "signal_patched.json",
+      "method": "PATCH",
+      "name": "signal_patched",
+      "path": "/api/signals/sig_000005",
+      "scenario": "main",
+      "schema": "ContextSignalOut",
       "status": 200
     },
     {
@@ -531,13 +661,23 @@
       "status": 200
     },
     {
+      "description": "explicit mapping for a previously unmapped account (future imports attribute to research)",
+      "file": "team_mapping_upserted.json",
+      "method": "PUT",
+      "name": "team_mapping_upserted",
+      "path": "/api/team-mappings",
+      "scenario": "main",
+      "schema": "TeamMappingUpsertResult",
+      "status": 200
+    },
+    {
       "description": "explicit source account -> team mappings",
       "file": "team_mappings.json",
       "method": "GET",
       "name": "team_mappings",
       "path": "/api/team-mappings",
       "scenario": "main",
-      "schema": "TeamMappingList",
+      "schema": "TeamMappingOut[]",
       "status": 200
     },
     {
@@ -547,7 +687,7 @@
       "name": "teams",
       "path": "/api/teams",
       "scenario": "main",
-      "schema": "TeamList",
+      "schema": "TeamOut[]",
       "status": 200
     }
   ],

@@ -60,6 +60,6 @@
     "provider": "placeholder"
   },
   "scenario": "main",
-  "schema": "ForecastSnapshot",
+  "schema": "ForecastSnapshotOut",
   "status": 201
 }

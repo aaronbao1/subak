@@ -55,7 +55,7 @@ price can also be mistaken for dollars.
 
 | ID | Check | Expected |
 |---|---|---|
-| P2 | Import the session | 3 records (one per distinct counter value), `repeated_snapshots_skipped: 3`; research gains exactly 52,000 input / 18,000 cached / 7,600 output / 1,500 reasoning tokens; `spend_added: 0.00` and research spend stays 45,000.00 (`unpriced_usage`) |
+| P2 | Import the session | 3 records (one per distinct counter value), `repeated_snapshots_skipped: 3`; research gains exactly 52,000 input / 18,000 cached / 7,600 output / 1,500 reasoning tokens, and `unpriced_tokens` rises by 59,600 (input + output; cached and reasoning are subsets and are not added again); `spend_added: 0.00` and research spend stays 45,000.00 (`unpriced_usage`) |
 | P2b | Upload the same session again | `status: duplicate` |
 
 ## 3. Unmapped provider project

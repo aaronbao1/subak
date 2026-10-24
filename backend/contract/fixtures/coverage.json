@@ -16,6 +16,7 @@
       "source_kinds": [
         "northstar_billing"
       ],
+      "spend_record_count": 6,
       "status": "complete",
       "unmapped_records": 0,
       "value_kinds": [
@@ -50,6 +51,7 @@
         "source_kinds": [
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "complete",
         "team": "engineering",
         "unmapped_records": 0,
@@ -65,6 +67,7 @@
         "source_kinds": [
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "complete",
         "team": "product",
         "unmapped_records": 0,
@@ -80,6 +83,7 @@
         "source_kinds": [
           "northstar_billing"
         ],
+        "spend_record_count": 2,
         "status": "complete",
         "team": "research",
         "unmapped_records": 0,

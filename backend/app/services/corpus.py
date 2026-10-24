@@ -2,9 +2,15 @@
 
 Rules:
 - Content is stored with normalized newlines; citation offsets index into stored content.
-- Content identical to ANY existing version of a doc_key is a no-op (re-importing an old export can
-  never make an outdated version current again). Changed content creates version+1 that supersedes
-  the previous latest version.
+- A document's identity is its content plus its authoritative metadata (doc_type, plan_status,
+  effective dates, team tags). An identity equal to ANY existing version of a doc_key is a no-op
+  (re-importing an old export can never make an outdated version current again). Changed content, or
+  the same content with changed metadata (e.g. a plan moving from draft to approved, or cancelled),
+  creates version+1 that supersedes the previous latest version.
+- If the latest version was already superseded by ANOTHER document (e.g. an approved plan replaced an
+  email thread), that supersede carries over: the new version is born superseded by the same
+  document, and the older version's link is left untouched. A newer reply on a replaced thread never
+  makes that thread current again.
 - A new version dated before the current version is rejected (it would wrongly become current).
 - Cross-document supersedes (e.g. an approved plan superseding an older email thread) is explicit,
   must point at an older document of a different doc_key, and a document is superseded only once.
@@ -92,8 +98,11 @@ def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory
     digest = content_hash(content)
     existing = versions(session, data.doc_key) if _key_exists(session, data.doc_key) else []
 
+    identity = _identity(digest, data.doc_type, data.plan_status, data.effective_from, data.effective_to,
+                         data.team_tags)
     for doc in existing:
-        if doc.content_hash == digest:
+        if _identity(doc.content_hash, doc.doc_type, doc.plan_status, doc.effective_from, doc.effective_to,
+                     doc.team_tags) == identity:
             return IngestOutcome(doc, created=False, duplicate_of_version=doc.version)
 
     latest = existing[-1] if existing else None
@@ -152,11 +161,23 @@ def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory
     session.add(doc)
     session.flush()
     if latest is not None:
-        latest.superseded_by_document_id = doc.id
+        replaced_by = session.get(CorpusDocument, latest.superseded_by_document_id) \
+            if latest.superseded_by_document_id else None
+        if replaced_by is not None and replaced_by.doc_key != latest.doc_key:
+            # Explicitly superseded by another document: keep that link and carry it to the new version.
+            doc.superseded_by_document_id = replaced_by.id
+        else:
+            latest.superseded_by_document_id = doc.id
     if target is not None:
         target.superseded_by_document_id = doc.id
     session.flush()
     return IngestOutcome(doc, created=True)
+
+
+def _identity(digest: str, doc_type: Any, plan_status: Any, effective_from: Any, effective_to: Any,
+              team_tags: Any) -> tuple:
+    norm_tags = tuple(sorted({str(t).strip().lower() for t in (team_tags or [])}))
+    return (digest, doc_type, plan_status, effective_from, effective_to, norm_tags)
 
 
 def _key_exists(session: Session, doc_key: str) -> bool:

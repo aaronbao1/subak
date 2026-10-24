@@ -20,7 +20,10 @@ REQUIRED = {
     "proposal_rebased", "error_self_approval", "error_role_forbidden_droid_decides",
     "error_validation_negative_allocation", "error_validation_addition_mismatch", "error_idempotency_key_reused",
     "error_citation_not_found", "agent_run_interpret", "agent_run_propose_addition", "agent_run_propose_transfer",
-    "agent_runs", "error_runner_unavailable",
+    "agent_runs", "error_runner_unavailable", "forecast_partial", "overview_forecast_partial", "proposal_revised",
+    "proposal_revised_original", "error_decide_revised_original", "decision_applied_revised", "decision_detail",
+    "agent_run_detail", "agent_run_answer_question", "signal_patched", "signal_deleted", "team_mapping_upserted",
+    "document_ingested", "document_duplicate", "coverage_incomplete",
 }
 
 
@@ -39,7 +42,9 @@ def test_every_fixture_validates_against_schema():
     for name, fx in fixtures.items():
         export.validate_fixture(fx)
         assert fx["name"] == name
-        if fx["schema"] == "ErrorBody":
+        if fx["schema"] == "NoContent":
+            assert fx["status"] == 204 and fx["response"] is None
+        elif fx["schema"] == "ErrorBody":
             assert fx["status"] >= 400 and set(fx["response"]["error"]) == {"code", "message", "details"}
         else:
             assert fx["status"] < 300
@@ -79,3 +84,57 @@ def test_openapi_lists_every_route():
                  "/api/proposals/{proposal_id}/decision", "/api/decisions", "/api/meta", "/api/agent/runs",
                  "/api/agent/runs/{run_id}", "/api/agent/runs/{run_id}/events", "/api/agent/tools"):
         assert path in spec["paths"], path
+
+
+def _spec() -> dict:
+    return json.loads((CONTRACT / "openapi.json").read_text())
+
+
+def _template_for(spec: dict, method: str, path: str) -> str:
+    """The OpenAPI path template a concrete fixture path was served by (most literal match wins)."""
+    import re
+
+    matches = [t for t, item in spec["paths"].items()
+               if method.lower() in item and re.fullmatch(re.sub(r"\\{[^/]+\\}", "[^/]+", re.escape(t)), path)]
+    assert matches, f"no OpenAPI path for {method} {path}"
+    return min(matches, key=lambda t: t.count("{"))
+
+
+def test_fixture_schema_names_are_openapi_components():
+    comps = set(_spec()["components"]["schemas"])
+    for name, fx in _committed().items():
+        schema = fx["schema"]
+        if schema == "NoContent":
+            continue
+        assert schema.removesuffix("[]") in comps, f"{name}: {schema} is not an OpenAPI component"
+
+
+def test_every_fixture_status_is_declared_in_openapi():
+    spec = _spec()
+    for name, fx in _committed().items():
+        method, path = fx["request"]["method"], fx["request"]["path"]
+        op = spec["paths"][_template_for(spec, method, path)][method.lower()]
+        assert str(fx["status"]) in op["responses"], f"{name}: {method} {path} -> {fx['status']} undeclared"
+        resp = op["responses"][str(fx["status"])]
+        if fx["schema"] == "ErrorBody":
+            ref = resp["content"]["application/json"]["schema"]["$ref"]
+            assert ref.endswith("/ErrorBody"), name
+            assert f"`{fx['response']['error']['code']}`" in resp["description"], \
+                f"{name}: code {fx['response']['error']['code']} not documented for {method} {path}"
+
+
+def test_openapi_errors_use_the_error_envelope_not_fastapi_default():
+    spec = _spec()
+    text = json.dumps(spec)
+    assert "HTTPValidationError" not in text
+    assert {"ErrorBody", "ErrorDetail", "AgentEventOut"} <= set(spec["components"]["schemas"])
+    decision = spec["paths"]["/api/proposals/{proposal_id}/decision"]["post"]["responses"]
+    assert {"200", "201", "400", "401", "403", "404", "409", "422"} <= set(decision)
+    for code in ("stale_proposal", "idempotency_key_reused", "proposal_not_pending"):
+        assert code in decision["409"]["description"]
+    assert "self_approval_forbidden" in decision["403"]["description"]
+    assert "200" in spec["paths"]["/api/imports"]["post"]["responses"]
+    runs = spec["paths"]["/api/agent/runs"]["post"]["responses"]
+    assert runs["503"]["content"]["application/json"]["schema"]["$ref"].endswith("/ErrorBody")
+    sse = spec["paths"]["/api/agent/runs/{run_id}/events"]["get"]["responses"]["200"]["content"]
+    assert sse["text/event-stream"]["schema"]["$ref"].endswith("/AgentEventOut")

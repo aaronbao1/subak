@@ -28,6 +28,11 @@ def test_parse_money_canonical(value, expected):
         ("abc", "invalid_amount"),
         (True, "invalid_amount"),
         (None, "invalid_amount"),
+        ("1e30", "amount_too_large"),
+        ("99999999999999999999999999.99", "amount_too_large"),
+        ("-1000000000000000", "amount_too_large"),
+        (10**40, "amount_too_large"),
+        (Decimal("1E+27"), "amount_too_large"),
     ],
 )
 def test_parse_money_rejects(value, code):
@@ -64,3 +69,23 @@ def test_money_round_trips_as_decimal(session):
     assert got.total_amount == Decimal("200000.00")
     assert isinstance(got.total_amount, Decimal)
     assert money_str(got.total_amount) == "200000.00"
+
+
+def test_parse_money_accepts_largest_bound():
+    assert money_str(parse_money("999999999999999.99")) == "999999999999999.99"
+
+
+@pytest.mark.parametrize("amount", ["1e30", "99999999999999999999999999.99"])
+def test_huge_amounts_are_422_not_500(seeded, client, amount):
+    headers = {"X-Actor-Id": "fin-ana", "X-Actor-Role": "finance_analyst"}
+    transfer = {"action_type": "transfer", "base_version": 1, "rationale": "x",
+                "lines": [{"from_team": "product", "to_team": "research", "amount": amount}]}
+    addition = {"action_type": "addition", "base_version": 1, "rationale": "x", "envelope_increase": amount,
+                "lines": [{"to_team": "research", "amount": amount}]}
+    for body in (transfer, addition):
+        r = client.post("/api/proposals", json=body, headers=headers)
+        assert r.status_code == 422, r.text
+        assert "amount_too_large" in r.text
+    r = client.post("/api/agent/runs", headers=headers, json={
+        "task_type": "propose_allocation", "params": {"mode": "transfer", "amount": amount, "prioritize": "research"}})
+    assert r.status_code == 422, r.text

@@ -55,6 +55,6 @@
     "version": "0.1.0"
   },
   "scenario": "main",
-  "schema": "Meta",
+  "schema": "MetaOut",
   "status": 200
 }

@@ -336,18 +336,64 @@ class FakeDroidRunner:
     # ---- answer ------------------------------------------------------------------------------
 
     def _answer(self, tools: AgentToolbox) -> AgentRunOutput:
+        """Allocation vs recorded vs projected per team, keeping units, dates and uncertainty visible:
+        the period and as-of date, that totals are to date, spend coverage (partial / missing data and
+        unattributed spend are called out, never hidden), and how projections are labeled."""
         budget = tools.get_budgets()
+        spend = tools.get_spend_summary()
         forecast = tools.get_forecast()["forecast"]
+        unit = budget["unit"]
         proj = {p["team"]: p["amount"] for p in forecast["projections"]}
+        team_cov = {t["team"]: t["coverage"]["status"] for t in spend["teams"]}
         rows = []
         for a in budget["allocations"]:
             rows.append({"type": "team_comparison", "team": a["team"], "allocation": a["amount"],
-                         "recorded_spend": a["recorded_spend"], "projected": proj.get(a["team"])})
-        text = "; ".join(f"{r['team']}: allocation {r['allocation']}, recorded {r['recorded_spend']}, projected "
-                         f"{r['projected'] if r['projected'] is not None else 'unavailable'}" for r in rows)
-        summary = f"{text} ({budget['unit']}, projections are {forecast['value_kind']} {forecast['method_label']})."
+                         "recorded_spend": a["recorded_spend"], "projected": proj.get(a["team"]),
+                         "coverage_status": team_cov.get(a["team"], a.get("coverage_status", "missing")),
+                         "unit": unit})
+        period = spend["period"]
+        cov = spend["coverage"]
+        unattributed = spend["unattributed"]
+        coverage_row = {"type": "spend_coverage", "status": cov["status"], "period": period["id"],
+                        "as_of": spend["as_of"], "company_total": spend["company_total"],
+                        "unattributed_spend": unattributed["recorded_spend"],
+                        "unattributed_records": unattributed["record_count"], "notes": cov["notes"], "unit": unit}
+        warnings: list[dict] = []
+
+        def team_text(r: dict) -> str:
+            proj_txt = r["projected"] if r["projected"] is not None else "unavailable"
+            flag = "" if r["coverage_status"] == "complete" else f" [spend data {r['coverage_status']}]"
+            return (f"{r['team']}: allocation {r['allocation']}, recorded {r['recorded_spend']}{flag}, "
+                    f"projected {proj_txt}")
+
+        parts = [f"Period {period['id']} ({period['starts_on']} to {period['ends_on']}), {unit}; recorded spend "
+                 f"is to date as of {spend['as_of']}.", "; ".join(team_text(r) for r in rows) + "."]
+        if cov["status"] != "complete":
+            msg = f"Spend coverage is {cov['status']}: the recorded figures may be incomplete"
+            if unattributed["record_count"]:
+                msg += (f"; {unattributed['recorded_spend']} {unit} from {unattributed['record_count']} "
+                        f"unattributed record(s) is counted in the company total ({spend['company_total']}) "
+                        "but in no team's figures")
+            parts.append(msg + ".")
+            warnings.append({"code": "spend_coverage_incomplete", "message": msg,
+                             "details": {"status": cov["status"], "notes": cov["notes"]}})
+        else:
+            parts.append(f"Spend coverage is complete; company total {spend['company_total']} {unit}.")
+        if forecast["availability"] == "unavailable":
+            parts.append(f"Projections are unavailable ({forecast.get('reason') or 'no forecast'}); "
+                         "no projected figures are shown.")
+            warnings.append({"code": "forecast_unavailable",
+                             "message": forecast.get("reason") or "forecast unavailable"})
+        else:
+            label = f"Projections are {forecast['value_kind']} ({forecast['method_label']}), not measured spend"
+            if forecast["availability"] == "partial":
+                label += f"; partial: no projection for {', '.join(forecast.get('missing_teams') or [])}"
+            parts.append(label + ".")
+        summary = " ".join(parts)
         tools.emit("assistant_text", {"text": summary})
-        return AgentRunOutput(summary=summary, findings=rows)
+        for w in warnings:
+            tools.emit("warning", w)
+        return AgentRunOutput(summary=summary, findings=rows + [coverage_row], warnings=warnings)
 
 
 # ---- helpers -----------------------------------------------------------------------------------

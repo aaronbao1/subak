@@ -33,8 +33,14 @@ NOTES = [
 ]
 
 
+# In the Codex/OpenAI usage shape `cached_input_tokens` is a subset of `input_tokens` and
+# `reasoning_tokens` (reasoning_output_tokens) is a subset of `output_tokens`. Only the two totals are
+# added; the subsets stay visible per field in `tokens` but are never summed on top.
+TOTAL_TOKEN_FIELDS = ("input_tokens", "output_tokens")
+
+
 def _tokens(r: UsageRecord) -> int:
-    return sum(getattr(r, f) or 0 for f in TOKEN_FIELDS)
+    return sum(getattr(r, f) or 0 for f in TOTAL_TOKEN_FIELDS)
 
 
 def _aggregate(team: str, recs: list[UsageRecord]) -> dict:

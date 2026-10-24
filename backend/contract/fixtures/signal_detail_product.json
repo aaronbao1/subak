@@ -51,6 +51,6 @@
     "uncertainty": "pilot feedback could move the milestone again"
   },
   "scenario": "main",
-  "schema": "ContextSignal",
+  "schema": "ContextSignalOut",
   "status": 200
 }

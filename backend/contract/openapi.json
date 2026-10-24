@@ -449,6 +449,15 @@
             "title": "Amount",
             "type": "string"
           },
+          "coverage_status": {
+            "enum": [
+              "complete",
+              "partial",
+              "missing"
+            ],
+            "title": "Coverage Status",
+            "type": "string"
+          },
           "recorded_spend": {
             "title": "Recorded Spend",
             "type": "string"
@@ -466,7 +475,8 @@
           "team",
           "amount",
           "recorded_spend",
-          "remaining"
+          "remaining",
+          "coverage_status"
         ],
         "title": "AllocationOut",
         "type": "object"
@@ -652,6 +662,43 @@
         "title": "BudgetSnapshotOut",
         "type": "object"
       },
+      "BudgetSpendCoverage": {
+        "description": "How complete the recorded_spend / remaining figures are. They are attributed spend to date.",
+        "properties": {
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "partial",
+              "missing"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unattributed_records": {
+            "title": "Unattributed Records",
+            "type": "integer"
+          },
+          "unattributed_spend": {
+            "title": "Unattributed Spend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "unattributed_spend",
+          "unattributed_records",
+          "notes"
+        ],
+        "title": "BudgetSpendCoverage",
+        "type": "object"
+      },
       "BudgetState": {
         "properties": {
           "allocated_total": {
@@ -688,6 +735,9 @@
           "period": {
             "$ref": "#/components/schemas/PeriodRef"
           },
+          "spend_coverage": {
+            "$ref": "#/components/schemas/BudgetSpendCoverage"
+          },
           "state_version": {
             "title": "State Version",
             "type": "integer"
@@ -710,7 +760,8 @@
           "state_version",
           "allocations",
           "updated_at",
-          "last_decision_id"
+          "last_decision_id",
+          "spend_coverage"
         ],
         "title": "BudgetState",
         "type": "object"
@@ -914,6 +965,10 @@
             "title": "Source Kinds",
             "type": "array"
           },
+          "spend_record_count": {
+            "title": "Spend Record Count",
+            "type": "integer"
+          },
           "status": {
             "enum": [
               "complete",
@@ -940,6 +995,7 @@
           "record_count",
           "unmapped_records",
           "counter_resets",
+          "spend_record_count",
           "last_record_at",
           "source_kinds",
           "value_kinds",
@@ -2400,6 +2456,43 @@
         "title": "DocumentVersions",
         "type": "object"
       },
+      "ErrorBody": {
+        "description": "Every 4xx/5xx response: {\"error\": {\"code\", \"message\", \"details\"}}. Branch on `code`.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
       "EvidenceOut": {
         "properties": {
           "id": {
@@ -2621,19 +2714,6 @@
           "forecast"
         ],
         "title": "ForecastSnapshotOut",
-        "type": "object"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
         "type": "object"
       },
       "ImportIssue": {
@@ -3805,6 +3885,10 @@
             "title": "Source Kinds",
             "type": "array"
           },
+          "spend_record_count": {
+            "title": "Spend Record Count",
+            "type": "integer"
+          },
           "status": {
             "enum": [
               "complete",
@@ -3836,6 +3920,7 @@
           "record_count",
           "unmapped_records",
           "counter_resets",
+          "spend_record_count",
           "last_record_at",
           "source_kinds",
           "value_kinds",
@@ -4428,46 +4513,6 @@
         "title": "UnattributedSpend",
         "type": "object"
       },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
-      },
       "WarningOut": {
         "properties": {
           "code": {
@@ -4520,6 +4565,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `reset_disabled`"
           }
         },
         "summary": "Reset",
@@ -4560,11 +4615,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Runs",
@@ -4637,20 +4692,57 @@
                 }
               }
             },
-            "description": "Accepted"
+            "description": "Accepted (`wait=false`): the run continues in the background; follow its events."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
           },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`, `non_positive_amount`, `invalid_params`, `unexpected_params`"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many concurrent requests. `error.code`: `runner_busy`"
           },
           "503": {
-            "description": "runner_unavailable"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Dependency unavailable. `error.code`: `runner_unavailable`"
           }
         },
         "summary": "Create Run",
@@ -4684,15 +4776,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Run",
@@ -4748,19 +4850,33 @@
         "responses": {
           "200": {
             "content": {
-              "text/event-stream": {}
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentEventOut"
+                }
+              }
             },
-            "description": "Successful Response"
+            "description": "Server-Sent Events. Each event: `id: <seq>`, `event: <type>`, `data: <AgentEventOut as JSON>`; the stream ends after `run_finished`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
           },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Stream Events",
@@ -4825,15 +4941,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Budget",
@@ -4874,15 +5000,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Budget History",
@@ -4923,15 +5059,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Coverage",
@@ -4981,11 +5127,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Decision Events",
@@ -5034,11 +5180,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Decisions",
@@ -5072,15 +5218,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `decision_not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Decision",
@@ -5200,11 +5356,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Documents",
@@ -5259,6 +5415,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentIngestResult"
+                }
+              }
+            },
+            "description": "Duplicate: identical content and metadata already stored; `created: false`."
+          },
           "201": {
             "content": {
               "application/json": {
@@ -5269,15 +5435,45 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `already_superseded`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `version_predates_current`, `supersedes_same_key`, `supersedes_newer_document`, `supersedes_target_not_found`, `front_matter_required`, `invalid_front_matter`"
           }
         },
         "summary": "Create Document",
@@ -5311,15 +5507,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Document Versions",
@@ -5353,15 +5559,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Document",
@@ -5402,15 +5618,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Forecast",
@@ -5484,15 +5710,45 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Create Snapshot",
@@ -5526,15 +5782,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Snapshot",
@@ -5636,6 +5902,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Duplicate file: identical bytes were already imported; `status: duplicate`, nothing added."
+          },
           "201": {
             "content": {
               "application/json": {
@@ -5646,15 +5922,45 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Payload too large. `error.code`: `file_too_large`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `import_failed`, `unknown_source_kind`, `unknown_value_kind`, `source_account_not_allowed`"
           }
         },
         "summary": "Create Import",
@@ -5688,15 +5994,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Import",
@@ -5758,15 +6074,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Overview",
@@ -5815,11 +6141,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Proposals",
@@ -5892,15 +6218,45 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `stale_base_version`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `currency_mismatch`, `unknown_team`, `negative_allocation_result`"
           }
         },
         "summary": "Create Proposal",
@@ -5934,15 +6290,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `proposal_not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Proposal",
@@ -6024,6 +6390,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            },
+            "description": "Idempotent replay: same Idempotency-Key and body; the stored decision with `replayed: true`. Nothing is applied twice."
+          },
           "201": {
             "content": {
               "application/json": {
@@ -6034,15 +6410,65 @@
             },
             "description": "Successful Response"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request. `error.code`: `idempotency_key_required`, `idempotency_key_invalid`"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`, `self_approval_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `proposal_not_found`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `stale_proposal`, `idempotency_key_reused`, `proposal_not_pending`, `proposal_no_longer_valid`, `proposal_state_mismatch`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Decide Proposal",
@@ -6125,15 +6551,55 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `proposal_not_found`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `proposal_not_stale`, `proposal_not_pending`, `stale_base_version`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Rebase Proposal",
@@ -6217,15 +6683,55 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`, `proposal_not_found`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `proposal_not_pending`, `stale_base_version`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Revise Proposal",
@@ -6304,11 +6810,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "List Signals",
@@ -6373,15 +6879,35 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `citation_not_found`, `signal_cites_superseded_only`"
           }
         },
         "summary": "Create Signal",
@@ -6440,15 +6966,55 @@
           "204": {
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict with the current state. `error.code`: `signal_in_use`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Delete Signal",
@@ -6480,15 +7046,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Get Signal",
@@ -6562,15 +7138,45 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Patch Signal",
@@ -6700,15 +7306,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Spend Records",
@@ -6749,15 +7365,25 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
           }
         },
         "summary": "Spend Summary",
@@ -6847,15 +7473,35 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`"
           }
         },
         "summary": "Upsert Mapping",

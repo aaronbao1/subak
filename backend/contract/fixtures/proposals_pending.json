@@ -193,6 +193,6 @@
     }
   ],
   "scenario": "main",
-  "schema": "ProposalList",
+  "schema": "ProposalOut[]",
   "status": 200
 }

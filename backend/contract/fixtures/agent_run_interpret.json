@@ -1153,6 +1153,6 @@
     "task_type": "interpret_corpus"
   },
   "scenario": "agent",
-  "schema": "AgentRun",
+  "schema": "AgentRunOut",
   "status": 201
 }

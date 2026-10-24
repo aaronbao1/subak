@@ -140,6 +140,7 @@ def _scenario(client) -> list[Check]:
     add = lambda cid, name, expected, actual: checks.append(Check(cid, name, expected, actual))  # noqa: E731
     base = client.get("/api/spend/summary").json()
     research_tokens_before = next(t["tokens"] for t in base["teams"] if t["team"] == "research")
+    research_unpriced_before = next(t["unpriced_tokens"] for t in base["teams"] if t["team"] == "research")
     add("P0", "seed baseline team spend",
         {"research": "45000.00", "product": "20000.00", "engineering": "30000.00", "company": "95000.00"},
         {**_team_spend(base), "company": base["company_total"]})
@@ -172,9 +173,12 @@ def _scenario(client) -> list[Check]:
         {"records_added": 3, "repeated_snapshots_skipped": 3,
          "tokens_added": {"input_tokens": 52000, "cached_input_tokens": 18000, "output_tokens": 7600,
                           "reasoning_tokens": 1500},
+         # cached is part of input and reasoning is part of output: 52,000 + 7,600, not all four added.
+         "unpriced_tokens_added": 59600,
          "research_spend": "45000.00", "spend_added": "0.00"},
         {"records_added": b["record_count"], "repeated_snapshots_skipped": b["stats"].get("repeated_snapshots_skipped"),
-         "tokens_added": gained, "research_spend": research["recorded_spend"], "spend_added": b["spend_added"]})
+         "tokens_added": gained, "unpriced_tokens_added": research["unpriced_tokens"] - research_unpriced_before,
+         "research_spend": research["recorded_spend"], "spend_added": b["spend_added"]})
     r = _upload(client, PLANTED_IMPORTS[2])
     add("P2b", "re-uploading the session file is a duplicate", "duplicate", r.json()["status"])
 

@@ -40,6 +40,6 @@
     }
   ],
   "scenario": "main",
-  "schema": "TeamMappingList",
+  "schema": "TeamMappingOut[]",
   "status": 200
 }

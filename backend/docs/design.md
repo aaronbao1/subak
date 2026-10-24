@@ -241,11 +241,11 @@ that rejects floats, >2 decimals, NaN/Inf, and serializes as string.
 
 | Handoff (master plan §3) | Response schema | Key fields |
 |---|---|---|
-| Spending history and current snapshot | `SpendSummary`, `TeamSpend`, `SpendRecordOut` | `period`, `unit`, per team `recorded_spend`, `by_cost_category`, `by_value_kind`, `included_usage_notional` (display only), `unpriced_tokens`; `unattributed`; `company_total`; `coverage{status: complete|partial|missing, unmapped_records, counter_resets, last_record_at, notes[]}`; `data_labels{simulated: bool, real_sample: bool}` |
+| Spending history and current snapshot | `SpendSummary`, `TeamSpend`, `SpendRecordOut` | `period`, `unit`, per team `recorded_spend`, `by_cost_category`, `by_value_kind`, `included_usage_notional` (display only), `unpriced_tokens`; `unattributed`; `company_total`; `coverage{status: complete|partial|missing, unmapped_records, counter_resets, spend_record_count, last_record_at, notes[]}`; `data_labels{simulated: bool, real_sample: bool}` |
 | Readable company material | `DocumentSummary`, `DocumentDetail` | `id`, `doc_key`, `version`, `title`, `origin`, `doc_type`, `plan_status`, `authored_at`, `effective_*`, `team_tags`, `project_tags`, `supersedes`, `superseded_by`, `is_simulated`, `content` (detail only) |
 | Relevant company context | `ContextSignalIn`, `ContextSignalOut`, `CitationOut` | `team`, `project`, `summary`, `change_type`, `applies_from/to`, `status`, `uncertainty`, `citations[{document_id, doc_key, version, quote, char_start, char_end, citation_currency}]`, `produced_by` |
 | Projections and supported scenarios | `ForecastResult`, `TeamProjection` | `provider`, `availability: available|partial|unavailable`, `reason`, `target_period`, `basis: full_period_total|remaining`, `projections[{team, amount, unit, assumptions[], uncertainty?}]`, `value_kind: "simulated"`, `method_label` |
-| Current internal budgets | `BudgetState` | `period`, `unit`, `envelope_total`, `state_version`, `allocations[{team, amount, recorded_spend}]`, `updated_at`, `last_decision_id` |
+| Current internal budgets | `BudgetState` | `period`, `unit`, `envelope_total`, `state_version`, `allocations[{team, amount, recorded_spend, remaining, coverage_status}]`, `updated_at`, `last_decision_id`, `spend_coverage{status, unattributed_spend, unattributed_records, notes[]}` (recorded/remaining are attributed spend to date) |
 | Proposed allocation change | `ProposalCreate` (discriminated union on `action_type`), `ProposalOut` | `AdditionCreate{envelope_increase, lines[{to_team, amount}]}`, `TransferCreate{lines[{from_team,to_team,amount}]}`, plus `base_version`, `rationale`, `evidence_refs`; out adds `before`, `after`, `deltas{team: signed}`, `status`, `warnings`, `requester` |
 | Finance decision and saved result | `DecisionCreate`, `DecisionOut`, `DecisionHistoryItem` | in: `outcome: approve|reject`, `rationale`, `evidence_refs`; out: `id`, `proposal_id`, `outcome`, `actor{id, role}`, `decided_at`, `from_version`, `to_version`, `before`, `after`, `replayed: bool`, `budget_state` (post-decision) |
 
@@ -292,12 +292,17 @@ Decision algorithm (`services/decisions.py::decide`), in one transaction:
 1. Lookup `idempotency_key`. If found: same fingerprint -> return stored decision with
    `replayed: true` (200); different fingerprint -> 409 `idempotency_key_reused`.
 2. Role must be `finance_approver` else 403 `role_forbidden` (Droid can never decide).
-3. Outcome `approve` and `actor_id == proposal.created_by_actor` -> 403 `self_approval_forbidden`.
+3. Outcome `approve` and the actor is a requester -> 403 `self_approval_forbidden`. Requesters are the
+   authors of every proposal in the revise/rebase lineage plus the `initiated_by` of any Droid run that
+   drafted or reused one of them.
    (A requester may still reject its own proposal; that changes no allocation.)
 4. Proposal status must be `pending_review` else 409 `proposal_not_pending`.
 5. Reject: write decision, status `rejected`, budget untouched.
 6. Approve: `UPDATE budget_envelopes SET state_version = base+1 ... WHERE id=? AND state_version = base_version`;
-   0 rows -> mark proposal `stale`, write `decision_events(stale_rejected)`, 409 `stale_proposal`
+   0 rows -> mark proposal `stale` only if it is still `pending_review` (a concurrent approver that already
+   applied it yields 409 `proposal_not_pending`), write `decision_events(stale_rejected)`, 409 `stale_proposal`.
+   The proposal's own status change is a compare-and-set (`... WHERE status='pending_review'`), so a revise
+   that lands mid-decision makes the decision fail with 409 `proposal_not_pending`
    with `details{base_version, current_version, current_allocations}`. Otherwise re-validate lines
    against current allocations (no negative results), write allocations, snapshot, decision,
    status `applied`, assert envelope invariant, commit.
@@ -585,8 +590,8 @@ Differences from and additions to §3.12 / §5 / §6:
   run. `output.proposal_ids/signal_ids` come from the toolbox, not the runner. `AgentRunOut.proposals`
   shows each draft's live status; `applied_changes` is always false.
 - Droid's actor id is `droid:<run id>` (role `droid_agent`). The finance user who starts a run is recorded in
-  `input.initiated_by` but is not the proposal's requester, so separation of duties does not block them
-  from approving Droid's draft (open product decision).
+  `input.initiated_by` and counts as a requester of every draft that run produced (or reused), across the
+  revise/rebase lineage, so they cannot approve it (403 `self_approval_forbidden`, `details.via_agent_run`).
 - `create_app(droid_runner=...)` injects a runner (tests); otherwise the runner is resolved per run.
 
 ## 15. Seed planted-error pack and edge cases (as built)

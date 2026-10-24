@@ -218,6 +218,30 @@ class UsageRecord(_IdMixin, Base):
         return cost_category not in NON_SPEND_CATEGORIES
 
 
+class CounterBaseline(_IdMixin, Base):
+    """A cumulative-counter observation that falls outside every planning period.
+
+    It books no usage (there is no period to book it to), but its counter value is the starting point
+    for the next in-period snapshot of the same stream. Without it, a later import would compute that
+    snapshot's delta from zero and count all pre-period usage inside the period.
+    """
+
+    __tablename__ = "counter_baselines"
+
+    import_batch_id: Mapped[str] = mapped_column(ForeignKey("import_batches.id"), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_record_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    stream_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    cumulative_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    counter_reset: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("source_kind", "source_record_key"),
+        Index("ix_counter_baselines_stream", "source_kind", "stream_key", "occurred_at"),
+    )
+
+
 # ---- 3.6 budgets -----------------------------------------------------------------------------
 
 

@@ -32,9 +32,9 @@ from app.schemas.agent import AgentRunList, AgentRunOut
 from app.schemas.budget import BudgetHistory, BudgetState
 from app.schemas.common import ErrorBody
 from app.schemas.decisions import DecisionEventOut, DecisionOut
-from app.schemas.documents import DocumentDetail, DocumentList, DocumentVersions
+from app.schemas.documents import DocumentDetail, DocumentIngestResult, DocumentList, DocumentVersions
 from app.schemas.forecasts import ForecastResult, ForecastSnapshotOut
-from app.schemas.imports import CoverageReport, ImportResult, TeamMappingOut, TeamOut
+from app.schemas.imports import CoverageReport, ImportResult, TeamMappingOut, TeamMappingUpsertResult, TeamOut
 from app.schemas.meta import MetaOut, Overview
 from app.schemas.proposals import ProposalOut
 from app.schemas.signals import ContextSignalOut, SignalList
@@ -59,23 +59,31 @@ OUTCOME_B_LINES = [
     {"to_team": "engineering", "amount": "15000.00"},
 ]
 
-# Fixture name -> schema used to validate it ("ErrorBody" for every error case).
+# Fixture `schema` -> model used to validate it. Every name is an OpenAPI component name
+# (`components.schemas.<name>`); `<name>[]` is a JSON array of that component; `NoContent` is an empty
+# 204 body. `ErrorBody` is used for every error case.
 SCHEMAS: dict[str, Any] = {
-    "Meta": MetaOut, "TeamList": list[TeamOut], "TeamMappingList": list[TeamMappingOut],
+    "MetaOut": MetaOut, "TeamOut[]": list[TeamOut], "TeamMappingOut[]": list[TeamMappingOut],
+    "TeamMappingUpsertResult": TeamMappingUpsertResult,
     "BudgetState": BudgetState, "BudgetHistory": BudgetHistory, "SpendSummary": SpendSummary,
     "SpendRecordList": SpendRecordList, "CoverageReport": CoverageReport, "ImportResult": ImportResult,
-    "ForecastResult": ForecastResult, "ForecastSnapshot": ForecastSnapshotOut, "Overview": Overview,
+    "ForecastResult": ForecastResult, "ForecastSnapshotOut": ForecastSnapshotOut, "Overview": Overview,
     "DocumentList": DocumentList, "DocumentDetail": DocumentDetail, "DocumentVersions": DocumentVersions,
-    "ContextSignal": ContextSignalOut, "SignalList": SignalList, "Proposal": ProposalOut,
-    "ProposalList": list[ProposalOut], "Decision": DecisionOut, "DecisionList": list[DecisionOut],
-    "DecisionEventList": list[DecisionEventOut], "ErrorBody": ErrorBody,
-    "AgentRun": AgentRunOut, "AgentRunList": AgentRunList,
+    "DocumentIngestResult": DocumentIngestResult,
+    "ContextSignalOut": ContextSignalOut, "SignalList": SignalList, "ProposalOut": ProposalOut,
+    "ProposalOut[]": list[ProposalOut], "DecisionOut": DecisionOut, "DecisionOut[]": list[DecisionOut],
+    "DecisionEventOut[]": list[DecisionEventOut], "ErrorBody": ErrorBody,
+    "AgentRunOut": AgentRunOut, "AgentRunList": AgentRunList, "NoContent": None,
 }
 
 
 def validate_fixture(fixture: dict) -> None:
     """Raise if a fixture's response does not match its declared schema."""
     schema = SCHEMAS[fixture["schema"]]
+    if schema is None:
+        if fixture["response"] is not None:
+            raise ValueError(f"{fixture['name']}: NoContent fixture has a body")
+        return
     if isinstance(schema, type) and issubclass(schema, BaseModel):
         schema.model_validate(fixture["response"])
     else:
@@ -169,10 +177,10 @@ def _addition(rationale: str, evidence: list[dict] | None = None, base_version: 
 
 def scenario_main(r: Recorder) -> None:
     """Seeded Northstar: reads, signals, outcome A applied, replay, stale outcome B, rebase."""
-    r.call("meta", "GET", "/api/meta", schema="Meta", expect=200,
+    r.call("meta", "GET", "/api/meta", schema="MetaOut", expect=200,
            description="modes and real-vs-simulated labels")
-    r.call("teams", "GET", "/api/teams", schema="TeamList", expect=200, description="three Northstar teams")
-    r.call("team_mappings", "GET", "/api/team-mappings", schema="TeamMappingList", expect=200,
+    r.call("teams", "GET", "/api/teams", schema="TeamOut[]", expect=200, description="three Northstar teams")
+    r.call("team_mappings", "GET", "/api/team-mappings", schema="TeamMappingOut[]", expect=200,
            description="explicit source account -> team mappings")
     r.call("budget_state_initial", "GET", "/api/budget", schema="BudgetState", expect=200,
            description="version 1: research 60k, product 80k, engineering 60k; envelope 200k")
@@ -186,7 +194,7 @@ def scenario_main(r: Recorder) -> None:
     r.call("forecast_available", "GET", "/api/forecasts", schema="ForecastResult", expect=200,
            description="placeholder projections 85k/50k/65k, full_period_total, simulated (not a model)")
     snap = r.call("forecast_snapshot", "POST", "/api/forecasts/snapshots", headers=DROID,
-                  schema="ForecastSnapshot", expect=201,
+                  schema="ForecastSnapshotOut", expect=201,
                   description="persisted forecast that proposals and decisions can cite")
     r.call("overview", "GET", "/api/overview", schema="Overview", expect=200,
            description="spend + budget + forecast combined, per-team comparison")
@@ -206,7 +214,7 @@ def scenario_main(r: Recorder) -> None:
     r.call("document_versions_product_launch", "GET", "/api/documents/by-key/product-launch-plan/versions",
            schema="DocumentVersions", expect=200, description="product launch plan v1 -> v2 chain")
 
-    research = r.call("signal_created", "POST", "/api/signals", headers=ANALYST, schema="ContextSignal",
+    research = r.call("signal_created", "POST", "/api/signals", headers=ANALYST, schema="ContextSignalOut",
                       expect=201, description="verified signal: exact quote from the approved research plan",
                       json_body={
         "team": "research", "project": "model-evaluation", "change_type": "expansion", "status": "current",
@@ -216,7 +224,7 @@ def scenario_main(r: Recorder) -> None:
         "citations": [{"document_id": plan_id,
                        "quote": "This plan expands model-evaluation work during the current planning period."}],
     })
-    r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignal", expect=201, description="",
+    r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignalOut", expect=201, description="",
            json_body={
         "team": "research", "project": "model-evaluation", "change_type": "timing_shift", "status": "superseded",
         "summary": "Older email thread pushed the evaluation expansion to next period; superseded by the approved plan.",
@@ -224,7 +232,7 @@ def scenario_main(r: Recorder) -> None:
         "citations": [{"document_id": thread_id,
                        "quote": "we will push the model-evaluation expansion to next period."}],
     })
-    product = r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignal", expect=201,
+    product = r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignalOut", expect=201,
                      description="", json_body={
         "team": "product", "project": "workspace-launch", "change_type": "timing_shift", "status": "current",
         "summary": "Launch milestone moved to the following period; near-term launch work reduced.",
@@ -236,7 +244,7 @@ def scenario_main(r: Recorder) -> None:
              "quote": "The general-availability launch milestone for the assistant workspace lands in the current period."},
         ],
     })
-    eng = r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignal", expect=201,
+    eng = r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignalOut", expect=201,
                  description="", json_body={
         "team": "engineering", "project": "platform", "change_type": "continuation", "status": "current",
         "summary": "Platform migration continues through the current period at the current pace.",
@@ -244,8 +252,8 @@ def scenario_main(r: Recorder) -> None:
         "citations": [{"document_id": eng_id,
                        "quote": "Platform migration work continues through the current period at the current pace."}],
     })
-    r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignal", expect=201, description="",
-           json_body={
+    marketing = r.call(None, "POST", "/api/signals", headers=ANALYST, schema="ContextSignalOut", expect=201,
+                       description="", json_body={
         "team": None, "project": "campaigns", "change_type": "other", "status": "informal",
         "summary": "Marketing brainstorm about generated demo videos; no budget or approval.",
         "uncertainty": "brainstorm only, explicitly not a plan",
@@ -253,7 +261,7 @@ def scenario_main(r: Recorder) -> None:
     })
     r.call("signals", "GET", "/api/signals", schema="SignalList", expect=200,
            description="current / superseded / informal signals with citation currency")
-    r.call("signal_detail_product", "GET", f"/api/signals/{product['id']}", schema="ContextSignal", expect=200,
+    r.call("signal_detail_product", "GET", f"/api/signals/{product['id']}", schema="ContextSignalOut", expect=200,
            description="product timing shift citing v2 (current) and v1 (superseded)")
     r.call("error_citation_not_found", "POST", "/api/signals", headers=DROID, schema="ErrorBody", expect=422,
            description="quote does not occur verbatim in the cited document", json_body={
@@ -274,11 +282,11 @@ def scenario_main(r: Recorder) -> None:
         {"kind": "signal", "id": eng["id"]}, {"kind": "forecast_snapshot", "id": snap["id"]},
         {"kind": "document", "id": plan_id},
     ]
-    a = r.call("proposal_transfer_pending", "POST", "/api/proposals", headers=DROID, schema="Proposal",
+    a = r.call("proposal_transfer_pending", "POST", "/api/proposals", headers=DROID, schema="ProposalOut",
                expect=201, description="outcome A drafted by Droid: product->research 25k, product->engineering 5k",
                json_body=_transfer("Research expands model evaluation this period while the product launch moved "
                                    "to next period; move 30k of product's allocation.", evidence))
-    b = r.call("proposal_addition_pending", "POST", "/api/proposals", headers=DROID, schema="Proposal",
+    b = r.call("proposal_addition_pending", "POST", "/api/proposals", headers=DROID, schema="ProposalOut",
                expect=201, description="outcome B drafted at the same base version: +50k envelope, research +35k, "
                                        "engineering +15k",
                json_body=_addition("Add 50k prioritizing research evaluation and engineering continuation.", evidence))
@@ -291,17 +299,17 @@ def scenario_main(r: Recorder) -> None:
            json_body={**_addition("lines short of the increase"),
                       "lines": [{"to_team": "research", "amount": "35000.00"}]})
     r.call("proposals_pending", "GET", "/api/proposals", params={"status": "pending_review"},
-           schema="ProposalList", expect=200, description="review queue")
+           schema="ProposalOut[]", expect=200, description="review queue")
     approve = {"outcome": "approve", "rationale": "Matches the approved research plan and the launch update.",
                "evidence_refs": [{"kind": "signal", "id": research["id"]}]}
     r.call("error_role_forbidden_droid_decides", "POST", f"/api/proposals/{a['id']}/decision",
            headers={**DROID, "Idempotency-Key": "droid-attempt-1"}, json_body=approve, schema="ErrorBody",
            expect=403, description="Droid can draft but never decide")
-    r.call("decision_applied_transfer", "POST", f"/api/proposals/{a['id']}/decision",
-           headers={**APPROVER, "Idempotency-Key": "approve-transfer-1"}, json_body=approve, schema="Decision",
+    applied = r.call("decision_applied_transfer", "POST", f"/api/proposals/{a['id']}/decision",
+           headers={**APPROVER, "Idempotency-Key": "approve-transfer-1"}, json_body=approve, schema="DecisionOut",
            expect=201, description="approved and applied: 85k/50k/65k, total 200k, version 1 -> 2")
     r.call("decision_replayed", "POST", f"/api/proposals/{a['id']}/decision",
-           headers={**APPROVER, "Idempotency-Key": "approve-transfer-1"}, json_body=approve, schema="Decision",
+           headers={**APPROVER, "Idempotency-Key": "approve-transfer-1"}, json_body=approve, schema="DecisionOut",
            expect=200, description="same Idempotency-Key and body: stored decision, replayed=true, applied once")
     r.call("error_idempotency_key_reused", "POST", f"/api/proposals/{a['id']}/decision",
            headers={**APPROVER, "Idempotency-Key": "approve-transfer-1"},
@@ -316,25 +324,45 @@ def scenario_main(r: Recorder) -> None:
            headers={**APPROVER, "Idempotency-Key": "approve-addition-1"},
            json_body={"outcome": "approve", "rationale": "add funds"}, schema="ErrorBody", expect=409,
            description="outcome B was drafted against version 1; budget is now version 2 -> not applied")
-    r.call("proposal_stale", "GET", f"/api/proposals/{b['id']}", schema="Proposal", expect=200,
+    r.call("proposal_stale", "GET", f"/api/proposals/{b['id']}", schema="ProposalOut", expect=200,
            description="the stale proposal with is_stale=true and its blocked attempt")
     r.call("proposal_rebased", "POST", f"/api/proposals/{b['id']}/rebase", headers=ANALYST, json_body={},
-           schema="Proposal", expect=201, description="same intent re-drafted on version 2; needs a fresh review")
-    r.call("decision_history", "GET", "/api/decisions", schema="DecisionList", expect=200,
+           schema="ProposalOut", expect=201, description="same intent re-drafted on version 2; needs a fresh review")
+    r.call("decision_history", "GET", "/api/decisions", schema="DecisionOut[]", expect=200,
            description="who, when, why, evidence, before/after, version for each decision")
-    r.call("decision_events", "GET", "/api/decision-events", schema="DecisionEventList", expect=200,
+    r.call("decision_events", "GET", "/api/decision-events", schema="DecisionEventOut[]", expect=200,
            description="blocked attempts: Droid decide (role), stale apply")
     r.call("budget_history", "GET", "/api/budget/history", schema="BudgetHistory", expect=200,
            description="immutable snapshots v1 (seed) and v2 linked to the decision")
+    r.call("decision_detail", "GET", f"/api/decisions/{applied['id']}", schema="DecisionOut", expect=200,
+           description="one decision by id: who, when, why, evidence, before/after")
+    r.call("signal_patched", "PATCH", f"/api/signals/{marketing['id']}", headers=ANALYST, schema="ContextSignalOut",
+           expect=200, json_body={"uncertainty": "brainstorm only; finance reviewed it, still no plan or budget"},
+           description="finance curation: uncertainty updated; content and citations stay immutable")
+    r.call("signal_deleted", "DELETE", f"/api/signals/{marketing['id']}", headers=ANALYST, schema="NoContent",
+           expect=204, description="an uncited signal removed (204, empty body); cited signals return 409")
+    r.call("team_mapping_upserted", "PUT", "/api/team-mappings", headers=ANALYST, schema="TeamMappingUpsertResult",
+           expect=200, json_body={"source_kind": "northstar_billing", "source_account": "ws-shared-sandbox",
+                                  "team_id": "research", "effective_from": "2026-10-01"},
+           description="explicit mapping for a previously unmapped account (future imports attribute to research)")
+    doc = {"doc_key": "research-eval-staffing-note", "title": "Evaluation staffing note", "origin": "upload",
+           "doc_type": "note", "plan_status": "n/a", "authored_at": "2026-10-20T09:00:00Z",
+           "team_tags": ["research"], "project_tags": ["model-evaluation"], "is_simulated": True,
+           "content": "Two more evaluators join the model-evaluation effort this period."}
+    r.call("document_ingested", "POST", "/api/documents", headers=IMPORTER, json_body=doc,
+           schema="DocumentIngestResult", expect=201, description="new corpus document stored as version 1")
+    r.call("document_duplicate", "POST", "/api/documents", headers=IMPORTER, json_body=doc,
+           schema="DocumentIngestResult", expect=200,
+           description="identical content and metadata again: created=false, nothing changes")
 
 
 def scenario_addition(r: Recorder) -> None:
-    b = r.call(None, "POST", "/api/proposals", headers=DROID, schema="Proposal", expect=201, description="",
+    b = r.call(None, "POST", "/api/proposals", headers=DROID, schema="ProposalOut", expect=201, description="",
                json_body=_addition("Add 50k prioritizing research evaluation and engineering continuation."))
     r.call("decision_applied_addition", "POST", f"/api/proposals/{b['id']}/decision",
            headers={**APPROVER, "Idempotency-Key": "approve-addition-1"},
            json_body={"outcome": "approve", "rationale": "Leadership approved 50k of new funds for this period."},
-           schema="Decision", expect=201, description="approved addition: 95k/80k/75k, total 250k, version 1 -> 2")
+           schema="DecisionOut", expect=201, description="approved addition: 95k/80k/75k, total 250k, version 1 -> 2")
     r.call("budget_state_after_addition", "GET", "/api/budget", schema="BudgetState", expect=200,
            description="version 2 after outcome B")
 
@@ -342,19 +370,25 @@ def scenario_addition(r: Recorder) -> None:
 def scenario_agent(r: Recorder) -> None:
     """FakeDroidRunner: interpret the corpus, then draft outcome B; nothing is applied."""
     r.call("agent_run_interpret", "POST", "/api/agent/runs", headers=ANALYST,
-           json_body={"task_type": "interpret_corpus"}, schema="AgentRun", expect=201,
+           json_body={"task_type": "interpret_corpus"}, schema="AgentRunOut", expect=201,
            description="fake runner reads the corpus, flags the superseded research thread, records cited signals")
     r.call("agent_run_propose_addition", "POST", "/api/agent/runs", headers=ANALYST,
            json_body={"task_type": "propose_allocation",
                       "params": {"mode": "addition", "amount": "50000.00", "prioritize": "research"}},
-           schema="AgentRun", expect=201,
+           schema="AgentRunOut", expect=201,
            description="fake runner drafts outcome B (+50k: research +35k, engineering +15k) as pending_review")
     r.call("agent_run_propose_transfer", "POST", "/api/agent/runs", headers=ANALYST,
            json_body={"task_type": "propose_allocation", "params": {"mode": "transfer", "prioritize": "research"}},
-           schema="AgentRun", expect=201,
+           schema="AgentRunOut", expect=201,
            description="fake runner drafts outcome A (product -> research 25k, product -> engineering 5k)")
+    answer = r.call("agent_run_answer_question", "POST", "/api/agent/runs", headers=ANALYST,
+                    json_body={"task_type": "answer_question"}, schema="AgentRunOut", expect=201,
+                    description="fake runner compares allocation, recorded spend and projections with period, "
+                                "units, coverage and projection labels")
     r.call("agent_runs", "GET", "/api/agent/runs", schema="AgentRunList", expect=200,
            description="recent runs, newest first, each with its step log and events")
+    r.call("agent_run_detail", "GET", f"/api/agent/runs/{answer['id']}", schema="AgentRunOut", expect=200,
+           description="one run by id with its step log, events and findings")
 
 
 def scenario_agent_sdk_unavailable(r: Recorder) -> None:
@@ -371,7 +405,7 @@ def scenario_agent_sdk_unavailable(r: Recorder) -> None:
 
 
 def scenario_rejection(r: Recorder) -> None:
-    p = r.call(None, "POST", "/api/proposals", headers=APPROVER, schema="Proposal", expect=201, description="",
+    p = r.call(None, "POST", "/api/proposals", headers=APPROVER, schema="ProposalOut", expect=201, description="",
                json_body=_addition("Requesting new funds for evaluation."))
     r.call("error_self_approval", "POST", f"/api/proposals/{p['id']}/decision",
            headers={**APPROVER, "Idempotency-Key": "self-approve-1"},
@@ -380,7 +414,7 @@ def scenario_rejection(r: Recorder) -> None:
     r.call("decision_rejected", "POST", f"/api/proposals/{p['id']}/decision",
            headers={**APPROVER_2, "Idempotency-Key": "reject-1"},
            json_body={"outcome": "reject", "rationale": "No new money this period; revisit after launch."},
-           schema="Decision", expect=201, description="rejected; budget stays version 1 at 60k/80k/60k")
+           schema="DecisionOut", expect=201, description="rejected; budget stays version 1 at 60k/80k/60k")
     r.call("budget_state_after_rejection", "GET", "/api/budget", schema="BudgetState", expect=200,
            description="unchanged version 1 after a rejection")
 
@@ -446,11 +480,51 @@ def scenario_incomplete(r: Recorder) -> None:
            description="partial coverage with notes")
 
 
+def scenario_revision(r: Recorder) -> None:
+    """A reviewer replaces Droid's draft with smaller lines; the original becomes `revised`."""
+    original = r.call(None, "POST", "/api/proposals", headers=DROID, schema="ProposalOut", expect=201,
+                      description="", json_body=_transfer("Move 30k from product to research and engineering."))
+    revised = r.call("proposal_revised", "POST", f"/api/proposals/{original['id']}/revise", headers=ANALYST,
+                     schema="ProposalOut", expect=201,
+                     json_body={**_transfer("Reviewer keeps 10k of the move in product until the launch date is "
+                                            "confirmed."),
+                                "lines": [{"from_team": "product", "to_team": "research", "amount": "20000.00"}]},
+                     description="replacement draft (pending_review) with revises_proposal_id -> the original")
+    r.call("proposal_revised_original", "GET", f"/api/proposals/{original['id']}", schema="ProposalOut",
+           expect=200, description="the original: status revised, replaced_by_proposal_id -> the replacement")
+    r.call("error_decide_revised_original", "POST", f"/api/proposals/{original['id']}/decision",
+           headers={**APPROVER, "Idempotency-Key": "approve-original-1"},
+           json_body={"outcome": "approve", "rationale": "approving the old lines"}, schema="ErrorBody",
+           expect=409, description="a revised proposal can no longer be decided (proposal_not_pending)")
+    r.call("decision_applied_revised", "POST", f"/api/proposals/{revised['id']}/decision",
+           headers={**APPROVER, "Idempotency-Key": "approve-revised-1"},
+           json_body={"outcome": "approve", "rationale": "Revised transfer matches the confirmed plans."},
+           schema="DecisionOut", expect=201, description="the replacement approved: research 80k, product 60k")
+
+
+def scenario_forecast_partial(r: Recorder) -> None:
+    """A fourth active team without a placeholder projection: availability partial."""
+    from app.db.models import Team
+
+    s = r.client.app.state.session_factory()
+    try:
+        s.add(Team(id="marketing", name="Marketing", active=True, created_at=FROZEN_AT))
+        s.commit()
+    finally:
+        s.close()
+    r.call("forecast_partial", "GET", "/api/forecasts", schema="ForecastResult", expect=200,
+           description="availability partial: projections for three teams, missing_teams [marketing], reason")
+    r.call("overview_forecast_partial", "GET", "/api/overview", schema="Overview", expect=200,
+           description="partial forecast: marketing projected null; projected_total null (not a partial sum)")
+
+
 SCENARIOS: list[tuple[str, Scenario, dict]] = [
     ("main", scenario_main, {}),
     ("addition", scenario_addition, {}),
     ("rejection", scenario_rejection, {}),
     ("forecast_unavailable", scenario_forecast_unavailable, {"forecast_provider": "unavailable"}),
+    ("forecast_partial", scenario_forecast_partial, {}),
+    ("revision", scenario_revision, {}),
     ("imports", scenario_imports, {"seed_kwargs": {"include_spend": False}}),
     ("incomplete", scenario_incomplete, {}),
     ("agent", scenario_agent, {}),

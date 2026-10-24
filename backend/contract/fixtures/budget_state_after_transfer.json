@@ -10,18 +10,21 @@
     "allocations": [
       {
         "amount": "65000.00",
+        "coverage_status": "complete",
         "recorded_spend": "30000.00",
         "remaining": "35000.00",
         "team": "engineering"
       },
       {
         "amount": "50000.00",
+        "coverage_status": "complete",
         "recorded_spend": "20000.00",
         "remaining": "30000.00",
         "team": "product"
       },
       {
         "amount": "85000.00",
+        "coverage_status": "complete",
         "recorded_spend": "45000.00",
         "remaining": "40000.00",
         "team": "research"
@@ -35,6 +38,14 @@
       "id": "2026-P1",
       "label": "Northstar planning period",
       "starts_on": "2026-10-01"
+    },
+    "spend_coverage": {
+      "notes": [
+        "recorded_spend and remaining use spend attributed to each team, to date"
+      ],
+      "status": "complete",
+      "unattributed_records": 0,
+      "unattributed_spend": "0.00"
     },
     "state_version": 2,
     "unit": "USD",

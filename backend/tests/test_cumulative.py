@@ -167,3 +167,58 @@ def test_to_deltas_unit_ordering_and_prior_baseline():
                                              last_counter={"input_tokens": 5})})
     assert [r.tokens["input_tokens"] for r, _ in out] == [5, 20, 15]
     assert stats.repeated_snapshots == 1 and stats.counter_resets == 0
+
+
+def test_pre_period_snapshot_is_a_baseline_across_split_imports(client, session):
+    """Splitting one session across two files must give the same delta as importing it whole."""
+    first = codex(client, codex_lines("split", [("2026-09-30T23:00:00Z", usage(1000, 0, 100))]),
+                  filename="a.jsonl").json()
+    assert first["record_count"] == 0 and first["stats"]["out_of_period_baselines_saved"] == 1
+    second = codex(client, codex_lines("split", [("2026-10-01T01:00:00Z", usage(1300, 0, 130))]),
+                   filename="b.jsonl").json()
+    assert second["record_count"] == 1
+    assert totals(session) == 300 and totals(session, "output_tokens") == 30
+
+
+def test_pre_period_snapshot_in_same_file_matches_split_result(client, session):
+    codex(client, codex_lines("whole", [("2026-09-30T23:00:00Z", usage(1000, 0, 100)),
+                                        ("2026-10-01T01:00:00Z", usage(1300, 0, 130))]))
+    assert totals(session) == 300
+
+
+def test_stored_snapshots_sharing_a_timestamp_resolve_to_the_larger_counter(client, session):
+    codex(client, codex_lines("tie", [("2026-10-03T10:00:00Z", usage(200, 0, 0)),
+                                      ("2026-10-03T10:00:00Z", usage(100, 0, 0))]), filename="a.jsonl")
+    assert totals(session) == 200
+    codex(client, codex_lines("tie", [("2026-10-03T11:00:00Z", usage(300, 0, 0))]), filename="b.jsonl")
+    assert totals(session) == 300  # +100 from the 200 counter, never +200 from the 100 one
+
+
+def test_counter_reaching_a_pre_reset_value_again_is_new_usage(client, session):
+    body = codex(client, codex_lines("rr", [
+        ("2026-10-04T10:00:00Z", usage(100, 0, 0)),
+        ("2026-10-04T10:05:00Z", usage(200, 0, 0)),
+        ("2026-10-04T10:10:00Z", usage(100, 0, 0)),  # reset: same value as the first snapshot
+        ("2026-10-04T10:15:00Z", usage(200, 0, 0)),
+        ("2026-10-04T10:16:00Z", usage(200, 0, 0)),  # a true repeat within the new generation
+    ])).json()
+    assert body["record_count"] == 4
+    assert body["stats"]["counter_resets"] == 1 and body["stats"]["repeated_snapshots_skipped"] == 1
+    assert totals(session) == 400
+
+
+def test_counter_reset_across_imports_keeps_generation(client, session):
+    codex(client, codex_lines("rg", [("2026-10-05T10:00:00Z", usage(100, 0, 0)),
+                                     ("2026-10-05T10:05:00Z", usage(200, 0, 0))]), filename="a.jsonl")
+    body = codex(client, codex_lines("rg", [("2026-10-05T10:10:00Z", usage(100, 0, 0)),
+                                            ("2026-10-05T10:15:00Z", usage(200, 0, 0))]), filename="b.jsonl").json()
+    assert body["record_count"] == 2 and body["stats"]["counter_resets"] == 1
+    assert totals(session) == 400
+    # Re-exporting the whole history in one different-bytes file adds nothing.
+    again = codex(client, codex_lines("rg", [("2026-10-05T10:00:00Z", usage(100, 0, 0)),
+                                             ("2026-10-05T10:05:00Z", usage(200, 0, 0)),
+                                             ("2026-10-05T10:10:00Z", usage(100, 0, 0)),
+                                             ("2026-10-05T10:15:00Z", usage(200, 0, 0))]),
+                  filename="c.jsonl").json()
+    assert again["record_count"] == 0
+    assert totals(session) == 400

@@ -1,0 +1,32 @@
+{
+  "description": "explicit mapping for a previously unmapped account (future imports attribute to research)",
+  "name": "team_mapping_upserted",
+  "request": {
+    "body": {
+      "effective_from": "2026-10-01",
+      "source_account": "ws-shared-sandbox",
+      "source_kind": "northstar_billing",
+      "team_id": "research"
+    },
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "PUT",
+    "path": "/api/team-mappings"
+  },
+  "response": {
+    "mapping": {
+      "created_by": "fin-analyst-ana",
+      "effective_from": "2026-10-01",
+      "id": "map_000005",
+      "source_account": "ws-shared-sandbox",
+      "source_kind": "northstar_billing",
+      "team_id": "research"
+    },
+    "reattributed_records": 0
+  },
+  "scenario": "main",
+  "schema": "TeamMappingUpsertResult",
+  "status": 200
+}

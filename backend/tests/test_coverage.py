@@ -53,3 +53,30 @@ def test_unmapped_account_goes_to_unattributed_with_partial_coverage(client):
 def test_unknown_period_404(client):
     r = client.get("/api/coverage?period=2031-P9")
     assert r.status_code == 404 and r.json()["error"]["code"] == "unknown_period"
+
+
+def test_team_with_billing_plus_tokens_stays_complete(client):
+    from reference_data import codex_lines, usage
+    upload(client, NORTHSTAR_CSV)
+    cov_before = client.get("/api/coverage").json()
+    assert cov_before["company"]["status"] == "complete"
+    r = upload(client, codex_lines("only-tokens", [("2026-10-10T10:00:00Z", usage(500, 0, 50))]),
+               source_kind="codex_sessions", filename="s.jsonl", source_account="codex-research-laptops")
+    assert r.status_code == 201, r.text
+    research = next(t for t in client.get("/api/coverage").json()["teams"] if t["team"] == "research")
+    assert research["status"] == "complete" and research["spend_record_count"] >= 1  # it still has billing
+
+
+def test_tokens_only_team_reports_partial_not_complete_zero(client):
+    from reference_data import codex_lines, usage
+    text = "\n".join(l for l in NORTHSTAR_CSV.splitlines() if "ws-research" not in l) + "\n"
+    upload(client, text)
+    r = upload(client, codex_lines("only-tokens", [("2026-10-10T10:00:00Z", usage(500, 0, 50))]),
+               source_kind="codex_sessions", filename="s.jsonl", source_account="codex-research-laptops")
+    assert r.status_code == 201, r.text
+    cov = client.get("/api/coverage").json()
+    research = next(t for t in cov["teams"] if t["team"] == "research")
+    assert research["record_count"] == 1 and research["spend_record_count"] == 0
+    assert research["status"] == "partial"
+    assert any("not a confirmed zero" in n for n in research["notes"])
+    assert cov["company"]["status"] == "partial"

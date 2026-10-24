@@ -10,6 +10,10 @@ from sqlalchemy.types import TypeDecorator
 
 CENT = Decimal("0.01")
 MAX_DECIMALS = 2
+# Largest accepted magnitude: 15 integer digits (just under one quadrillion). Kept far inside the
+# 28-digit default Decimal context so that quantizing, and summing many amounts, is always exact.
+MAX_INTEGER_DIGITS = 15
+MAX_ABS = Decimal(10) ** MAX_INTEGER_DIGITS
 
 
 class MoneyError(ValueError):
@@ -23,8 +27,9 @@ class MoneyError(ValueError):
 def parse_money(value: Any) -> Decimal:
     """Parse str | int | Decimal into a Decimal quantized to cents.
 
-    Rejects floats (`float_not_allowed`), bools, NaN/Inf, and inputs with more than two decimal
-    places (`too_many_decimals`). Sign is preserved; positivity is a domain rule checked elsewhere.
+    Rejects floats (`float_not_allowed`), bools, NaN/Inf, inputs with more than two decimal
+    places (`too_many_decimals`), and magnitudes of 10**15 or more (`amount_too_large`). Never raises
+    anything but MoneyError. Sign is preserved; positivity is a domain rule checked elsewhere.
     """
     if isinstance(value, bool):
         raise MoneyError("invalid_amount", "booleans are not money")
@@ -51,7 +56,13 @@ def parse_money(value: Any) -> Decimal:
     if isinstance(exponent, int) and exponent < -MAX_DECIMALS:
         # Strict: "1.500" is rejected too. Rounding is never applied silently.
         raise MoneyError("too_many_decimals", f"at most {MAX_DECIMALS} decimal places: {value!r}")
-    return dec.quantize(CENT)
+    if abs(dec) >= MAX_ABS:
+        raise MoneyError("amount_too_large",
+                         f"amounts must have at most {MAX_INTEGER_DIGITS} integer digits: {value!r}")
+    try:
+        return dec.quantize(CENT)
+    except InvalidOperation as exc:  # pragma: no cover - unreachable inside the magnitude bound
+        raise MoneyError("invalid_amount", f"not a representable amount: {value!r}") from exc
 
 
 def money_str(value: Decimal) -> str:

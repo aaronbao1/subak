@@ -5,7 +5,10 @@ Guarantees:
 - Overlapping files with different hashes cannot double count: (source_kind, source_record_key) is
   unique; a key restated with different values is skipped and reported, never overwritten.
 - Cumulative counters become deltas per stream (`to_deltas`); repeated snapshots are stored once with
-  their first delta, a decrease is a counter reset (flagged, coverage becomes partial).
+  their first delta, a decrease is a counter reset (flagged, coverage becomes partial). The record key
+  carries the stream's reset generation, so a counter that climbs back to a value seen before a reset
+  is new usage, not a repeat. Snapshots outside every period are kept as `counter_baselines` (no usage
+  booked) so the next in-period snapshot is still measured from the right starting point.
 - Team comes only from explicit mappings; unmapped accounts are stored with team_id NULL.
 - A batch with any invalid row fails as a whole (nothing inserted) and is kept for audit.
 """
@@ -26,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import VALUE_KINDS, ImportBatch, PlanningPeriod, UsageRecord
+from app.db.models import VALUE_KINDS, CounterBaseline, ImportBatch, PlanningPeriod, UsageRecord
 from app.services.parsers import codex_sessions, northstar_csv
 from app.services.parsers.base import TOKEN_FIELDS, ParsedRecord, ParseIssue, ParseResult
 from app.services.teams import MappingResolver
@@ -57,8 +60,16 @@ def counter_hash(counter: dict[str, int]) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def cumulative_record_key(stream_key: str, counter: dict[str, int]) -> str:
+def cumulative_record_key(stream_key: str, counter: dict[str, int], generation: int = 0) -> str:
+    """Key of one cumulative observation. `generation` counts the stream's counter resets so far;
+    generation 0 keeps the original `stream#hash` form."""
+    if generation:
+        return f"{stream_key}#r{generation}#{counter_hash(counter)}"
     return f"{stream_key}#{counter_hash(counter)}"
+
+
+def _key_hash(key: str) -> str:
+    return key.rsplit("#", 1)[-1]
 
 
 @dataclass
@@ -66,6 +77,7 @@ class StreamState:
     last_at: datetime | None = None
     last_counter: dict[str, int] | None = None
     known_keys: set[str] = field(default_factory=set)
+    generation: int = 0  # number of counter resets already stored for the stream
 
 
 @dataclass
@@ -100,21 +112,29 @@ def to_deltas(
     for stream, recs in by_stream.items():
         state = prior.get(stream) or StreamState()
         seen = set(state.known_keys)
+        seen_hashes = {_key_hash(k) for k in seen}
+        generation = state.generation
         prev = dict(state.last_counter) if state.last_counter else {k: 0 for k in TOKEN_FIELDS}
         recs.sort(key=lambda r: (r.occurred_at, sum(r.cumulative.values())))  # type: ignore[union-attr]
         for rec in recs:
             counter = rec.cumulative  # type: ignore[assignment]
-            key = cumulative_record_key(stream, counter)
+            if state.last_at is not None and rec.occurred_at < state.last_at:
+                # Older than what is stored: either the same snapshot re-exported, or unplaceable.
+                if counter_hash(counter) in seen_hashes:
+                    stats.repeated_snapshots += 1
+                else:
+                    stats.out_of_order += 1
+                    stats.out_of_order_rows.append(rec.row)
+                continue
+            reset = any(counter.get(k, 0) < prev.get(k, 0) for k in TOKEN_FIELDS)
+            key = cumulative_record_key(stream, counter, generation + 1 if reset else generation)
             if key in seen:
                 stats.repeated_snapshots += 1
                 continue
-            if state.last_at is not None and rec.occurred_at < state.last_at:
-                stats.out_of_order += 1
-                stats.out_of_order_rows.append(rec.row)
-                continue
             seen.add(key)
-            reset = any(counter.get(k, 0) < prev.get(k, 0) for k in TOKEN_FIELDS)
+            seen_hashes.add(counter_hash(counter))
             if reset:
+                generation += 1
                 stats.counter_resets += 1
                 stats.reset_rows.append(rec.row)
                 deltas = {k: counter.get(k, 0) for k in TOKEN_FIELDS}
@@ -128,20 +148,29 @@ def to_deltas(
 
 
 def _prior_stream_states(session: Session, source_kind: str, streams: set[str]) -> dict[str, StreamState]:
+    """Last stored observation per stream: in-period usage records and out-of-period baselines alike.
+
+    Ordered exactly like `to_deltas` orders a file, (occurred_at, counter size), so two snapshots that
+    share a timestamp always resolve to the larger counter as the starting point.
+    """
     states: dict[str, StreamState] = {}
     for stream in streams:
-        rows = session.scalars(
-            select(UsageRecord)
-            .where(UsageRecord.source_kind == source_kind, UsageRecord.stream_key == stream)
-            .order_by(UsageRecord.occurred_at)
-        ).all()
-        if not rows:
+        obs: list[tuple[datetime, int, dict, str, bool]] = []
+        for model in (UsageRecord, CounterBaseline):
+            for r in session.scalars(
+                select(model).where(model.source_kind == source_kind, model.stream_key == stream)
+            ):
+                snap = dict(r.cumulative_snapshot or {})
+                obs.append((r.occurred_at, sum(snap.values()), snap, r.source_record_key, bool(r.counter_reset)))
+        if not obs:
             continue
-        last = rows[-1]
+        obs.sort(key=lambda o: (o[0], o[1]))
+        last = obs[-1]
         states[stream] = StreamState(
-            last_at=last.occurred_at,
-            last_counter=dict(last.cumulative_snapshot or {}),
-            known_keys={r.source_record_key for r in rows},
+            last_at=last[0],
+            last_counter=last[2],
+            known_keys={o[3] for o in obs},
+            generation=sum(1 for o in obs if o[4]),
         )
     return states
 
@@ -332,7 +361,7 @@ def run_import(
     session.add(batch)
     session.flush()
 
-    inserted = skipped_dup = conflicts = unmapped = out_of_period = 0
+    inserted = skipped_dup = conflicts = unmapped = out_of_period = baselines = 0
     unmapped_accounts: dict[str, int] = defaultdict(int)
     spend_added = Decimal("0.00")
     for rec in sorted(candidates, key=lambda r: r.row):
@@ -351,6 +380,15 @@ def run_import(
             continue
         period_id = period_of(rec.occurred_at)
         if period_id is None:
+            if rec.cumulative is not None and rec.stream_key:
+                # Book nothing, but keep the counter as the stream's starting point for later imports.
+                session.add(CounterBaseline(
+                    id=ids.new_id("base_"), created_at=clock.now(), import_batch_id=batch.id,
+                    source_kind=source_kind, source_record_key=rec.source_record_key,
+                    stream_key=rec.stream_key, occurred_at=rec.occurred_at,
+                    cumulative_snapshot=rec.cumulative, counter_reset=id(rec) in resets,
+                ))
+                baselines += 1
             out_of_period += 1
             warnings.append(ParseIssue("outside_known_periods", "record date is outside every planning period; skipped", rec.row))
             continue
@@ -396,6 +434,8 @@ def run_import(
         "conflicting_records": conflicts,
         "out_of_period_skipped": out_of_period,
     })
+    if baselines:
+        stats["out_of_period_baselines_saved"] = baselines
     batch.record_count = inserted
     batch.skipped_duplicate_records = skipped_dup
     batch.unmapped_record_count = unmapped

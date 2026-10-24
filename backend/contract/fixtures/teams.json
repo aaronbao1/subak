@@ -23,6 +23,6 @@
     }
   ],
   "scenario": "main",
-  "schema": "TeamList",
+  "schema": "TeamOut[]",
   "status": 200
 }

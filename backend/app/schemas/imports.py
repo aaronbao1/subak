@@ -103,6 +103,7 @@ class TeamCoverage(OutModel):
     record_count: int
     unmapped_records: int
     counter_resets: int
+    spend_record_count: int  # records that carry dollars (counts_toward_spend); 0 means no billing data
     last_record_at: datetime | None
     source_kinds: list[str]
     value_kinds: list[str]
@@ -114,6 +115,7 @@ class CompanyCoverage(OutModel):
     record_count: int
     unmapped_records: int
     counter_resets: int
+    spend_record_count: int  # records that carry dollars (counts_toward_spend); 0 means no billing data
     last_record_at: datetime | None
     source_kinds: list[str]
     value_kinds: list[str]

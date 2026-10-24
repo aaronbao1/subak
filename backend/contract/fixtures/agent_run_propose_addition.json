@@ -438,6 +438,6 @@
     "task_type": "propose_allocation"
   },
   "scenario": "agent",
-  "schema": "AgentRun",
+  "schema": "AgentRunOut",
   "status": 201
 }

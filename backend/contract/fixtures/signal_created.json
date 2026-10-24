@@ -58,6 +58,6 @@
     "uncertainty": "token volume depends on how many model updates ship; plan is not measured usage"
   },
   "scenario": "main",
-  "schema": "ContextSignal",
+  "schema": "ContextSignalOut",
   "status": 201
 }

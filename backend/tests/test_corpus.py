@@ -177,3 +177,29 @@ def test_parse_markdown_front_matter():
     assert meta["authored_at"].tzinfo is not None
     with pytest.raises(DomainError):
         parse_markdown_document("no front matter")
+
+
+def test_new_version_of_superseded_thread_stays_superseded(client, corpus):
+    """Thread v2 (one more reply, dated before the plan) must not undo the plan's explicit supersede."""
+    r = post(client, {**THREAD, "authored_at": "2026-09-05T10:00:00Z",
+                      "content": THREAD["content"] + "\nAgreed, revisit next period."})
+    assert r.status_code == 201, r.text
+    v2 = r.json()["document"]
+    assert v2["version"] == 2 and v2["is_current"] is False
+    assert v2["superseded_by"]["id"] == corpus["plan"]
+    v1 = client.get(f"/api/documents/{corpus['thread']}").json()
+    assert v1["superseded_by"]["id"] == corpus["plan"]  # the plan's link is not overwritten
+    current = client.get("/api/documents", params={"q": "model-evaluation", "include_superseded": "false"}).json()
+    items = current["items"] if isinstance(current, dict) else current
+    assert {d["doc_key"] for d in items} == {"research-eval-plan"}
+
+
+def test_same_content_with_changed_plan_status_creates_a_version(client, corpus):
+    r = post(client, {**LAUNCH_V2, "plan_status": "cancelled", "authored_at": "2026-10-20T09:00:00Z"})
+    assert r.status_code == 201, r.text
+    doc = r.json()["document"]
+    assert doc["version"] == 3 and doc["plan_status"] == "cancelled" and doc["is_current"] is True
+    # Re-importing the older (approved) export is still a no-op and cannot make it current again.
+    again = post(client, LAUNCH_V2)
+    assert again.status_code == 200 and again.json()["duplicate_of_version"] == 2
+    assert client.get("/api/documents/by-key/product-launch-plan/versions").json()["current_version"] == 3

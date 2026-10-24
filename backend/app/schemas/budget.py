@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from app.schemas.common import MoneyStr, OutModel
+from app.schemas.common import CoverageStatus, MoneyStr, OutModel
 
 
 class PeriodRef(OutModel):
@@ -20,6 +20,18 @@ class AllocationOut(OutModel):
     recorded_spend: MoneyStr
     # amount - recorded_spend; negative means the team has already spent past its allocation.
     remaining: MoneyStr
+    # Completeness of this team's recorded_spend (see /api/coverage). Anything but `complete` means
+    # recorded_spend may be understated and remaining overstated.
+    coverage_status: CoverageStatus
+
+
+class BudgetSpendCoverage(OutModel):
+    """How complete the recorded_spend / remaining figures are. They are attributed spend to date."""
+
+    status: CoverageStatus
+    unattributed_spend: MoneyStr  # counts toward the company total but toward no team's remaining
+    unattributed_records: int
+    notes: list[str]
 
 
 class BudgetState(OutModel):
@@ -31,6 +43,7 @@ class BudgetState(OutModel):
     allocations: list[AllocationOut]
     updated_at: datetime
     last_decision_id: str | None
+    spend_coverage: BudgetSpendCoverage
     # Internal planning records only: nothing here moves provider credits or enforces limits.
     note: str = "internal planning allocations; no provider credits are transferred or enforced"
 

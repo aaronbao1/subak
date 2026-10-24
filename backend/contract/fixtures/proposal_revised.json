@@ -1,0 +1,89 @@
+{
+  "description": "replacement draft (pending_review) with revises_proposal_id -> the original",
+  "name": "proposal_revised",
+  "request": {
+    "body": {
+      "action_type": "transfer",
+      "base_version": 1,
+      "evidence_refs": [],
+      "lines": [
+        {
+          "amount": "20000.00",
+          "from_team": "product",
+          "to_team": "research"
+        }
+      ],
+      "rationale": "Reviewer keeps 10k of the move in product until the launch date is confirmed."
+    },
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/revise"
+  },
+  "response": {
+    "action_type": "transfer",
+    "after": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "60000.00",
+        "research": "80000.00"
+      },
+      "total": "200000.00"
+    },
+    "agent_run_id": null,
+    "base_version": 1,
+    "before": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "80000.00",
+        "research": "60000.00"
+      },
+      "total": "200000.00"
+    },
+    "blocked_attempts": [],
+    "created_at": "2026-10-24T12:02:00Z",
+    "current_version": 1,
+    "decision_id": null,
+    "deltas": {
+      "engineering": "0.00",
+      "product": "-20000.00",
+      "research": "20000.00"
+    },
+    "envelope_increase": "0.00",
+    "evidence_refs": [],
+    "id": "prop_000002",
+    "is_stale": false,
+    "lines": [
+      {
+        "amount": "20000.00",
+        "from_team": "product",
+        "to_team": "research"
+      }
+    ],
+    "origin": "finance_manual",
+    "period": "2026-P1",
+    "rationale": "Reviewer keeps 10k of the move in product until the launch date is confirmed.",
+    "rebased_from_proposal_id": null,
+    "replaced_by_proposal_id": null,
+    "requester": {
+      "id": "fin-analyst-ana",
+      "role": "finance_analyst"
+    },
+    "revises_proposal_id": "prop_000001",
+    "status": "pending_review",
+    "unit": "USD",
+    "updated_at": "2026-10-24T12:02:00Z",
+    "warnings": [
+      {
+        "code": "no_evidence_cited",
+        "message": "the proposal cites no evidence",
+        "team": null
+      }
+    ]
+  },
+  "scenario": "revision",
+  "schema": "ProposalOut",
+  "status": 201
+}

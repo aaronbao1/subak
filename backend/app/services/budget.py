@@ -151,9 +151,32 @@ def last_decision_id(session: Session, env: BudgetEnvelope) -> str | None:
     )
 
 
+def _spend_coverage(session: Session, period: PlanningPeriod, env: BudgetEnvelope) -> tuple[dict, dict[str, str]]:
+    from app.services import coverage as coverage_svc  # local: coverage is a sibling read model
+
+    # Status and unattributed totals do not depend on "now" (only the period-in-progress note does).
+    cov = coverage_svc.coverage_report(session, period, env.updated_at)
+    by_team = {t["team"]: t["status"] for t in cov["teams"]}
+    notes = ["recorded_spend and remaining use spend attributed to each team, to date"]
+    unattributed = cov["unattributed"]
+    if unattributed["record_count"]:
+        notes.append(f"{money_str(unattributed['recorded_spend'])} {env.unit} of spend from "
+                     f"{unattributed['record_count']} unattributed record(s) is in no team's figures")
+    for t in cov["teams"]:
+        if t["status"] != "complete":
+            notes.append(f"{t['team']}: spend coverage {t['status']}")
+    return {
+        "status": cov["company"]["status"],
+        "unattributed_spend": unattributed["recorded_spend"],
+        "unattributed_records": unattributed["record_count"],
+        "notes": notes,
+    }, by_team
+
+
 def budget_state(session: Session, period: PlanningPeriod, env: BudgetEnvelope) -> dict:
     spend = recorded_spend_by_team(session, period.id)
     allocs = allocation_map(env)
+    spend_coverage, team_status = _spend_coverage(session, period, env)
     return {
         "period": period,
         "unit": env.unit,
@@ -161,11 +184,13 @@ def budget_state(session: Session, period: PlanningPeriod, env: BudgetEnvelope) 
         "allocated_total": sum(allocs.values(), ZERO),
         "state_version": env.state_version,
         "allocations": [
-            {"team": t, "amount": a, "recorded_spend": spend.get(t, ZERO), "remaining": a - spend.get(t, ZERO)}
+            {"team": t, "amount": a, "recorded_spend": spend.get(t, ZERO), "remaining": a - spend.get(t, ZERO),
+             "coverage_status": team_status.get(t, "missing")}
             for t, a in sorted(allocs.items())
         ],
         "updated_at": env.updated_at,
         "last_decision_id": last_decision_id(session, env),
+        "spend_coverage": spend_coverage,
     }
 
 

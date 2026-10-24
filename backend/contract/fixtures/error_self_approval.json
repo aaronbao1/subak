@@ -19,7 +19,8 @@
       "code": "self_approval_forbidden",
       "details": {
         "actor_id": "fin-approver-alice",
-        "requester": "fin-approver-alice"
+        "requester": "fin-approver-alice",
+        "via_agent_run": false
       },
       "message": "a requester cannot approve its own request; another finance approver must decide"
     }
