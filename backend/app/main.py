@@ -56,6 +56,11 @@ def create_app(
     app.include_router(health)
     app.include_router(health, prefix="/api")
 
+    from app.api import routes_documents, routes_imports, routes_teams
+
+    for module in (routes_teams, routes_imports, routes_documents):
+        app.include_router(module.router)
+
     return app
 
 

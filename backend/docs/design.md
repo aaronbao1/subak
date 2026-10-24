@@ -264,6 +264,7 @@ Supporting: `ImportResult`, `MetaOut` (`period`, `unit`, `runner_kind`, `forecas
 | PUT | `/team-mappings` | finance_* | upsert mapping; re-resolves `team_id` on affected records |
 | POST | `/imports` | importer, finance_* | multipart file + `source_kind`; idempotent by content hash and record key |
 | GET | `/imports`, `/imports/{id}` | any | batch provenance |
+| GET | `/coverage?period=` | any | completeness per team + company, unattributed bucket, contributing batches |
 | GET | `/spend/summary?period=` | any | team + company totals, coverage; never blocked by forecast |
 | GET | `/spend/records?team=&value_kind=&cost_category=&batch=` | any | record drill-down |
 | GET | `/budget?period=` | any | current `BudgetState` |
@@ -470,3 +471,37 @@ Files under `backend/tests/`.
 | Projections | placeholder, not a model; `unavailable` mode available |
 | Droid | `FakeDroidRunner` deterministic until a Factory key exists; `runner_kind` always reported |
 | Identity | demo headers, not authentication; authority rules themselves are enforced |
+
+## 11. Ingestion implementation notes (as built)
+
+Spend (`services/imports.py`, `services/parsers/`, `services/teams.py`, `services/coverage.py`):
+- Source kinds: `northstar_billing` (CSV or JSON `{"records": [...]}`, simulated) and `codex_sessions`
+  (real Codex JSONL; only session id, model, timestamps and `total_token_usage` are read). Codex files
+  do not name an account, so the uploader passes `source_account`; without it records are unattributed.
+- A batch with any invalid row fails as a whole (422 `import_failed`, nothing inserted, batch kept with
+  grouped errors). Failed batches do not block a corrected retry. Row codes: `amount_required`,
+  `included_usage_with_charge`, `unpriced_usage_with_amount`, `negative_amount`, `too_many_decimals`,
+  `float_not_allowed`, `unknown_cost_category`, `unknown_value_kind`, `unsupported_unit`,
+  `timezone_required`, `invalid_timestamp`, `conflicting_duplicate_record_id`, `missing_columns`, ...
+- Non-fatal warnings (grouped by code with row samples): `team_column_ignored` (a `team` column is never
+  trusted), `unmapped_source_account`, `duplicate_row_in_file`, `record_key_conflict` (key restated with
+  different values: existing record kept), `outside_known_periods`, `counter_reset`,
+  `out_of_order_snapshot`, `truncated_last_line`, `token_count_without_session`.
+- Cumulative streams: `source_record_key = stream_key#sha256(counters)[:16]`; the baseline for a new
+  file is the last stored snapshot of the stream, so a re-exported growing session adds only new usage.
+  A snapshot older than the last stored one is skipped (rewriting stored deltas would alter provenance).
+  Limitation: snapshots outside every planning period are dropped, so a later file's baseline cannot use
+  them; within one file they still serve as the baseline.
+- Concurrent identical uploads: the loser of the partial-unique-index race is retried and returns
+  `duplicate`.
+- Coverage: a team with no records is `missing`; resets or any unattributed records in the period make
+  teams `partial` (unattributed spend could belong to any team); company is `complete` only if all teams
+  are. Exposed at `GET /api/coverage` for the spending summary to embed.
+
+Corpus (`services/corpus.py`): content identical to any existing version of a `doc_key` is a no-op
+(an old export can never become current again); a new version dated before the current one is 422
+`version_predates_current`; explicit cross-key supersedes must target an older document of another key
+that is not already superseded (`supersedes_newer_document`, `already_superseded`, `supersedes_same_key`).
+Search: all terms must match (title, content, tags, doc_key), "quoted phrases" supported, results carry
+`is_current` and exact `char_start/char_end` offsets into stored content for citations.
+`parse_markdown_document` reads `---` front matter (`supersedes: key@version`) for the seed corpus.

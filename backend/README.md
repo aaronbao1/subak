@@ -56,6 +56,22 @@ key from the environment only when `DROID_RUNNER=sdk`.
 - Every error response is `{"error": {"code", "message", "details"}}`.
 - All timestamps are timezone-aware UTC.
 
+## Ingestion
+
+```bash
+# simulated Northstar billing export (CSV or JSON)
+curl -F source_kind=northstar_billing -F file=@export.csv \
+     -H 'X-Actor-Id: imp-1' -H 'X-Actor-Role: importer' http://127.0.0.1:8787/api/imports
+# real Codex session telemetry; account is stated by the uploader, never inferred
+curl -F source_kind=codex_sessions -F source_account=codex-research-laptops -F file=@rollout.jsonl \
+     -H 'X-Actor-Id: imp-1' -H 'X-Actor-Role: importer' http://127.0.0.1:8787/api/imports
+curl http://127.0.0.1:8787/api/coverage
+curl 'http://127.0.0.1:8787/api/documents?q=model-evaluation&include_superseded=false'
+```
+
+Re-posting identical bytes returns `status: "duplicate"` and adds nothing; overlapping files are
+deduplicated per record key; cumulative token counters are converted to deltas. See design §11.
+
 ## Real vs simulated
 
 | Component | Status |
