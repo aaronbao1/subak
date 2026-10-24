@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+sdk = ["droid-sdk[mcp]==0.5.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]

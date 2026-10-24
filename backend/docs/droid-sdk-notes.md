@@ -106,7 +106,7 @@ Every event carries `source: "droid_sdk" | "fake_runner"` for honest real-vs-sim
 - `DROID_MODEL` (ours, optional; omit for user default; `"auto"` = Factory Router).
 - `DROID_TIMEOUT_S` (ours, default 120).
 
-## 6. Unknowns / risks
+## 6. Unknowns / risks (as of research; see §7 for live answers)
 
 - Exact tool-ID strings for SDK MCP tools in `restrict_tools` (CLI uses `MCP:<server>/<tool>`); verify with `list_tools()` once a key exists.
 - Minimum `droid` CLI version for SDK MCP and custom system prompts (older versions raise `DroidProtocolError` / `SessionError`); no minimum is documented.
@@ -116,3 +116,37 @@ Every event carries `source: "droid_sdk" | "fake_runner"` for honest real-vs-sim
 - Session storage is local to the `droid` user dir (`~/.factory`); resume across server restarts relies on that.
 - Cost/rate limits (`factory_credits` per run) are unknown; record `usage` as provider-reported.
 - SDK is pre-1.0 (0.x, weekly releases): pin `droid-sdk[mcp]==0.5.0` as an optional extra, import lazily so the backend runs without it.
+
+## 7. Verified live (2026-10-24)
+
+Three live turns via a throwaway probe (not committed): `droid` CLI **0.249.0**, `droid-sdk` **0.5.0**
+(`mcp` 1.30.0), Python 3.13, empty temp `cwd`, `disable_builtin_skills=True`, in-process SDK MCP server
+`probe` with one tool `echo_number(n: int) -> str`. Default session settings reported:
+model `gpt-6.1-sol`, reasoning `high`, mode `auto`. The SDK added its own tag `sdk {language: python, version: 0.5.0}`.
+
+### Resolved unknowns
+
+| Unknown (§6) | Verified answer |
+|---|---|
+| Tool-ID strings | SDK MCP tools are `<server>___<tool>` (**three** underscores), e.g. `probe___echo_number` (so ours: `northstar___get_budget_state`, ...). Not `MCP:<server>/<tool>`. `ToolInfo.source` was `None`; category `READ`. `list_mcp_tools()` gives `server_name='probe'`, `name='echo_number'`, `is_read_only=None`, input schema from type hints. |
+| Built-in tool IDs | `ApplyPatch, AskUser, ConnectApp, CreateAutomation, DeleteAutomation, DismissHandoffItems, EditAutomation, EndFeatureRun, Execute, ExitSpecMode, FetchUrl, GenerateDroid, GenerateImage, Glob, Grep, ListAutomations, ListAutomationTemplates, Loop, LS, ProposeMission, Read, ReadAutomation, RunAutomation, Script, Skill, StageSettingsChanges, StartMissionRun, Task, TaskOutput, TaskStop, TodoWrite, ToolSearch, WaitForScript, WebSearch`. |
+| `restrict_tools` effect | `list_tools(restrict_tools=["probe___echo_number"])` still leaves `Script`, `ToolSearch`, `WaitForScript` allowed (meta tools are not removable by the allowlist). `update_settings(restrict_tools=..., autonomy=...)` is accepted and reflected in `session.settings`. With `disabled_tools={"Script","WaitForScript","ToolSearch"}` in `SessionConfig`, `ToolSearch` still listed as allowed. |
+| How MCP tools are called | **Not as direct tool calls.** The CLI uses a code-mode `Script` tool: the model first runs `Script` -> `tools.ToolSearch({query:"select:probe___echo_number"})` to load the deferred tool, then a second `Script` with `await tools.probe.echo_number({n:7})`. `ToolCall.name` is `Script` (inner `ToolSearch` shows as its own `ToolCall`/`ToolResult`), never `probe___echo_number`. With `Script` disabled the model reported it could not reach the tool (no call, no permission request). |
+| Permission prompts at LOW / OFF | Yes, at both. The `ToolSearch` Script ran without a prompt; the Script that invokes the MCP tool raised a permission request at `Autonomy.LOW` and again at `OFF`. **Our `on_permission` handler was never invoked**: SDK 0.5.0 failed to parse the request (`permission_request_from_wire`), emitted `ErrorEvent(message="Permission interaction handler failed", error_type=DROID_CLIENT_ERROR)` and fell back to `cancel` (`PermissionResolved(selected_option=CANCEL, tool_use_ids=())`, tool result `"Error: Tool execution cancelled by user"`, `is_error=True`). The MCP handler was never called. Fail-closed, but it means **our tools cannot currently execute through the SDK with this CLI/SDK pair at LOW/OFF**. |
+| `PermissionRequest` shape (from installed source) | `PermissionRequest(actions: tuple[PermissionAction], options: tuple[PermissionOption(label, value: ToolConfirmationOutcome)], associated_session_ids)`; there is no `.action`. `respond(outcome)` raises `ValueError` if the outcome was not offered. `McpToolAction(tool_use, tool_name, impact_level, server_name, actual_tool_name)`. The SDK schema has no confirmation-details type for `Script`, which is the likely parse failure (raw wire shape not captured). |
+| Question handler | `QuestionRequest(tool_call_id, questions)`; cancel with `request.cancel()` (returns `QuestionResponse`), not `respond(...)`. |
+| Stream event types seen (`include_partial_messages=True`) | `WorkingStateChanged`, `UserMessage`, `AssistantMessage` (content blocks; `.text` was `''` for tool-only turns), `ToolCallDelta`, `ToolCall`, `ToolResult`, `TokenUsageUpdate`, `ErrorEvent`, `PermissionResolved`, `ThinkingDelta`, `ThinkingComplete`, `TextDelta`, `TextComplete`, `SessionTitleUpdated`, terminal `RunSuccess`. Not seen: `ToolProgress`, `HookExecution`, `SettingsUpdated`, `McpStatusChanged`. |
+| `RunResult` / usage | `RunSuccess(subtype="success", text, messages, usage: Usage, duration: timedelta, turn_count, session_id, output, structured_output, output_validation_error, success, interrupted)`. A run whose tools were all cancelled still ends `success` with empty `text`. `Usage` is a frozen **dataclass** (not Pydantic; use `dataclasses.asdict`): `input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, thinking_tokens, factory_credits: float`. Observed per turn: 10801.0, 4708.0, 3433.0 `factory_credits` (unit not documented). `TokenUsageUpdate` is cumulative per session (15509.0 after turns 1+2). |
+| Turn latency | 3 to 5 s per short turn. |
+| Minimum CLI version | 0.249.0 works for SDK MCP servers, `list_tools`, `update_settings`; custom `system_prompt` not exercised. |
+
+### Contradicts earlier notes / current `sdk_runner.py`
+- `ToolConfirmationOutcome` is **not** exported from `droid_sdk.permissions` (import from `droid_sdk`); the runner's import fails as `sdk_not_installed`.
+- `SessionConfig.tags` takes `SessionTag(name=..., metadata=...)` objects, not strings.
+- `list_tools()` returns `list[ToolInfo]` directly (no `.tools`).
+- `ToolCall`/`ToolResult` names are `Script`/`ToolSearch`, so "non-northstar tool call" warnings would fire for every legitimate call; the tool ID separator is `___`.
+- `PermissionRequest` has `actions` (tuple), not `action`; even so the handler is not reached for `Script` requests (above).
+- Usage needs `dataclasses.asdict`, not `model_dump`.
+
+### Next options (untested)
+Autonomy `MEDIUM`/`HIGH` may auto-approve the `Script` call (still bounded by `restrict_tools`, since Script can only reach allowed tools, and our toolbox has no apply/approve tool); or an SDK release that parses Script permission requests; or an external HTTP MCP server with `skip_permissions` semantics. Each needs a live check before relying on it.
