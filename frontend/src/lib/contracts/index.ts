@@ -52,6 +52,8 @@ export interface Budget {
   period: Period;
   allocated: number;
   unit: Unit;
+  /** Backend state version; a proposal built on an older version is stale. */
+  version?: string;
 }
 
 /** Handoff 4: Forecast (forecasting → agent, frontend). Period comes from forecasting, never hard-coded. */
@@ -82,6 +84,9 @@ export interface SourceRef {
 
 export type ContextKind = "plan" | "project_doc" | "research_note" | "correspondence";
 
+/** A stated plan, something that was observed to happen, or the assistant's own interpretation. */
+export type ClaimType = "stated_plan" | "observed_event" | "interpretation";
+
 /** Handoff 3: Relevant context (Droid → forecasting, frontend). What is planned or changing. */
 export interface ContextItem {
   id: string;
@@ -97,6 +102,11 @@ export interface ContextItem {
   sources: SourceRef[];
   /** What is still unresolved about this item */
   uncertainty?: string;
+  claimType?: ClaimType;
+  /** Set when a newer item explicitly replaces this one (e.g. an old thread superseded by an approved plan). */
+  supersededBy?: string;
+  /** Ids of older items this one supersedes. */
+  supersedes?: string[];
 }
 
 /** Adding to the overall budget and redistributing the existing budget are DIFFERENT actions. */
@@ -122,15 +132,25 @@ export interface AllocationProposal {
   rationale: string;
   citations: SourceRef[];
   createdAt: string;
-  status: "proposed" | "applied" | "rejected" | "revised";
+  /**
+   * proposed → finance is reviewing. pending → apply requested, awaiting backend confirmation.
+   * applied → backend confirmed. rejected → finance declined. revised → replaced by a newer proposal.
+   * stale → budgets changed since this was built; needs renewed review. failed → backend refused; see failureReason.
+   */
+  status: "proposed" | "pending" | "applied" | "rejected" | "revised" | "stale" | "failed";
   /** If this proposal revises an earlier one */
   revisesProposalId?: string;
+  /** Budget version this proposal was computed against (for staleness checks). */
+  basedOnBudgetVersion?: string;
+  failureReason?: string;
 }
 
 /** Handoff 6: Saved results (backend → frontend/agent). The finance decision and what changed. */
 export interface Decision {
   id: string;
   proposalId: string;
+  /** What finance did. Rejections are recorded too so history explains them. */
+  action: "applied" | "rejected";
   kind: ProposalKind;
   appliedAt: string;
   appliedBy: string;
@@ -154,6 +174,21 @@ export interface AssistantMessage {
   proposalId?: string;
   citations?: SourceRef[];
   toolCalls?: ToolCallSummary[];
+}
+
+/** Handoff 2: Readable company material (backend → Droid; frontend for evidence inspection). */
+export interface CompanyDocument {
+  id: string;
+  title: string;
+  kind: ContextKind;
+  date: string;
+  teamIds?: string[];
+  /** Where it came from: "Uploaded PDF", "Slack export #research", "Notion export" */
+  origin: string;
+  /** Markdown body, readable by finance */
+  body: string;
+  /** Id of the document that replaces this one, if any */
+  supersededBy?: string;
 }
 
 export interface Company {

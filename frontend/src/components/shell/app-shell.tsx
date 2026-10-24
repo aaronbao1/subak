@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b flex items-center justify-between px-6">
-          <div className="text-sm text-muted-foreground">Internal budgets in <span className="font-medium text-foreground">credits</span>. Planning numbers, not provider limits.</div>
+          <div className="text-sm text-muted-foreground">Internal planning envelope in <span className="font-medium text-foreground">{company?.budgetUnit === "usd" ? "USD" : company?.budgetUnit ?? "…"}</span>. Planning records, not provider limits or purchases.</div>
           <Button variant={assistantOpen ? "secondary" : "default"} size="sm" onClick={() => setAssistantOpen(!assistantOpen)}>
             <MessageSquare className="size-4" /> Assistant
           </Button>

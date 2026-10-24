@@ -3,6 +3,7 @@ import type {
   AssistantMessage,
   Budget,
   Company,
+  CompanyDocument,
   ContextItem,
   Decision,
   Forecast,
@@ -27,6 +28,8 @@ export interface DataClient {
   getBudgets(): Promise<Budget[]>;
   getForecasts(): Promise<Forecast[]>;
   getContext(teamId?: string): Promise<ContextItem[]>;
+  getDocuments(): Promise<CompanyDocument[]>;
+  getDocument(id: string): Promise<CompanyDocument | undefined>;
   getProposals(): Promise<AllocationProposal[]>;
   getProposal(id: string): Promise<AllocationProposal | undefined>;
   getDecisions(): Promise<Decision[]>;

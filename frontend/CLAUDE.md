@@ -1,6 +1,6 @@
 # AI Spend Planner — frontend
 
-Finance workspace for an enterprise FP&A team: AI token spending, projections, company context, and an assistant that proposes internal budget allocations. See `../MASTER_PLAN.md` for product scope. This folder is the frontend workstream only.
+Finance workspace for an enterprise FP&A team: AI token spending, projections, company context, and an assistant that proposes internal budget allocations. Read `../docs/frontend-plan.md` first (the frontend plan of record), then `../docs/ai-spend-master-plan.md`. This folder is the frontend workstream only.
 
 ## Stack
 Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`src/components/ui`), Recharts, Zustand, lucide-react. `npm run dev` → http://localhost:3000.
@@ -9,7 +9,7 @@ Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`
 - `src/lib/contracts/index.ts` — **shared types for the six handoffs. Frozen.** Add optional fields only; never rename or remove. Ask the integration owner for anything else.
 - `src/lib/data/client.ts` — `DataClient` interface. UI never imports fixtures directly; it goes through `useAppStore` (`src/lib/store.ts`) or `getDataClient()`.
 - `src/lib/data/mock-client.ts` — in-memory mock. Will be swapped for an HTTP client when the backend lands.
-- `src/fixtures/index.ts` — the shared company example (Meridian Software, 4 teams, October 2026, credits). Includes `scriptedReply()` for the mock assistant.
+- `src/fixtures/index.ts` — the shared company example from the plan (Northstar Software, 3 teams, USD, Q4 2026, $200k envelope). Totals are fixed by the plan; see the header comment. Includes `scriptedReply()` for the mock assistant.
 - `src/lib/store.ts` — app state. Applying a proposal here updates budgets everywhere.
 - `src/lib/format.ts` — `formatAmount`, `pct`, `formatPct`. Use these; don't hand-format numbers.
 
@@ -30,6 +30,9 @@ If you need a shared component, put it in your own folder first and flag it; don
 - **Provenance is visible.** Reported charge vs estimate vs usage-only must be distinguishable where amounts appear.
 - **Cost components stay distinguishable**: subscription, included usage, extra usage, API.
 - **Missing data is shown, not hidden.** A forecast with `status: "unavailable"` renders its reason. `complete: false` days are marked.
+- **Superseded context is distinguishable.** A `ContextItem` with `supersededBy` is visibly outdated and never cited as current. `claimType` separates a stated plan from an observed event from an assistant interpretation.
+- **Proposal states are distinct.** proposed / pending / applied / rejected / revised / stale / failed each look different. Success shows only after the DataClient confirms. A double-click cannot apply twice (disable the button while pending).
+- **A receipt follows every applied decision**: what changed, when, why, who. History lives at /decisions.
 - **Forecast periods come from the Forecast object.** Never hard-code dates.
 - **Citations are reachable** from any context card or proposal, but the main dashboard is not a tool-execution console.
 - **Demo label stays on.** `company.isDemo` shows a badge.

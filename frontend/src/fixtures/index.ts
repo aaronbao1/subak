@@ -1,126 +1,199 @@
 /**
- * SHARED COMPANY EXAMPLE (demo data, clearly fictional).
- * Company: Meridian Software. Budget unit: internal credits. Period: October 2026.
- * The fixtures owner expands this (90 days of daily spending, richer docs, more scripted replies)
- * WITHOUT changing the contracts in src/lib/contracts.
+ * SHARED COMPANY EXAMPLE — matches docs/frontend-plan.md exactly. Demo data, clearly fictional.
+ * Company: Northstar Software. Teams: Research, Product, Engineering. Unit: USD. One planning period (Q4 2026).
+ *
+ *   Team         Allocation   Spent so far   Projection
+ *   Research       60,000       45,000        85,000
+ *   Product        80,000       20,000        50,000
+ *   Engineering    60,000       30,000        65,000
+ *   Total         200,000       95,000       200,000
+ *
+ * Two canonical outcomes (independent alternatives from this starting state):
+ *   Redistribute: product −25k → research, product −5k → engineering  ⇒ 85k / 50k / 65k, envelope 200k
+ *   Add funding:  +50k authorized, research first: +35k research, +15k engineering ⇒ 95k / 80k / 75k, envelope 250k
+ *
+ * Fixtures owner may enrich (more days, more docs, more scripted replies) but these totals are fixed.
  */
 import type {
-  AllocationProposal, AssistantMessage, Budget, Company, ContextItem, Decision, Forecast, Period,
+  AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast, Period,
   SpendingRecord, Team,
 } from "@/lib/contracts";
 
-export const period: Period = { start: "2026-10-01", end: "2026-10-31", label: "October 2026" };
+export const period: Period = { start: "2026-10-01", end: "2026-12-31", label: "Q4 2026 planning period" };
+export const asOf = "2026-10-22"; // last day with recorded spending
+const BUDGET_VERSION = "v1";
 
 export const company: Company = {
-  id: "meridian",
-  name: "Meridian Software",
+  id: "northstar",
+  name: "Northstar Software",
   isDemo: true,
-  budgetUnit: "credits",
+  budgetUnit: "usd",
   currentPeriod: period,
 };
 
 export const teams: Team[] = [
   { id: "research", name: "Research", lead: "Priya N.", color: "var(--chart-1)", description: "Model evaluation and applied research" },
-  { id: "product", name: "Product Engineering", lead: "Marcus L.", color: "var(--chart-2)", description: "Core product features" },
-  { id: "platform", name: "Platform", lead: "Dana K.", color: "var(--chart-3)", description: "Infra, CI, internal tooling" },
-  { id: "marketing", name: "Marketing", lead: "Jules O.", color: "var(--chart-4)", description: "Content and campaign tooling" },
+  { id: "product", name: "Product", lead: "Marcus L.", color: "var(--chart-2)", description: "Customer-facing product features" },
+  { id: "engineering", name: "Engineering", lead: "Dana K.", color: "var(--chart-3)", description: "Platform, infrastructure, internal tooling" },
 ];
 
 export const budgets: Budget[] = [
-  { teamId: "research", period, allocated: 120_000, unit: "credits" },
-  { teamId: "product", period, allocated: 150_000, unit: "credits" },
-  { teamId: "platform", period, allocated: 60_000, unit: "credits" },
-  { teamId: "marketing", period, allocated: 30_000, unit: "credits" },
+  { teamId: "research", period, allocated: 60_000, unit: "usd", version: BUDGET_VERSION },
+  { teamId: "product", period, allocated: 80_000, unit: "usd", version: BUDGET_VERSION },
+  { teamId: "engineering", period, allocated: 60_000, unit: "usd", version: BUDGET_VERSION },
 ];
 
-// Minimal spending: 22 days of Oct, research running hot, product running cool.
-function daily(teamId: string, perDay: Record<string, number>, provider: string, days = 22): SpendingRecord[] {
-  const out: SpendingRecord[] = [];
+/** Generate daily records Oct 1–22 whose sum equals `target` exactly. Component mix and provider vary by team. */
+function dailySeries(
+  teamId: string,
+  target: number,
+  mix: Record<SpendingRecord["component"], number>,
+  provider: string,
+  ramp: (day: number) => number = () => 1,
+): SpendingRecord[] {
+  const days = 22;
+  const weekends = new Set([3, 4, 10, 11, 17, 18]);
+  const raw: Omit<SpendingRecord, "amount">[] = [];
+  const weights: number[] = [];
   for (let d = 1; d <= days; d++) {
     const date = `2026-10-${String(d).padStart(2, "0")}`;
-    const weekend = [3, 4, 10, 11, 17, 18].includes(d) ? 0.35 : 1;
-    for (const [component, base] of Object.entries(perDay)) {
-      const jitter = 0.85 + ((d * 7 + teamId.length) % 10) / 33;
-      const isFixed = component === "subscription";
-      out.push({
+    for (const [component, w] of Object.entries(mix) as [SpendingRecord["component"], number][]) {
+      const fixed = component === "subscription";
+      const activity = fixed ? 1 : (weekends.has(d) ? 0.3 : 1) * ramp(d) * (0.9 + ((d * 7 + teamId.length) % 10) / 45);
+      weights.push(w * activity);
+      raw.push({
         id: `${teamId}-${date}-${component}`,
-        teamId, date,
-        component: component as SpendingRecord["component"],
-        provider,
-        amount: Math.round(isFixed ? base : base * jitter * weekend),
-        unit: "credits",
-        provenance: component === "api" ? "reported_charge" : component === "included_usage" ? "usage_only" : "estimate",
-        source: component === "api" ? "Anthropic cost report export 2026-10-22" : "Cursor Admin API export 2026-10-22",
-        complete: d <= 21,
+        teamId, date, component, provider,
+        unit: "usd",
+        provenance: component === "api" ? "reported_charge" : component === "included_usage" ? "usage_only" : component === "subscription" ? "reported_charge" : "estimate",
+        source: component === "api"
+          ? `${provider === "anthropic" ? "Anthropic" : "OpenAI"} cost report export ${asOf}`
+          : `Cursor Admin API export ${asOf}`,
+        complete: d <= 21, // Oct 22 is partial
       });
     }
   }
+  const total = weights.reduce((a, b) => a + b, 0);
+  const out = raw.map((r, i) => ({ ...r, amount: Math.round((weights[i] / total) * target) }));
+  const residual = target - out.reduce((s, r) => s + r.amount, 0);
+  out[out.length - 1].amount += residual; // keep exact total
   return out;
 }
 
 export const spending: SpendingRecord[] = [
-  ...daily("research", { subscription: 900, included_usage: 1200, extra_usage: 1800, api: 3400 }, "anthropic"),
-  ...daily("product", { subscription: 1500, included_usage: 2000, extra_usage: 400, api: 1600 }, "anthropic"),
-  ...daily("platform", { subscription: 600, included_usage: 700, extra_usage: 300, api: 900 }, "openai"),
-  ...daily("marketing", { subscription: 300, included_usage: 350, extra_usage: 100, api: 350 }, "openai"),
+  // Research ramps up after Oct 14 (eval expansion). API-heavy.
+  ...dailySeries("research", 45_000, { subscription: 1, included_usage: 1.2, extra_usage: 1.5, api: 5 }, "anthropic", (d) => (d >= 14 ? 1.6 : 1)),
+  // Product cools after Oct 15 (launch moved). Seat-heavy.
+  ...dailySeries("product", 20_000, { subscription: 2.5, included_usage: 2, extra_usage: 0.4, api: 1.2 }, "anthropic", (d) => (d >= 15 ? 0.6 : 1)),
+  // Engineering steady.
+  ...dailySeries("engineering", 30_000, { subscription: 1.5, included_usage: 1.2, extra_usage: 0.8, api: 2.2 }, "openai"),
 ];
 
 export const forecasts: Forecast[] = [
   {
-    teamId: "research", period, status: "available", unit: "credits",
-    projected: 148_000, low: 136_000, high: 162_000,
-    assumptions: ["Eval expansion continues at current pace through Oct 31", "No new model price changes"],
-    limitations: ["Based on 21 complete days; Oct 22 is partial", "Subscription fees treated as fixed"],
+    teamId: "research", period, status: "available", unit: "usd",
+    projected: 85_000, low: 76_000, high: 96_000,
+    assumptions: ["Approved Q4 Research Plan: evaluation runs expand from Oct 14 through the end of the period", "Provider pricing unchanged"],
+    limitations: ["Shared illustrative projection, not the output of a selected model", "Oct 22 data is partial"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
   {
-    teamId: "product", period, status: "available", unit: "credits",
-    projected: 112_000, low: 104_000, high: 121_000,
-    assumptions: ["Launch freeze reduces feature work through Nov 4"],
-    limitations: ["Cursor extra usage is an estimate until invoice arrives"],
+    teamId: "product", period, status: "available", unit: "usd",
+    projected: 50_000, low: 44_000, high: 58_000,
+    assumptions: ["v4 launch milestone moved to Q1 2027; near-term feature work reduced"],
+    limitations: ["Shared illustrative projection", "Cursor overage is an estimate until the invoice arrives"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
   {
-    teamId: "platform", period, status: "available", unit: "credits",
-    projected: 58_000, low: 54_000, high: 63_000,
-    assumptions: ["Steady state"], limitations: [],
-    generatedAt: "2026-10-22T09:00:00Z",
-  },
-  {
-    teamId: "marketing", period, status: "unavailable", unit: "credits",
-    assumptions: [], limitations: ["Fewer than 14 complete days of API data"],
-    unavailableReason: "Insufficient history for this team after provider workspace was re-mapped on Oct 9",
+    teamId: "engineering", period, status: "available", unit: "usd",
+    projected: 65_000, low: 60_000, high: 71_000,
+    assumptions: ["Observability migration continues at the current pace through December"],
+    limitations: ["Shared illustrative projection"],
     generatedAt: "2026-10-22T09:00:00Z",
   },
 ];
 
 export const context: ContextItem[] = [
   {
-    id: "ctx-eval-expansion",
+    id: "ctx-research-eval-expansion",
     teamIds: ["research"],
-    title: "Evaluation suite expanding to 3 new benchmarks",
-    summary: "Research plans to run the full eval harness nightly on three additional benchmark sets starting Oct 14, roughly doubling eval token volume for the rest of the quarter.",
+    title: "Approved Q4 plan expands model-evaluation work",
+    summary: "The approved Q4 Research Plan adds nightly evaluation runs on three additional benchmark suites starting Oct 14 and continuing through the planning period. This is the current plan of record for Research.",
     kind: "plan",
+    claimType: "stated_plan",
     effectiveFrom: "2026-10-14", effectiveTo: "2026-12-31",
     expectedEffect: "increase", confidence: "high",
+    supersedes: ["ctx-research-old-timeline"],
     sources: [
-      { documentId: "doc-q4-research-plan", title: "Q4 Research Plan", excerpt: "Nightly runs across HELM-lite, SWE-bench Verified, and our internal agentic suite begin Oct 14.", locator: "§2.3", date: "2026-10-06", kind: "plan" },
-      { documentId: "msg-priya-1012", title: "Slack #research, Priya N.", excerpt: "heads up finance, eval volume is about to go up a lot", date: "2026-10-12", kind: "correspondence" },
+      { documentId: "doc-q4-research-plan", title: "Q4 Research Plan (approved)", excerpt: "Nightly runs across HELM-lite, SWE-bench Verified, and the internal agentic suite begin Oct 14 and continue through Q4. This plan supersedes the September timeline discussed in #research.", locator: "§2.3", date: "2026-10-06", kind: "plan" },
     ],
-    uncertainty: "Plan does not state per-run token cost; the doubling estimate is the forecasting team's.",
+    uncertainty: "The plan does not state a per-run cost. How much it should move the projection is a forecasting decision.",
   },
   {
-    id: "ctx-launch-freeze",
+    id: "ctx-product-launch-moved",
     teamIds: ["product"],
-    title: "Feature freeze ahead of Nov 5 launch",
-    summary: "Product Engineering enters a code freeze Oct 20 to Nov 4. Expect fewer coding-tool sessions and lower API usage from feature development.",
+    title: "v4 launch milestone moved to next period",
+    summary: "A product update moves the v4 launch from Dec 3 into Q1 2027. Near-term feature development is reduced relative to the earlier roadmap, so Product's AI usage is expected to run below its original plan.",
     kind: "project_doc",
-    effectiveFrom: "2026-10-20", effectiveTo: "2026-11-04",
+    claimType: "stated_plan",
+    effectiveFrom: "2026-10-15", effectiveTo: "2026-12-31",
     expectedEffect: "decrease", confidence: "medium",
     sources: [
-      { documentId: "doc-launch-runbook", title: "v4.0 Launch Runbook", excerpt: "Freeze window: Oct 20 – Nov 4. Only P0 fixes.", locator: "p.2", date: "2026-10-01", kind: "project_doc" },
+      { documentId: "doc-product-update-oct", title: "Product Roadmap Update, October", excerpt: "v4 GA moves from Dec 3 to the week of Jan 19. Q4 focus shifts to stabilization.", locator: "p.1", date: "2026-10-15", kind: "project_doc" },
     ],
-    uncertainty: "Incident response during launch week could spike usage briefly.",
+    uncertainty: "Stabilization work could still use coding tools heavily if incident load is high.",
+  },
+  {
+    id: "ctx-research-old-timeline",
+    teamIds: ["research"],
+    title: "Older #research thread with a different eval timeline (superseded)",
+    summary: "A September Slack thread discussed starting expanded evals in November with a smaller benchmark set. The approved Q4 Research Plan explicitly supersedes this timeline. Shown for traceability only.",
+    kind: "correspondence",
+    claimType: "stated_plan",
+    effectiveFrom: "2026-11-01",
+    expectedEffect: "unknown", confidence: "low",
+    supersededBy: "ctx-research-eval-expansion",
+    sources: [
+      { documentId: "msg-research-0918", title: "Slack #research, Sep 18", excerpt: "thinking we kick off the bigger eval sweep in Nov once the new harness lands, probably just two suites to start", date: "2026-09-18", kind: "correspondence" },
+    ],
+    uncertainty: "Superseded. Do not use for projections.",
+  },
+  {
+    id: "ctx-engineering-migration",
+    teamIds: ["engineering"],
+    title: "Observability migration continues through Q4",
+    summary: "An engineering note confirms the observability platform migration continues at its current pace through the end of the period, with no planned change in coding-tool or API usage.",
+    kind: "project_doc",
+    claimType: "stated_plan",
+    effectiveFrom: "2026-10-01", effectiveTo: "2026-12-31",
+    expectedEffect: "neutral", confidence: "medium",
+    sources: [
+      { documentId: "doc-eng-note-migration", title: "Engineering note: observability migration status", excerpt: "Migration is on track; we expect steady effort through December with no staffing change.", date: "2026-10-12", kind: "project_doc" },
+    ],
+  },
+];
+
+/** Readable source documents behind the context items. Fixtures owner: expand bodies to a few paragraphs each. */
+export const documents: CompanyDocument[] = [
+  {
+    id: "doc-q4-research-plan", title: "Q4 Research Plan (approved)", kind: "plan", date: "2026-10-06", teamIds: ["research"],
+    origin: "Uploaded PDF (Research leadership)",
+    body: "# Q4 Research Plan\n\n## 2.3 Evaluation expansion\n\nNightly runs across HELM-lite, SWE-bench Verified, and the internal agentic suite begin **Oct 14** and continue through Q4. This plan supersedes the September timeline discussed in #research.\n\nExpected effect: evaluation token volume roughly doubles. Per-run cost is not estimated here.",
+  },
+  {
+    id: "doc-product-update-oct", title: "Product Roadmap Update, October", kind: "project_doc", date: "2026-10-15", teamIds: ["product"],
+    origin: "Notion export",
+    body: "# Product Roadmap Update\n\nv4 GA moves from **Dec 3** to the **week of Jan 19**. Q4 focus shifts to stabilization and customer escalations. Feature development pauses except P0.",
+  },
+  {
+    id: "msg-research-0918", title: "Slack #research, Sep 18", kind: "correspondence", date: "2026-09-18", teamIds: ["research"],
+    origin: "Slack export #research", supersededBy: "doc-q4-research-plan",
+    body: "**Priya N.** 10:42 — thinking we kick off the bigger eval sweep in Nov once the new harness lands, probably just two suites to start\n\n**Sam R.** 10:45 — works for me, let's revisit when the Q4 plan is approved",
+  },
+  {
+    id: "doc-eng-note-migration", title: "Engineering note: observability migration status", kind: "project_doc", date: "2026-10-12", teamIds: ["engineering"],
+    origin: "Uploaded Markdown",
+    body: "# Observability migration: status\n\nMigration is on track; we expect steady effort through December with no staffing change. Tooling usage should remain at current levels.",
   },
 ];
 
@@ -132,82 +205,99 @@ export const threads: Record<string, AssistantMessage[]> = {
     {
       id: "msg-welcome", threadId: "main", role: "assistant",
       createdAt: "2026-10-22T09:05:00Z",
-      content: "Research is tracking **23% over** its October allocation and Product Engineering is **25% under**. Ask me to redistribute, or tell me how much new budget is available and how to prioritize it.",
+      content: "Research is projected at **$85k against a $60k allocation**, and Product is projected at **$50k against $80k**. I can redistribute the existing envelope, or allocate new funding if finance authorizes it.",
     },
   ],
 };
 
+const allSources = () => context.filter((c) => !c.supersededBy).flatMap((c) => c.sources);
+
 /**
- * Scripted assistant replies for the mock. Pattern-matched on the finance message.
- * The 50,000-credit scenario is the canonical demo. Fixtures owner: add more cases here.
+ * Scripted assistant replies for the mock, pattern-matched on the finance message.
+ * Fixtures owner: add cases (e.g. "why is research over?", "compare research and product").
  */
 export function scriptedReply(
   content: string,
-  state: { proposals: AllocationProposal[]; budgets: Budget[] },
+  state: { proposals: AllocationProposal[]; budgets: Budget[]; budgetVersion: string },
 ): { message: Omit<AssistantMessage, "id" | "threadId" | "role" | "createdAt">; proposal?: AllocationProposal } {
   const text = content.toLowerCase();
   const b = (id: string) => state.budgets.find((x) => x.teamId === id)!.allocated;
+  const total = state.budgets.reduce((s, x) => s + x.allocated, 0);
   const now = new Date().toISOString();
+  const base = { unit: "usd" as const, period, createdAt: now, status: "proposed" as const, basedOnBudgetVersion: state.budgetVersion };
 
-  if (/50[, ]?000|50k/.test(text) || text.includes("add")) {
+  if (/50[, ]?000|50k|\badd|additional|more (credits|budget|funding)/.test(text)) {
     const proposal: AllocationProposal = {
+      ...base,
       id: `prop_${Date.now()}`,
-      kind: "add_budget", unit: "credits", period,
-      totalBefore: state.budgets.reduce((s, x) => s + x.allocated, 0),
-      totalAfter: state.budgets.reduce((s, x) => s + x.allocated, 0) + 50_000,
+      kind: "add_budget",
+      totalBefore: total,
+      totalAfter: total + 50_000,
       addedAmount: 50_000,
       lines: [
         { teamId: "research", before: b("research"), after: b("research") + 35_000 },
-        { teamId: "platform", before: b("platform"), after: b("platform") + 10_000 },
-        { teamId: "marketing", before: b("marketing"), after: b("marketing") + 5_000 },
         { teamId: "product", before: b("product"), after: b("product") },
+        { teamId: "engineering", before: b("engineering"), after: b("engineering") + 15_000 },
       ],
       rationale:
-        "Research is projected at 148k against 120k allocated, driven by the eval expansion in the Q4 Research Plan. 35k closes most of that gap. Platform gets 10k headroom for launch-week support. Marketing has no forecast, so 5k is a conservative buffer. Product is projected under allocation during the freeze and needs nothing new.",
-      citations: context.flatMap((c) => c.sources),
-      createdAt: now, status: "proposed",
+        "Research is projected at $85k against $60k, driven by the approved Q4 Research Plan's evaluation expansion. $35k brings Research to $95k, above its high-end projection. Engineering is projected at $65k against $60k with steady migration work; $15k gives it headroom to $75k. Product is projected well under allocation after the v4 launch moved to Q1, so it receives nothing new. The older #research timeline was superseded and not used.",
+      citations: allSources(),
     };
     return {
       proposal,
       message: {
-        content: "Here's how I'd allocate the additional **50,000 credits**, prioritizing Research:\n\n- **Research +35,000** to cover the eval expansion\n- **Platform +10,000** for launch-week headroom\n- **Marketing +5,000** as a buffer (no forecast available)\n- **Product +0**, projected under allocation during the freeze\n\nReview the before/after and apply when ready.",
+        content: "Here's how I'd allocate the additional **$50,000**, prioritizing Research:\n\n- **Research +$35,000** → $95,000, covering the approved eval expansion\n- **Engineering +$15,000** → $75,000, headroom for the migration\n- **Product +$0** → $80,000, projected under allocation after the launch moved\n\nCompany envelope goes from **$200,000 to $250,000**. Review the before/after and apply when ready.",
         proposalId: proposal.id,
         citations: proposal.citations,
         toolCalls: [
-          { name: "get_spending", summary: "Pulled Oct 1–22 spending for 4 teams" },
-          { name: "get_forecasts", summary: "Read October projections (Marketing unavailable)" },
-          { name: "search_documents", summary: "Found Q4 Research Plan §2.3 and v4.0 Launch Runbook" },
+          { name: "get_spending", summary: "Pulled Oct 1–22 spending for 3 teams ($95,000 recorded)" },
+          { name: "get_forecasts", summary: "Read Q4 projections: $85k / $50k / $65k" },
+          { name: "search_documents", summary: "Found Q4 Research Plan §2.3, October roadmap update, engineering migration note" },
+          { name: "check_superseded", summary: "Excluded Sep 18 #research thread (superseded by approved plan)" },
         ],
       },
     };
   }
 
-  if (text.includes("redistribut") || text.includes("rebalanc") || text.includes("move")) {
+  if (/redistribut|rebalanc|\bmove\b|shift|reallocat|without (adding|new)/.test(text)) {
     const proposal: AllocationProposal = {
+      ...base,
       id: `prop_${Date.now()}`,
-      kind: "redistribute", unit: "credits", period,
-      totalBefore: state.budgets.reduce((s, x) => s + x.allocated, 0),
-      totalAfter: state.budgets.reduce((s, x) => s + x.allocated, 0),
+      kind: "redistribute",
+      totalBefore: total,
+      totalAfter: total,
       lines: [
+        { teamId: "research", before: b("research"), after: b("research") + 25_000 },
         { teamId: "product", before: b("product"), after: b("product") - 30_000 },
-        { teamId: "research", before: b("research"), after: b("research") + 30_000 },
-        { teamId: "platform", before: b("platform"), after: b("platform") },
-        { teamId: "marketing", before: b("marketing"), after: b("marketing") },
+        { teamId: "engineering", before: b("engineering"), after: b("engineering") + 5_000 },
       ],
       rationale:
-        "Product Engineering is projected at 112k against 150k during the launch freeze. Moving 30k to Research brings Research to 150k, just above its 148k projection, while leaving Product 8k of headroom above its high estimate.",
-      citations: context.flatMap((c) => c.sources),
-      createdAt: now, status: "proposed",
+        "Product is projected at $50k against $80k after the v4 launch moved to Q1. Moving $25k to Research and $5k to Engineering brings Research to $85k (its projection) and Engineering to $65k (its projection), while Product keeps $50k, matching its own projection. The envelope stays at $200k.",
+      citations: allSources(),
     };
     return {
       proposal,
       message: {
-        content: "Without adding budget, I'd move **30,000 credits from Product Engineering to Research**. Product stays above its high-end projection during the freeze, and Research lands just above its projected spend. Total budget is unchanged.",
+        content: "Without adding funding, I'd move **$30,000 out of Product**: **$25,000 to Research** and **$5,000 to Engineering**. Each team lands at its current projection ($85k / $50k / $65k) and the envelope stays at **$200,000**.",
         proposalId: proposal.id,
         citations: proposal.citations,
         toolCalls: [
-          { name: "get_budgets", summary: "Read current October allocations" },
+          { name: "get_budgets", summary: "Read current Q4 allocations ($200,000 envelope)" },
           { name: "get_forecasts", summary: "Compared projections to allocations" },
+          { name: "search_documents", summary: "Confirmed launch move in October roadmap update" },
+        ],
+      },
+    };
+  }
+
+  if (/why|explain|over|exceed/.test(text) && text.includes("research")) {
+    return {
+      message: {
+        content: "Research is running over because the **approved Q4 Research Plan** started nightly evaluation runs on three new benchmark suites on **Oct 14**. Daily API spend roughly 1.6× since then. An older September thread proposed a smaller November start, but the approved plan explicitly supersedes it.",
+        citations: context[0].sources,
+        toolCalls: [
+          { name: "get_spending", summary: "Compared Research daily API spend before/after Oct 14" },
+          { name: "search_documents", summary: "Read Q4 Research Plan §2.3 and Sep 18 #research thread" },
         ],
       },
     };
@@ -215,7 +305,7 @@ export function scriptedReply(
 
   return {
     message: {
-      content: "I can help with two kinds of changes: **redistribute** the existing budget between teams, or **add** new budget and allocate it. Which would you like, and should I prioritize any team?",
+      content: "I can help with two kinds of changes: **redistribute** the existing $200,000 envelope between teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under. What would you like?",
     },
   };
 }

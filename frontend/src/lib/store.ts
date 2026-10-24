@@ -21,10 +21,15 @@ interface AppState {
   decisions: Decision[];
   threads: Record<string, AssistantMessage[]>;
   assistantOpen: boolean;
+  /** Prefilled text for the assistant composer (e.g. from a team page). Consumed by the drawer. */
+  assistantDraft?: string;
 
   load: () => Promise<void>;
   refreshBudgets: () => Promise<void>;
   setAssistantOpen: (open: boolean) => void;
+  /** Opens the drawer with a prefilled prompt. */
+  askAssistant: (draft: string) => void;
+  clearAssistantDraft: () => void;
   sendMessage: (threadId: string, content: string) => Promise<AssistantMessage[]>;
   applyProposal: (proposalId: string, note?: string) => Promise<Decision>;
   rejectProposal: (proposalId: string) => Promise<void>;
@@ -51,6 +56,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setAssistantOpen: (assistantOpen) => set({ assistantOpen }),
+  askAssistant: (assistantDraft) => set({ assistantDraft, assistantOpen: true }),
+  clearAssistantDraft: () => set({ assistantDraft: undefined }),
 
   async sendMessage(threadId, content) {
     const msgs = await getDataClient().sendMessage(threadId, content);

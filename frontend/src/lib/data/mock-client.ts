@@ -31,6 +31,8 @@ export class MockDataClient implements DataClient {
     await wait();
     return teamId ? fx.context.filter((c) => c.teamIds.includes(teamId)) : fx.context;
   }
+  async getDocuments() { await wait(); return fx.documents; }
+  async getDocument(id: string) { await wait(); return fx.documents.find((d) => d.id === id); }
   async getProposals() { await wait(); return this.proposals; }
   async getProposal(id: string) { await wait(); return this.proposals.find((p) => p.id === id); }
   async getDecisions() { await wait(); return this.decisions; }
@@ -41,7 +43,7 @@ export class MockDataClient implements DataClient {
     const thread = this.threads.get(threadId) ?? [];
     const now = new Date().toISOString();
     const user: AssistantMessage = { id: newId("msg"), threadId, role: "user", content, createdAt: now };
-    const scripted = fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets });
+    const scripted = fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets, budgetVersion: this.budgetVersion });
     if (scripted.proposal) this.proposals.unshift(scripted.proposal);
     const assistant: AssistantMessage = {
       id: newId("msg"),
@@ -55,19 +57,38 @@ export class MockDataClient implements DataClient {
     return [user, assistant];
   }
 
+  private budgetVersion = fx.budgets[0]?.version ?? "v1";
+
   async applyProposal(proposalId: string, note?: string) {
     await wait(300);
     const p = this.proposals.find((x) => x.id === proposalId);
     if (!p) throw new Error(`Proposal ${proposalId} not found`);
-    if (p.status !== "proposed") throw new Error(`Proposal ${proposalId} is ${p.status}`);
+    if (p.status === "applied") throw new Error("This proposal was already applied.");
+    if (p.status !== "proposed") throw new Error(`Proposal is ${p.status} and cannot be applied.`);
+    if (p.basedOnBudgetVersion && p.basedOnBudgetVersion !== this.budgetVersion) {
+      p.status = "stale";
+      throw new Error("Budgets changed since this proposal was prepared. Ask for a refreshed proposal.");
+    }
+    // Validate arithmetic the way the backend will.
+    const sumAfter = p.lines.reduce((s, l) => s + l.after, 0);
+    const sumBefore = p.lines.reduce((s, l) => s + l.before, 0);
+    if (sumAfter !== p.totalAfter || sumBefore !== p.totalBefore || (p.kind === "redistribute" && sumAfter !== sumBefore)) {
+      p.status = "failed";
+      p.failureReason = "Team totals do not reconcile with the company envelope.";
+      throw new Error(p.failureReason);
+    }
     for (const line of p.lines) {
       const b = this.budgets.find((x) => x.teamId === line.teamId);
       if (b) b.allocated = line.after;
     }
+    this.budgetVersion = newId("v");
+    for (const b of this.budgets) b.version = this.budgetVersion;
+    for (const other of this.proposals) if (other.status === "proposed" && other.id !== p.id) other.status = "stale";
     p.status = "applied";
     const d: Decision = {
       id: newId("dec"),
       proposalId,
+      action: "applied",
       kind: p.kind,
       appliedAt: new Date().toISOString(),
       appliedBy: "finance@demo",
@@ -84,6 +105,10 @@ export class MockDataClient implements DataClient {
     const p = this.proposals.find((x) => x.id === proposalId);
     if (!p) throw new Error(`Proposal ${proposalId} not found`);
     p.status = "rejected";
+    this.decisions.unshift({
+      id: newId("dec"), proposalId, action: "rejected", kind: p.kind,
+      appliedAt: new Date().toISOString(), appliedBy: "finance@demo", lines: p.lines, unit: p.unit,
+    });
     return p;
   }
 }
