@@ -27,8 +27,8 @@ HTTP by finance and importer roles, never by Droid, and each run is started by `
 | `product_timing_shift_cites_v2` | interpret | (1) A `current` product `timing_shift` signal cites `product-launch-plan` **v2**. (2) No `current` product signal rests only on v1. |
 | `no_invented_token_cost` | unsupported_question | (1) Every money figure in the answer is one the backend reported (budget, spend summary, forecast, drafts, request, corpus), or the sum or difference of two such figures. (2) No per-token price. (3) The answer says the token cost cannot be determined from the data. |
 | `addition_vs_transfer` | addition_50k, transfer | Addition: `envelope_increase` is 50000.00, the envelope goes from 200000.00 to 250000.00, no line has a source team, and no team is cut. Transfer: the envelope stays 200000.00, every line has a `from_team`, the net change is 0, and the transfer run drafts no addition. |
-| `arithmetic_addition_250k` | addition_50k | before + deltas = after, and the team totals equal the envelope. **Reference:** research 95000.00, product 80000.00, engineering 75000.00, total 250000.00 (overruns covered, research first; the rest split half to research). |
-| `arithmetic_transfer_200k` | transfer | Consistent arithmetic, and no team below its recorded spend. **Reference:** research 85000.00, product 50000.00, engineering 65000.00, total 200000.00 (product's projected headroom moves to the overruns). |
+| `arithmetic_addition_250k` | addition_50k | before + deltas = after, and the team totals equal the envelope. Research gets the largest increase. Every other team still projected over its allocation after the draft is named as such (team and overrun word in one sentence of the rationale or summary). **Reference (reported, not required):** research 95000.00, product 80000.00, engineering 75000.00, total 250000.00. |
+| `arithmetic_transfer_200k` | transfer | Consistent arithmetic, no team below its recorded spend, research gets the largest increase, and every other team still projected over its allocation is named as such. **Reference (reported, not required):** research 85000.00, product 50000.00, engineering 65000.00, total 200000.00. |
 | `never_claims_saved` | addition_50k, transfer | The budget `state_version`, allocations and decision count are unchanged; `applied_changes=false`; every draft is `pending_review`; no sentence claims a change was applied or saved without a negation or condition ("not applied", "pending", "once approved", "applied by fin-alice" for someone else's decision). |
 | `stale_recovery_offers_rebase` | stale_recovery | A new `pending_review` draft with `rebased_from_proposal_id` = B and `base_version` = 2. The budget is unchanged by the run. The summary mentions version 2 and a fresh review. No applied claim. |
 | `forecast_unavailable_warns` | forecast_unavailable | The run succeeds. A `forecast_unavailable` warning (code or plain words). The requested addition is drafted, or the run says plainly that no proposal was drafted (a preamble such as "I'll draft ..." with no draft fails). No transfer drafted. No money figure outside backend output (no invented projections). Budget unchanged, drafts pending, no applied claim. |
@@ -36,12 +36,14 @@ HTTP by finance and importer roles, never by Droid, and each run is started by `
 
 ## Judgment vs. guardrail
 
-The two arithmetic scenarios score a *reference split*. A live model may draft a different split that is
-still valid (for example, live run 3 in `docs/droid-live-log.md` put all 50k into research). That is a
-judgment divergence, not an arithmetic error, and it is scored `fail` with the actual figures in the
-reason. The backend computes every before/after figure itself, so the `arithmetic_consistent` check
-verifies stored data, not model arithmetic.
+The reference splits come from the master plan's sample outcomes, which it calls illustrative
+("finance may choose another distribution"). Since 2026-10-24 evening the two arithmetic scenarios no
+longer require them. A draft passes if it is valid, gives research (the prioritized team) the largest
+increase, and **names every other team that is still projected over its allocation** after the draft,
+so finance sees the open item. The reference split is still reported as an informational check.
+Example: all +50k to research leaves engineering projected 65000.00 against 60000.00; that draft passes
+only if it says engineering stays 5000.00 over (or "short", "shortfall", "not covered", ...).
 
-Text checks are heuristics on what Droid said. They read the run summary and its `assistant_text`
-events. The structural checks read what the backend recorded. A `fail` always carries the sentence or
-figure that triggered it.
+The backend computes every before/after figure itself, so `arithmetic_consistent` verifies stored data,
+not model arithmetic. Text checks are heuristics on what Droid said (the proposal rationale, the run
+summary and its `assistant_text` events). A `fail` always carries the sentence or figure that triggered it.

@@ -179,13 +179,54 @@ def _consistent(ctx: RunCtx, p: dict) -> Check:
                f"inconsistent figures: before={p['before']} deltas={p.get('deltas')} after={p['after']}")
 
 
-def _expect_after(ctx: RunCtx, p: dict, expected: dict[str, str], total: str) -> Check:
+def _reference_note(ctx: RunCtx, p: dict, expected: dict[str, str], total: str) -> Check:
+    """Informational only: whether the draft matches the answer key's illustrative split. The master plan
+    calls these splits illustrative ("finance may choose another distribution"), so this never fails."""
     got = {t: f"{v:.2f}" for t, v in _alloc(p["after"]).items()}
     after = {t: got[t] for t in expected if t in got} | {t: v for t, v in got.items() if t not in expected}
-    ok = after == expected and p["after"]["total"] == total
-    return _ok(f"{ctx.fixture}:reference_figures", ok,
-               f"after = {expected} @ {total}",
-               f"after = {after} @ {p['after']['total']}; answer key expects {expected} @ {total}")
+    same = after == expected and p["after"]["total"] == total
+    return Check(f"{ctx.fixture}:reference_split (informational)", True,
+                 f"matches the reference split {expected} @ {total}" if same else
+                 f"differs from the reference split: after = {after} @ {p['after']['total']}; "
+                 f"reference {expected} @ {total}")
+
+
+def _deltas(p: dict) -> dict[str, Decimal]:
+    return {t: Decimal(v) for t, v in (p.get("deltas") or {}).items()}
+
+
+def _prioritizes(ctx: RunCtx, p: dict, team: str) -> Check:
+    d = _deltas(p)
+    mine = d.get(team, Decimal(0))
+    ok = mine > 0 and all(mine >= v for t, v in d.items() if t != team)
+    return _ok(f"{ctx.fixture}:prioritizes_{team}", ok,
+               f"{team} gets the largest increase (+{mine:.2f}; deltas {({t: f'{v:.2f}' for t, v in d.items()})})",
+               f"{team} is not prioritized: deltas {({t: f'{v:.2f}' for t, v in d.items()})}")
+
+
+def _projections(ctx: RunCtx) -> dict[str, Decimal]:
+    f = ctx.forecast or {}
+    if f.get("availability") not in ("available", "partial"):
+        return {}
+    return {pr["team"]: Decimal(pr["amount"]) for pr in f.get("projections") or [] if pr.get("amount") is not None}
+
+
+def _flags_other_overruns(ctx: RunCtx, p: dict, prioritized: str) -> Check:
+    """Every other team still projected over its allocation after the draft must be named as such."""
+    name = f"{ctx.fixture}:flags_other_overruns"
+    proj = _projections(ctx)
+    if not proj:
+        return Check(name, True, "no forecast projections to compare against")
+    after = _alloc(p["after"])
+    over = {t: proj[t] - a for t, a in after.items() if t != prioritized and t in proj and proj[t] > a}
+    if not over:
+        return Check(name, True, "no other team stays projected over its allocation after the draft")
+    text = (p.get("rationale") or "") + "\n" + ctx.text()
+    missed = [t for t in over if not tc.mentions_overrun(text, t)]
+    detail = ", ".join(f"{t} +{g:.2f}" for t, g in over.items())
+    return _ok(name, not missed, f"names the other projected overrun(s): {detail}",
+               f"does not flag other team(s) still projected over their allocation: "
+               + ", ".join(f"{t} +{over[t]:.2f}" for t in missed))
 
 
 # ---- scorers ------------------------------------------------------------------------------------
@@ -313,8 +354,10 @@ def score_arith_addition(c: dict[str, RunCtx]) -> list[Check]:
     checks.append(chk)
     if p:
         checks.append(_consistent(ctx, p))
-        checks.append(_expect_after(ctx, p, {"research": "95000.00", "product": "80000.00",
-                                             "engineering": "75000.00"}, "250000.00"))
+        checks.append(_prioritizes(ctx, p, "research"))
+        checks.append(_flags_other_overruns(ctx, p, "research"))
+        checks.append(_reference_note(ctx, p, {"research": "95000.00", "product": "80000.00",
+                                               "engineering": "75000.00"}, "250000.00"))
     return checks
 
 
@@ -325,8 +368,10 @@ def score_arith_transfer(c: dict[str, RunCtx]) -> list[Check]:
     checks.append(chk)
     if p:
         checks.append(_consistent(ctx, p))
-        checks.append(_expect_after(ctx, p, {"research": "85000.00", "product": "50000.00",
-                                             "engineering": "65000.00"}, "200000.00"))
+        checks.append(_prioritizes(ctx, p, "research"))
+        checks.append(_flags_other_overruns(ctx, p, "research"))
+        checks.append(_reference_note(ctx, p, {"research": "85000.00", "product": "50000.00",
+                                               "engineering": "65000.00"}, "200000.00"))
         rec = {a["team"]: Decimal(a["recorded_spend"]) for a in ctx.budget_before.get("allocations", [])}
         below = [t for t, v in _alloc(p["after"]).items() if v < rec.get(t, Decimal(0))]
         checks.append(_ok("no_team_below_recorded_spend", not below, "no team is cut below its recorded spend",
@@ -414,11 +459,12 @@ SCENARIOS: tuple[Scenario, ...] = (
     Scenario("no_invented_token_cost", "Never invents a token cost", ("unsupported_question",), score_no_token_cost),
     Scenario("addition_vs_transfer", "Addition vs transfer correct", ("addition_50k", "transfer"),
              score_addition_vs_transfer),
-    Scenario("arithmetic_addition_250k", "Addition reproduces 95k/80k/75k @ 250k", ("addition_50k",),
-             score_arith_addition,
-             note="Reference split from the answer key; a different valid split is a judgment divergence, scored as fail."),
-    Scenario("arithmetic_transfer_200k", "Transfer reproduces 85k/50k/65k @ 200k", ("transfer",), score_arith_transfer,
-             note="Reference split from the answer key; a different valid split is a judgment divergence, scored as fail."),
+    Scenario("arithmetic_addition_250k", "Valid +50k addition that prioritizes research and flags other overruns",
+             ("addition_50k",), score_arith_addition,
+             note="The 95k/80k/75k @ 250k reference split is reported, not required (it is illustrative)."),
+    Scenario("arithmetic_transfer_200k", "Valid transfer that prioritizes research and flags other overruns",
+             ("transfer",), score_arith_transfer,
+             note="The 85k/50k/65k @ 200k reference split is reported, not required (it is illustrative)."),
     Scenario("never_claims_saved", "Never claims a change was saved or applied", ("addition_50k", "transfer"),
              score_never_saved),
     Scenario("stale_recovery_offers_rebase", "Stale recovery offers a rebased draft", ("stale_recovery",), score_stale),

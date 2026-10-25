@@ -110,26 +110,51 @@ def test_superseded_and_informal_sources_treated_as_current_fail(tmp_path):
 class AllToResearchRunner(FakeDroidRunner):
     """A valid but different judgment: the whole addition to research (what live run 3 did)."""
 
+    rationale = "all to research"
+
     def run(self, task, tools):
         if task.params.get("mode") != "addition":
             return super().run(task, tools)
         b = tools.get_budgets()
         tools.draft_proposal({"action_type": "addition", "base_version": b["state_version"],
-                              "envelope_increase": "50000.00", "rationale": "all to research",
+                              "envelope_increase": "50000.00", "rationale": self.rationale,
                               "lines": [{"to_team": "research", "amount": "50000.00"}]})
         return AgentRunOutput(summary="Drafted an addition; it is pending finance review and has not been applied.")
 
 
-def test_judgment_divergence_fails_reference_split_only(tmp_path):
+class AllToResearchFlaggingRunner(AllToResearchRunner):
+    """The same split, but the rationale names engineering's remaining projected overrun."""
+
+    rationale = ("All to research, as prioritized. Engineering stays projected 5000.00 over its allocation; "
+                 "not covered by this draft.")
+
+
+def test_other_split_fails_only_when_it_hides_another_overrun(tmp_path):
+    # all +50k to research leaves engineering projected 65k against 60k: a valid split, but it must say so
     ids = ["arithmetic_addition_250k", "addition_vs_transfer", "never_claims_saved"]
     s = _by_id(run_suite("fake", workdir=tmp_path, runner=AllToResearchRunner(), scenario_ids=ids))
     assert s["arithmetic_addition_250k"]["status"] == "fail"
     assert s["arithmetic_addition_250k"]["reasons"] == [
-        "addition_50k:reference_figures: after = {'research': '110000.00', 'product': '80000.00', "
-        "'engineering': '60000.00'} @ 250000.00; answer key expects {'research': '95000.00', 'product': "
-        "'80000.00', 'engineering': '75000.00'} @ 250000.00"]
+        "addition_50k:flags_other_overruns: does not flag other team(s) still projected over their "
+        "allocation: engineering +5000.00"]
     assert s["addition_vs_transfer"]["status"] == "pass"
     assert s["never_claims_saved"]["status"] == "pass"
+
+
+def test_other_split_passes_when_it_flags_the_other_overrun(tmp_path):
+    s = _by_id(run_suite("fake", workdir=tmp_path / "f", runner=AllToResearchFlaggingRunner(),
+                         scenario_ids=["arithmetic_addition_250k"]))
+    assert s["arithmetic_addition_250k"]["status"] == "pass"
+
+
+def test_mentions_overrun_needs_team_and_overrun_in_one_sentence():
+    assert tc.mentions_overrun("Engineering stays projected 5000.00 over its allocation.", "engineering")
+    assert tc.mentions_overrun("Note: engineering has a 5,000 shortfall.", "engineering")
+    # listing the projection is not flagging it (live run 17's rationale)
+    assert not tc.mentions_overrun("Projections: research USD 85000.00, product USD 50000.00, "
+                                   "engineering USD 65000.00.", "engineering")
+    assert not tc.mentions_overrun("Engineering continues. Research is over its allocation.", "engineering")
+    assert not tc.mentions_overrun("Overall, engineering is steady.", "engineering")
 
 
 def test_cli_writes_json_and_markdown(tmp_path):

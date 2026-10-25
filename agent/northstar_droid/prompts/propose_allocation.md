@@ -20,7 +20,10 @@ Request parameters: {params}
    Amounts are decimal strings with two places (for example "35000.00"), never floats.
 4. `draft_proposal` with `base_version` = the `state_version` you read, a rationale that names the
    action type, cites the signals (with their exact quotes and doc_key/version) and the forecast
-   snapshot, and says what the evidence does not establish. `evidence_refs` has one item per source
+   snapshot, and says what the evidence does not establish. When you prioritize one team, also name
+   every OTHER team whose forecast projection would still exceed its allocation after your draft, with
+   the gap (for example "engineering stays projected 5000.00 over its allocation; not covered by this
+   draft"), so finance sees the open item. `evidence_refs` has one item per source
    (`signal`, `forecast_snapshot`, `spend_summary`). Every ref is `{"kind": ..., "id": ...}`
    (optional `version`, `note`): a signal id, the forecast snapshot id, and for the spend summary the
    period id (for example `2026-P1`). The backend computes before/after and validates arithmetic.

@@ -133,9 +133,26 @@ has its recorded reason.
 | 16 | transfer | `arithmetic_transfer_200k` **fail** (no draft) | 1 cancel | 40,625 | A Script indexed with a variable (`reads[i].name`, the pattern droid's own Script guide teaches). Still refused on purpose; `c58d58e` adds a bounded retry turn carrying the refusal reason. |
 | 17 | transfer | `arithmetic_transfer_200k` **fail** on the reference split only | 1 cancel, then 1 retry | 72,633 | Confirms `c58d58e` live: a `checks[i]` Script was refused, the gate-retry turn gave the reason, and Droid rewrote it and drafted a pending transfer of 25,000.00 product -> research (85k / 55k / 60k @ 200k). Run succeeded, transfer drafted, arithmetic consistent, no team below spend; only the answer key's extra 5k to engineering (85k / 50k / 65k) differs. |
 
-**Current live score: 7 pass, 3 fail, 1 not run** (11 scenarios; `forecast_unavailable_warns` now
+Live score after the reruns: 7 pass, 3 fail, 1 not run (11 scenarios; `forecast_unavailable_warns` now
 passes). The transfer path is **confirmed live** (run 17): the gate refusal was recovered by the retry
 turn and Droid drafted a valid transfer. Of the 3 fails, 2 are reference-split judgment differences
 (`arithmetic_addition_250k`, `arithmetic_transfer_200k`: valid drafts, different split from the
 answer key) and `addition_vs_transfer` has not been re-run since the fixes (it also needs the
 addition fixture in the same eval run). `never_claims_saved` was not re-run either.
+
+**Scorer change and offline re-score (no new live runs).** The arithmetic scenarios now require a
+valid draft that prioritizes research and flags any other team still projected over its allocation;
+the reference split is informational (`../evals/answer_key.md`, "Judgment vs. guardrail"). Re-scored from
+saved data (`../evals/results/rescore-2026-10-24/rescored.json`):
+- `arithmetic_transfer_200k`, run 17: **pass**. Droid named the gap: "Engineering's USD 5,000.00
+  placeholder shortfall remains unaddressed."
+- `arithmetic_addition_250k`, the morning addition run: **fail**. All +50k to research, and the summary
+  never says engineering stays 5000.00 over. Its rationale was not saved, so this is scored on the
+  summary only.
+
+**Current live score: 8 pass, 2 fail, 1 not run** (latest result per scenario, across runs on different
+code versions). Fails: `arithmetic_addition_250k` (does not flag engineering) and
+`addition_vs_transfer` (its transfer half is from the morning run, which ended without a draft; not
+re-run since the fixes because it needs both fixtures in one eval run). Not run: `stale_recovery`
+(verified live earlier). `propose_allocation.md` now tells Droid to name other teams' remaining
+overruns; that line is not yet exercised live.

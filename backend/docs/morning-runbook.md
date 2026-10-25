@@ -101,7 +101,8 @@ zsh -ic '.venv/bin/python -m evals.run --runner sdk --scenario stale_recovery --
 - The harness runs live only while the log has fewer than `--live-cap` (15) minus `--live-reserve` (2)
   lines. With 13 lines it runs nothing until you add `--live-reserve 0` or start a fresh log.
 - The full live set is 6 runs, about 270k credits.
-- Current live score: 7 pass, 3 fail, 1 not run, after the evening reruns (see `evals/README.md`,
+- Current live score: 8 pass, 2 fail, 1 not run (latest result per scenario, see `evals/README.md`).
+  Before the arithmetic scorer change it was 7 pass, 3 fail, 1 not run, after the evening reruns (see `evals/README.md`,
   "Live reruns"). Last night's score was 6 pass, 4 fail, 1 not run under the current scorer. The committed
   `results/sdk.*` still say 7 / 3 / 1: they were scored before the `completed_or_declined` check
   existed, and `forecast_unavailable_warns` passed only because of that. The two runs that ended
@@ -154,8 +155,8 @@ npm install && npm run dev                                         # http://loca
 > streamed live, labeled real or fake, with Factory's credit usage on each run. When the budget
 > moves under a pending draft, the approval is refused as stale and Droid re-drafts on the new
 > numbers and explains what changed. Live, Droid caught the superseded research thread and never
-> claimed to have saved anything. It passes 7 of 11 eval scenarios live, and we publish the 3 it failed:
-> two are valid drafts that split the money differently from our answer key.
+> claimed to have saved anything. It passes 8 of 11 eval scenarios live, and we publish the ones it
+> missed: one draft put everything into research without flagging that engineering stays 5k short.
 
 Supporting docs: [`../../agent/README.md`](../../agent/README.md) (design, bounds, live results),
 [`droid-live-log.md`](droid-live-log.md) (each live run), [`../evals/results/sdk.md`](../evals/results/sdk.md).

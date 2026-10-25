@@ -123,3 +123,16 @@ def unsupported_figures(text: str, known: set[Decimal], *, tolerance: Decimal = 
         if not any(abs(v - k) <= tolerance for k in allowed):
             bad.append(v)
     return bad
+
+
+_OVERRUN_WORDS = re.compile(r"\b(?:over(?:run|runs|spend|spent)?|exceed\w*|short(?:fall)?|gap|underfunded|"
+                            r"uncovered|not covered|above (?:its|the) allocation|more than (?:its|the) allocation)\b",
+                            re.I)
+
+
+def mentions_overrun(text: str, team: str) -> bool:
+    """True if one sentence names `team` and says it is projected over / short of its allocation."""
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
+        if re.search(rf"\b{re.escape(team)}\b", sentence, re.I) and _OVERRUN_WORDS.search(sentence):
+            return True
+    return False
