@@ -18,7 +18,7 @@ from typing import Any, Iterable
 from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from app.core.actors import Actor
+from app.core.actors import FINANCE_ROLES, Actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
 from app.core.money import MoneyError, money_str, parse_money
@@ -466,6 +466,27 @@ def revise(session: Session, proposal_id: str, body: AdditionCreate | TransferCr
     if not claim_status(session, p, "revised", from_statuses=REVISABLE_STATUSES, now=clock.now()):
         raise _moved_error(session, p)
     return new
+
+
+def link_revision(session: Session, original_id: str, new_id: str, *, actor: Actor, clock: Clock) -> bool:
+    """Finance asked (in chat) for `original_id` to be revised and a Droid run drafted `new_id` from that
+    request: the original becomes `revised` and the new draft records `revises_proposal_id`. Finance roles
+    only, like `revise`. False (nothing written) when the new draft is not a fresh pending proposal or the
+    original is no longer pending or stale."""
+    if actor.role not in FINANCE_ROLES:
+        raise DomainError("role_forbidden", 403, f"role {actor.role!r} may not revise proposals",
+                          {"role": actor.role, "allowed_roles": list(FINANCE_ROLES)})
+    p = get_proposal(session, original_id)
+    new = get_proposal(session, new_id)
+    if (new.id == p.id or new.status != "pending_review" or new.revises_proposal_id
+            or new.rebased_from_proposal_id):
+        return False
+    if not claim_status(session, p, "revised", from_statuses=REVISABLE_STATUSES, now=clock.now()):
+        return False
+    new.revises_proposal_id = p.id
+    new.updated_at = clock.now()
+    session.flush()
+    return True
 
 
 def lineage(session: Session, p: Proposal) -> list[Proposal]:

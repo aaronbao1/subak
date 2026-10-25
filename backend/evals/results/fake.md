@@ -1,6 +1,6 @@
 # Droid eval results: `fake` runner
 
-Generated 2026-10-25T04:38:07+00:00 by `python -m evals.run --runner fake`. Answer key: [`../answer_key.md`](../answer_key.md).
+Generated 2026-10-25T05:25:19+00:00 by `python -m evals.run --runner fake`. Answer key: [`../answer_key.md`](../answer_key.md).
 
 **13 pass, 0 fail, 0 not run** (of 13 scenarios).
 
@@ -19,7 +19,7 @@ FakeDroidRunner is a deterministic scripted playbook, not a model: passing here 
 | `stale_recovery_offers_rebase` Stale recovery offers a rebased draft | **pass** | stale_recovery | 5 check(s) passed |
 | `forecast_unavailable_warns` Works with the forecast unavailable, with a warning | **pass** | forecast_unavailable | 8 check(s) passed |
 | `unsupported_question_limited` Refuses or limits an unsupported question | **pass** | unsupported_question | 4 check(s) passed |
-| `person_signals_cited` Records person and company signals with the right people, team and kind | **pass** | interpret | 11 check(s) passed |
+| `person_signals_cited` Records person and company signals with the right people, team and kind | **pass** | interpret | 12 check(s) passed |
 | `propose_reuses_signals` A proposal after interpretation reuses current signals without re-reading | **pass** | addition_50k_after_interpret | 5 check(s) passed |
 
 ## Runs
@@ -27,10 +27,10 @@ FakeDroidRunner is a deterministic scripted playbook, not a model: passing here 
 | Fixture | Run | Status | Duration | Tools | Drafts | Signals | Credits |
 |---|---|---|---|---|---|---|---|
 | interpret | `run_000001` | succeeded | 0.07 s | 28 | none | 12 | - |
-| transfer | `run_000001` | succeeded | 0.14 s | 34 | transfer pending_review | 12 | - |
+| transfer | `run_000001` | succeeded | 0.13 s | 34 | transfer pending_review | 12 | - |
 | forecast_unavailable | `run_000001` | succeeded | 0.11 s | 34 | addition pending_review | 12 | - |
 | unsupported_question | `run_000001` | succeeded | 0.05 s | 3 | none | 0 | - |
-| addition_50k | `run_000001` | succeeded | 0.12 s | 34 | addition pending_review | 12 | - |
+| addition_50k | `run_000001` | succeeded | 0.13 s | 34 | addition pending_review | 12 | - |
 | stale_recovery | `run_000001` | succeeded | 0.01 s | 1 | addition pending_review | 0 | - |
 | addition_50k_after_interpret | `run_000002` | succeeded | 0.06 s | 6 | addition pending_review | 0 | - |
 
@@ -129,6 +129,7 @@ _The 85k/50k/65k @ 200k reference split is reported, not required (it is illustr
 - pass `person:engineering-welcome-slack`: sig_000010 (engineering, current, cites engineering-welcome-slack@v1): ['engineering-hana-sato'] on engineering, onboarding
 - pass `person:product-tool-switch-slack`: sig_000011 (product, current, cites product-tool-switch-slack@v1): ['product-felix-weber'] on product, tool_change
 - pass `person_ids_real`: every person_ids entry is a real person on the signal's team
+- pass `person_ids_grounded`: every person a signal names is named in the documents it cites
 - pass `company:company-model-announcement-slack`: one current company signal, team null, no people, model_change (sig_000012)
 - pass `team_signals_name_no_people`: no team-scope signal carries person_ids
 - pass `no_new_figures`: no person or company summary adds a $ amount or % value

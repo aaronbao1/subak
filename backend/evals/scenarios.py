@@ -472,6 +472,26 @@ def _new_figures(summary: str, cited: str) -> list[str]:
     return [m for m in _DOLLAR.findall(summary) + _PERCENT.findall(summary) if norm(m) not in cited_n]
 
 
+def _names_person(text: str, name: str) -> bool:
+    return bool(name) and re.search(rf"(?<!\w){re.escape(name.lower())}(?!\w)", (text or "").lower()) is not None
+
+
+def _cited_text(ctx: RunCtx, s: dict) -> str:
+    """The full text of every document version a signal cites (falls back to its quotes)."""
+    parts = []
+    for cit in s.get("citations", []):
+        doc = ctx.documents.get(cit.get("document_id")) or {}
+        parts.append(doc.get("content") or cit.get("quote") or "")
+    return "\n".join(parts)
+
+
+def expected_people(doc: dict, people: dict[str, dict]) -> set[str]:
+    """The people a person signal on `doc` must name: its person tags that are real, on one team, and
+    actually named (full name) in the document's text. A tag the text does not back is not expected."""
+    return {pid for pid in doc.get("person_tags") or []
+            if pid in people and _names_person(doc.get("content") or "", people[pid]["name"])}
+
+
 def score_person_signals(c: dict[str, RunCtx]) -> list[Check]:
     ctx = c["interpret"]
     checks = [_ran(ctx)]
@@ -490,11 +510,14 @@ def score_person_signals(c: dict[str, RunCtx]) -> list[Check]:
                                 + "; ".join(map(_sig_label, mine))))
             continue
         sig = mine[0]
-        tags = list(doc.get("person_tags") or [])
-        teams = {people[p]["team"] for p in tags if p in people}
+        want = expected_people(doc, people)
+        teams = {people[p]["team"] for p in want}
         problems = []
-        if sig.get("person_ids") != tags:
-            problems.append(f"person_ids {sig.get('person_ids')} != document person_tags {tags}")
+        if not want:
+            problems.append(f"{key} names none of its tagged people; the scenario has no grounded answer")
+        if set(sig.get("person_ids") or []) != want:  # order-insensitive
+            problems.append(f"person_ids {sorted(sig.get('person_ids') or [])} != people the document names "
+                            f"and tags {sorted(want)}")
         if teams != {sig.get("team")}:
             problems.append(f"team {sig.get('team')!r} is not the tagged people's team {sorted(teams)}")
         if sig.get("signal_kind") != kind:
@@ -505,6 +528,12 @@ def score_person_signals(c: dict[str, RunCtx]) -> list[Check]:
               if pid not in people or people[pid]["team"] != s.get("team")]
     checks.append(_ok("person_ids_real", not unreal, "every person_ids entry is a real person on the signal's team",
                       f"person ids not on the signal's team: {unreal}"))
+    # Grounding in the text, not the tags: every person a signal names must be named in what it cites.
+    ungrounded = [(s["id"], pid) for s in sigs for pid in s.get("person_ids") or []
+                  if pid in people and not _names_person(_cited_text(ctx, s), people[pid]["name"])]
+    checks.append(_ok("person_ids_grounded", not ungrounded,
+                      "every person a signal names is named in the documents it cites",
+                      f"people not named in the cited documents: {ungrounded}"))
     for key, kind in COMPANY_DOC_KINDS.items():
         comp = [s for s in sigs if s["status"] == "current" and s.get("scope") == "company" and _cites(s, key)]
         ok = (len(comp) == 1 and comp[0].get("team") is None and comp[0].get("person_ids") == []

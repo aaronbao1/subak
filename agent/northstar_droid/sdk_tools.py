@@ -65,8 +65,9 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
     def get_forecast() -> str:
         return _respond(lambda: toolbox.call("get_forecast", {}))
 
-    def list_signals(status: str | None = None, team: str | None = None) -> str:
-        return _respond(lambda: toolbox.call("list_signals", {"status": status, "team": team}))
+    def list_signals(status: str | None = None, team: str | None = None, include_company: bool = True) -> str:
+        return _respond(lambda: toolbox.call("list_signals", {"status": status, "team": team,
+                                                              "include_company": include_company}))
 
     def list_people(team: str | None = None) -> str:
         return _respond(lambda: toolbox.call("list_people", {"team": team}))

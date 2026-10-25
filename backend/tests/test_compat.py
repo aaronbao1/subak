@@ -147,7 +147,9 @@ def test_unattributed_spend_gets_a_pseudo_team_and_marks_partial(c):
     # Company total is not understated; unpriced token rows never become dollars.
     assert sum(r["amount"] for r in rows) == sum(SPENT.values()) + 700
     assert all(r["component"] != "unpriced_usage" for r in rows)
-    assert not any(r["complete"] for r in rows)  # unattributed records make every team partial
+    # `complete` is per day: the unattributed row is partial, the teams' own days stay complete (the
+    # period-wide coverage flag would have marked every day of every team partial).
+    assert all(r["complete"] for r in rows if r["teamId"] != "unattributed")
 
 
 def test_documents_list_has_bodies_and_supersession(c):
@@ -237,7 +239,10 @@ def test_chat_addition_then_apply_once(c):
 def test_apply_without_note_uses_default_reason(c):
     pid = say(c, "add $50,000 for research")["proposalId"]
     r = c.post(f"{API}/proposals/{pid}/apply", json={})
-    assert r.status_code == 200 and r.json()["note"] == "Approved from the dashboard (no note given)"
+    # The stored default reason is not finance's words, so it is not returned as a note (the UI quotes notes).
+    assert r.status_code == 200 and "note" not in r.json()
+    [d] = get(c, "decisions")
+    assert "note" not in d
 
 
 def test_stale_proposal_refused_then_refreshed_via_chat(c):

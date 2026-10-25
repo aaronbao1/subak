@@ -155,11 +155,16 @@ def person(p: Any) -> dict:
 # ---- spending -----------------------------------------------------------------------------------
 
 
-def spending(records: Iterable[dict], *, team_status: Mapping[str, str], batch_labels: Mapping[str, str]) -> list[dict]:
+def spending(records: Iterable[dict], *, batch_labels: Mapping[str, str]) -> list[dict]:
     """Group backend usage records (spending.record_out dicts) into one row per team x person x day x
     component x provider (person None = a team-level row, e.g. included usage). Included usage carries amount 0 (it is covered by the subscription fee; its notional value is
     named in `source`). Unpriced token rows have no frontend equivalent that would not be summed into dollars,
-    so they are left out; the team's coverage is then not complete, which shows as `complete: false`."""
+    so they are left out.
+
+    `complete` is per row and day, never the period-wide coverage status (which turns every team `partial`
+    as soon as any record in the period is unattributed): a row is partial only when its own records are
+    unattributed or include a cumulative counter reset. So spend on complete days + forecast.daily (from the
+    day after as_of) still equals `projected` while unmapped records are present."""
     groups: dict[tuple[str, str, str, str, str], list[dict]] = defaultdict(list)
     for r in records:
         component = COMPONENT.get(r["cost_category"])
@@ -187,8 +192,7 @@ def spending(records: Iterable[dict], *, team_status: Mapping[str, str], batch_l
                            Decimal("0"))
             source += (f"; included in the subscription fee, notional value {money_text(notional)} "
                        "is not counted as spend")
-        complete = (team != UNATTRIBUTED and team_status.get(team) == "complete"
-                    and not any(r["counter_reset"] for r in recs))
+        complete = team != UNATTRIBUTED and not any(r["counter_reset"] for r in recs)
         row_id = f"{team}:{person_id}:{d}:{component}:{provider}" if person_id else f"{team}:{d}:{component}:{provider}"
         out.append({
             "id": row_id, "teamId": team, **({"personId": person_id} if person_id else {}), "date": d, "component": component, "provider": provider,
@@ -455,6 +459,14 @@ def proposal(p: dict, *, period_row: Any, citations: list[dict], forecasts_revie
     return out
 
 
+# The rationale compat stores when the dashboard sends no note. Finance did not write these, so a Decision
+# never returns them as `note` (the UI quotes any note as finance's words).
+APPROVE_NOTE = "Approved from the dashboard (no note given)"
+REJECT_NOTE = "Rejected from the dashboard"
+DISMISS_NOTE = "Dismissed from the dashboard: the budget changed after this proposal was drafted"
+SYSTEM_NOTES = frozenset({APPROVE_NOTE, REJECT_NOTE, DISMISS_NOTE})
+
+
 def decision(d: dict, p: dict, *, forecasts_reviewed: list[dict]) -> dict:
     if d["after"] is not None:
         ln = lines(d["before"]["allocations"], d["after"]["allocations"])
@@ -467,11 +479,13 @@ def decision(d: dict, p: dict, *, forecasts_reviewed: list[dict]) -> dict:
         "kind": PROPOSAL_KIND[d["action_type"]],
         "appliedAt": iso(d["decided_at"]),
         "appliedBy": APPROVER_LABELS.get(d["actor"]["id"], d["actor"]["id"]),
-        "note": d["rationale"],
         "lines": ln,
         "unit": unit(p["unit"]),
         "rationale": p["rationale"],
     }
+    note = (d.get("rationale") or "").strip()
+    if note and note not in SYSTEM_NOTES:
+        out["note"] = d["rationale"]
     if forecasts_reviewed:
         out["forecastsReviewed"] = forecasts_reviewed
     return out

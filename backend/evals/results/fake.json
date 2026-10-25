@@ -1,6 +1,6 @@
 {
   "runner": "fake",
-  "generated_at": "2026-10-25T04:38:07+00:00",
+  "generated_at": "2026-10-25T05:25:19+00:00",
   "counts": {
     "pass": 13,
     "fail": 0,
@@ -516,6 +516,11 @@
           "reason": "every person_ids entry is a real person on the signal's team"
         },
         {
+          "name": "person_ids_grounded",
+          "passed": true,
+          "reason": "every person a signal names is named in the documents it cites"
+        },
+        {
           "name": "company:company-model-announcement-slack",
           "passed": true,
           "reason": "one current company signal, team null, no people, model_change (sig_000012)"
@@ -532,7 +537,7 @@
         }
       ],
       "reasons": [
-        "11 check(s) passed"
+        "12 check(s) passed"
       ]
     },
     {
@@ -771,7 +776,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.14,
+      "duration_s": 0.13,
       "tools_called": [
         "list_signals",
         "search_corpus",
@@ -1208,7 +1213,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.12,
+      "duration_s": 0.13,
       "tools_called": [
         "list_signals",
         "search_corpus",

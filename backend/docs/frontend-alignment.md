@@ -112,7 +112,7 @@ per team x person x day x component x provider. Compat groups `usage_records` fo
 | `unit` | `"usd"` | |
 | `provenance` | `value_kind`: `reported`->`reported_charge`, `estimated`->`estimate`, `simulated`->`reported_charge`, `measured`->`usage_only`; **included usage rows are always `usage_only`** (no charge of their own) | a group mixing kinds takes the weakest (`estimate` > `usage_only` > `reported_charge`); `simulated` has no frontend value (G7) |
 | `source` | `import_batch.source_label`/`filename` + `"(simulated)"` when `value_kind=simulated`; included usage adds `"notional value $X not counted"` | human readable |
-| `complete` | team coverage `status == "complete"` and no `counter_reset` in the group | backend coverage is per team, not per day (G4) |
+| `complete` | per row and day: a known team and no `counter_reset` in the group (never the period-wide team coverage flag) | G4 |
 
 ### #4 `Budget`
 | Frontend | Backend (`BudgetState`) |
@@ -239,7 +239,7 @@ disagree with ours. This needs a decision from the frontend owner.
 
 **G2. Unpriced usage and tokens.** Codex telemetry records have tokens and no dollar amount. The
 frontend sums `amount` across rows without checking `unit`, so token rows would be added to dollars.
-Compat omits them. The team's coverage then says partial, which surfaces as `complete:false`.
+Compat omits them; the backend coverage report still notes the unpriced usage.
 
 **G3. Unattributed spend.** The backend keeps unmapped spend in an `unattributed` bucket that counts
 toward the company total. The frontend only aggregates rows whose `teamId` is a known team. Compat adds
@@ -248,9 +248,11 @@ understated with no warning.
 
 **G4. Granularity and completeness.** *Granularity closed:* the seed is now a deterministic daily
 per-person series (616 rows, Oct 1-20) with the same team totals, and forecasts carry `daily` points
-from Oct 21. Compat still never invents points: every spend row is a stored record. *Still open:*
-completeness is tracked per team for the period, so `complete:false` gets applied to every row of a
-partial team, not to specific days.
+from Oct 21. Compat still never invents points: every spend row is a stored record. *Closed:*
+`complete` is derived per row and day (unattributed rows and counter-reset days are partial). The
+period-wide team coverage flag is no longer used: it turns every team `partial` as soon as any record is
+unattributed (the `--with-planted` state), which emptied the complete days and broke
+complete-days spend + sum(daily) == projected.
 
 **G5. Context fields we do not store.** *Mostly closed.* `context_signals` now stores `title`, `scope`,
 `person_ids` and `signal_kind`, and Droid's `record_signal` tool takes them (invalid scope/person
@@ -283,7 +285,9 @@ acts as both, separation of duties is only nominal in the dashboard demo. If the
 
 **G10. Apply semantics.**
 - The backend requires a non-empty rationale. When `note` is missing, compat sends
-  "Approved from the dashboard (no note given)". Reject sends "Rejected from the dashboard".
+  "Approved from the dashboard (no note given)". Reject sends "Rejected from the dashboard" and Dismiss
+  a stale-proposal reason. These stay in the backend audit trail but are never returned as
+  `Decision.note`: the UI quotes any note as finance's own words.
 - The backend requires an `Idempotency-Key`. Compat uses `compat-{approve|reject}-{proposal_id}`.
   A retried click therefore replays and never double-applies.
 - The frontend expects a second apply to fail. Compat checks `status` first. A replayed response
@@ -406,7 +410,13 @@ Changes from the design above, all made to avoid showing a number or claim the b
 - **Citation `locator`** reads `chars a-b (superseded version)` when the cited document version has been replaced.
 - **Chat intents** (§4.3) also cover *refresh / rebase* plus a stale proposal. That runs
   `propose_allocation {stale_proposal_id}`, Droid rebases the proposal, and the new proposal has
-  `revisesProposalId` set to the stale one, so the stale error's advice works from the drawer. The
+  `revisesProposalId` set to the stale one, so the stale error's advice works from the drawer. With
+  several stale proposals and no id named, compat asks which. *Revise* ("Revise this proposal: <change>",
+  the prefill of the Revise and "Ask for a refreshed proposal" buttons) targets the named or only open
+  proposal (asks which when several are open); the change is read like a budget request with the
+  target's mode and team as defaults, and the new draft marks the target `revised`
+  (`revisesProposalId`). No change text: a stale target is refreshed, a pending one gets a question.
+  "We have another $25,000 to allocate" is an addition; a negative amount ("add -5k") is asked about. The
   parser asks a question, and starts no run, when an addition has no amount, or when no team is
   named and no projection exists to choose one. Message `citations` are the proposal's evidence
   signals, or the run's recorded signals when there is no proposal. Fake-runner replies end with a

@@ -217,13 +217,20 @@ class BackendToolbox:
         return self._invoke("get_forecast", {}, fn,
                             lambda r: f"{r['availability']} ({r['provider']}), snapshot {r['id']}")
 
-    def list_signals(self, status: str | None = None, team: str | None = None) -> dict:
+    def list_signals(self, status: str | None = None, team: str | None = None,
+                     include_company: bool = True) -> dict:
+        """A team filter keeps company-scope signals (no team, apply to every team) unless include_company
+        is false, so narrowing to a team never hides a company-wide change."""
         def fn(s: Session) -> dict:
             items = [ContextSignalOut.model_validate(signal_svc.signal_out(s, sig)).model_dump(mode="json")
-                     for sig in signal_svc.list_signals(s, team=team, status=status)]
+                     for sig in signal_svc.list_signals(s, team=team, status=status,
+                                                        include_company=include_company)]
             return {"count": len(items), "items": items}
 
-        return self._invoke("list_signals", {"status": status, "team": team}, fn, lambda r: f"{r['count']} signal(s)")
+        args: dict[str, Any] = {"status": status, "team": team}
+        if team is not None:
+            args["include_company"] = include_company
+        return self._invoke("list_signals", args, fn, lambda r: f"{r['count']} signal(s)")
 
     def list_people(self, team: str | None = None) -> dict:
         def fn(s: Session) -> dict:

@@ -17,9 +17,15 @@ Rules:
   `company` signals have no team and no people and apply to every team. Every violation is 422
   `validation_failed` with `reasons[].code` (`person_ids_required`, `unknown_person`,
   `person_team_mismatch`, `person_ids_not_allowed`, `team_not_allowed`).
+- Person attribution is grounded in the cited text, not in metadata: every person a `person` signal names
+  must be named in at least one cited document version (full name, or a first name no other active person
+  shares; case-insensitive, whole words). A document's person tags alone are not enough. A person the cited
+  text does not name is 422 `validation_failed` with `reasons[].code == "person_not_in_citations"`.
 """
 
 from __future__ import annotations
+
+import re
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -101,6 +107,36 @@ def _scope_reasons(session: Session, body: ContextSignalIn) -> tuple[list[dict],
     return reasons, team
 
 
+def _names(text: str, name: str) -> bool:
+    return bool(name) and re.search(rf"(?<!\w){re.escape(name.lower())}(?!\w)", text.lower()) is not None
+
+
+def _ungrounded_people(session: Session, person_ids: list[str], docs: list[CorpusDocument]) -> list[dict]:
+    """Reasons for each person id that no cited document version names in its text."""
+    if not person_ids:
+        return []
+    active = list(session.scalars(select(Person).where(Person.active.is_(True))))
+    first_counts: dict[str, int] = {}
+    for p in active:
+        first = p.name.split()[0].lower() if p.name.split() else ""
+        first_counts[first] = first_counts.get(first, 0) + 1
+    reasons = []
+    for pid in person_ids:
+        person = session.get(Person, pid)
+        if person is None:
+            continue  # already reported by _scope_reasons
+        parts = person.name.split()
+        first = parts[0] if parts else ""
+        unique_first = len(parts) > 1 and first_counts.get(first.lower(), 0) == 1
+        if any(_names(d.content, person.name) or (unique_first and _names(d.content, first)) for d in docs):
+            continue
+        reasons.append({"code": "person_not_in_citations", "field": "person_ids", "person_id": pid,
+                        "document_ids": [d.id for d in docs],
+                        "message": f"{person.name} ({pid}) is not named in any cited document; a person-scope "
+                                   "signal may only name people the cited text names"})
+    return reasons
+
+
 def create_signal(
     session: Session, body: ContextSignalIn, *, actor: Actor, runner_kind: str, clock: Clock, ids: IdFactory
 ) -> tuple[ContextSignal, set[tuple[str, int]]]:
@@ -148,6 +184,11 @@ def create_signal(
     if missing:
         code = "citation_not_found" if any(m["code"] == "citation_not_found" for m in missing) else "unknown_document"
         raise _fail(code, "every citation must quote a stored document version exactly", missing)
+
+    if body.scope == "person":
+        ungrounded = _ungrounded_people(session, list(body.person_ids), [d for d, *_ in verified])
+        if ungrounded:
+            raise _fail("validation_failed", "signal is invalid", ungrounded)
 
     if body.status == "current" and all(d.superseded_by_document_id is not None for d, *_ in verified):
         raise _fail("signal_cites_superseded_only",

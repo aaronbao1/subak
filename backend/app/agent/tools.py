@@ -47,6 +47,8 @@ class NoArgsIn(_In):
 class ListSignalsIn(_In):
     status: SignalStatus | None = None
     team: str | None = None
+    # With a team filter, company-scope signals (no team, apply to every team) are included unless false.
+    include_company: bool = True
 
 
 class ListPeopleIn(_In):
@@ -133,7 +135,8 @@ TOOLS: tuple[ToolDef, ...] = (
     ToolDef("list_signals", "read",
             "Context signals already recorded (by finance or earlier Droid runs), with citation currency. "
             "Read these before a proposal: when a current signal covers the team, cite it by id instead of "
-            "re-reading documents.",
+            "re-reading documents. A team filter also returns company-scope signals (they have no team but "
+            "apply to every team) unless include_company is false.",
             ListSignalsIn),
     ToolDef("list_people", "read",
             "People directory: active team members with id, team, name, role, primary_tool and "
@@ -156,7 +159,8 @@ TOOLS: tuple[ToolDef, ...] = (
             "one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` "
             "(team null and no person_ids; every team is affected). signal_kind is one of project_deferred, "
             "project_accelerated, model_change, tool_change, out_of_office, onboarding, steady. title is a "
-            "short label of at most 120 characters. Never name a person the cited text does not name. Does "
+            "short label of at most 120 characters. Never name a person the cited text does not name (the backend refuses "
+            "a person the cited documents do not name: person_not_in_citations). Does "
             "not change any budget.",
             RecordSignalIn),
     ToolDef("draft_proposal", "draft",

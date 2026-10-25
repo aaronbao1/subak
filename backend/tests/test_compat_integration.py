@@ -307,7 +307,7 @@ def test_dismiss_of_a_stale_proposal_records_a_rejected_decision(c, seeded):
     assert r.status_code == 200, r.text
     assert S.AllocationProposal.model_validate(r.json()).status == "rejected"
     d = next(d for d in get(c, "decisions", list[S.Decision]) if d["proposalId"] == tid)
-    assert d["action"] == "rejected" and d["note"] == DISMISS_NOTE and d["appliedBy"] == "Finance approver (demo)"
+    assert d["action"] == "rejected" and "note" not in d and d["appliedBy"] == "Finance approver (demo)"
     assert {b["teamId"]: b["allocated"] for b in get(c, "budgets")} == OUTCOME_B
     assert {b["version"] for b in get(c, "budgets")} == {"2"}
     assert _counts(seeded) == before
@@ -331,16 +331,23 @@ def test_dismiss_of_a_pending_proposal_on_an_outdated_version(c, seeded):
     r = c.post(f"{API}/proposals/{tid}/reject", json={})
     assert r.status_code == 200 and r.json()["status"] == "rejected"
     d = next(d for d in get(c, "decisions") if d["proposalId"] == tid)
-    assert d["note"] == DISMISS_NOTE
+    assert "note" not in d
+    s = seeded.state.session_factory()
+    try:  # the backend still records why: the dismiss reason is the stored rationale
+        assert s.scalar(select(Decision).where(Decision.proposal_id == tid)).rationale == DISMISS_NOTE
+    finally:
+        s.close()
     assert {b["teamId"]: b["allocated"] for b in get(c, "budgets")} == OUTCOME_B
     assert _counts(seeded) == before
 
 
-def test_plain_reject_keeps_the_reject_note(c):
+def test_plain_reject_stores_the_reject_note_but_does_not_quote_it(c):
     pid = say(c, "add 50k prioritizing research")["proposalId"]
     assert c.post(f"{API}/proposals/{pid}/reject", json={}).status_code == 200
     [d] = get(c, "decisions")
-    assert d["note"] == REJECT_NOTE and d["appliedBy"] == "Finance approver (demo)"
+    assert "note" not in d and d["appliedBy"] == "Finance approver (demo)"
+    [backend] = c.get("/api/decisions").json()
+    assert backend["rationale"] == REJECT_NOTE  # the backend audit trail keeps the reason
     assert {b["teamId"]: b["allocated"] for b in get(c, "budgets")} == ALLOCATED
 
 

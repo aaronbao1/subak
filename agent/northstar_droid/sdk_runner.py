@@ -90,7 +90,10 @@ def signals_table(signals: list[dict[str, Any]]) -> str:
     quotes: list[str] = []
     for sig in signals:
         title = (sig.get("title") or sig.get("summary") or "").replace("|", "/").replace("\n", " ")[:160]
-        lines.append(f"| {sig.get('id')} | {sig.get('team') or '(company)'} | {sig.get('scope') or 'team'} | "
+        scope = sig.get("scope") or "team"
+        # "(company)" only for a company-scope signal; a team signal with no team is not company-wide.
+        team = sig.get("team") or ("(company)" if scope == "company" else "(no team)")
+        lines.append(f"| {sig.get('id')} | {team} | {scope} | "
                      f"{sig.get('signal_kind') or '-'} | {title} |")
         for c in sig.get("citations") or []:
             quote = " ".join(str(c.get("quote") or "").split())

@@ -33,6 +33,8 @@ from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
 from app.compat import errors, intent, mappers, threads
 from app.compat import schemas as S
+# Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
+from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
 from app.core.actors import Actor, get_actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
@@ -56,9 +58,6 @@ COMPANY_ID = "northstar"
 COMPANY_NAME = "Northstar Software"  # the seeded demo company; the backend stores no company row
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
-APPROVE_NOTE = "Approved from the dashboard (no note given)"
-REJECT_NOTE = "Rejected from the dashboard"
-DISMISS_NOTE = "Dismissed from the dashboard: the budget changed after this proposal was drafted"
 MAX_MESSAGE = 4000
 MAX_THREAD_ID = 200
 
@@ -228,12 +227,10 @@ def get_spending(
         offset += len(page["items"])
         if not page["items"] or offset >= page["total"]:
             break
-    cov = coverage_svc.coverage_report(session, period, clock.now())
-    status = {t["team"]: t["status"] for t in cov["teams"]}
     batch_ids = {r["import_batch_id"] for r in records}
     labels = {b.id: (b.source_label or b.filename or b.source_kind)
               for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))} if batch_ids else {}
-    rows = mappers.spending(records, team_status=status, batch_labels=labels)
+    rows = mappers.spending(records, batch_labels=labels)
     if team_id:
         rows = [r for r in rows if r["teamId"] == team_id]
     if date_from:
@@ -320,8 +317,9 @@ def get_thread(thread_id: str, session: Session = Depends(get_session)):
 
 def _intent_context(session: Session, request: Request, clock: Clock) -> dict:
     teams = [(t.id, t.name) for t in _active_teams(session)]
+    names = dict(teams)
     gaps: dict[str, Decimal] = {}
-    stale: list[str] = []
+    open_: list[dict] = []
     try:
         period, env = budget_svc.resolve_envelope(session, None, clock)
         alloc = budget_svc.allocation_map(env)
@@ -332,11 +330,23 @@ def _intent_context(session: Session, request: Request, clock: Clock) -> dict:
             if pr.team in alloc:
                 gaps[pr.team] = projected - alloc[pr.team]
         for p in reversed(proposal_svc.list_proposals(session)):
-            if p.status == "stale" or (p.status == "pending_review" and p.base_version != env.state_version):
-                stale.append(p.id)
+            if p.status in proposal_svc.REVISABLE_STATUSES:
+                open_.append(_open_proposal(p, env.state_version, names))
     except DomainError:
         pass  # unseeded: the parser asks instead of guessing
-    return {"teams": teams, "gaps": gaps, "stale_proposal_ids": stale}
+    return {"teams": teams, "gaps": gaps, "open_proposals": open_}
+
+
+def _open_proposal(p: Proposal, version: int, names: dict[str, str]) -> dict:
+    """What the chat parser needs to revise a proposal: its mode, the team it favours most, a short label."""
+    gains = {t: d for t, d in proposal_svc.deltas(p.before, p.after).items() if d > 0}
+    favoured = max(sorted(gains), key=lambda t: gains[t]) if gains else None
+    stale = p.status == "stale" or p.base_version != version
+    amount = p.envelope_increase if p.action_type == "addition" else sum(gains.values(), Decimal("0"))
+    what = "add" if p.action_type == "addition" else "move"
+    label = (f"{'stale' if stale else 'awaiting review'}, {what} ${amount:,.2f}"
+             + (f" toward {names.get(favoured, favoured)}" if favoured else ""))
+    return {"id": p.id, "stale": stale, "mode": p.action_type, "prioritize": favoured, "label": label}
 
 
 @router.post("/threads/{thread_id}/messages", response_model=list[S.AssistantMessage], **JSON_OPTS)
@@ -386,15 +396,35 @@ def post_message(
     session.expire_all()  # the run wrote through its own sessions
     run = run_svc.run_out(session, run_svc.get_run(session, run_id))
     proposal_id = run["proposals"][0]["id"] if run["proposals"] else None
+    revised_note = _link_revision(session, parsed.revises, proposal_id, actor=actor, clock=clock)
     proposal = (proposal_svc.proposal_out(session, proposal_svc.get_proposal(session, proposal_id))
                 if proposal_id else None)
     reply = threads.add_message(
-        session, thread_id, "assistant", threads.reply_text(parsed.read_as, run), clock=clock, ids=ids,
+        session, thread_id, "assistant", threads.reply_text(parsed.read_as, run) + revised_note, clock=clock, ids=ids,
         agent_run_id=run_id, proposal_id=proposal_id, citations=threads.citations(session, run, proposal),
         tool_calls=threads.tool_calls(run),
     )
     session.commit()
     return [threads.message_out(user), threads.message_out(reply)]
+
+
+def _link_revision(session: Session, original_id: str | None, new_id: str | None, *, actor: Actor,
+                   clock: Clock) -> str:
+    """A chat revise: finance asked for `original_id` to be revised and the run drafted `new_id`. The original
+    becomes `revised` and the draft records what it replaces. Returns a line for the reply ("" when no link)."""
+    if not original_id or not new_id:
+        return ""
+    if new_id == original_id:
+        return f"\n\n_The revised draft came out the same as {original_id}, so {original_id} stays open._"
+    try:
+        linked = proposal_svc.link_revision(session, original_id, new_id, actor=actor, clock=clock)
+    except DomainError as exc:
+        session.rollback()
+        return f"\n\n_{new_id} was drafted, but {original_id} could not be marked revised: {exc.message}._"
+    session.commit()
+    if not linked:
+        return f"\n\n_{new_id} was drafted, but {original_id} had already moved on, so it was not marked revised._"
+    return f"\n\n_{new_id} replaces {original_id}, which is now marked revised._"
 
 
 def _guard_settled(p: Proposal) -> None:
