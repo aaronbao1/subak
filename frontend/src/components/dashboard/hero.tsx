@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import type { Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -102,7 +102,7 @@ export function Hero(p: HeroProps) {
         centered in the middle row, so the straight connector between them points exactly at the projection.
         Below sm the grid is one column and DOM order (label, number, caption per figure) stacks naturally.
       */}
-      <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-[minmax(0,auto)_minmax(120px,1fr)_minmax(0,auto)] md:gap-x-6">
+      <div className="mt-5 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,auto)_minmax(80px,1fr)_minmax(0,auto)] md:gap-x-4">
         {/* Current spend */}
         <span className="eyebrow sm:col-start-1 sm:row-start-1 sm:self-end">Total spend to date</span>
         <span className="num truncate text-5xl leading-none font-medium text-foreground sm:col-start-1 sm:row-start-2 sm:self-center md:text-[56px]">
@@ -125,8 +125,11 @@ export function Hero(p: HeroProps) {
         {/* Projection */}
         <span className="mt-3 inline-flex items-center gap-1.5 sm:col-start-3 sm:row-start-1 sm:mt-0 sm:self-end">
           <span className="eyebrow">Projected for period</span>
-          {calculating && <span className="animate-pulse-dot size-1.5 rounded-full bg-foreground" aria-hidden />}
-          {calculating && <span className="num text-[11px] text-muted-foreground" aria-live="polite">updating</span>}
+          {/* Always laid out so the column width (and the arrow's end) never shifts; only visible while calculating. */}
+          <span className={cn("inline-flex items-center gap-1.5 transition-opacity duration-300", calculating ? "opacity-100" : "opacity-0")} aria-hidden={!calculating}>
+            <span className={cn("size-1.5 rounded-full bg-foreground", calculating && "animate-pulse-dot")} />
+            <span className="num text-[11px] text-muted-foreground" aria-live="polite">updating</span>
+          </span>
         </span>
         <span className={cn("num truncate leading-none font-medium sm:col-start-3 sm:row-start-2 sm:self-center", hasProjection ? "text-[28px] text-foreground md:text-[32px]" : "text-lg text-muted-foreground")}>
           {hasProjection ? <Reserved final={formatAmount(projected as number, p.unit)}>{formatAmount(projectedShown, p.unit)}</Reserved> : "No projection"}
@@ -173,60 +176,50 @@ export function Hero(p: HeroProps) {
 }
 
 /*
- * The link between the two figures. A hairline runs from the hero number down into the projected number.
- * While the projection calculates: three chevrons light in sequence, and a comet with a short tail travels the
- * line in step with the count-up (driven by the same eased progress). When it lands, the arrowhead pops to full ink.
+ * The link between the two figures: a perfectly horizontal line that spans the whole gap, from the edge of the
+ * current-spend number to the projected number, ending in an arrowhead that touches the projection.
+ * While the projection calculates, chevrons light in sequence and a comet travels the line in step with the count-up.
+ * Built in HTML (not a fixed-aspect SVG) so it stretches to any width without bending or scaling.
  */
-const W = 200, H = 24, CY0 = H / 2, CY1 = H / 2, CX0 = 6, CX1 = W - 16;
-const along = (t: number) => ({ x: CX0 + (CX1 - CX0) * t, y: CY0 + (CY1 - CY0) * t });
-const ANGLE = (Math.atan2(CY1 - CY0, CX1 - CX0) * 180) / Math.PI;
-const CHEVRONS = [0.28, 0.5, 0.72];
+const CHEVRONS = [0.25, 0.5, 0.75];
+
+function Chevron({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-1/2", className)} style={style} aria-hidden>
+      <path d="M2 1.5 L8 7 L2 12.5" fill="none" stroke="var(--foreground)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function Connector({ progress, calculating, landed, className }: { progress: number; calculating: boolean; landed: boolean; className?: string }) {
-  const head = along(Math.max(0, Math.min(1, progress)));
-  const tail = along(Math.max(0, progress - 0.22));
+  const t = Math.max(0, Math.min(1, progress));
+  const lit = landed ? 1 : calculating ? t : 0;
   return (
-    <div className={className} aria-hidden>
-      {/* Stretches to the column width; the line and arrow stay perfectly horizontal. */}
-      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="block overflow-visible">
-        <defs>
-          <linearGradient id="hero-comet-tail" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="var(--foreground)" stopOpacity="0" />
-            <stop offset="1" stopColor="var(--foreground)" stopOpacity="0.9" />
-          </linearGradient>
-        </defs>
-        <circle cx={CX0} cy={CY0} r={2.5} fill="var(--foreground)" fillOpacity={0.6} />
-        {/* Base line. */}
-        <line x1={CX0} y1={CY0} x2={CX1} y2={CY1} stroke="var(--foreground)" strokeOpacity={0.22} strokeWidth={1.25} strokeLinecap="round" />
-        {/* Lit portion behind the comet; it fills in as the calculation advances and stays lit once landed. */}
-        {(calculating || landed) && (
-          <line x1={CX0} y1={CY0} x2={landed ? CX1 : head.x} y2={landed ? CY1 : head.y} stroke="var(--foreground)" strokeOpacity={0.5} strokeWidth={1.25} strokeLinecap="round" />
-        )}
-        {/* Chevrons. */}
-        {CHEVRONS.map((t, i) => {
-          const c = along(t);
-          return (
-            <path
-              key={t} d="M-4,-5.5 L2,0 L-4,5.5" fill="none" stroke="var(--foreground)" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"
-              transform={`translate(${c.x} ${c.y}) rotate(${ANGLE})`}
-              className={cn(calculating && "animate-chevron")}
-              style={calculating ? { ["--rise-delay" as string]: `${i * 160}ms` } : { opacity: landed ? 0.6 : 0.22 }}
-            />
-          );
-        })}
-        {/* Comet with tail; appears once the calculation is actually moving. */}
-        {calculating && progress > 0 && (
-          <>
-            <line x1={tail.x} y1={tail.y} x2={head.x} y2={head.y} stroke="url(#hero-comet-tail)" strokeWidth={2.5} strokeLinecap="round" />
-            <circle cx={head.x} cy={head.y} r={4} fill="var(--foreground)" stroke="var(--card)" strokeWidth={2} />
-          </>
-        )}
-        {/* Arrowhead into the projected figure. */}
-        <polygon
-          key={landed ? "landed" : "pending"}
-          points={`${CX1 + 1},${CY1 - 6} ${CX1 + 11},${CY1} ${CX1 + 1},${CY1 + 6}`}
-          fill="var(--foreground)" className={cn(landed && "animate-land")} style={{ opacity: landed ? 1 : 0.25 }}
+    <div className={cn("relative h-6", className)} aria-hidden>
+      {/* Origin dot at the current number. */}
+      <span className="absolute top-1/2 left-0 size-1.5 -translate-y-1/2 rounded-full bg-foreground/60" />
+      {/* Track, stopping where the arrowhead begins. */}
+      <span className="absolute top-1/2 right-2.5 left-1 h-px -translate-y-1/2 bg-foreground/20" />
+      {/* Lit portion that fills in with the calculation and stays lit once landed. */}
+      <span className="absolute top-1/2 left-1 h-px -translate-y-1/2 bg-foreground/55" style={{ width: `calc((100% - 14px) * ${lit})` }} />
+      {/* Chevrons. */}
+      {CHEVRONS.map((c, i) => (
+        <Chevron
+          key={c}
+          className={cn(calculating && "animate-chevron")}
+          style={{ left: `${c * 100}%`, ...(calculating ? { ["--rise-delay" as string]: `${i * 160}ms` } : { opacity: landed ? 0.6 : 0.22 }) }}
         />
+      ))}
+      {/* Comet with a short fading tail. */}
+      {calculating && t > 0 && (
+        <span className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc((100% - 14px) * ${t})` }}>
+          <span className="absolute top-1/2 right-0 h-0.5 w-16 -translate-y-1/2 bg-gradient-to-r from-transparent to-foreground/90" />
+          <span className="absolute top-1/2 left-0 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-card" />
+        </span>
+      )}
+      {/* Arrowhead touching the projected number. */}
+      <svg key={landed ? "landed" : "pending"} width="11" height="12" viewBox="0 0 11 12" className={cn("absolute top-1/2 right-0 -translate-y-1/2", landed && "animate-land")} style={{ opacity: landed ? 1 : 0.3 }} aria-hidden>
+        <path d="M0 0 L11 6 L0 12 Z" fill="var(--foreground)" />
       </svg>
     </div>
   );
