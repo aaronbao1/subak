@@ -18,6 +18,8 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
 
 from __future__ import annotations
 
+import os
+
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -54,8 +56,9 @@ from app.services import signals as signal_svc
 from app.services import spending as spending_svc
 
 PREFIX = "/compat/api"
-COMPANY_ID = "northstar"
-COMPANY_NAME = "Northstar Software"  # the seeded demo company; the backend stores no company row
+# The backend stores no company row; the loaded dataset names it (datagen/demo.sh sets these for the Uber data).
+COMPANY_ID = os.environ.get("BACKEND_COMPANY_ID", "northstar")
+COMPANY_NAME = os.environ.get("BACKEND_COMPANY_NAME", "Northstar Software")
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
 MAX_MESSAGE = 4000
