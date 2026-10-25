@@ -1,48 +1,45 @@
 "use client";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SIGNAL_LABEL } from "@/components/person/signal-badges";
 import type { AffectedPerson } from "./derive";
+import { Initials } from "./marks";
 
-/** Everyone the filtered evidence names, with their team and the newest signal about them. Rows open the person page. */
+const LIMIT = 12;
+
+/** Everyone the filtered evidence names, as initials on their team color. Each opens the person page; the latest signal is in the tooltip. */
 export function PeopleAffected({ people }: { people: AffectedPerson[] }) {
+  const [all, setAll] = useState(false);
+  if (people.length === 0) return null;
+  const shown = all ? people : people.slice(0, LIMIT);
+  const more = people.length - shown.length;
+
   return (
-    <section aria-labelledby="people-heading" className="rounded-xl border border-border bg-card">
-      <header className="px-5 pt-5 pb-3">
-        <h2 id="people-heading" className="text-base font-medium">People affected</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Individuals named in the evidence shown, with the latest signal about each.</p>
-      </header>
-      {people.length === 0 ? (
-        <div className="border-t border-border px-5 py-6">
-          <div className="eyebrow">No one named</div>
-          <p className="mt-1.5 text-sm text-muted-foreground">The evidence shown is about teams or the company, not individuals.</p>
-        </div>
-      ) : (
-        <ul className="divide-y divide-border border-t border-border">
-          {people.map(({ person, team, item, more }) => (
+    <section aria-labelledby="people-heading" className="rounded-xl border border-border bg-card px-5 py-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="people-heading" className="text-sm font-medium">People affected</h2>
+        <span className="num text-xs text-muted-foreground">{people.length}</span>
+      </div>
+      <ul className="mt-3 flex flex-wrap items-center gap-1.5">
+        {shown.map(({ person, team, item, more: extra }) => {
+          const label = `${person.name}${team ? ` · ${team.name}` : ""} · ${item.signal ? SIGNAL_LABEL[item.signal] : item.title}${item.supersededBy ? " (superseded)" : ""}${extra > 0 ? ` +${extra}` : ""}`;
+          return (
             <li key={person.id}>
-              <Link
-                href={`/teams/${person.teamId}/people/${person.id}`}
-                className="group flex items-center gap-3 px-5 py-2.5 transition-colors duration-300 hover:bg-popover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
-              >
-                <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: team?.color ?? "var(--border-strong)" }} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-2">
-                    <span className="truncate text-sm">{person.name}</span>
-                    {team && <span className="truncate text-xs text-muted-foreground">{team.name}</span>}
-                  </span>
-                  <span className={cn("mt-0.5 block truncate text-xs", item.supersededBy ? "text-muted-foreground line-through" : "text-foreground/80")}>
-                    {item.signal ? SIGNAL_LABEL[item.signal] : item.title}
-                    {more > 0 && <span className="num text-muted-foreground no-underline"> +{more}</span>}
-                  </span>
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors duration-300 group-hover:text-foreground" aria-hidden strokeWidth={1.5} />
+              <Link href={`/teams/${person.teamId}/people/${person.id}`} title={label} aria-label={label} className="block rounded-full transition-opacity duration-300 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                <Initials person={person} team={team} className={cn("size-7", item.supersededBy && "opacity-70")} />
               </Link>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+        {more > 0 && (
+          <li>
+            <button type="button" onClick={() => setAll(true)} className="num flex size-7 items-center justify-center rounded-full bg-popover text-[10px] text-muted-foreground transition-colors duration-300 hover:text-foreground">
+              +{more}
+            </button>
+          </li>
+        )}
+      </ul>
     </section>
   );
 }

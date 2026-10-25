@@ -12,7 +12,7 @@ import { isWeekend, WEEKEND_PATTERN_ID } from "@/components/shared/components";
 import { useMounted, usePrefersReducedMotion } from "@/components/shared/motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { COMPONENT_COLOR, COMPONENT_LABEL, COMPONENT_ORDER, fmtDate, ProvenanceBadge } from "./labels";
+import { COMPONENT_COLOR, COMPONENT_LABEL, COMPONENT_ORDER, fmtDate, PROVENANCE_LABEL, ProvenanceBadge } from "./labels";
 import { riseAt } from "./count-up";
 
 interface Props {
@@ -154,22 +154,27 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
         <div>
           <h2 id="spend-heading" className="text-base font-medium">Daily spend</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            <span className="num">{fmtDate(days[0].date)} – {fmtDate(days[days.length - 1].date, { year: true })}</span> · stacked by cost component · select a recorded day for its breakdown
+            <span className="num">{fmtDate(days[0].date)} – {fmtDate(days[days.length - 1].date, { year: true })}</span>
           </p>
         </div>
-        {/* Legend: square swatch per component, with a provenance chip where it varies */}
+        {/* Legend: square swatch per component; provenance and notes live in the swatch's tooltip */}
         <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end" aria-label="Legend">
           {COMPONENT_ORDER.map((c) => (
-            <li key={c} className="inline-flex items-center gap-2" title={COMPONENT_NOTE[c]}>
+            <li key={c} className="inline-flex items-center gap-2" title={legendTitle(c, legendProvenance.get(c))}>
               <span aria-hidden className={cn("size-2 rounded-[2px]", isInformational(c) && "border border-dashed border-muted-foreground")} style={{ background: COMPONENT_COLOR[c] }} />
               <span>{COMPONENT_LABEL[c]}</span>
-              {[...(legendProvenance.get(c) ?? [])].map((p) => <ProvenanceBadge key={p} provenance={p} />)}
             </li>
           ))}
           {projectedCount > 0 && (
             <li className="inline-flex items-center gap-2" title="Day-by-day projection from the forecast; nothing recorded yet">
               <span aria-hidden className="size-2 rounded-[2px] border border-dashed border-muted-foreground" />
               <span>Projected</span>
+            </li>
+          )}
+          {partialDays.length > 0 && (
+            <li className="inline-flex items-center gap-2" title={`Source incomplete: ${partialDays.map((d) => fmtDate(d.date)).join(", ")}`}>
+              <span aria-hidden className="size-2 rounded-[2px] bg-muted-foreground/50" />
+              <span>Partial</span>
             </li>
           )}
           {weekendDays.length > 0 && (
@@ -247,7 +252,7 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
               >
                 {days.map((d) => {
                   const dimmed = !!selected && selected !== d.date;
-                  // Partial days are recorded but known incomplete: a lighter fill, named in the footnote and tooltip.
+                  // Partial days are recorded but known incomplete: a lighter fill, named in the legend and tooltip.
                   const base = d.complete ? 1 : 0.5;
                   return <Cell key={d.date} fillOpacity={dimmed ? base * 0.35 : base} />;
                 })}
@@ -288,10 +293,8 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
                 onClick={() => toggle(d.date)}
                 title={d.complete ? fmtDate(d.date, { year: true }) : `${fmtDate(d.date, { year: true })} · partial day`}
                 className={cn(
-                  "num h-7 shrink-0 rounded-md border px-2 text-xs whitespace-nowrap transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  active
-                    ? "border-border-strong bg-brand-soft text-foreground"
-                    : "border-border bg-popover text-muted-foreground hover:border-border-strong hover:text-foreground",
+                  "num h-6 shrink-0 rounded-md px-1.5 text-[11px] whitespace-nowrap transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active ? "bg-brand-soft text-foreground" : "text-muted-foreground hover:bg-popover hover:text-foreground",
                 )}
               >
                 {fmtDate(d.date)}{!d.complete && <span aria-hidden className="ml-1 font-sans text-muted-foreground">·</span>}
@@ -301,35 +304,18 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
         </div>
       </div>
 
-      <div className="space-y-2 p-5 pt-3">
-        {projectedCount > 0 && (
-          <p className="flex items-start gap-2 text-xs text-muted-foreground">
-            <span aria-hidden className="mt-[3px] inline-block size-2.5 shrink-0 rounded-[2px] border border-dashed border-muted-foreground" />
-            <span>
-              Dashed segments are projected, not recorded: the rest of a partial day, then{" "}
-              <span className="num">{days.filter((d) => d.projected).map((d) => fmtDate(d.date)).join(", ")}</span>.
-            </span>
-          </p>
-        )}
-        {partialDays.length > 0 && (
-          <p className="flex items-start gap-2 text-xs text-muted-foreground">
-            <span aria-hidden className="mt-[3px] inline-block size-2.5 shrink-0 rounded-[2px] bg-muted-foreground/50" />
-            <span>
-              Partial days are lighter and marked with a dot: the source is known to be incomplete for{" "}
-              <span className="num">{partialDays.map((d) => fmtDate(d.date)).join(", ")}</span>.
-            </span>
-          </p>
-        )}
-        {weekendDays.length > 0 && (
-          <p className="text-xs text-muted-foreground">Hatched columns are Saturdays and Sundays; usage is usually lower than Monday to Friday.</p>
-        )}
-
+      <div className="p-5 pt-2">
         {selectedDay && (
           <DayBreakdown day={selectedDay} records={selectedRecords} unit={unit} onClose={() => setSelected(undefined)} />
         )}
       </div>
     </section>
   );
+}
+
+function legendTitle(c: CostComponent, provenance?: Set<Provenance>) {
+  const parts = [COMPONENT_NOTE[c], provenance?.size ? [...provenance].map((p) => PROVENANCE_LABEL[p]).join(", ") : undefined].filter(Boolean);
+  return parts.length ? parts.join(" · ") : undefined;
 }
 
 /**

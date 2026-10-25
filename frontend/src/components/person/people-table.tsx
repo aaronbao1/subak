@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/components/shared/motion";
 import { riseAt, rowStep } from "@/components/team/count-up";
+import { DeltaChip, ShareMeter, Sparkline } from "@/components/team/viz";
 import { SignalChip } from "./signal-badges";
 import type { PersonSummary } from "./derive";
 
@@ -18,7 +19,7 @@ interface Props {
   enterAt?: number;
 }
 
-/** Everyone on the team: spend to date, projection, share of the team number, week-over-week change and the signals behind it. */
+/** Everyone on the team: spend, projection, share as a meter, a 14-day sparkline with the weekly delta, and the top signal. */
 export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
   const mounted = useMounted();
   const rise = mounted ? "animate-rise" : "opacity-0";
@@ -33,17 +34,16 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
   return (
     <section className="space-y-3" aria-labelledby="people-heading">
       <div className={rise} style={riseAt(enterAt)}>
-        <h2 id="people-heading" className="text-base font-medium">People</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {rows.length} {rows.length === 1 ? "person" : "people"} currently on {team.name}. Shared spend and historical team changes can make these person totals differ from the team total.
-        </p>
+        <h2 id="people-heading" className="text-base font-medium">
+          People {rows.length > 0 && <span className="num ml-1 text-sm font-normal text-muted-foreground">{rows.length}</span>}
+        </h2>
       </div>
 
       {rows.length === 0 ? (
         <div className={cn("flex flex-col items-center gap-2 rounded-xl border border-border py-16 text-center", rise)} style={riseAt(enterAt)}>
           <Users className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
           <div className="eyebrow">No people attributed yet</div>
-          <p className="max-w-sm text-sm text-muted-foreground">Usage is recorded at team level until the backend maps seats and API keys to people.</p>
+          <p className="max-w-sm text-sm text-muted-foreground">Usage stays at team level until seats map to people.</p>
         </div>
       ) : (
         <>
@@ -52,11 +52,11 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Person</TableHead>
-                  <TableHead className="text-right">Spent to date</TableHead>
+                  <TableHead className="text-right">Spent</TableHead>
                   <TableHead className="text-right">Projection</TableHead>
-                  <TableHead className="text-right">Share</TableHead>
-                  <TableHead className="text-right">vs last week</TableHead>
-                  <TableHead>Signals</TableHead>
+                  <TableHead className="text-right" title="Share of the team's projected total">Share</TableHead>
+                  <TableHead className="text-right" title="Daily spend, last 14 days; change is this week vs last week">Trend</TableHead>
+                  <TableHead>Signal</TableHead>
                   <TableHead className="w-12"><span className="sr-only">Open</span></TableHead>
                 </TableRow>
               </TableHeader>
@@ -66,22 +66,25 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
                     <TableCell>
                       <Link
                         href={`/teams/${team.id}/people/${r.person.id}`}
-                        className="block min-w-0 outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
+                        title={[r.person.role, r.person.primaryTool].filter(Boolean).join(" · ") || undefined}
+                        className="block min-w-0 truncate font-medium outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
                       >
-                        <div className="truncate font-medium">{r.person.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">{r.person.role ?? "—"}{r.person.primaryTool ? ` · ${r.person.primaryTool}` : ""}</div>
+                        {r.person.name}
                       </Link>
                     </TableCell>
                     <TableCell className="num text-right">{formatAmount(r.spent, unit)}</TableCell>
                     <TableCell className="num text-right">
                       {r.projected != null ? formatAmount(r.projected, unit) : <span className="font-sans text-muted-foreground">No projection</span>}
                     </TableCell>
-                    <TableCell className="num text-right text-muted-foreground">{r.share != null ? formatPct(r.share * 100) : "—"}</TableCell>
-                    <TableCell className="text-right"><WeekChange value={r.weekChange} /></TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {r.signals.length === 0 ? <span className="text-xs text-muted-foreground">No change signalled</span> : r.signals.slice(0, 2).map((s) => <SignalChip key={s.id} item={s} />)}
-                      </div>
+                    <TableCell className="text-right"><ShareMeter share={r.share} color={team.color} grow={mounted} delay={enterAt + i * step} className="w-full" /></TableCell>
+                    <TableCell className="text-right">
+                      <span className="inline-flex items-center justify-end gap-3">
+                        <Sparkline values={r.recentDaily ?? []} partialLast={r.recentPartial} className="text-muted-foreground" />
+                        <DeltaChip value={r.weekChange} className="w-12 justify-end" />
+                      </span>
+                    </TableCell>
+                    <TableCell className="max-w-48">
+                      {r.signals.length === 0 ? <span className="text-xs text-muted-foreground">—</span> : <SignalChip item={r.signals[0]} />}
                     </TableCell>
                     <TableCell className="pr-4">
                       <ChevronRight className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
@@ -91,12 +94,12 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
               </TableBody>
               <TableFooter>
                 <TableRow className={cn("hover:bg-transparent", rise)} style={rowAt(rows.length - 1)}>
-                  <TableCell className="text-xs">Attributed people subtotal</TableCell>
+                  <TableCell className="text-xs" title="Shared spend and past team changes can make this differ from the team total">Attributed subtotal</TableCell>
                   <TableCell className="num text-right text-xs">{formatAmount(totalSpent, unit)}</TableCell>
                   <TableCell className="num text-right text-xs">
                     {totalProjected != null ? formatAmount(totalProjected, unit) : <span className="text-muted-foreground">—</span>}
                     {withProjection.length < rows.length && totalProjected != null && (
-                      <span className="ml-1.5 font-sans font-normal text-muted-foreground">{withProjection.length} with a projection</span>
+                      <span className="ml-1.5 font-sans font-normal text-muted-foreground" title="People with a projection">{withProjection.length}/{rows.length}</span>
                     )}
                   </TableCell>
                   <TableCell className="num text-right text-xs text-muted-foreground">{totalShare != null ? formatPct(totalShare * 100) : "—"}</TableCell>
@@ -114,19 +117,22 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
                   href={`/teams/${team.id}/people/${r.person.id}`}
                   className="block rounded-xl border border-border bg-card p-4 outline-none transition-colors duration-300 hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{r.person.name}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{r.person.role ?? "—"}</div>
-                    </div>
-                    <WeekChange value={r.weekChange} className="text-sm" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 truncate text-sm font-medium">{r.person.name}</div>
+                    <span className="inline-flex items-center gap-2">
+                      <Sparkline values={r.recentDaily ?? []} partialLast={r.recentPartial} className="text-muted-foreground" />
+                      <DeltaChip value={r.weekChange} className="text-sm" />
+                    </span>
                   </div>
-                  <dl className="mt-4 grid grid-cols-3 gap-3">
-                    <Stat label="Spent" value={formatAmount(r.spent, unit)} />
-                    <Stat label="Projection" value={r.projected != null ? formatAmount(r.projected, unit) : "None"} muted={r.projected == null} />
-                    <Stat label="Share" value={r.share != null ? formatPct(r.share * 100) : "—"} muted={r.share == null} />
-                  </dl>
-                  {r.signals.length > 0 && <div className="mt-3 flex flex-wrap gap-1">{r.signals.slice(0, 2).map((s) => <SignalChip key={s.id} item={s} />)}</div>}
+                  <div className="mt-3 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                    <span>Spent <span className="num text-foreground">{formatAmount(r.spent, unit)}</span></span>
+                    <span>Projected <span className={cn("num", r.projected != null ? "text-foreground" : "")}>{r.projected != null ? formatAmount(r.projected, unit) : "none"}</span></span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">Share</span>
+                    <ShareMeter share={r.share} color={team.color} />
+                  </div>
+                  {r.signals.length > 0 && <div className="mt-3"><SignalChip item={r.signals[0]} /></div>}
                 </Link>
               </li>
             ))}
@@ -134,25 +140,5 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
         </>
       )}
     </section>
-  );
-}
-
-/** Week-over-week change in average daily spend. A rise past 15% reads in --warning; a fall is muted; the rest is plain ink. */
-export function WeekChange({ value, className }: { value?: number; className?: string }) {
-  if (value === undefined) return <span className={cn("text-muted-foreground", className)}>—</span>;
-  const pctText = `${value > 0 ? "+" : ""}${Math.round(value * 100)}%`;
-  return (
-    <span className={cn("num", value > 0.15 ? "text-warning" : value < -0.15 ? "text-muted-foreground" : "text-foreground/80", className)} title="Average daily spend on complete days this week vs last week">
-      {pctText}
-    </span>
-  );
-}
-
-function Stat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="eyebrow">{label}</dt>
-      <dd className={cn("num mt-1 truncate text-sm", muted && "text-muted-foreground")}>{value}</dd>
-    </div>
   );
 }

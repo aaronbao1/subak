@@ -16,6 +16,10 @@ export interface PersonSummary {
   /** Average daily spend on complete days this week relative to last week's daily average; e.g. -0.32. */
   weekChange?: number;
   trend: Trend;
+  /** Daily totals for the most recent (up to 14) recorded days, oldest first, for a sparkline. */
+  recentDaily?: number[];
+  /** True when the newest day in `recentDaily` is known incomplete. */
+  recentPartial?: boolean;
   /** Connector signals about this person (scope "person"), newest first, superseded last. */
   signals: ContextItem[];
 }
@@ -78,6 +82,15 @@ export function summarizePeople(
       && forecast?.unit === teamForecast?.unit
       && forecast?.period.start === teamForecast?.period.start && forecast?.period.end === teamForecast?.period.end;
     const weekChange = weekOverWeek(ownHistory, period);
+    const byDay = new Map<string, { total: number; complete: boolean }>();
+    for (const r of ownHistory) {
+      if (r.date > period.end) continue;
+      const d = byDay.get(r.date) ?? { total: 0, complete: true };
+      d.total += r.amount;
+      if (!r.complete) d.complete = false;
+      byDay.set(r.date, d);
+    }
+    const recentDates = [...byDay.keys()].sort().slice(-14);
     const trend: Trend = weekChange === undefined ? "unknown" : weekChange > 0.15 ? "up" : weekChange < -0.15 ? "down" : "flat";
     const signals = context
       .filter((c) => c.scope === "person" && c.personIds?.includes(person.id))
@@ -88,6 +101,8 @@ export function summarizePeople(
       high: available ? forecast!.high : undefined,
       share: available && comparable && teamProjected !== undefined && teamProjected > 0 ? (projected as number) / teamProjected : undefined,
       weekChange, trend, signals,
+      recentDaily: recentDates.map((d) => byDay.get(d)!.total),
+      recentPartial: recentDates.length > 0 && !byDay.get(recentDates[recentDates.length - 1])!.complete,
     };
   });
 }

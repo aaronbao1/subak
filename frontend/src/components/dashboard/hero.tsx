@@ -1,6 +1,7 @@
 "use client";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
+import { Info } from "lucide-react";
 import type { Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StatTone } from "@/components/shared/stat-tile";
@@ -16,8 +17,7 @@ import { dateLabel, type TeamSummary } from "./derive";
  *                 the "97% of $206,000 allotted" caption counts alongside it
  *   1400 → 2400   projected counts from the current spend to the projection while the dashed segment
  *                 extends from the recorded end with a pulsing marker; an overrun appears once the marker
- *                 passes the Allotted mark; the bar caption reads "Calculating projection…"
- *   2400          caption switches to "Projected 91% of the allotment"
+ *                 passes the Allotted mark; "updating" pulses beside the projected label
  * Later changes (an applied proposal) tick the numbers in place and re-grow only the segment whose value moved.
  */
 const COUNT_MS = 900;
@@ -66,7 +66,9 @@ export function Hero(p: HeroProps) {
   const spentTone: StatTone = envelope === undefined ? "neutral" : p.spent > envelope ? "over" : p.spent >= envelope * 0.9 ? "close" : "neutral";
   const projectedTone: StatTone = envelope === undefined || projected === undefined ? "neutral" : projected > envelope ? "over" : "under";
   const likelyOver = (p.summaries ?? []).filter((s) => teamStatus(s.budget, s.forecast, s.spent) === "likely_over").map((s) => s.team.name);
-  const excluded = p.projectionCoverageNote ?? (p.unavailableCount > 0 ? excludedSentence(p.unavailableCount, p.unavailableTeams ?? []) : undefined);
+  // Coverage detail lives in a tooltip; the resting state shows only a short count.
+  const excluded = p.unavailableCount > 0 ? excludedSentence(p.unavailableCount, p.unavailableTeams ?? []) : undefined;
+  const coverageTitle = p.projectionCoverageNote ?? excluded;
 
   // The first projection is derived from the current spend (delayed count from spent); once it has changed, later values tick in place.
   const [initialProjected] = useState(projected);
@@ -97,19 +99,14 @@ export function Hero(p: HeroProps) {
   const mounted = useMounted();
   const calculating = mounted && !reduce && projected !== undefined && calc < 1;
 
-  const projectionCaption = over !== undefined
-    ? isOver ? `Projected ${formatAmount(over, p.unit)} over the allotment` : `Projected ${formatPct(pct(projected as number, envelope as number))} of the allotment`
-    : "No projection to compare";
-
   return (
     <section aria-label="Company spend summary" className="min-w-0 rounded-xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="eyebrow">Company spend</span>
-        <span className="truncate text-xs text-muted-foreground" title={p.periodRange}>
-          {p.periodLabel ?? "Period not set"}
-          {p.periodRange && <span className="num hidden sm:inline"> · {p.periodRange}</span>}
+        <span className="num truncate text-xs text-muted-foreground" title={p.periodRange}>
+          {p.periodLabel ?? "Period not set"} · {p.asOf ? `as of ${dateLabel(p.asOf)}` : "no complete day yet"}
         </span>
-        <span className="num text-xs text-muted-foreground" title={p.asOf}>{p.asOf ? `as of ${dateLabel(p.asOf)}` : "no complete day yet"}</span>      </div>
+      </div>
 
       {/*
         Two figures on one shared number line. Rows: labels, numbers, captions. Both numbers are vertically
@@ -133,14 +130,20 @@ export function Hero(p: HeroProps) {
           <>
             <Connector progress={calc} calculating={calculating} landed={mounted && calc >= 1} direction={direction} className="hidden sm:col-start-2 sm:row-start-2 sm:block sm:self-center" />
             <span className={cn("num hidden text-center text-[11px] sm:col-start-2 sm:row-start-3 sm:block", DIRECTION_TEXT[direction])} aria-live="polite">
-              {direction === "neutral" ? "from current spend" : `${direction === "up" ? "▲" : "▼"} ${formatAmount(Math.abs(lastDelta), p.unit)} since last update`}
+              {direction === "neutral" ? "\u00a0" : `${direction === "up" ? "▲" : "▼"} ${formatAmount(Math.abs(lastDelta), p.unit)} since last update`}
             </span>
           </>
         )}
 
         {/* Projection */}
         <span className="mt-3 inline-flex items-center gap-1.5 sm:col-start-3 sm:row-start-1 sm:mt-0 sm:self-end">
-          <span className="eyebrow">Projected for period</span>
+          <span className="eyebrow" title={coverageTitle}>Projected for period</span>
+          {p.projectionCoverageNote && (
+            <button type="button" aria-label="About this projection" title={p.projectionCoverageNote} className="inline-flex rounded-sm text-muted-foreground transition-colors duration-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Info className="size-3.5" strokeWidth={1.5} aria-hidden />
+              <span className="sr-only">{p.projectionCoverageNote}</span>
+            </button>
+          )}
           {/* Always laid out so the column width (and the arrow's end) never shifts; only visible while calculating. */}
           <span className={cn("inline-flex items-center gap-1.5 transition-opacity duration-300", calculating ? "opacity-100" : "opacity-0")} aria-hidden={!calculating}>
             <span className={cn("size-1.5 rounded-full bg-foreground", calculating && "animate-pulse-dot")} />
@@ -152,39 +155,35 @@ export function Hero(p: HeroProps) {
         </span>
         {over !== undefined && (
           <Caption tone={projectedTone} className={cn("transition-opacity duration-300 sm:col-start-3 sm:row-start-3", calculating && "opacity-0")}>
-            <span className="num">{isOver ? `+${formatAmount(over, p.unit)} over allotment` : `${formatAmount(-over, p.unit)} under allotment`}</span>
+            <span className="num">{isOver ? `▲ ${formatAmount(over, p.unit)} over allotment` : `${formatAmount(-over, p.unit)} under · ${formatPct(pct(projected as number, envelope as number))} of allotment`}</span>
           </Caption>
         )}
       </div>
 
       {hasEnvelope && (
-        <>
-          <EnvelopeBar spent={p.spent} projected={projected} envelope={envelope as number} progress={calc} calculating={calculating} />
-          <p className="num mt-2 min-h-4 text-[11px] text-muted-foreground" aria-live="polite">
-            {!mounted ? "" : calculating ? "Calculating projection…" : projectionCaption}
-          </p>
-        </>
+        <EnvelopeBar spent={p.spent} projected={projected} envelope={envelope as number} unit={p.unit} progress={calc} calculating={calculating} />
       )}
 
-      {/* One caption row: the teams likely over (and any excluded) on the left, the way to the evidence on the right. */}
-      <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {(likelyOver.length > 0 || excluded) && (
-          <p className="min-w-0">
-            {likelyOver.length > 0 && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-1.5 shrink-0 rounded-full bg-destructive" aria-hidden />
-                {likelyOverSentence(likelyOver)}
-              </span>
-            )}
-            {likelyOver.length > 0 && excluded && " · "}
-            {excluded}
-          </p>
+      {/* One quiet row: teams likely over and teams without a projection as short counts (names on hover), then the evidence link. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {likelyOver.length > 0 && (
+          <span className="inline-flex min-w-0 items-center gap-1.5" title={likelyOver.join(", ")}>
+            <span className="size-1.5 shrink-0 rounded-full bg-destructive" aria-hidden />
+            <span className="truncate">{likelyOverSentence(likelyOver)}</span>
+          </span>
+        )}
+        {p.unavailableCount > 0 && (
+          <span className="inline-flex items-center gap-1.5" title={excluded}>
+            <span className="size-1.5 shrink-0 rounded-full border border-muted-foreground" aria-hidden />
+            <span className="num">{p.unavailableCount} not projected</span>
+            <span className="sr-only">{excluded}</span>
+          </span>
         )}
         <Link
           href="/evidence"
-          className="ml-auto shrink-0 underline underline-offset-4 decoration-border-strong transition-colors duration-300 hover:text-foreground hover:decoration-foreground"
+          className="ml-auto shrink-0 transition-colors duration-300 hover:text-foreground"
         >
-          See the evidence behind the projection →
+          Evidence →
         </Link>
       </div>
     </section>
@@ -279,7 +278,7 @@ function Reserved({ final, children }: { final: string; children: ReactNode }) {
  * `progress` (0..1) moves the leading edge of the projection from the recorded end to the projected end;
  * a pulsing dot rides that edge while `calculating`. The overrun segment only exists once the edge is past the marker.
  */
-function EnvelopeBar({ spent, projected, envelope, progress, calculating }: { spent: number; projected?: number; envelope: number; progress: number; calculating: boolean }) {
+function EnvelopeBar({ spent, projected, envelope, unit, progress, calculating }: { spent: number; projected?: number; envelope: number; unit: Unit; progress: number; calculating: boolean }) {
   const scaleMax = Math.max(envelope, spent, projected ?? 0);
   const w = (v: number) => `${Math.max(0, Math.min(100, (v / scaleMax) * 100))}%`;
   const projectionEnd = projected !== undefined ? Math.max(projected, spent) : spent;
@@ -290,9 +289,10 @@ function EnvelopeBar({ spent, projected, envelope, progress, calculating }: { sp
   const labelLeft = envelope / scaleMax < 0.85;
   // Envelope changes (an applied proposal) slide the marker and rescale the segments; the calculation itself is driven per frame, so it must not be smoothed.
   const slide = cn(!calculating && "transition-[left,width] duration-300");
+  const summary = `Spent ${formatAmount(spent, unit)}${projected !== undefined ? `, projected ${formatAmount(projected, unit)}` : ""}, allotted ${formatAmount(envelope, unit)}`;
 
   return (
-    <div className="relative mt-5 w-full" role="img" aria-label="Spent and projected against the total allocation">
+    <div className="relative mt-5 w-full" role="img" aria-label={summary} title={summary}>
       <div className="relative h-4 font-mono text-[11px] text-muted-foreground" aria-hidden>
         <span className={cn("absolute top-0 whitespace-nowrap leading-4", labelLeft ? "translate-x-1.5" : "-translate-x-full", slide)} style={{ left: w(envelope) }}>Allotted</span>
       </div>

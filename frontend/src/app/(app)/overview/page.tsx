@@ -43,7 +43,7 @@ export default function OverviewPage() {
     ? summaries.reduce((s, t) => s + (typeof t.projected === "number" ? t.projected : t.spent), 0)
     : undefined;
   const issuedCompany = scopeView(forecastBundle, "company");
-  const projected = companyQuarterProjection(forecastBundle, legacyProjected);
+  const projected = companyQuarterProjection(forecastBundle, legacyProjected, period);
   const unavailableCount = teams.length - withProjection.length;
   const unavailableTeams = useMemo(() => summaries.filter((s) => typeof s.projected !== "number").map((s) => s.team.name), [summaries]);
   const hasPlaceholder = forecasts.some((f) => f.origin === "placeholder");
@@ -68,7 +68,6 @@ export default function OverviewPage() {
 
   return (
     <div className="min-w-0 space-y-6">
-      <ForecastPanel />
       <div {...enter(0)}>
         <Hero
           unit={unit} spent={spent} envelope={envelope} projected={projected}
@@ -108,15 +107,20 @@ export default function OverviewPage() {
             <RecentEvidence items={context} teams={teams} people={people} />
           </div>
 
+          {/* Cost mix and API mix side by side; cost components take the full row when there is no API spend. */}
           <div {...enter(3)}>
-            <CostComponents spending={spending} unit={unit} />
-          </div>
-
-          <div {...enter(4)}>
-            <ModelBreakdown spending={spending} unit={unit} />
+            <div className="grid gap-6 lg:grid-cols-2 lg:[&>*:only-child]:col-span-2">
+              <CostComponents spending={spending} unit={unit} />
+              <ModelBreakdown spending={spending} unit={unit} />
+            </div>
           </div>
         </>
       )}
+
+      {/* The published forecast sits below the overview's glanceable summary; its internals belong to the forecast lane. */}
+      <div {...enter(4)}>
+        <ForecastPanel embedded />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import { Fragment, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileSearch, History, MessageSquare, Info } from "lucide-react";
+import { LayoutDashboard, Users, FileSearch, History, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -45,7 +45,7 @@ function useCrumbs(pathname: string): Crumb[] {
 
 /**
  * Product chrome as one top bar: brand, the four sections as tabs with the brand rule under the active one,
- * then the period, the unit and the assistant. A second slim row carries the breadcrumb only
+ * then the unit and the assistant. A second slim row carries the breadcrumb only
  * when the route is deeper than a section, so the overview keeps its full height.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -92,34 +92,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-14 items-center gap-4 px-4 md:gap-6 md:px-6">
           <Link href="/" aria-label="About AI Spend Planner" className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-4 focus-visible:ring-ring">
             <BrandMark />
-            <span className="hidden min-w-0 leading-tight lg:block">
-              <span className="block truncate text-[15px] font-medium text-foreground">AI Spend Planner</span>
-              <span className="block truncate text-xs text-muted-foreground">{company?.name ?? "Loading…"}</span>
-            </span>
+            <span className="hidden truncate text-[15px] font-medium text-foreground lg:block" title={company?.name}>AI Spend Planner</span>
           </Link>
 
           {tabs("hidden h-14 items-center md:flex")}
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-            <span className="num hidden truncate text-xs text-muted-foreground xl:inline">{company?.currentPeriod.label ?? "—"}</span>
-            <div className="hidden items-center gap-1 sm:flex">
-              <Badge className="num">{unitLabel}</Badge>
-              <Tooltip>
-                <TooltipTrigger
-                  aria-label="About these amounts"
-                  className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-300 outline-none hover:text-foreground focus-visible:ring-4 focus-visible:ring-ring"
-                >
-                  <Info strokeWidth={1.5} className="size-4" />
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Internal allocations in {unitLabel} — planning records, not provider limits or purchases.
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <Tooltip>
+              <TooltipTrigger
+                aria-label={`Unit: ${unitLabel}. Internal allocations in ${unitLabel}, not provider limits`}
+                className="hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:inline-flex"
+              >
+                <Badge className="num">{unitLabel}</Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                Internal allocations in {unitLabel}, not provider limits{company ? ` · ${company.currentPeriod.label}` : ""}
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant={assistantOpen ? "secondary" : "brand"}
               size="lg"
@@ -133,13 +126,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Narrow screens: tabs scroll in their own row. */}
-        <div className="border-t border-border md:hidden">
+        <div className="border-t border-border/70 md:hidden">
           {tabs("flex items-center overflow-x-auto px-1")}
         </div>
       </header>
 
       {showCrumbs && (
-        <nav aria-label="Breadcrumb" className="flex h-10 items-center gap-1.5 border-b border-border px-4 text-sm text-muted-foreground md:px-6">
+        <nav aria-label="Breadcrumb" className="flex h-10 items-center gap-1.5 border-b border-border/70 px-4 text-sm text-muted-foreground md:px-6">
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
             return (

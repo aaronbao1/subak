@@ -220,7 +220,6 @@ export function TeamListMock() {
           ))}
         </ul>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Team figures are the sum of each team&rsquo;s people. One day is incomplete and marked.</p>
     </div>
   );
 }

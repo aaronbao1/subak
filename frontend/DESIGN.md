@@ -36,3 +36,29 @@ One vocabulary, in `src/components/shared/motion.ts` and `globals.css`. No motio
 - **Calculating:** the projection reads as derived from the current: the bar extends from the recorded end to the projected end with a pulsing marker while the number counts from the current value to the projected one.
 - Reduced motion: hooks return the end state; the global `prefers-reduced-motion` rule zeroes CSS durations.
 - Budget: one entrance sequence per page load, ≤1.2s total; no loops except the calculating pulse while it runs; no hover lift.
+
+## Quiet pass (Oct 25) — glanceable, subtle, visual
+The owner's direction: everything cleaner and more subtle, no fluff, numbers turned into visuals wherever possible, readable at a glance, not lost in detail. Every lane follows these rules.
+
+**Cut**
+- One-line descriptions under headings go unless the reader cannot use the section without them. Never explain what a chart already shows.
+- Footnotes and helper sentences ("Hatched days are weekends…", "Subscription, included usage… stay separate…") become a legend entry, a tooltip, or nothing.
+- No repeated facts: if the hero says it, the panel below doesn't.
+- Badges: at most one per row/card, only when it changes a decision (status). Provenance and claim-type chips move into tooltips or a details view.
+- Captions in muted text max one line. No sentence longer than ~12 words in the UI chrome.
+
+**Visualize**
+- A number that is a share of something → a thin meter or a stacked bar with the number beside it, not a sentence ("35% of billable" → 4px bar).
+- A list of amounts → bar list (label · bar · value), sorted, top N then "+N more".
+- A trend → a 24px sparkline next to the number, not a table of days.
+- Over/under against a limit → a bullet bar (track = allotment, fill = spent, tick = projected). Status color only on the overrun part.
+- Change between two values → a delta chip (▲ $1.2k) in status color, not a sentence.
+- Tables stay only where comparison across many rows needs exact values (Teams list). Even there, add an inline bar in the key column.
+
+**Quiet**
+- Fewer borders: one card border per section; inside, use spacing and a hairline only where two groups meet.
+- Muted by default: labels `text-muted-foreground`, values `text-foreground`, color only for status and team identity.
+- Progressive detail: hover/tooltip or click for the exact value, provenance, source. The resting state shows the shape.
+- Keep motion as is (entrance, count-up, beam). Don't add new animation.
+
+**Do not break:** product rules in CLAUDE.md (add ≠ redistribute labeled, units explicit, missing data shown as missing, superseded never cited, receipts). The straight hero connector, red/green beam, equal-size hero numbers, non-modal sheets, live refresh. Empty states must still look intentional with the live backend (no forecasts, no context yet).

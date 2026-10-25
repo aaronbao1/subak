@@ -1,4 +1,5 @@
-import { ArrowDownRight, ArrowUpRight, Building2, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { EFFECT_TEXT } from "@/components/shared/tone";
 import type { ContextItem, Integration, SignalKind } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 
@@ -44,18 +45,6 @@ export const SIGNAL_LABEL: Record<SignalKind, string> = {
 
 const EFFECT_ICON = { increase: ArrowUpRight, decrease: ArrowDownRight, neutral: Minus, unknown: Minus } as const;
 
-export function IntegrationChip({ integration, className }: { integration: Integration; className?: string }) {
-  return (
-    <span
-      title={`Source: ${INTEGRATION_LABEL[integration]}`}
-      className={cn("inline-flex h-6 items-center gap-1.5 rounded-md border border-border bg-popover px-2 text-xs font-medium whitespace-nowrap text-muted-foreground", className)}
-    >
-      <span aria-hidden className={cn("size-1.5 rounded-full", INTEGRATION_DOT[integration])} />
-      {INTEGRATION_LABEL[integration]}
-    </span>
-  );
-}
-
 /** One chip summarising a person signal: what it is, which way it moves spend, where it came from. */
 export function SignalChip({ item, className }: { item: ContextItem; className?: string }) {
   const Icon = EFFECT_ICON[item.expectedEffect];
@@ -70,17 +59,9 @@ export function SignalChip({ item, className }: { item: ContextItem; className?:
         className,
       )}
     >
-      <Icon aria-hidden strokeWidth={1.5} className={cn("size-3 shrink-0", item.expectedEffect === "increase" && "text-warning", item.expectedEffect === "decrease" && "text-muted-foreground")} />
+      <Icon aria-hidden strokeWidth={1.5} className={cn("size-3 shrink-0", EFFECT_TEXT[item.expectedEffect])} />
       <span className="truncate">{label}</span>
       {via && <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", INTEGRATION_DOT[via])} title={INTEGRATION_LABEL[via]} />}
-    </span>
-  );
-}
-
-export function CompanyWideChip({ className }: { className?: string }) {
-  return (
-    <span title="Applies to the whole company, not one person or team" className={cn("inline-flex h-6 items-center gap-1.5 rounded-md border border-border bg-popover px-2 text-xs font-medium whitespace-nowrap text-foreground/80", className)}>
-      <Building2 className="size-3 text-muted-foreground" aria-hidden strokeWidth={1.5} /> Company-wide
     </span>
   );
 }

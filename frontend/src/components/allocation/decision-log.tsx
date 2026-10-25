@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { AllocationProposal, Decision } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageTitle } from "@/components/shared/stat-tile";
-import { fmtDateTime } from "@/components/team/labels";
-import { AllocationLines, decisionTotals, Delta, KindBadge, kindLabel, ProposalStatusBadge, teamName } from "./proposal-bits";
+import { fmtDate, fmtDateTime } from "@/components/team/labels";
+import { AllocationTable, decisionTotals, DeltaChip, kindShort, MiniTotal, PairedBars, ProposalStatusBadge, Reveal, teamColor, teamName, TotalBar } from "./proposal-bits";
 import { ProposalReview } from "./proposal-review";
 
 /** /decisions: receipts newest first, plus proposals that still need attention. */
@@ -21,10 +22,9 @@ export function DecisionLog() {
       <div className="space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-7 w-28" />
-          <Skeleton className="h-4 w-72 max-w-full" />
         </div>
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
       </div>
     );
   }
@@ -33,7 +33,7 @@ export function DecisionLog() {
 
   return (
     <div className="space-y-8">
-      <PageTitle title="Decisions" description="Every applied or rejected allocation change, with what finance reviewed at the time." />
+      <PageTitle title="Decisions" />
 
       {attention.length > 0 && (
         <section className="space-y-3" aria-label="Needs attention">
@@ -52,9 +52,7 @@ export function DecisionLog() {
           <div className="flex flex-col items-center gap-3 rounded-xl border border-border px-6 py-16 text-center">
             <div className="space-y-1">
               <div className="eyebrow">No decisions yet</div>
-              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Ask the assistant for a proposal, review it, and apply or reject it. The receipt lands here.
-              </p>
+              <p className="text-sm text-muted-foreground">Applied proposals land here.</p>
             </div>
             <Button variant="outline" size="lg" onClick={() => setAssistantOpen(true)}>Ask the assistant</Button>
           </div>
@@ -93,18 +91,15 @@ function AttentionRow({ p, onOpen }: { p: AllocationProposal; onOpen: () => void
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4">
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <KindBadge kind={p.kind} />
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-3">
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ProposalStatusBadge status={dismissing ? "pending" : p.status} />
+          <span className="text-sm">{kindShort(p.kind)}</span>
+          <span className="num text-xs text-muted-foreground">{fmtDate(p.createdAt)}</span>
         </div>
-        <div className="text-sm leading-snug font-medium">{kindLabel(p)}</div>
-        <div className={cn("text-xs leading-snug text-muted-foreground", p.status === "failed" && "text-destructive")}>
-          {p.status === "proposed" && <>Prepared <span className="num">{fmtDateTime(p.createdAt)}</span>. Not saved until applied.</>}
-          {p.status === "stale" && "Budgets changed since this was prepared. Ask for a refreshed proposal or dismiss it."}
-          {p.status === "failed" && (p.failureReason ?? "Refused by the backend.")}
-        </div>
+        <TotalBar before={p.totalBefore} after={p.totalAfter} unit={p.unit} kind={p.kind} className="max-w-sm" />
+        {p.status === "failed" && <div className="text-xs text-destructive">{p.failureReason ?? "Refused by the backend."}</div>}
         {error && <div className="text-xs text-destructive">{error}</div>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -121,93 +116,88 @@ function AttentionRow({ p, onOpen }: { p: AllocationProposal; onOpen: () => void
   );
 }
 
+/** Compact receipt row: status dot, kind, date, total as a tiny bar, deltas as chips. Click for details. */
 function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof useAppStore.getState>["teams"] }) {
   const [open, setOpen] = useState(false);
   const applied = d.action === "applied";
   const { before, after } = decisionTotals(d);
-  const changed = d.lines.filter((l) => l.after !== l.before);
+  const changed = applied ? [...d.lines].filter((l) => l.after !== l.before).sort((a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before)) : [];
+  const chips = changed.slice(0, 3);
+  const projected = (teamId: string) => {
+    const f = d.forecastsReviewed?.find((x) => x.teamId === teamId);
+    return f?.status === "available" && typeof f.projected === "number" ? f.projected : undefined;
+  };
+  const unavailable = (d.forecastsReviewed ?? []).filter((f) => f.status !== "available" || typeof f.projected !== "number");
 
   return (
-    <article className="space-y-3 px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="eyebrow inline-flex items-center gap-1.5">
-              <span aria-hidden className={cn("size-1.5 rounded-full", applied ? "bg-success" : "bg-muted-foreground")} />
-              {applied ? "Applied" : "Rejected"}
-            </span>
-            <span className="num text-xs text-muted-foreground">{fmtDateTime(d.appliedAt)}</span>
-            <span aria-hidden className="text-xs text-muted-foreground">·</span>
-            <span className="text-xs text-muted-foreground">{d.appliedBy}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <KindBadge kind={d.kind} />
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="eyebrow">Total allocation</div>
-          {applied ? (
-            <div className="num mt-1 flex items-baseline justify-end gap-1.5 text-sm">
-              <span className="text-muted-foreground">{formatAmount(before, d.unit)}</span>
-              <span aria-hidden className="text-muted-foreground">→</span>
-              <span className="font-medium">{formatAmount(after, d.unit)}</span>
-            </div>
+    <article>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-5 py-3 text-left transition-colors duration-300 outline-none hover:bg-popover focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[auto_7rem_6.5rem_minmax(0,1fr)_auto]"
+      >
+        <span className="flex items-center gap-2" title={applied ? "Applied" : "Rejected"}>
+          <span aria-hidden className={cn("size-1.5 rounded-full", applied ? "bg-success" : "bg-muted-foreground")} />
+          <span className="sr-only">{applied ? "Applied" : "Rejected"}</span>
+          <ChevronRight aria-hidden strokeWidth={1.5} className={cn("size-4 text-muted-foreground transition-transform duration-150", open && "rotate-90")} />
+        </span>
+        <span className={cn("text-sm", !applied && "text-muted-foreground")}>{kindShort(d.kind)}</span>
+        <span className="num hidden text-xs text-muted-foreground sm:block">{fmtDate(d.appliedAt)}</span>
+        <span className="hidden min-w-0 flex-wrap items-center gap-1.5 sm:flex">
+          {!applied ? (
+            <span className="text-xs text-muted-foreground">Rejected</span>
+          ) : chips.length === 0 ? (
+            <span className="text-xs text-muted-foreground">No change</span>
           ) : (
-            <div className="mt-1 text-sm text-muted-foreground"><span className="num">{formatAmount(before, d.unit)}</span> <span className="text-xs">unchanged</span></div>
+            <>
+              {chips.map((l) => (
+                <span key={l.teamId} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <span aria-hidden className="size-1.5 rounded-full" style={{ background: teamColor(teams, l.teamId) }} />
+                  <span className="max-w-[7rem] truncate">{teamName(teams, l.teamId)}</span>
+                  <DeltaChip n={l.after - l.before} unit={d.unit} kind={d.kind} />
+                </span>
+              ))}
+              {changed.length > chips.length && <span className="num text-xs text-muted-foreground">+{changed.length - chips.length}</span>}
+            </>
           )}
-        </div>
-      </div>
+        </span>
+        <MiniTotal before={before} after={after} unit={d.unit} kind={d.kind} applied={applied} />
+      </button>
 
-      <p className={cn("text-sm leading-relaxed", !applied && "text-muted-foreground")}>
-        {applied ? (
-          changed.length ? (
-            changed.map((l, i) => (
-              <span key={l.teamId}>
-                {i > 0 && <span aria-hidden className="mx-1.5 text-muted-foreground">·</span>}
-                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={d.unit} kind={d.kind} />
-              </span>
-            ))
-          ) : "No allocation changed."
-        ) : "Allocations left unchanged."}
-      </p>
-
-      {d.note && <p className="text-sm leading-relaxed text-muted-foreground italic">“{d.note}”</p>}
-
-      <div>
-        <Button variant="link" size="xs" className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          {open ? "Hide details" : "Show details"}
-        </Button>
-        {open && (
-          <div className="mt-3 space-y-5 border-t border-border pt-4">
-            <div className="space-y-1">
-              <div className="eyebrow">Per team</div>
-              <AllocationLines lines={d.lines} unit={d.unit} teams={teams} kind={d.kind} />
-            </div>
-            {d.rationale && (
-              <div className="space-y-1.5">
-                <div className="eyebrow">Why</div>
-                <p className="text-sm leading-relaxed text-foreground/80">{d.rationale}</p>
-              </div>
-            )}
-            {d.forecastsReviewed && d.forecastsReviewed.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="eyebrow">Projections reviewed at the time</span>
-                </div>
-                <ul className="divide-y divide-border text-sm">
-                  {d.forecastsReviewed.map((f) => (
-                    <li key={f.teamId} className="flex h-10 items-center justify-between gap-3">
-                      <span>{teamName(teams, f.teamId)}</span>
-                      <span className="inline-flex items-center gap-2 text-muted-foreground">
-                        <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : f.unavailableReason ?? "Unavailable"}</span>                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+      {open && (
+        <div className="space-y-4 px-5 pt-1 pb-5 sm:pl-[4.25rem]">
+          <div className="text-xs text-muted-foreground">
+            <span className={applied ? "text-success" : undefined}>{applied ? "Applied" : "Rejected"}</span>
+            {" · "}<span className="num">{fmtDateTime(d.appliedAt)}</span> · {d.appliedBy}
           </div>
-        )}
-      </div>
+          {applied && <PairedBars lines={d.lines} unit={d.unit} teams={teams} kind={d.kind} projection={projected} />}
+          {unavailable.length > 0 && (
+            <ul className="space-y-0.5 text-xs text-muted-foreground">
+              {unavailable.map((f) => (
+                <li key={f.teamId}>{teamName(teams, f.teamId)} · projection {f.unavailableReason ?? "unavailable"}</li>
+              ))}
+            </ul>
+          )}
+          {d.note && <p className="text-sm text-muted-foreground italic">“{d.note}”</p>}
+          {d.rationale && <p className="max-w-prose text-sm leading-relaxed text-foreground/80">{d.rationale}</p>}
+          <Reveal show="Show table" hide="Hide table">
+            <AllocationTable
+              lines={d.lines}
+              unit={d.unit}
+              teams={teams}
+              kind={d.kind}
+              extra={d.forecastsReviewed?.length ? [{
+                header: "Projection reviewed",
+                cell: (l) => {
+                  const p = projected(l.teamId);
+                  return p === undefined ? <span className="font-sans text-muted-foreground">—</span> : <span className="text-muted-foreground">{formatAmount(p, d.unit)}</span>;
+                },
+              }] : []}
+            />
+          </Reveal>
+        </div>
+      )}
     </article>
   );
 }

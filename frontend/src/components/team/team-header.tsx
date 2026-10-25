@@ -4,12 +4,13 @@ import { ArrowLeft, ChevronRight, Info, MessageSquare } from "lucide-react";
 import type { Budget, Forecast, Provenance, SpendingRecord, Team } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { formatAmount } from "@/lib/format";
-import { PageTitle, StatTile } from "@/components/shared/stat-tile";
+import { PageTitle } from "@/components/shared/stat-tile";
 import { riseDelay, useMounted } from "@/components/shared/motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { fmtDate, fmtDateTime, ProvenanceBadge, spentToDate, StatusChip, Tag, teamStatus, teamUnit } from "./labels";
+import { fmtDate, fmtDateTime, PROVENANCE_LABEL, provenanceNote, spentToDate, StatusChip, Tag, teamStatus, teamUnit } from "./labels";
 import { CountUpAmount } from "./count-up";
+import { BulletBar, BulletLegend, dailySeries, Sparkline } from "./viz";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -19,16 +20,18 @@ interface Props {
   records: SpendingRecord[];
 }
 
-/** Team identity, three stat tiles, and a quiet disclosure with the forecast's metadata, assumptions and limitations. */
+/** Team identity, one bullet bar (allocation, spend, projection) with a spend sparkline, and a quiet disclosure with the forecast's metadata, assumptions and limitations. */
 export function TeamHeader({ team, budget, forecast, records }: Props) {
   const askAssistant = useAppStore((s) => s.askAssistant);
-  // Entrance (ms): link and title 0 · tiles 60/120/180 (numbers count up from each tile's delay) · alert and disclosure 240.
+  // Entrance (ms): link and title 0 · bullet card 60 (numbers count up 60/120/180) · alert and disclosure 240.
   const mounted = useMounted();
   const rise = mounted ? "animate-rise" : "opacity-0";
   const spent = spentToDate(records);
   const unit = teamUnit(budget, records);
   const lastDate = records.reduce<string | undefined>((m, r) => (!m || r.date > m ? r.date : m), undefined);
   const provenances = [...new Set<Provenance>(records.map((r) => r.provenance))];
+  const provenanceTitle = provenances.length ? `Provenance: ${provenances.map((p) => PROVENANCE_LABEL[p]).join(", ")}` : undefined;
+  const series = dailySeries(records);
   const status = teamStatus(budget, forecast, spent);
 
   const available = forecast?.status === "available" && forecast.projected != null;
@@ -58,12 +61,7 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
             <StatusChip status={status} />
           </span>
         }
-        description={
-          <>
-            {team.lead ? <>Lead <span className="text-foreground/80">{team.lead}</span></> : "No lead listed"}
-            {team.description && <> · {team.description}</>}
-          </>
-        }
+        description={team.lead ? <span title={team.description}>Lead <span className="text-foreground/80">{team.lead}</span></span> : undefined}
         actions={
           <Button variant="outline" onClick={() => askAssistant(`Tell me about ${team.name}'s spending and projection`)}>
             <MessageSquare className="text-muted-foreground" strokeWidth={1.5} /> Ask the assistant
@@ -71,61 +69,53 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className={rise} style={riseDelay(1)}>
-          <StatTile
-            className="h-full"
-            size="primary"
-            card
-            label="Allocation"
-            value={budget ? <CountUpAmount value={budget.allocated} unit={budget.unit} delay={60} /> : "—"}
-            muted={!budget}
-            caption={budget ? periodLabel(budget.period) : "No allocation recorded"}
+      <section className={cn("rounded-xl border border-border bg-card p-5", rise)} style={riseDelay(1)} aria-label="Spend against allocation">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+          <BulletLegend
+            size="lg"
+            items={[
+              { label: "Spent", mark: "fill", color: team.color, value: <CountUpAmount value={spent} unit={unit} delay={60} />, title: provenanceTitle, note: provenanceNote(provenances) },
+              {
+                label: isScenario ? "Scenario" : "Projected",
+                mark: "tick",
+                value: projectedTotal != null ? <CountUpAmount value={projectedTotal} unit={fUnit} delay={120} /> : "None",
+                muted: projectedTotal == null,
+                title: projectedTotal != null
+                  ? `Full period, includes spend to date${low != null && high != null ? ` · range ${formatAmount(low, fUnit)} – ${formatAmount(high, fUnit)}` : ""}${isScenario ? " · conditional on its assumptions" : ""}`
+                  : undefined,
+              },
+              { label: "Allocation", mark: "track", value: budget ? <CountUpAmount value={budget.allocated} unit={budget.unit} delay={180} /> : "None", muted: !budget },
+            ]}
           />
+          {series.values.length >= 2 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground" title={`Daily spend, ${fmtDate(series.from)} – ${fmtDate(series.to)}`}>
+              <Sparkline values={series.values} partialLast={series.partialLast} color={team.color} className="w-24" />
+              <span className="num">{series.values.length}d</span>
+            </div>
+          )}
         </div>
-        <div className={rise} style={riseDelay(2)}>
-          <StatTile
-            className="h-full"
-            size="primary"
-            card
-            label="Spent to date"
-            value={<CountUpAmount value={spent} unit={unit} delay={120} />}
-            caption={
-              lastDate ? (
-                <span className="inline-flex flex-wrap items-center gap-1.5">
-                  <span>Through <span className="num">{fmtDate(lastDate, { year: true })}</span></span>
-                  {provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
-                </span>
-              ) : "No spending recorded"
-            }
-          />
+        <BulletBar
+          className="mt-4"
+          size="md"
+          allocation={budget?.allocated}
+          spent={spent}
+          projected={projectedTotal}
+          color={team.color}
+          grow={mounted}
+          delay={120}
+        />
+        <div className="mt-2 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+          {budget ? <span>{periodLabel(budget.period)}</span> : <span>No allocation recorded</span>}
+          {lastDate ? <span>Through <span className="num">{fmtDate(lastDate)}</span></span> : <span>No spending recorded</span>}
         </div>
-        <div className={rise} style={riseDelay(3)}>
-          <StatTile
-            className="h-full"
-            size="primary"
-            card
-            label={isScenario ? "Scenario" : "Projection"}
-            value={projectedTotal != null ? <CountUpAmount value={projectedTotal} unit={fUnit} delay={180} /> : "No projection"}
-            muted={projectedTotal == null}
-            caption={
-              projectedTotal != null
-                ? low != null && high != null
-                  ? <><span className="num">{formatAmount(low, fUnit)} – {formatAmount(high, fUnit)}</span> · full period, includes spend to date</>
-                  : "Full period, includes spend to date"
-                : forecast?.status === "unavailable" ? "See reason below" : "Not supplied"
-            }
-          />
-        </div>
-      </div>
+      </section>
 
       {forecast?.status === "unavailable" && (
         <Alert className={cn("border-border bg-card", rise)} style={riseDelay(4)}>
           <Info className="size-4 text-muted-foreground" strokeWidth={1.5} />
           <AlertTitle>Projection unavailable</AlertTitle>
           <AlertDescription>
-            {forecast.unavailableReason ?? "The forecasting service did not return a projection for this team."}{" "}
-            Spending and allocation remain current.
+            {forecast.unavailableReason ?? "No projection returned for this team."}
           </AlertDescription>
         </Alert>
       )}
@@ -139,7 +129,6 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
               <span aria-hidden>·</span>
               <span className="truncate">{periodLabel(forecast.period)}</span>
               {isScenario && <Tag title="Conditional on the stated assumptions; not an unconditional forecast">Scenario</Tag>}
-              {isRemaining && <Tag>Remaining basis, added to spend</Tag>}
             </span>
           </summary>
           <div className="space-y-5 border-t border-border px-4 py-4 text-sm">

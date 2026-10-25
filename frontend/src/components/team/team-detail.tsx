@@ -12,9 +12,9 @@ import { teamRecords, teamUnit } from "./labels";
 import { PeopleTable } from "@/components/person/people-table";
 import { summarizePeople } from "@/components/person/derive";
 
-/* Entrance (ms), one sequence per page load. The header runs 0–240 on its own (link and title, three tiles,
+/* Entrance (ms), one sequence per page load. The header runs 0–240 on its own (link and title, bullet card,
    disclosure); the chart card follows while its columns rise from the baseline (0–1180), then the day buttons,
-   the people table and its rows, and the context cards. Last rise begins ≤500 and ends ≤1200. */
+   the people table and its rows, and the context list. Last rise begins ≤500 and ends ≤1200. */
 const CHART_AT = 240;
 const PEOPLE_AT = 360;
 const CONTEXT_AT = 420;
@@ -58,7 +58,7 @@ export function TeamDetail({ teamId }: { teamId: string }) {
   return (
     <div className="space-y-8">
       <TeamHeader team={team} budget={budget} forecast={forecast} records={records} />
-      <ForecastPanel scopeType="team" scopeId={teamId} />
+      <ForecastPanel scopeType="team" scopeId={teamId} embedded />
       <TeamSpendChart team={team} records={records} forecast={forecast} unit={unit} enterAt={CHART_AT} />
       <PeopleTable team={team} summaries={peopleSummaries} unit={unit} enterAt={PEOPLE_AT} />
       <ContextCards team={team} items={items} allItems={context} people={people} enterAt={CONTEXT_AT} />
@@ -79,14 +79,10 @@ export function TeamDetailSkeleton() {
           </div>
           <Skeleton className="h-4 w-72 max-w-full" />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-8 w-28" />
-              <Skeleton className="h-3 w-36 max-w-full" />
-            </div>
-          ))}
+        <div className="space-y-4 rounded-xl border border-border bg-card p-5">
+          <Skeleton className="h-6 w-96 max-w-full" />
+          <Skeleton className="h-2.5 w-full" />
+          <Skeleton className="h-3 w-40" />
         </div>
         <Skeleton className="h-11 w-full rounded-xl" />
       </div>
@@ -94,7 +90,7 @@ export function TeamDetailSkeleton() {
         <div className="flex items-start justify-between gap-3 p-5 pb-0">
           <div className="space-y-1.5">
             <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-64 max-w-full" />
+            <Skeleton className="h-3 w-32" />
           </div>
           <Skeleton className="hidden h-3 w-56 sm:block" />
         </div>
@@ -103,20 +99,13 @@ export function TeamDetailSkeleton() {
         </div>
       </div>
       <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-3 w-72 max-w-full" />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="space-y-2.5 rounded-xl border border-border bg-card p-5">
-              <Skeleton className="h-4 w-48 max-w-full" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-5/6" />
-              <div className="flex gap-1.5 pt-1">
-                <Skeleton className="h-6 w-20 rounded-md" />
-                <Skeleton className="h-6 w-24 rounded-md" />
-              </div>
+        <Skeleton className="h-4 w-40" />
+        <div className="divide-y divide-border rounded-xl border border-border bg-card">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex h-12 items-center gap-3 px-4">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-64 max-w-full" />
+              <Skeleton className="ml-auto h-3 w-24" />
             </div>
           ))}
         </div>

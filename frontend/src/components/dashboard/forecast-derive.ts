@@ -70,7 +70,20 @@ export function selectedDriverForView(selection: { driver: ForecastDriver; runId
 }
 
 /** A present company view is authoritative, including its unavailable quarter and shared residuals. */
-export function companyQuarterProjection(bundle: ForecastBundle | undefined, fallback?: number): number | undefined {
+/**
+ * The issued company quarter outlook, but only when it covers the same period as the spend and allotment it is shown
+ * against (outlook end is exclusive, period end inclusive). A quarter outlook next to a weekly allotment would compare
+ * different periods, so in that case the per-team projection for the period (`fallback`) is used instead.
+ */
+export function companyQuarterProjection(bundle: ForecastBundle | undefined, fallback?: number, period?: { start: string; end: string }): number | undefined {
   const company = scopeView(bundle, "company");
-  return company ? finite(company.quarter_outlook?.base) : fallback;
+  if (!company) return fallback;
+  const q = company.quarter_outlook as { start?: unknown; end?: unknown; base?: unknown } | undefined;
+  if (period && q) {
+    const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+    const sameStart = typeof q.start === "string" && q.start === period.start;
+    const sameEnd = typeof q.end === "string" && (q.end === dayAfter(period.end) || q.end === period.end);
+    if (!sameStart || !sameEnd) return fallback;
+  }
+  return finite(company.quarter_outlook?.base);
 }

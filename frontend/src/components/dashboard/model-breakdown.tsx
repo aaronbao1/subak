@@ -1,103 +1,80 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { SpendingRecord, Unit } from "@/lib/contracts";
 import { formatAmount } from "@/lib/format";
-import { riseDelay } from "@/components/shared/motion";
 import { cn } from "@/lib/utils";
 import { modelTotals, providerTotals } from "./derive";
 import { ProviderLogo, providerMeta } from "./provider-brand";
+import { BarRow, CountUp, StackedBar } from "./bars";
+
+const TOP = 5;
+
+/** "1.2B tokens" for a tooltip; dollars and tokens are never added together. */
+const tokensText = (tokens?: number) => (typeof tokens === "number" ? ` · ${formatAmount(tokens, "tokens")}` : "");
 
 /**
- * Compact section: API spend split by provider (one bar) and by model (a short table with tokens).
- * Only API rows carry a model; seats and tool overage are shown in the cost components above.
- * Dollars stay the headline; tokens are the secondary column because a cheap model can burn many of them.
+ * API dollars only: a provider mix bar with chips, then the top models as a bar list (+N more).
+ * Tokens move to each row's tooltip; the header keeps the total.
  */
 export function ModelBreakdown({ spending, unit, className }: { spending: SpendingRecord[]; unit: Unit; className?: string }) {
   const models = useMemo(() => modelTotals(spending), [spending]);
   const providers = useMemo(() => providerTotals(spending), [spending]);
+  const [expanded, setExpanded] = useState(false);
   const total = providers.reduce((s, p) => s + p.amount, 0);
   const tokens = providers.reduce((s, p) => s + (p.tokens ?? 0), 0);
   const hasTokens = providers.some((p) => typeof p.tokens === "number");
   if (total <= 0) return null;
   const top = models[0]?.amount ?? 1;
+  const shown = expanded ? models : models.slice(0, TOP);
+  const rest = models.length - shown.length;
+  const money = (n: number) => formatAmount(n, unit, { compact: true });
 
   return (
-    <section className={cn("rounded-xl border border-border bg-card", className)} aria-labelledby="model-breakdown-heading">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 px-5 pt-5">
-        <div>
-          <h2 id="model-breakdown-heading" className="text-base font-medium">API spend by model</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Which models the API dollars went to this period{hasTokens ? ", with the tokens they bought" : ""}. Seats and tool overage are not included.</p>
-        </div>
-        <div className="flex items-baseline gap-4 text-xs text-muted-foreground">
-          <span>API <span className="num text-foreground">{formatAmount(total, unit)}</span></span>
-          {hasTokens && <span>Tokens <span className="num text-foreground">{formatAmount(tokens, "tokens", { compact: true })}</span></span>}
-        </div>
-      </div>
+    <section className={cn("min-w-0 rounded-xl border border-border bg-card p-5", className)} aria-labelledby="model-breakdown-heading">
+      <header className="flex items-baseline justify-between gap-4">
+        <h2 id="model-breakdown-heading" className="text-base font-medium">API spend by model</h2>
+        <span className="flex items-baseline gap-3 text-xs text-muted-foreground">
+          <span className="num text-foreground"><CountUp value={total} format={money} /></span>
+          {hasTokens && <span className="num" title="From provider usage exports; not added to dollars">{formatAmount(tokens, "tokens")}</span>}
+        </span>
+      </header>
 
-      <div className="grid gap-6 px-5 py-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* By provider: one stacked bar, then a legend row per provider. */}
-        <div className="min-w-0 space-y-3">
-          <div className="eyebrow">By provider</div>
-          <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-sm" aria-hidden>
-            {providers.map((p, i) => (
-              <div key={p.provider} className="animate-grow-x h-full rounded-[1px]" style={{ ...riseDelay(i), width: `${(p.amount / total) * 100}%`, background: providerMeta(p.provider).accent }} />
-            ))}
-          </div>
-          <ul className="divide-y divide-border text-xs">
-            {providers.map((p) => (
-              <li key={p.provider} className="flex items-center justify-between gap-3 py-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <ProviderLogo provider={p.provider} />
-                  <span className="truncate">{providerMeta(p.provider).label}</span>
-                </span>
-                <span className="flex items-baseline gap-3">
-                  {typeof p.tokens === "number" && <span className="num text-muted-foreground">{formatAmount(p.tokens, "tokens", { compact: true })}</span>}
-                  <span className="num w-16 text-right">{formatAmount(p.amount, unit, { compact: true })}</span>
-                  <span className="num w-9 text-right text-muted-foreground">{Math.round((p.amount / total) * 100)}%</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <StackedBar
+        className="mt-4"
+        segments={providers.map((p) => ({
+          key: p.provider, value: p.amount, color: providerMeta(p.provider).accent,
+          title: `${providerMeta(p.provider).label} ${formatAmount(p.amount, unit)}${tokensText(p.tokens)}`,
+        }))}
+      />
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="By provider">
+        {providers.map((p) => (
+          <li key={p.provider} className="flex items-center gap-1.5" title={`${formatAmount(p.amount, unit)}${tokensText(p.tokens)}`}>
+            <span className="size-2 shrink-0 rounded-sm" style={{ background: providerMeta(p.provider).accent }} aria-hidden />
+            {providerMeta(p.provider).label}
+            <span className="num text-foreground/80">{Math.round((p.amount / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
 
-        {/* By model: name, tokens, dollars, and a bar against the largest model. */}
-        <div className="min-w-0 space-y-3">
-          <div className="eyebrow">By model</div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-[11px] text-muted-foreground">
-                <th scope="col" className="pb-1.5 font-normal">Model</th>
-                {hasTokens && <th scope="col" className="pb-1.5 text-right font-normal">Tokens</th>}
-                <th scope="col" className="pb-1.5 text-right font-normal">Spend</th>
-                <th scope="col" className="hidden w-28 pb-1.5 pl-3 font-normal sm:table-cell"><span className="sr-only">Share of API spend</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {models.map((m, i) => {
-                const meta = providerMeta(m.provider);
-                return (
-                  <tr key={m.model}>
-                    <td className="py-2 pr-3">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <ProviderLogo provider={m.provider} className="size-3.5" />
-                        <span className="truncate">{m.model}</span>
-                      </span>
-                    </td>
-                    {hasTokens && <td className="num py-2 text-right text-muted-foreground">{typeof m.tokens === "number" ? formatAmount(m.tokens, "tokens", { compact: true }) : "—"}</td>}
-                    <td className="num py-2 text-right">{formatAmount(m.amount, unit, { compact: true })}</td>
-                    <td className="hidden py-2 pl-3 sm:table-cell">
-                      <div className="h-1.5 w-full overflow-hidden rounded-sm bg-muted" aria-hidden>
-                        <div className="animate-grow-x h-full rounded-[1px]" style={{ ...riseDelay(i), width: `${(m.amount / top) * 100}%`, background: meta.accent }} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {hasTokens && <p className="text-[11px] text-muted-foreground">Tokens come from the provider usage exports; dollars from the cost reports. Neither is added to the other.</p>}
-        </div>
-      </div>
+      <ul className="mt-3" aria-label="By model">
+        {shown.map((m, i) => (
+          <BarRow
+            key={m.model} index={i}
+            label={<><ProviderLogo provider={m.provider} className="size-3.5" /><span className="truncate">{m.model}</span></>}
+            value={m.amount} max={top} color={providerMeta(m.provider).accent}
+            title={`${m.model} · ${formatAmount(m.amount, unit)}${tokensText(m.tokens)}`}
+            valueNode={money(m.amount)}
+          />
+        ))}
+      </ul>
+      {(rest > 0 || expanded) && models.length > TOP && (
+        <button
+          type="button" onClick={() => setExpanded((e) => !e)}
+          className="mt-1 text-xs text-muted-foreground transition-colors duration-300 hover:text-foreground"
+        >
+          {expanded ? "Show fewer" : `+${rest} more`}
+        </button>
+      )}
     </section>
   );
 }

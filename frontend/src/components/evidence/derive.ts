@@ -324,3 +324,37 @@ export function macroBuckets(rows: EvidenceRow[], today: string, days = 14): Mac
 }
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
+
+/* ------------------------------------------------------------------ */
+/* Waterfall steps: team-level adjustments grouped by evidence scope   */
+/* ------------------------------------------------------------------ */
+
+export interface ScopeStep {
+  scope: EvidenceScope | "other";
+  amount: number;
+  items: number;
+}
+
+/**
+ * The same team-level adjustments `projectionTotals` sums, split by the scope of the item each one cites, so the
+ * steps add up to `totals.adjustments`. An adjustment citing an item the feed does not hold lands in "other".
+ */
+export function scopeSteps(teamForecasts: Forecast[], rows: EvidenceRow[]): ScopeStep[] {
+  const scopeById = new Map(rows.map((r) => [r.item.id, r.scope]));
+  const acc = new Map<ScopeStep["scope"], { amount: number; ids: Set<string> }>();
+  for (const f of teamForecasts) {
+    for (const a of f.adjustments ?? []) {
+      const scope = scopeById.get(a.contextId) ?? "other";
+      const e = acc.get(scope) ?? { amount: 0, ids: new Set<string>() };
+      e.amount += a.amount;
+      e.ids.add(a.contextId);
+      acc.set(scope, e);
+    }
+  }
+  return ([...SCOPE_ORDER, "other"] as ScopeStep["scope"][])
+    .filter((s) => acc.has(s))
+    .map((scope) => ({ scope, amount: acc.get(scope)!.amount, items: acc.get(scope)!.ids.size }));
+}
+
+/** Signed Σ of what forecasts applied for a row; undefined when no forecast lists it. */
+export const rowNet = (r: EvidenceRow) => (r.adjustments.length ? r.adjustments.reduce((s, a) => s + a.amount, 0) : undefined);

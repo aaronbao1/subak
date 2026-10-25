@@ -1,89 +1,117 @@
 "use client";
 import { formatAmount } from "@/lib/format";
-import { StatTile } from "@/components/shared/stat-tile";
+import { cn } from "@/lib/utils";
+import { useCountUp } from "@/components/shared/motion";
+import { EFFECT_FILL } from "@/components/shared/tone";
 import { Tag } from "@/components/team/labels";
-import type { ProjectionTotals } from "./derive";
+import type { ProjectionTotals, ScopeStep } from "./derive";
 import { signedAmount } from "./labels";
 
+const H = 96;
+const STEP_LABEL: Record<ScopeStep["scope"], string> = { company: "Company", team: "Teams", person: "People", other: "Other" };
+
+interface Col {
+  key: string;
+  label: string;
+  lo: number;
+  hi: number;
+  value: string;
+  kind: "total" | "up" | "down";
+  title: string;
+}
+
 /**
- * How the projection is built: trend baseline → evidence adjustments → projected. The arrow between the
- * tiles is the hero's connector in its static form: a hairline with three chevrons, no animation.
+ * Trend baseline → signed steps by evidence scope → projection, as one small zero-based waterfall.
+ * Exact values sit above each bar; item counts and the basis live in the bar's tooltip.
  */
-export function ProjectionStrip({ totals }: { totals: ProjectionTotals }) {
+export function ProjectionStrip({ totals, steps, mounted }: { totals: ProjectionTotals; steps: ScopeStep[]; mounted: boolean }) {
   const { unit } = totals;
-  const fmt = (n: number) => formatAmount(n, unit);
-  const coverage = totals.teamsProjected < totals.teamsTotal
-    ? `${totals.teamsProjected} of ${totals.teamsTotal} teams have a projection`
-    : `${totals.teamsTotal} ${totals.teamsTotal === 1 ? "team" : "teams"}`;
-  const aside = (
-    <>
-      {totals.anyScenario && <Tag title="Conditional on the stated assumptions; not an unconditional forecast">Scenario</Tag>}
-    </>
-  );
+  const projected = useCountUp(totals.projected);
+  const fmt = (n: number) => formatAmount(n, unit, { compact: true });
 
-  if (totals.teamsProjected === 0) {
-    return (
-      <section aria-label="How the projection is built" className="rounded-xl border border-border bg-card p-5">
-        <div className="eyebrow">How the projection is built</div>
-        <p className="mt-2 text-sm text-muted-foreground">No team has an available projection for this period, so there is nothing to decompose yet.</p>
-      </section>
-    );
+  if (totals.teamsProjected === 0) return null;
+
+  const cols: Col[] = [];
+  if (totals.hasBaseline) {
+    cols.push({ key: "base", label: "Trend", lo: 0, hi: totals.baseline, value: fmt(totals.baseline), kind: "total", title: `Trend baseline ${formatAmount(totals.baseline, unit)}` });
+    let run = totals.baseline;
+    for (const s of steps) {
+      if (s.amount === 0) continue;
+      const next = run + s.amount;
+      cols.push({
+        key: s.scope, label: STEP_LABEL[s.scope], lo: Math.min(run, next), hi: Math.max(run, next),
+        value: signedAmount(s.amount, unit, { compact: true }), kind: s.amount > 0 ? "up" : "down",
+        title: `${STEP_LABEL[s.scope]} evidence ${signedAmount(s.amount, unit)} · ${s.items} ${s.items === 1 ? "item" : "items"}`,
+      });
+      run = next;
+    }
   }
+  cols.push({ key: "proj", label: "Projected", lo: 0, hi: totals.projected, value: fmt(totals.projected), kind: "total", title: `Projected ${formatAmount(totals.projected, unit)}${totals.anyRemaining ? " · remaining basis, excludes incurred spend" : ""}` });
 
-  if (!totals.hasBaseline) {
-    return (
-      <section aria-label="How the projection is built" className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <StatTile card label="Projected" value={totals.projected} animate format={fmt} aside={aside} caption={periodCaption(totals, coverage)} />
-        <div className="flex flex-col justify-center rounded-xl border border-dashed border-border p-5">
-          <div className="eyebrow">Adjustments not provided by the forecast yet</div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            The forecasts carry a projected total but no trend baseline, so the share that evidence moved cannot be shown. The feed below still lists what each item is expected to do.
-          </p>
-          <p className="num mt-3 text-xs text-muted-foreground">projected = trend baseline + evidence adjustments</p>
+  const max = Math.max(1, ...cols.map((c) => c.hi));
+  const y = (v: number) => (v / max) * H;
+  const partial = totals.teamsProjected < totals.teamsTotal;
+
+  return (
+    <section aria-label="How the projection is built" className="rounded-xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="space-y-1">
+          <div className="eyebrow">{totals.periodLabel ? `Projected · ${totals.periodLabel}` : "Projected"}</div>
+          <div className="num text-[32px] leading-none font-normal">{formatAmount(projected, unit)}</div>
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+            {totals.hasAdjustments && <span className="num">{signedAmount(totals.adjustments, unit, { compact: true })} from evidence</span>}
+            {partial && <span className="num">{totals.teamsProjected}/{totals.teamsTotal} teams</span>}
+            {totals.anyRemaining && <span title="Remaining basis: excludes spend already incurred">excl. incurred</span>}
+            {totals.anyScenario && <Tag title="Conditional on the stated assumptions; not an unconditional forecast">Scenario</Tag>}
+          </div>
         </div>
-      </section>
-    );
-  }
 
-  return (
-    <section aria-label="How the projection is built" className="space-y-3">
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] md:items-stretch">
-        <StatTile
-          card label="Trend baseline" value={totals.baseline} animate format={fmt}
-          caption={<>Where the trend alone lands &middot; {coverage}</>}
-        />
-        <Connector />
-        <StatTile
-          card label="Evidence adjustments" value={totals.adjustments} animate format={(n) => signedAmount(n, unit)}
-          caption={<><span className="num">{totals.appliedItems}</span> {totals.appliedItems === 1 ? "item" : "items"} applied</>}
-          muted={!totals.hasAdjustments}
-        />
-        <Connector />
-        <StatTile card label="Projected" value={totals.projected} animate format={fmt} aside={aside} caption={periodCaption(totals, coverage)} />
+        <figure className="min-w-0 flex-1 sm:max-w-[420px]" aria-label="Projection waterfall">
+          <div className="relative flex items-end" style={{ height: H + 18 }}>
+            {/* Baseline hairline. */}
+            <span aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-border" />
+            {cols.map((c, i) => {
+              const bottom = y(c.lo);
+              const height = Math.max(2, y(c.hi) - y(c.lo));
+              const endLevel = c.kind === "down" ? c.lo : c.hi;
+              const next = cols[i + 1];
+              return (
+                <div key={c.key} className="relative h-full flex-1" title={c.title}>
+                  {next && (
+                    <span aria-hidden className="absolute left-1/2 w-full border-t border-dashed border-border-strong" style={{ bottom: y(endLevel) }} />
+                  )}
+                  <span
+                    className={cn(
+                      "num absolute inset-x-0 text-center text-[11px] whitespace-nowrap",
+                      c.kind === "total" ? "text-foreground/80" : "text-muted-foreground",
+                    )}
+                    style={{ bottom: bottom + height + 4 }}
+                  >
+                    {c.value}
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute left-1/2 w-6 -translate-x-1/2",
+                      mounted && "animate-grow-y",
+                      c.kind === "total" && (c.key === "proj" ? "rounded-t-[4px] bg-foreground/70" : "rounded-t-[4px] bg-foreground/30"),
+                      c.kind === "up" && "rounded-t-[4px]",
+                      c.kind === "down" && "rounded-b-[4px]",
+                    )}
+                    style={{ background: c.kind === "up" ? EFFECT_FILL.increase : c.kind === "down" ? EFFECT_FILL.decrease : undefined, bottom, height, ["--rise-delay" as string]: `${i * 80}ms`, transformOrigin: c.kind === "down" ? "center top" : "center bottom" }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <figcaption className="mt-2 flex">
+            {cols.map((c) => (
+              <span key={c.key} className="num flex-1 truncate text-center text-[11px] text-muted-foreground">{c.label}</span>
+            ))}
+          </figcaption>
+          <p className="sr-only">{cols.map((c) => `${c.label} ${c.value}`).join(", ")}</p>
+        </figure>
       </div>
-      <p className="num text-xs text-muted-foreground">
-        projected = trend baseline + evidence adjustments
-        {totals.anyRemaining && <span> &middot; remaining basis: excludes spend already incurred</span>}
-      </p>
     </section>
-  );
-}
-
-function periodCaption(totals: ProjectionTotals, coverage: string) {
-  return totals.periodLabel ? <>{totals.periodLabel} &middot; {coverage}</> : coverage;
-}
-
-/** Static hairline with chevrons pointing from one figure to the next. Hidden when the tiles stack. */
-function Connector() {
-  return (
-    <div className="hidden items-center md:flex" aria-hidden>
-      <svg width="56" height="16" viewBox="0 0 56 16" className="block overflow-visible">
-        <line x1="2" y1="8" x2="50" y2="8" stroke="var(--foreground)" strokeOpacity={0.22} strokeWidth={1.25} strokeLinecap="round" />
-        {[14, 26, 38].map((x) => (
-          <path key={x} d={`M${x - 3},3 L${x + 2},8 L${x - 3},13`} fill="none" stroke="var(--foreground)" strokeOpacity={0.6} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        <polygon points="50,3 55,8 50,13" fill="var(--foreground)" fillOpacity={0.8} />
-      </svg>
-    </div>
   );
 }
