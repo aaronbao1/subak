@@ -1,4 +1,4 @@
-import type { Budget, CostComponent, Forecast, Provenance, SpendingRecord, Team } from "@/lib/contracts";
+import type { Budget, CostComponent, Forecast, ForecastDailyPoint, Period, Provenance, SpendingRecord, Team } from "@/lib/contracts";
 import { projectedTotals } from "./status";
 
 export const COMPONENT_ORDER: CostComponent[] = ["subscription", "included_usage", "extra_usage", "api"];
@@ -26,6 +26,8 @@ export interface DailyPoint {
   date: string;
   amount: number;
   partial: boolean;
+  /** True for a forecast day: nothing has been recorded yet, the amount is a projection. */
+  projected?: boolean;
 }
 
 export interface TeamSummary {
@@ -38,18 +40,28 @@ export interface TeamSummary {
   low?: number;
   high?: number;
   daily: DailyPoint[];
+  /** Day-by-day projection for days not complete yet (the partial day's full-day total, then later days); empty when none was supplied. */
+  dailyProjected: DailyPoint[];
   byComponent: ComponentTotal[];
 }
 
-/** Row of the daily chart: one key per team as `t_<teamId>`; null where that team has no record that day. */
+/**
+ * Row of the daily chart. Per team: `t_<teamId>` is the recorded amount (null when nothing was recorded that day)
+ * and `p_<teamId>` the projected amount (null on complete days). A partial day can carry both: what was recorded
+ * so far and the projected full-day total. The last complete day also carries the projected key so the dashed
+ * line starts where the solid one ends.
+ */
 export interface DailyRow {
   ts: number;
   date: string;
   partial: boolean;
+  /** recorded: at least one team has a record; projected: only projections exist; empty: nothing at all. */
+  kind: "recorded" | "projected" | "empty";
   [key: string]: number | string | boolean | null;
 }
 
 export const teamKey = (teamId: string) => `t_${teamId}`;
+export const projectedKey = (teamId: string) => `p_${teamId}`;
 
 const DAY_MS = 86_400_000;
 
@@ -65,6 +77,19 @@ export function fromTs(ts: number): string {
 export function dateLabel(value: string | number): string {
   const d = new Date(typeof value === "number" ? value : toTs(value));
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+/** "Mon 19" for a weekly axis, "Mon, Oct 19" for tooltips. */
+export function dayLabel(value: string | number, opts: { month?: boolean } = {}): string {
+  const d = new Date(typeof value === "number" ? value : toTs(value));
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  return opts.month ? `${weekday}, ${dateLabel(value)}` : `${weekday} ${d.getUTCDate()}`;
+}
+
+/** Projection days the forecast supplies for dates that are not complete yet (the partial day and later), in date order. */
+export function projectedDays(forecast: Forecast | undefined, completeDates: Set<string>): ForecastDailyPoint[] {
+  if (!forecast || forecast.status !== "available" || !forecast.daily?.length) return [];
+  return forecast.daily.filter((d) => !completeDates.has(d.date)).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Days where any record is partial, and the latest day where every record is complete. */
@@ -104,17 +129,22 @@ export function summarizeTeams(
       byDay.set(r.date, p);
     }
     const daily = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+    const completeDates = new Set([...byDay.values()].filter((p) => !p.partial).map((p) => p.date));
+    const dailyProjected: DailyPoint[] = projectedDays(forecast, completeDates)
+      .map((d) => ({ date: d.date, amount: d.projected, partial: false, projected: true }));
     return {
-      team, budget, forecast, spent, daily,
+      team, budget, forecast, spent, daily, dailyProjected,
       ...projectedTotals(forecast, spent),
       byComponent: componentTotals(records),
     };
   });
 }
 
-/** One row per calendar day from the first to the last recorded date, all teams side by side. */
-export function buildDailyRows(teams: Team[], spending: SpendingRecord[]): DailyRow[] {
-  if (spending.length === 0) return [];
+/**
+ * One row per calendar day across the period (widened to cover any recorded or projected date outside it),
+ * all teams side by side. Recorded amounts come from spending; projected amounts from each team's forecast.
+ */
+export function buildDailyRows(teams: Team[], spending: SpendingRecord[], forecasts: Forecast[] = [], period?: Period): DailyRow[] {
   const byDate = new Map<string, { partial: boolean; totals: Map<string, number> }>();
   for (const r of spending) {
     const e = byDate.get(r.date) ?? { partial: false, totals: new Map() };
@@ -122,19 +152,43 @@ export function buildDailyRows(teams: Team[], spending: SpendingRecord[]): Daily
     e.totals.set(r.teamId, (e.totals.get(r.teamId) ?? 0) + r.amount);
     byDate.set(r.date, e);
   }
-  const dates = [...byDate.keys()].sort();
-  const start = toTs(dates[0]);
-  const end = toTs(dates[dates.length - 1]);
+  const recordedDates = new Set(byDate.keys());
+  const completeDates = new Set([...byDate.entries()].filter(([, e]) => !e.partial).map(([d]) => d));
+  const projected = new Map<string, Map<string, number>>();
+  for (const t of teams) {
+    for (const d of projectedDays(forecasts.find((f) => f.teamId === t.id), completeDates)) {
+      const m = projected.get(d.date) ?? new Map<string, number>();
+      m.set(t.id, d.projected);
+      projected.set(d.date, m);
+    }
+  }
+  const dates = [...recordedDates, ...projected.keys()].sort();
+  if (dates.length === 0 && !period) return [];
+  const start = Math.min(...(period ? [toTs(period.start)] : []), ...(dates.length ? [toTs(dates[0])] : []));
+  const end = Math.max(...(period ? [toTs(period.end)] : []), ...(dates.length ? [toTs(dates[dates.length - 1])] : []));
+  if (recordedDates.size === 0 && projected.size === 0) return [];
+
   const rows: DailyRow[] = [];
   for (let ts = start; ts <= end; ts += DAY_MS) {
     const date = fromTs(ts);
     const e = byDate.get(date);
-    const row: DailyRow = { ts, date, partial: e?.partial ?? false };
+    const p = projected.get(date);
+    const row: DailyRow = { ts, date, partial: e?.partial ?? false, kind: e ? "recorded" : p ? "projected" : "empty" };
     for (const t of teams) {
       const v = e?.totals.get(t.id);
       row[teamKey(t.id)] = typeof v === "number" ? v : null;
+      const pv = p?.get(t.id);
+      row[projectedKey(t.id)] = typeof pv === "number" ? pv : null;
     }
     rows.push(row);
+  }
+  // Anchor each dashed line to the team's last recorded point that has no projection, so it continues the solid one.
+  for (const t of teams) {
+    const tk = teamKey(t.id), pk = projectedKey(t.id);
+    const first = rows.findIndex((r) => r[pk] !== null);
+    if (first <= 0) continue;
+    const anchor = rows[first - 1];
+    if (anchor[tk] !== null) anchor[pk] = anchor[tk];
   }
   return rows;
 }

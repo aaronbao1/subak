@@ -1,7 +1,7 @@
 import type { DataClient, SpendingFilter } from "./client";
 import type {
   AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast,
-  SpendingRecord, Team,
+  Person, SpendingRecord, Team,
 } from "@/lib/contracts";
 
 /**
@@ -30,6 +30,7 @@ export class HttpDataClient implements DataClient {
 
   getCompany() { return this.get<Company>("/api/company"); }
   getTeams() { return this.get<Team[]>("/api/teams"); }
+  getPeople() { return this.get<Person[]>("/api/people"); }
   getSpending(filter?: SpendingFilter) {
     const q = new URLSearchParams();
     if (filter?.teamId) q.set("teamId", filter.teamId);

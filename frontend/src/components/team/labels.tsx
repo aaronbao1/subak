@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import type { Budget, ClaimType, CostComponent, Forecast, Provenance, SpendingRecord, Team } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -41,21 +42,21 @@ const PROVENANCE_TITLE: Record<Provenance, string> = {
   usage_only: "Usage recorded without a charge amount",
 };
 
+/** Small inline chip next to an amount. Border style carries the provenance so it survives without color. */
 export function ProvenanceBadge({ provenance, className }: { provenance: Provenance; className?: string }) {
   return (
-    <Badge
-      variant="outline"
+    <span
       title={PROVENANCE_TITLE[provenance]}
       className={cn(
-        "text-[10px] font-normal",
-        provenance === "reported_charge" && "border-foreground/30 text-foreground",
-        provenance === "estimate" && "border-dashed text-muted-foreground",
-        provenance === "usage_only" && "border-dotted text-muted-foreground",
+        "inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 text-[11px] leading-none whitespace-nowrap",
+        provenance === "reported_charge" && "border-border-strong text-foreground/80",
+        provenance === "estimate" && "border-dashed border-border-strong text-muted-foreground",
+        provenance === "usage_only" && "border-dotted border-border-strong text-muted-foreground",
         className,
       )}
     >
       {PROVENANCE_LABEL[provenance]}
-    </Badge>
+    </span>
   );
 }
 
@@ -83,6 +84,26 @@ export const CONFIDENCE_LABEL = {
 } as const;
 
 /* ------------------------------------------------------------------ */
+/* Tags                                                                */
+/* ------------------------------------------------------------------ */
+
+/** Neutral spec badge for qualifiers such as "scenario" or "remaining basis". */
+export function Tag({ children, title, className }: { children: ReactNode; title?: string; className?: string }) {
+  return (
+    <Badge variant="outline" title={title} className={cn("text-muted-foreground", className)}>
+      {children}
+    </Badge>
+  );
+}
+
+export const PLACEHOLDER_TITLE = "Placeholder projection: a shared sample number, not the output of the forecasting service";
+
+/** Always shown where a `origin: "placeholder"` projection is cited. */
+export function PlaceholderBadge({ className }: { className?: string }) {
+  return <Tag title={PLACEHOLDER_TITLE} className={className}>Sample projection</Tag>;
+}
+
+/* ------------------------------------------------------------------ */
 /* Team status                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -94,6 +115,13 @@ export const STATUS_LABEL: Record<TeamStatus, string> = {
   likely_over: "Likely over",
   no_projection: "No projection",
 };
+
+const STATUS_VARIANT = {
+  on_track: "success",
+  watch: "warning",
+  likely_over: "destructive",
+  no_projection: "outline",
+} as const;
 
 /**
  * Likely over only when the projected full-period total exceeds the allocation.
@@ -109,19 +137,11 @@ export function teamStatus(budget: Budget | undefined, forecast: Forecast | unde
   return "on_track";
 }
 
+/** Spec status badge: 1px tinted border and text in --success / --warning / --destructive, never a filled background. */
 export function StatusChip({ status, className }: { status: TeamStatus; className?: string }) {
   return (
-    <Badge variant="outline" className={cn("gap-1.5 font-normal", status === "no_projection" && "text-muted-foreground", className)}>
-      <span
-        aria-hidden
-        className={cn(
-          "size-1.5 rounded-full",
-          status === "on_track" && "bg-emerald-600/80",
-          status === "watch" && "bg-amber-500/90",
-          status === "likely_over" && "bg-destructive/80",
-          status === "no_projection" && "bg-muted-foreground/40",
-        )}
-      />
+    <Badge variant={STATUS_VARIANT[status]} className={cn("gap-1.5", status === "no_projection" && "text-muted-foreground", className)}>
+      <span aria-hidden className={cn("size-1.5 rounded-full bg-current", status === "no_projection" && "bg-muted-foreground")} />
       {STATUS_LABEL[status]}
     </Badge>
   );
@@ -157,10 +177,13 @@ export function fmtDate(iso: string | undefined, opts: { year?: boolean } = {}) 
   }).format(d);
 }
 
+/** Timestamps render in the reader's local time with a short zone name; a date-only string stays a UTC date. */
 export function fmtDateTime(iso: string) {
+  if (!iso) return "";
+  if (iso.length === 10) return fmtDate(iso, { year: true });
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat("en-US", {
-    month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
+    month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
   }).format(d);
 }

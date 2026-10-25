@@ -1,16 +1,38 @@
 "use client";
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import type { Team, Unit } from "@/lib/contracts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover } from "@base-ui/react/popover";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Period, Team, Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatAmount } from "@/lib/format";
-import { dateLabel, teamKey, toTs, type DailyRow } from "./derive";
+import { formatAmount, unitNoun } from "@/lib/format";
+import { dateLabel, dayLabel, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
+import { TeamPicker } from "./team-picker";
 
 const HALF_DAY = 43_200_000;
+/** Saturday or Sunday, read from the ISO date so the local timezone cannot shift it. */
+const isWeekend = (date: string) => { const d = new Date(`${date}T00:00:00Z`).getUTCDay(); return d === 0 || d === 6; };
+/** Up to two weeks of days get one tick per day with a weekday label; longer ranges fall back to weekly ticks. */
+const DAILY_TICK_LIMIT = 14;
+/** How much of the history is in view. 0 means everything. */
+const ZOOMS = [{ days: 7, label: "Week" }, { days: 28, label: "4 weeks" }, { days: 0, label: "All" }] as const;
+type ZoomDays = (typeof ZOOMS)[number]["days"];
+/** The categorical palette has 8 slots. Past that, the smallest teams fold into one neutral "Other" line. */
+const MAX_LINES = 8;
+const OTHER_ID = "__other";
+const AXIS_TICK = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
+const AREA_LABEL = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
+
+/** A drawn line: a team, or the folded "Other" series which carries the teams it sums. */
+interface Series {
+  id: string;
+  name: string;
+  color: string;
+  folded?: Team[];
+}
 
 export interface SpendByTeamChartProps {
   teams: Team[];
@@ -19,112 +41,357 @@ export interface SpendByTeamChartProps {
   unit: Unit;
   selectedId: string | null;
   onSelect: (teamId: string) => void;
+  /** True when any projection on the chart is a placeholder; keeps the dashed days labeled as such. */
+  placeholder?: boolean;
+  /** The planning period; the chart opens on it and earlier history sits to the left. */
+  period?: Period;
 }
 
-export function SpendByTeamChart({ teams, rows, partialDates, unit, selectedId, onSelect }: SpendByTeamChartProps) {
+/**
+ * One line per team. Recorded days are solid with filled dots; projected days are dashed with hollow dots inside
+ * a lightly shaded region, so "this is what was spent" and "this is what we expect" never blur. The chart opens
+ * on the current period and pans back through history (trackpad swipe, drag, or the arrows) to show growth.
+ * With more than eight teams visible, the eight largest by period spend are drawn as themselves and the rest
+ * are summed into a neutral dashed "Other" line; hiding a team in the picker lets another take its place.
+ * Colors follow the team (`team.color`), so hiding one team never recolors another.
+ */
+export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, unit, period, selectedId, onSelect, placeholder }: SpendByTeamChartProps) {
+  const [zoom, setZoom] = useState<ZoomDays>(7);
+  /** Teams the reader has unchecked in the picker. Empty means every team is drawn. */
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
+  const visibleTeams = useMemo(() => allTeams.filter((t) => !hiddenIds.has(t.id)), [allTeams, hiddenIds]);
+
+  // Fold beyond eight: rank visible teams by recorded spend inside the planning period (all rows when no period).
+  const { drawn, folded } = useMemo(() => {
+    if (visibleTeams.length <= MAX_LINES) return { drawn: visibleTeams, folded: [] as Team[] };
+    const inPeriod = period ? all.filter((r) => r.date >= period.start && r.date <= period.end) : all;
+    const spendOf = new Map(visibleTeams.map((t) => {
+      const k = teamKey(t.id);
+      return [t.id, inPeriod.reduce((s, r) => s + (typeof r[k] === "number" ? (r[k] as number) : 0), 0)] as const;
+    }));
+    const top = new Set([...visibleTeams].sort((a, b) => (spendOf.get(b.id) ?? 0) - (spendOf.get(a.id) ?? 0)).slice(0, MAX_LINES).map((t) => t.id));
+    // Keep the dataset's own order for the drawn teams so legend order does not jump as teams swap in.
+    return { drawn: visibleTeams.filter((t) => top.has(t.id)), folded: visibleTeams.filter((t) => !top.has(t.id)) };
+  }, [visibleTeams, all, period]);
+  const foldedIds = useMemo(() => new Set(folded.map((t) => t.id)), [folded]);
+  const series = useMemo<Series[]>(() => {
+    const own: Series[] = drawn.map((t) => ({ id: t.id, name: t.name, color: t.color }));
+    return folded.length ? [...own, { id: OTHER_ID, name: `Other (${folded.length} teams)`, color: "var(--chart-other)", folded }] : own;
+  }, [drawn, folded]);
+  /** Rows with the folded teams summed under the Other keys; untouched when nothing is folded. */
+  const plotAll = useMemo(() => {
+    if (folded.length === 0) return all;
+    return all.map((r) => {
+      let rec: number | null = null, proj: number | null = null;
+      for (const t of folded) {
+        const v = r[teamKey(t.id)]; if (typeof v === "number") rec = (rec ?? 0) + v;
+        const pv = r[projectedKey(t.id)]; if (typeof pv === "number") proj = (proj ?? 0) + pv;
+      }
+      return { ...r, [teamKey(OTHER_ID)]: rec, [projectedKey(OTHER_ID)]: proj };
+    });
+  }, [all, folded]);
+
+  const onHiddenChange = useCallback((next: Set<string>) => {
+    setHiddenIds(next);
+    // Hiding the selected team would leave the breakdown panel pointing at a line that is no longer drawn.
+    if (selectedId !== null && next.has(selectedId)) onSelect(selectedId);
+  }, [selectedId, onSelect]);
+  /** Days between the window's right edge and the latest row; 0 shows the current period. */
+  const [offset, setOffset] = useState(0);
+  const plotRef = useRef<HTMLDivElement>(null);
+  const wheelAcc = useRef(0);
+  const drag = useRef<{ x: number; offset: number; moved: boolean } | null>(null);
+  /** Set on pointer-up so the click that follows a drag does not also select a team. */
+  const dragMoved = useRef(false);
+
+  const windowDays = zoom === 0 ? plotAll.length : Math.min(zoom, plotAll.length);
+  const maxOffset = Math.max(0, plotAll.length - windowDays);
+  const off = Math.min(offset, maxOffset);
+  const endIdx = plotAll.length - 1 - off;
+  const rows = useMemo(() => plotAll.slice(Math.max(0, endIdx - windowDays + 1), endIdx + 1), [plotAll, endIdx, windowDays]);
+  const canBack = off < maxOffset;
+  const canForward = off > 0;
+  const clampOffset = useCallback((o: number) => Math.max(0, Math.min(maxOffset, o)), [maxOffset]);
+  const pan = useCallback((days: number) => setOffset((o) => clampOffset(Math.min(o, maxOffset) + days)), [clampOffset, maxOffset]);
+  const pxPerDay = () => (plotRef.current?.clientWidth ?? 600) / Math.max(1, windowDays);
+  // Horizontal trackpad swipe (or shift+wheel) pans; vertical wheel keeps scrolling the page.
+  const onWheel = (e: React.WheelEvent) => {
+    const dx = e.shiftKey && Math.abs(e.deltaX) < Math.abs(e.deltaY) ? e.deltaY : e.deltaX;
+    if (!dx) return;
+    wheelAcc.current += dx;
+    const step = Math.max(8, pxPerDay());
+    const days = Math.trunc(wheelAcc.current / step);
+    if (days !== 0) { wheelAcc.current -= days * step; pan(-days); }
+  };
+  const onPointerDown = (e: React.PointerEvent) => { if (e.button === 0) drag.current = { x: e.clientX, offset: off, moved: false }; };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current) return;
+    const days = Math.round((e.clientX - drag.current.x) / pxPerDay());
+    if (days !== 0) drag.current.moved = true;
+    setOffset(clampOffset(drag.current.offset + days));
+  };
+  const onPointerUp = () => { dragMoved.current = drag.current?.moved ?? false; drag.current = null; };
+  const inPeriod = period && rows.length > 0 && rows[0].date >= period.start && rows[rows.length - 1].date <= period.end;
+  const rangeLabel = rows.length ? `${dateLabel(rows[0].ts)} – ${dateLabel(rows[rows.length - 1].ts)}` : "";
+
   const domain = useMemo<[number, number] | undefined>(() => {
     if (rows.length === 0) return undefined;
     return [rows[0].ts - HALF_DAY, rows[rows.length - 1].ts + HALF_DAY];
   }, [rows]);
 
-  // Roughly one tick per week so 90 days never collide; always include the first and last day.
+  const daily = rows.length <= DAILY_TICK_LIMIT;
   const ticks = useMemo(() => {
     if (rows.length === 0) return [];
+    if (daily) return rows.map((r) => r.ts);
     const step = Math.max(1, Math.ceil(rows.length / 7));
     const out = rows.filter((_, i) => i % step === 0).map((r) => r.ts);
     const last = rows[rows.length - 1].ts;
     if (out[out.length - 1] !== last) out.push(last);
     return out;
-  }, [rows]);
+  }, [rows, daily]);
 
-  const teamById = useMemo(() => new Map(teams.map((t) => [teamKey(t.id), t])), [teams]);
+  const weekendTs = useMemo(() => rows.filter((r) => isWeekend(r.date)).map((r) => r.ts), [rows]);
+  const projectedStart = useMemo(() => rows.find((r) => r.kind === "projected")?.ts, [rows]);
+  const projectedDays = useMemo(() => rows.filter((r) => r.kind === "projected").length, [rows]);
+  const hasProjection = projectedStart !== undefined;
+  const tickLabel = (v: number) => (daily ? dayLabel(v) : dateLabel(v));
+
   const dimming = selectedId !== null;
+  const noun = unitNoun(unit);
+  const select = (s: Series) => { if (!s.folded && !dragMoved.current) onSelect(s.id); };
 
   return (
-    <Card className="min-w-0">
-      <CardHeader>
-        <CardTitle>Daily spend by team</CardTitle>
-        <CardDescription>Click a line or a team below to see its breakdown.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {rows.length === 0 ? (
-          <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">No spending recorded yet.</div>
+    <section className="flex min-w-0 flex-col rounded-xl border border-border bg-card" aria-label={`Daily ${noun} by team`}>
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-5">
+        <div className="min-w-0">
+          <h2 className="text-base font-medium">Daily {noun} by team</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            <span className="num">{rangeLabel}</span>
+            {inPeriod && period?.label && <span> · {period.label}</span>}
+            {maxOffset > 0 && <span className="hidden sm:inline"> · swipe or drag sideways for earlier weeks</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {allTeams.length > 1 && <TeamPicker teams={allTeams} hiddenIds={hiddenIds} onChange={onHiddenChange} foldedIds={foldedIds} />}
+          <div className="flex items-center rounded-md bg-popover p-0.5" role="group" aria-label="Range">
+            {ZOOMS.map((z) => (
+              <button
+                key={z.label} type="button" onClick={() => setZoom(z.days)} aria-pressed={zoom === z.days}
+                className={cn(
+                  "relative h-7 rounded-sm px-2.5 text-xs text-muted-foreground transition-colors duration-300 hover:text-foreground",
+                  zoom === z.days && "bg-card text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-brand",
+                )}
+              >
+                {z.label}
+              </button>
+            ))}
+          </div>
+          {zoom !== 0 && (
+            <div className="flex items-center">
+              <button type="button" onClick={() => pan(windowDays)} disabled={!canBack} aria-label="Earlier" className="rounded-md p-1.5 text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground disabled:opacity-50 disabled:hover:bg-transparent">
+                <ChevronLeft className="size-4" strokeWidth={1.5} />
+              </button>
+              <button type="button" onClick={() => pan(-windowDays)} disabled={!canForward} aria-label="Later" className="rounded-md p-1.5 text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground disabled:opacity-50 disabled:hover:bg-transparent">
+                <ChevronRight className="size-4" strokeWidth={1.5} />
+              </button>
+              {canForward && (
+                <button type="button" onClick={() => setOffset(0)} className="ml-0.5 h-7 rounded-md px-2 text-xs text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground">
+                  Today
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className="px-3 pt-4">
+        {plotAll.length === 0 ? (
+          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">No spending recorded yet.</div>
+        ) : series.length === 0 ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-muted-foreground md:h-72">
+            <span>No teams selected.</span>
+            <button type="button" onClick={() => onHiddenChange(new Set())} className="h-8 rounded-md border border-border bg-popover px-3 text-xs text-foreground transition-colors duration-300 hover:border-border-strong">
+              Show all teams
+            </button>
+          </div>
         ) : (
-          <div className="h-72 w-full md:h-80">
+          <div
+            ref={plotRef} className={cn("h-64 w-full touch-pan-y select-none md:h-72 [&_svg:focus]:outline-none [&_.recharts-wrapper:focus]:outline-none", maxOffset > 0 && "cursor-grab active:cursor-grabbing")}
+            onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rows} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+              <LineChart data={rows} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
+                <defs>
+                  {/* Diagonal hatch for weekends: distinct from the flat shading used for partial and projected days. */}
+                  <pattern id="weekend-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="var(--foreground)" strokeOpacity="0.09" strokeWidth="1.5" />
+                  </pattern>
+                </defs>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
+                {weekendTs.map((ts, i) => (
+                  <ReferenceArea
+                    key={`w-${ts}`} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="url(#weekend-hatch)" stroke="none"
+                    label={daily && (i === 0 || !weekendTs.includes(ts - 2 * HALF_DAY)) ? { value: "weekend", position: "insideBottom", ...AREA_LABEL, fontSize: 10 } : undefined}
+                  />
+                ))}
                 <XAxis
                   dataKey="ts" type="number" scale="time" domain={domain} ticks={ticks}
-                  tickFormatter={(v: number) => dateLabel(v)} tickLine={false} axisLine={false}
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} minTickGap={16}
+                  tickFormatter={tickLabel} tickLine={false} axisLine={false}
+                  tick={AXIS_TICK} minTickGap={12} tickMargin={8}
                 />
                 <YAxis
-                  width={64} tickLine={false} axisLine={false}
-                  tickFormatter={(v: number) => formatAmount(v, unit)}
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  width={52} tickLine={false} axisLine={false} tickCount={4}
+                  tickFormatter={(v: number) => formatAmount(v, unit, { compact: true })}
+                  tick={AXIS_TICK}
                 />
+                {/* Projected region: shaded, separated from recorded days by a hairline. */}
+                {hasProjection && domain && (
+                  <>
+                    <ReferenceArea
+                      x1={projectedStart - HALF_DAY} x2={domain[1]} fill="var(--foreground)" fillOpacity={0.035} stroke="none"
+                      label={{ value: "Projected", position: "insideTop", ...AREA_LABEL }}
+                    />
+                    <ReferenceLine x={projectedStart - HALF_DAY} stroke="var(--border-strong)" strokeDasharray="3 3" />
+                  </>
+                )}
                 {partialDates.map((d) => {
                   const ts = toTs(d);
                   return (
                     <ReferenceArea
-                      key={d} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="var(--muted-foreground)" fillOpacity={0.08} stroke="none"
-                      label={{ value: "partial", position: "insideTop", fontSize: 10, fill: "var(--muted-foreground)" }}
+                      key={d} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="var(--foreground)" fillOpacity={0.045} stroke="none"
+                      label={daily ? { value: "partial", position: "insideTop", ...AREA_LABEL, fontSize: 10 } : undefined}
                     />
                   );
                 })}
                 <Tooltip
-                  cursor={{ stroke: "var(--border)" }}
+                  cursor={{ stroke: "var(--border-strong)" }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
-                    const items = payload
-                      .filter((p) => typeof p.value === "number")
-                      .map((p) => ({ team: teamById.get(String(p.dataKey)), value: p.value as number }))
-                      .filter((p) => p.team)
-                      .sort((a, b) => b.value - a.value);
-                    const total = items.reduce((s, i) => s + i.value, 0);
                     const row = payload[0]?.payload as DailyRow | undefined;
+                    if (!row) return null;
+                    const isProjected = row.kind === "projected";
+                    const items = series
+                      .map((s) => {
+                        const recorded = row[teamKey(s.id)];
+                        const projected = row[projectedKey(s.id)];
+                        // On a partial day both exist: recorded so far and the projected full-day total.
+                        const value = typeof recorded === "number" ? recorded : typed(projected);
+                        if (value === undefined) return null;
+                        const fullDay = row.partial && typeof recorded === "number" && typeof projected === "number" ? projected : undefined;
+                        return { s, value, projected: isProjected, fullDay };
+                      })
+                      .filter((x): x is { s: Series; value: number; projected: boolean; fullDay: number | undefined } => x !== null)
+                      .sort((a, b) => b.value - a.value);
+                    if (items.length === 0) return null;
+                    const total = items.reduce((s, i) => s + i.value, 0);
+                    const fullDayTotal = row.partial && items.every((i) => i.fullDay !== undefined) ? items.reduce((s, i) => s + (i.fullDay ?? 0), 0) : undefined;
                     return (
-                      <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-sm">
-                        <div className="mb-1 flex items-center gap-2 font-medium">
-                          {dateLabel(Number(label))}
-                          {row?.partial && <span className="text-muted-foreground">partial</span>}
+                      <div className="min-w-48 rounded-md border border-border bg-popover px-3 py-2 font-mono text-xs text-popover-foreground">
+                        <div className="mb-1.5 flex items-center justify-between gap-3">
+                          <span className="text-foreground">{dayLabel(Number(label), { month: true })}</span>
+                          <span className="text-muted-foreground">
+                            {isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
+                          </span>
                         </div>
-                        <ul className="space-y-0.5">
-                          {items.map(({ team, value }) => (
-                            <li key={team!.id} className={cn("flex items-center justify-between gap-4", dimming && team!.id !== selectedId && "text-muted-foreground")}>
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-2 rounded-full" style={{ background: team!.color }} />
-                                {team!.name}
-                              </span>
-                              <span className="tabular-nums">{formatAmount(value, unit)}</span>
+                        {row.partial && !isProjected && (
+                          <div className="mb-1 flex justify-between gap-4 text-[11px] text-muted-foreground">
+                            <span>so far</span><span>full day, projected</span>
+                          </div>
+                        )}
+                        <ul className="space-y-1">
+                          {items.map(({ s, value, projected, fullDay }) => (
+                            <li key={s.id} className={cn(dimming && s.id !== selectedId && "opacity-70")}>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-muted-foreground">
+                                  <LineKey color={s.color} dashed={projected || !!s.folded} />
+                                  {s.name}
+                                </span>
+                                <span className="num flex items-center gap-2 text-right text-foreground">
+                                  {formatAmount(value, unit, { compact: true })}
+                                  {fullDay !== undefined && (
+                                    <span className="flex items-center gap-1 text-muted-foreground">
+                                      <LineKey color={s.color} dashed />
+                                      {formatAmount(fullDay, unit, { compact: true })}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              {s.folded && (
+                                <div className="mt-0.5 pl-5 text-[11px] leading-snug text-muted-foreground">{foldedList(s.folded)}</div>
+                              )}
                             </li>
                           ))}
                         </ul>
                         {items.length > 1 && (
-                          <div className="mt-1 flex justify-between gap-4 border-t pt-1 text-muted-foreground">
-                            <span>Total</span><span className="tabular-nums">{formatAmount(total, unit)}</span>
+                          <div className="mt-1.5 flex justify-between gap-4 border-t border-border pt-1.5">
+                            <span className="text-muted-foreground">{isProjected ? "Projected total" : "Total"}</span>
+                            <span className="num flex gap-2 text-right text-foreground">
+                              {formatAmount(total, unit, { compact: true })}
+                              {fullDayTotal !== undefined && <span>{formatAmount(fullDayTotal, unit, { compact: true })}</span>}
+                            </span>
                           </div>
                         )}
                       </div>
                     );
                   }}
                 />
-                {teams.map((t) => {
-                  const selected = t.id === selectedId;
+                {/* Wide invisible stroke under each team line so a click anywhere along it (not just on a dot) selects the team. */}
+                {series.filter((s) => !s.folded).map((s) => (
+                  <Line
+                    key={`hit-${s.id}`} type="monotone" dataKey={teamKey(s.id)} name={s.name}
+                    stroke={s.color} strokeWidth={16} strokeOpacity={0} strokeLinecap="round" strokeLinejoin="round"
+                    dot={false} activeDot={false} connectNulls={false} isAnimationActive={false}
+                    tooltipType="none" legendType="none" style={{ cursor: "pointer" }}
+                    onClick={() => select(s)}
+                  />
+                ))}
+                {series.map((s) => {
+                  const selected = s.id === selectedId;
                   const dim = dimming && !selected;
+                  const clickable = !s.folded;
                   return (
                     <Line
-                      key={t.id} type="monotone" dataKey={teamKey(t.id)} name={t.name}
-                      stroke={t.color} strokeWidth={selected ? 2.75 : 1.75} strokeOpacity={dim ? 0.25 : 1}
+                      key={s.id} type="monotone" dataKey={teamKey(s.id)} name={s.name}
+                      stroke={s.color} strokeWidth={selected ? 2.5 : 2} strokeOpacity={dim ? 0.2 : 0.95}
+                      strokeDasharray={s.folded ? "6 4" : undefined}
                       strokeLinecap="round" strokeLinejoin="round"
-                      dot={false} connectNulls={false} isAnimationActive={false}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => onSelect(t.id)}
+                      dot={daily ? { r: 4, fill: s.color, fillOpacity: dim ? 0.2 : 1, stroke: "var(--card)", strokeWidth: 2 } : false}
+                      connectNulls={false} isAnimationActive={false}
+                      style={{ cursor: clickable ? "pointer" : "default" }}
+                      onClick={() => select(s)}
                       activeDot={{
-                        r: selected ? 6 : 4.5, strokeWidth: 2, stroke: "var(--background)", fill: t.color,
-                        fillOpacity: dim ? 0.25 : 1, cursor: "pointer",
-                        onClick: () => onSelect(t.id),
+                        r: selected ? 5 : 4, strokeWidth: 2, stroke: "var(--card)", fill: s.color,
+                        fillOpacity: dim ? 0.2 : 1, cursor: clickable ? "pointer" : "default",
+                        onClick: () => select(s),
+                      }}
+                    />
+                  );
+                })}
+                {hasProjection && series.map((s) => {
+                  const selected = s.id === selectedId;
+                  const dim = dimming && !selected;
+                  const clickable = !s.folded;
+                  return (
+                    <Line
+                      key={`p-${s.id}`} type="monotone" dataKey={projectedKey(s.id)} name={`${s.name} (projected)`}
+                      stroke={s.color} strokeWidth={selected ? 2.5 : 2} strokeOpacity={dim ? 0.15 : 0.7} strokeDasharray="5 4"
+                      strokeLinecap="round" strokeLinejoin="round"
+                      dot={(props) => {
+                        const { key, cx, cy, payload } = props as { key?: React.Key | null; cx?: number; cy?: number; payload?: DailyRow };
+                        const k = key ?? undefined;
+                        // The anchor point on the last recorded day already has a solid dot.
+                        // Hollow dots only where the value is a projection: projected days and the partial day's full-day total.
+                        const show = payload?.kind === "projected" || (payload?.partial && payload[teamKey(s.id)] !== null && payload[projectedKey(s.id)] !== payload[teamKey(s.id)]);
+                        if (!daily || !show || cx === undefined || cy === undefined) return <g key={k} />;
+                        return <circle key={k} cx={cx} cy={cy} r={4} fill="var(--card)" stroke={s.color} strokeOpacity={dim ? 0.2 : 0.9} strokeWidth={2} />;
+                      }}
+                      connectNulls={false} isAnimationActive={false}
+                      style={{ cursor: clickable ? "pointer" : "default" }}
+                      onClick={() => select(s)}
+                      activeDot={{
+                        r: selected ? 5 : 4, strokeWidth: 2, stroke: s.color, fill: "var(--card)",
+                        strokeOpacity: dim ? 0.2 : 1, cursor: clickable ? "pointer" : "default",
+                        onClick: () => select(s),
                       }}
                     />
                   );
@@ -133,36 +400,120 @@ export function SpendByTeamChart({ teams, rows, partialDates, unit, selectedId, 
             </ResponsiveContainer>
           </div>
         )}
+      </div>
 
-        <ChartLegend teams={teams} selectedId={selectedId} onSelect={onSelect} />
-
-        {partialDates.length > 0 && (
+      <footer className="space-y-2.5 px-5 pb-5 pt-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <EncodingLegend hasProjection={hasProjection} />
+          <ChartLegend series={series} selectedId={selectedId} onSelect={onSelect} />
+        </div>
+        {(folded.length > 0 || partialDates.length > 0 || (hasProjection && placeholder) || weekendTs.length > 0) && (
           <p className="text-xs text-muted-foreground">
-            Shaded {partialDates.length === 1 ? "day is" : "days are"} partial ({partialDates.map(dateLabel).join(", ")}): some sources have not reported yet.
+            {folded.length > 0 && (
+              <>Showing the {MAX_LINES} largest teams by spend this period; {folded.length} more {folded.length === 1 ? "is" : "are"} summed into Other. Hide a team in the picker to swap another in. </>
+            )}
+            {weekendTs.length > 0 && <>Hatched days are weekends; usage is usually lower than Monday to Friday. </>}
+            {partialDates.length > 0 && (
+              <>Shaded {partialDates.length === 1 ? "day is" : "days are"} partial (<span className="num">{partialDates.map(dateLabel).join(", ")}</span>): some sources have not reported yet. </>
+            )}
+            {hasProjection && placeholder && (
+              <>Dashed lines and hollow dots are placeholder projections ({projectedDays} {projectedDays === 1 ? "day" : "days"} ahead), not recorded usage.</>
+            )}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </footer>
+    </section>
   );
 }
 
-function ChartLegend({ teams, selectedId, onSelect }: { teams: Team[]; selectedId: string | null; onSelect: (id: string) => void }) {
+const typed = (v: unknown) => (typeof v === "number" ? v : undefined);
+
+/** "Design, Legal, Ops +4 more" for the folded teams. */
+function foldedList(teams: Team[]): string {
+  const shown = teams.slice(0, 4).map((t) => t.name);
+  const rest = teams.length - shown.length;
+  return `${shown.join(", ")}${rest > 0 ? ` +${rest} more` : ""}`;
+}
+
+/** Short stroke of the series color, the way the line is drawn; dashed when the value is projected or folded. */
+function LineKey({ color, dashed }: { color: string; dashed?: boolean }) {
   return (
-    <ul className="flex max-h-20 flex-wrap gap-x-1 gap-y-0.5 overflow-y-auto" aria-label="Teams">
-      {teams.map((t) => {
-        const selected = t.id === selectedId;
+    <svg width="12" height="4" viewBox="0 0 12 4" aria-hidden className="shrink-0">
+      <line x1="0" y1="2" x2="12" y2="2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeDasharray={dashed ? "3 2" : undefined} />
+    </svg>
+  );
+}
+
+/** Recorded vs projected key, drawn in neutral ink so it reads independently of team colors. */
+function EncodingLegend({ hasProjection }: { hasProjection: boolean }) {
+  return (
+    <ul className="flex items-center gap-3 text-xs text-muted-foreground" aria-label="Line styles">
+      <li className="flex items-center gap-1.5">
+        <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><circle cx="11" cy="5" r="4" fill="currentColor" stroke="var(--card)" strokeWidth="2" /></svg>
+        Recorded
+      </li>
+      {hasProjection && (
+        <li className="flex items-center gap-1.5">
+          <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" strokeOpacity="0.7" strokeWidth="2" strokeDasharray="4 3" strokeLinecap="round" /><circle cx="11" cy="5" r="3.5" fill="var(--card)" stroke="currentColor" strokeWidth="2" /></svg>
+          Projected
+        </li>
+      )}
+    </ul>
+  );
+}
+
+const CHIP = "flex h-6 items-center gap-1.5 rounded-md border border-transparent px-2 text-xs text-foreground transition-colors duration-300 hover:bg-popover";
+
+/** Team chips with square swatches. The Other chip selects nothing; it opens a list of the teams it sums. */
+function ChartLegend({ series, selectedId, onSelect }: { series: Series[]; selectedId: string | null; onSelect: (id: string) => void }) {
+  return (
+    <ul className="flex max-h-16 flex-wrap gap-1 overflow-y-auto sm:ml-auto" aria-label="Teams">
+      {series.map((s) => {
+        const selected = s.id === selectedId;
         const dim = selectedId !== null && !selected;
+        const swatch = (
+          <span
+            className={cn("size-2 shrink-0 rounded-sm", s.folded && "border border-dashed bg-transparent")}
+            style={s.folded ? { borderColor: s.color, opacity: dim ? 0.35 : 1 } : { background: s.color, opacity: dim ? 0.35 : 1 }}
+            aria-hidden
+          />
+        );
+        if (s.folded) {
+          return (
+            <li key={s.id}>
+              <Popover.Root>
+                <Popover.Trigger className={cn(CHIP, "data-popup-open:border-border data-popup-open:bg-popover", dim && "text-muted-foreground")} aria-label={`${s.name}: which teams are summed`}>
+                  {swatch}
+                  {s.name}
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner side="top" align="end" sideOffset={6} className="isolate z-50">
+                    <Popover.Popup className="w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_32px_rgba(0,0,0,0.5)] duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0">
+                      <p className="eyebrow px-2 pb-1 pt-1.5">Summed into Other</p>
+                      <ul className="max-h-56 overflow-y-auto">
+                        {s.folded.map((t) => (
+                          <li key={t.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs">
+                            <span className="size-2 shrink-0 rounded-sm" style={{ background: t.color }} aria-hidden />
+                            <span className="truncate">{t.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="px-2 pb-1.5 pt-1 text-[11px] text-muted-foreground">Hide a team in the picker to swap one of these in.</p>
+                    </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
+            </li>
+          );
+        }
         return (
-          <li key={t.id}>
+          <li key={s.id}>
             <button
-              type="button" onClick={() => onSelect(t.id)} aria-pressed={selected}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-muted",
-                selected && "bg-muted font-medium", dim && "text-muted-foreground",
-              )}
+              type="button" onClick={() => onSelect(s.id)} aria-pressed={selected}
+              className={cn(CHIP, selected && "border-border bg-popover font-medium", dim && "text-muted-foreground")}
             >
-              <span className="size-2 shrink-0 rounded-full" style={{ background: t.color, opacity: dim ? 0.35 : 1 }} />
-              {t.name}
+              {swatch}
+              {s.name}
             </button>
           </li>
         );
@@ -173,9 +524,17 @@ function ChartLegend({ teams, selectedId, onSelect }: { teams: Team[]; selectedI
 
 export function SpendByTeamChartSkeleton() {
   return (
-    <Card>
-      <CardHeader><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-64" /></CardHeader>
-      <CardContent><Skeleton className="h-72 w-full md:h-80" /></CardContent>
-    </Card>
+    <section className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 pt-5">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-3 w-48" />
+      </div>
+      <div className="px-5 pt-4"><Skeleton className="h-64 w-full md:h-72" /></div>
+      <div className="flex gap-1.5 px-5 pb-5 pt-3">
+        <Skeleton className="h-6 w-20 rounded-md" />
+        <Skeleton className="h-6 w-16 rounded-md" />
+        <Skeleton className="h-6 w-24 rounded-md" />
+      </div>
+    </section>
   );
 }

@@ -7,6 +7,7 @@ import type {
   ContextItem,
   Decision,
   Forecast,
+  Person,
   SpendingRecord,
   Team,
 } from "@/lib/contracts";
@@ -24,8 +25,11 @@ export interface SpendingFilter {
 export interface DataClient {
   getCompany(): Promise<Company>;
   getTeams(): Promise<Team[]>;
+  /** Everyone whose usage rolls up into a team. */
+  getPeople(): Promise<Person[]>;
   getSpending(filter?: SpendingFilter): Promise<SpendingRecord[]>;
   getBudgets(): Promise<Budget[]>;
+  /** Team-level and person-level projections together; person-level ones carry `personId`. */
   getForecasts(): Promise<Forecast[]>;
   getContext(teamId?: string): Promise<ContextItem[]>;
   getDocuments(): Promise<CompanyDocument[]>;

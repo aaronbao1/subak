@@ -16,10 +16,11 @@ Demo switches (mock only): `?teams=N` for a generated company with N teams (0..1
 |---|---|---|---|
 | GET | `/api/company` | `Company` | `isDemo`, `budgetUnit`, `currentPeriod` |
 | GET | `/api/teams` | `Team[]` | `color` is any CSS color; frontend falls back if missing |
-| GET | `/api/spending?teamId=&from=&to=` | `SpendingRecord[]` | one row per team × day × cost component × provider; `complete:false` marks partial days |
+| GET | `/api/people` | `Person[]` | everyone whose usage rolls up into a team (`teamId`, `role`, `integrations` such as slack/asana/monday, `primaryTool`) |
+| GET | `/api/spending?teamId=&from=&to=` | `SpendingRecord[]` | one row per person × day × cost component × provider, with `personId` set when attribution is known (team-level rows omit it); team totals are the sum; `complete:false` marks partial days |
 | GET | `/api/budgets` | `Budget[]` | include `version` so stale proposals can be detected |
-| GET | `/api/forecasts` | `Forecast[]` | `basis:"full_period"` means the number already includes spend to date. `status:"unavailable"` + `unavailableReason` is a valid answer |
-| GET | `/api/context?teamId=` | `ContextItem[]` | Droid's cited summaries; `supersededBy` for outdated items |
+| GET | `/api/forecasts` | `Forecast[]` | team-level AND person-level projections in one list; person-level ones carry `personId` and must sum to the team projection. `basis:"full_period"` means the number already includes spend to date. `status:"unavailable"` + `unavailableReason` is a valid answer |
+| GET | `/api/context?teamId=` | `ContextItem[]` | Droid's cited summaries; `supersededBy` for outdated items. Person-level signals set `scope:"person"`, `personIds`, a typed `signal` (project_deferred, model_change, out_of_office, …) and `sources[].integration` (slack/asana/monday). Macro changes such as a new model set `scope:"company"` with every `teamId` |
 | GET | `/api/documents` | `CompanyDocument[]` | readable source material (markdown body) |
 | GET | `/api/documents/:id` | `CompanyDocument` | |
 | GET | `/api/proposals` | `AllocationProposal[]` | newest first |

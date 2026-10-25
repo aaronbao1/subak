@@ -13,6 +13,7 @@ Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`
 - `src/fixtures/generate.ts` — `generateCompany(n)` builds a deterministic synthetic company with 0..16 teams plus a generic assistant. The mock client picks it when the URL has `?teams=N` (remembered in localStorage; `?teams=default` resets). **UI code must never assume a team count or hard-code team ids.**
 - `src/lib/store.ts` — app state. Applying a proposal here updates budgets everywhere.
 - `src/lib/format.ts` — `formatAmount`, `pct`, `formatPct`. Use these; don't hand-format numbers.
+- **People are the unit of attribution.** `Person` (contracts) belongs to one team. Spending records and forecasts carry an optional `personId`; the store splits `forecasts` (team-level, no personId) from `personForecasts`. Team numbers are always the sum of the team's people; `src/components/person/derive.ts` (`summarizePeople`) is the one place that rolls them up. Context items with `scope: "person"` name `personIds`, a typed `signal`, and `sources[].integration` (Slack, Asana, Monday) so the UI and the assistant can say *why* an individual's usage moves (manager pushed a project back, moving to a new model, out of office). `scope: "company"` is a macro change (e.g. a new model everyone migrates to). Person pages live at `/teams/[teamId]/people/[personId]`.
 
 ## Ownership (parallel agents — stay in your lane)
 | Area | Owns |
@@ -20,7 +21,9 @@ Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind v4, shadcn/ui (`
 | Fixtures | `src/fixtures/**`, `src/lib/data/mock-client.ts` |
 | Dashboard | `src/app/page.tsx`, `src/components/dashboard/**` |
 | Teams | `src/app/teams/**`, `src/components/team/**` |
-| Assistant + allocation | `src/components/assistant/**`, `src/components/allocation/**`, `src/app/decisions/**` |
+| People | `src/components/person/**`, `src/app/(app)/teams/[teamId]/people/**` |
+| Assistant + allocation | `src/components/assistant/**`, `src/components/allocation/**`, `src/app/(app)/decisions/**` |
+| Landing | `src/app/(marketing)/**`, `src/components/landing/**` |
 | Shell / shared | `src/components/shell/**`, `src/lib/**`, `src/components/ui/**` — integration owner only |
 
 If you need a shared component, put it in your own folder first and flag it; don't edit another lane's files.
@@ -40,6 +43,7 @@ If you need a shared component, put it in your own folder first and flag it; don
 - **Receipts cite the projection reviewed.** A decision shows `forecastsReviewed` from the moment of review, not the current forecast.
 - **Citations are reachable** from any context card or proposal, but the main dashboard is not a tool-execution console.
 - **Demo label stays on.** `company.isDemo` shows a badge.
+- **Individuals reconcile to the team.** Person projections sum to the team projection; person spend sums to team spend. A person has no allocation of their own (allocations stay at team level); show share of the team number instead.
 - Calm design: restrained status colors, clear hierarchy, details on demand. No neon dashboards.
 
 ## Conventions

@@ -7,11 +7,16 @@ import type { Forecast } from "@/lib/contracts";
  */
 export type TeamStatus = "on_track" | "watch" | "likely_over" | "no_projection";
 
+/**
+ * Quiet badges (spec tag: h-6, rounded-md, 1px border): neutral when fine, warning tint to watch,
+ * destructive tint when likely over, dashed when unknown. Pair with `STATUS_BADGE` for the box.
+ */
+export const STATUS_BADGE = "inline-flex h-6 shrink-0 items-center rounded-md border px-2 text-xs font-medium whitespace-nowrap";
 export const STATUS_META: Record<TeamStatus, { label: string; className: string }> = {
-  on_track: { label: "On track", className: "bg-muted text-muted-foreground" },
-  watch: { label: "Watch", className: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
-  likely_over: { label: "Likely over", className: "bg-destructive/10 text-destructive" },
-  no_projection: { label: "No projection", className: "border border-dashed border-border text-muted-foreground" },
+  on_track: { label: "On track", className: "border-border bg-popover text-muted-foreground" },
+  watch: { label: "Watch", className: "border-warning/30 bg-warning/10 text-warning" },
+  likely_over: { label: "Likely over", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+  no_projection: { label: "No projection", className: "border-dashed border-border text-muted-foreground" },
 };
 
 /** Full-period projected total for a forecast. `remaining` basis is added to spent; `full_period` never is. */
@@ -28,9 +33,9 @@ export function projectedTotals(
   };
 }
 
-export function teamStatus(allocated: number | undefined, projected: number | undefined): TeamStatus {
+export function teamStatus(allocated: number | undefined, projected: number | undefined, high?: number): TeamStatus {
   if (typeof projected !== "number" || typeof allocated !== "number") return "no_projection";
   if (projected > allocated) return "likely_over";
-  if (projected >= allocated * 0.9) return "watch";
+  if (projected >= allocated * 0.9 || (typeof high === "number" && high > allocated)) return "watch";
   return "on_track";
 }

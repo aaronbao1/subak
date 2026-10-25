@@ -1,15 +1,14 @@
 "use client";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, Info, MessageSquare } from "lucide-react";
+import { ArrowLeft, ChevronRight, Info, MessageSquare } from "lucide-react";
 import type { Budget, Forecast, SpendingRecord, Team } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { formatAmount } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { fmtDate, fmtDateTime, spentToDate, StatusChip, teamStatus, teamUnit } from "./labels";
+import { fmtDate, fmtDateTime, PlaceholderBadge, spentToDate, StatusChip, Tag, teamStatus, teamUnit } from "./labels";
 
 interface Props {
   team: Team;
@@ -18,7 +17,7 @@ interface Props {
   records: SpendingRecord[];
 }
 
-/** Team identity, three stat tiles, forecast metadata, assumptions and limitations. */
+/** Team identity, three stat tiles, and a quiet disclosure with the forecast's metadata, assumptions and limitations. */
 export function TeamHeader({ team, budget, forecast, records }: Props) {
   const askAssistant = useAppStore((s) => s.askAssistant);
   const spent = spentToDate(records);
@@ -33,40 +32,46 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
   const low = available && forecast.low != null ? (isRemaining ? spent + forecast.low : forecast.low) : undefined;
   const high = available && forecast.high != null ? (isRemaining ? spent + forecast.high : forecast.high) : undefined;
   const fUnit = forecast?.unit ?? unit;
+  const isScenario = forecast?.kind === "scenario";
+  const isPlaceholder = forecast?.origin === "placeholder";
+  const periodLabel = (p: { start: string; end: string; label?: string }) => p.label ?? `${fmtDate(p.start)} – ${fmtDate(p.end, { year: true })}`;
 
   return (
-    <div className="space-y-4">
-      <Link href="/teams" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> Back to overview
+    <div className="space-y-6">
+      <Link href="/teams" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors duration-300 hover:text-foreground">
+        <ArrowLeft className="size-4" aria-hidden /> All teams
       </Link>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: team.color }} />
-            <h1 className="text-xl font-semibold tracking-tight">{team.name}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="flex items-center gap-2.5 text-[22px] leading-[1.15]">
+              <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: team.color }} />
+              {team.name}
+            </h1>
             <StatusChip status={status} />
           </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {team.lead ? <>Lead: <span className="text-foreground">{team.lead}</span></> : "No lead listed"}
+          <div className="mt-1.5 text-sm text-muted-foreground">
+            {team.lead ? <>Lead <span className="text-foreground/80">{team.lead}</span></> : "No lead listed"}
             {team.description && <> · {team.description}</>}
           </div>
         </div>
         <Button
           variant="outline"
-          size="sm"
-          className="shrink-0 self-start"
+          size="lg"
+          className="shrink-0 self-start border-border bg-popover hover:border-border-strong"
           onClick={() => askAssistant(`Tell me about ${team.name}'s spending and projection`)}
         >
-          <MessageSquare /> Ask the assistant about this team
+          <MessageSquare className="text-muted-foreground" /> Ask the assistant
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <dl className="grid gap-4 sm:grid-cols-3">
         <Tile
           label="Allocation"
           value={budget ? formatAmount(budget.allocated, budget.unit) : "—"}
-          caption={budget?.period.label ?? (budget ? `${fmtDate(budget.period.start)} – ${fmtDate(budget.period.end, { year: true })}` : "No allocation recorded")}
+          muted={!budget}
+          caption={budget ? periodLabel(budget.period) : "No allocation recorded"}
         />
         <Tile
           label="Spent to date"
@@ -74,22 +79,23 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
           caption={lastDate ? `Through ${fmtDate(lastDate, { year: true })}` : "No spending recorded"}
         />
         <Tile
-          label="Projection"
+          label={isScenario ? "Scenario" : "Projection"}
           value={projectedTotal != null ? formatAmount(projectedTotal, fUnit) : "No projection"}
           muted={projectedTotal == null}
+          tag={isPlaceholder ? <PlaceholderBadge /> : undefined}
           caption={
             projectedTotal != null
               ? low != null && high != null
-                ? `${formatAmount(low, fUnit)} – ${formatAmount(high, fUnit)} · full-period total, includes spend to date`
-                : "Full-period total, includes spend to date"
+                ? <><span className="num">{formatAmount(low, fUnit)} – {formatAmount(high, fUnit)}</span> · full period, includes spend to date</>
+                : "Full period, includes spend to date"
               : forecast?.status === "unavailable" ? "See reason below" : "Not supplied"
           }
         />
-      </div>
+      </dl>
 
       {forecast?.status === "unavailable" && (
-        <Alert>
-          <Info />
+        <Alert className="border-border bg-card">
+          <Info className="size-4 text-muted-foreground" />
           <AlertTitle>Projection unavailable</AlertTitle>
           <AlertDescription>
             {forecast.unavailableReason ?? "The forecasting service did not return a projection for this team."}{" "}
@@ -99,64 +105,77 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
       )}
 
       {forecast && (
-        <Card size="sm">
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{forecast.kind === "scenario" ? "Scenario" : "Projection"}</span>
-              <span>{forecast.period.label ?? `${fmtDate(forecast.period.start)} – ${fmtDate(forecast.period.end, { year: true })}`}</span>
-              <span>Generated {fmtDateTime(forecast.generatedAt)}</span>
-              {forecast.origin === "placeholder" && (
-                <Badge variant="outline" className="font-normal text-muted-foreground" title="Shared placeholder number, not the output of the forecasting service">
-                  placeholder projection
-                </Badge>
-              )}
-              {forecast.kind === "scenario" && (
-                <Badge variant="secondary" className="font-normal" title="Conditional on the stated assumptions; not an unconditional forecast">
-                  scenario
-                </Badge>
-              )}
-              {isRemaining && (
-                <Badge variant="outline" className="font-normal text-muted-foreground">remaining basis, added to spend</Badge>
-              )}
+        <details className="group rounded-xl border border-border bg-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm transition-colors duration-300 [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden />
+            <span className="font-medium">About this {isScenario ? "scenario" : "projection"}</span>
+            <span className="hidden min-w-0 flex-wrap items-center gap-x-2 text-xs text-muted-foreground sm:flex">
+              <span aria-hidden>·</span>
+              <span className="truncate">{periodLabel(forecast.period)}</span>
+              {isPlaceholder && <PlaceholderBadge />}
+              {isScenario && <Tag title="Conditional on the stated assumptions; not an unconditional forecast">Scenario</Tag>}
+              {isRemaining && <Tag>Remaining basis, added to spend</Tag>}
+            </span>
+          </summary>
+          <div className="space-y-5 border-t border-border px-4 py-4 text-sm">
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+              <dt className="text-muted-foreground">Kind</dt>
+              <dd className="flex flex-wrap items-center gap-2">
+                {isScenario ? "Scenario, conditional on the assumptions below" : "Forecast"}
+                {isPlaceholder && <PlaceholderBadge />}
+              </dd>
+              <dt className="text-muted-foreground">Period</dt>
+              <dd>{periodLabel(forecast.period)}</dd>
+              <dt className="text-muted-foreground">Generated</dt>
+              <dd className="num">{fmtDateTime(forecast.generatedAt)}</dd>
+              <dt className="text-muted-foreground">Basis</dt>
+              <dd>{isRemaining ? "Remaining spend to period end; added to spend to date above" : "Full-period total; already includes spend to date"}</dd>
+              <dt className="text-muted-foreground">Origin</dt>
+              <dd>{isPlaceholder ? "Shared placeholder number, not the output of the forecasting service" : "Forecasting service"}</dd>
+            </dl>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ListBlock title="Assumptions" items={forecast.assumptions} empty="No assumptions stated." />
+              <ListBlock title="Limitations" items={forecast.limitations} empty="No limitations stated." />
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Expandable title="Assumptions" items={forecast.assumptions} empty="No assumptions stated." />
-              <Expandable title="Limitations" items={forecast.limitations} empty="No limitations stated." />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </details>
       )}
     </div>
   );
 }
 
-function Tile({ label, value, caption, muted }: { label: string; value: string; caption?: string; muted?: boolean }) {
+/** Stat tile per spec: eyebrow above, mono 32px value, caption below. */
+function Tile({ label, value, caption, muted, tag }: { label: string; value: string; caption?: ReactNode; muted?: boolean; tag?: ReactNode }) {
   return (
-    <Card size="sm">
-      <CardContent>
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className={cn("mt-1 text-2xl font-semibold tracking-tight", muted && "text-muted-foreground text-lg font-medium")}>{value}</div>
-        {caption && <div className="mt-1 text-xs text-muted-foreground">{caption}</div>}
-      </CardContent>
-    </Card>
+    <div className="min-w-0 rounded-xl border border-border bg-card p-4">
+      <dt className="flex items-center gap-2">
+        <span className="eyebrow">{label}</span>
+        {tag}
+      </dt>
+      <dd className={cn("num mt-2 truncate text-[32px] leading-none tracking-[-0.01em]", muted && "text-muted-foreground")}>{value}</dd>
+      {caption && <dd className="mt-2 text-xs leading-relaxed text-muted-foreground">{caption}</dd>}
+    </div>
   );
 }
 
-function Expandable({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+function ListBlock({ title, items, empty }: { title: string; items: string[]; empty: string }) {
   return (
-    <details className="group rounded-lg border bg-muted/30 px-3 py-2 open:bg-muted/50">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium [&::-webkit-details-marker]:hidden">
-        <span>{title} <span className="text-xs font-normal text-muted-foreground">({items.length})</span></span>
-        <span className="text-xs text-muted-foreground group-open:hidden">Show</span>
-        <span className="hidden text-xs text-muted-foreground group-open:inline">Hide</span>
-      </summary>
+    <div>
+      <div className="eyebrow">
+        {title} <span className="num">({items.length})</span>
+      </div>
       {items.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
       ) : (
-        <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-          {items.map((it, i) => <li key={i}>{it}</li>)}
+        <ul className="mt-2 space-y-1.5 text-sm text-foreground/80">
+          {items.map((it, i) => (
+            <li key={i} className="flex gap-2.5">
+              <span aria-hidden className="mt-[8px] size-1 shrink-0 rounded-full bg-muted-foreground" />
+              <span>{it}</span>
+            </li>
+          ))}
         </ul>
       )}
-    </details>
+    </div>
   );
 }

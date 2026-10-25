@@ -1,13 +1,13 @@
 import type { DailyPoint } from "./derive";
 
-/** Tiny inline-SVG daily trend. Partial days are drawn with a lighter stroke so a dip at the end is not misread. */
+/** Tiny inline-SVG daily trend. Partial and projected days are drawn dashed and lighter so they are never read as recorded. */
 export function Sparkline({ points, color, className }: { points: DailyPoint[]; color: string; className?: string }) {
   if (points.length < 2) return <div className={className} aria-hidden />;
   const W = 100, H = 28, PAD = 2;
   const max = Math.max(1, ...points.map((p) => p.amount));
   const x = (i: number) => (i / (points.length - 1)) * W;
   const y = (v: number) => H - PAD - (v / max) * (H - PAD * 2);
-  const firstPartial = points.findIndex((p) => p.partial);
+  const firstPartial = points.findIndex((p) => p.partial || p.projected);
   const solidEnd = firstPartial === -1 ? points.length - 1 : Math.max(1, firstPartial);
   const toPath = (from: number, to: number) => points.slice(from, to + 1).map((p, i) => `${i === 0 ? "M" : "L"}${x(from + i).toFixed(1)},${y(p.amount).toFixed(1)}`).join(" ");
 

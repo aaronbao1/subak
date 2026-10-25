@@ -1,28 +1,31 @@
 import type { DataClient, SpendingFilter } from "./client";
 import type { AllocationProposal, AssistantMessage, Budget, Decision } from "@/lib/contracts";
-import { northstar, generateCompany, MAX_TEAMS, type Dataset } from "@/fixtures";
+import { northstar, generateCompany, DEFAULT_TEAM_COUNT, MAX_TEAMS, type Dataset } from "@/fixtures";
 
 const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 const newId = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
 const TEAMS_KEY = "aisp.teams";
 
 /**
- * Pick the dataset. `?teams=N` (0..16) selects a generated company and is remembered in localStorage
- * so navigation and reloads keep it. `?teams=default` (or `northstar`) returns to the plan's example.
+ * Pick the dataset. The demo is the generated company with DEFAULT_TEAM_COUNT teams. `?teams=N` (0..16)
+ * overrides the team count and is remembered in localStorage; `?teams=default` forgets the override;
+ * `?teams=northstar` loads the plan's 3-team example.
  */
 function selectDataset(): Dataset {
-  if (typeof window === "undefined") return northstar;
+  const fallback = () => generateCompany(DEFAULT_TEAM_COUNT);
+  if (typeof window === "undefined") return fallback();
   try {
     const q = new URLSearchParams(window.location.search).get("teams");
-    if (q === "default" || q === "northstar") { window.localStorage.removeItem(TEAMS_KEY); return northstar; }
+    if (q === "northstar") { window.localStorage.removeItem(TEAMS_KEY); return northstar; }
+    if (q === "default") { window.localStorage.removeItem(TEAMS_KEY); return fallback(); }
     const raw = q ?? window.localStorage.getItem(TEAMS_KEY);
-    if (raw == null || raw === "") return northstar;
+    if (raw == null || raw === "") return fallback();
     const n = Number(raw);
-    if (!Number.isInteger(n) || n < 0 || n > MAX_TEAMS) return northstar;
+    if (!Number.isInteger(n) || n < 0 || n > MAX_TEAMS) return fallback();
     window.localStorage.setItem(TEAMS_KEY, String(n));
     return generateCompany(n);
   } catch {
-    return northstar;
+    return fallback();
   }
 }
 
@@ -38,6 +41,7 @@ export class MockDataClient implements DataClient {
 
   async getCompany() { await wait(); return this.fx.company; }
   async getTeams() { await wait(); return this.fx.teams; }
+  async getPeople() { await wait(); return this.fx.people; }
   async getSpending(filter?: SpendingFilter) {
     await wait();
     return this.fx.spending.filter(
@@ -47,7 +51,7 @@ export class MockDataClient implements DataClient {
         (!filter?.to || r.date <= filter.to),
     );
   }
-  async getBudgets() { await wait(); return this.budgets; }
+  async getBudgets() { await wait(); return this.budgets.map((b) => ({ ...b })); }
   async getForecasts() { await wait(); return this.fx.forecasts; }
   async getContext(teamId?: string) {
     await wait();
@@ -55,10 +59,10 @@ export class MockDataClient implements DataClient {
   }
   async getDocuments() { await wait(); return this.fx.documents; }
   async getDocument(id: string) { await wait(); return this.fx.documents.find((d) => d.id === id); }
-  async getProposals() { await wait(); return this.proposals; }
-  async getProposal(id: string) { await wait(); return this.proposals.find((p) => p.id === id); }
-  async getDecisions() { await wait(); return this.decisions; }
-  async getThread(threadId: string) { await wait(); return this.threads.get(threadId) ?? []; }
+  async getProposals() { await wait(); return this.proposals.map((p) => ({ ...p })); }
+  async getProposal(id: string) { await wait(); const p = this.proposals.find((x) => x.id === id); return p ? { ...p } : undefined; }
+  async getDecisions() { await wait(); return this.decisions.map((d) => ({ ...d })); }
+  async getThread(threadId: string) { await wait(); return [...(this.threads.get(threadId) ?? [])]; }
 
   async sendMessage(threadId: string, content: string) {
     await wait(600);
@@ -66,7 +70,14 @@ export class MockDataClient implements DataClient {
     const now = new Date().toISOString();
     const user: AssistantMessage = { id: newId("msg"), threadId, role: "user", content, createdAt: now };
     const scripted = this.fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets, budgetVersion: this.budgetVersion });
-    if (scripted.proposal) this.proposals.unshift(scripted.proposal);
+    if (scripted.proposal) {
+      // A revision replaces the proposal it revises; the older one is kept in history as "revised".
+      if (scripted.proposal.revisesProposalId) {
+        const old = this.proposals.find((x) => x.id === scripted.proposal!.revisesProposalId);
+        if (old && old.status === "proposed") old.status = "revised";
+      }
+      this.proposals.unshift(scripted.proposal);
+    }
     const assistant: AssistantMessage = {
       id: newId("msg"),
       threadId,
