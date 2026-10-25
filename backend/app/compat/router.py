@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
-from app.compat import cache, errors, intent, mappers, threads
+from app.compat import cache, errors, intent, mappers, spending_index, threads
 from app.compat import schemas as S
 # Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
 from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
@@ -211,24 +211,6 @@ def get_people(request: Request, session: Session = Depends(get_session)):
     return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person], build)
 
 
-# Only the columns mappers.spending reads, as plain rows: building ~27k ORM objects and full
-# spending.record_out dicts per rebuild cost ~0.5 s on the Uber dataset. Same order as
-# spending.list_records (mappers.spending takes each row's unit from its first record).
-_SPEND_COLUMNS = (
-    func.coalesce(UsageRecord.team_id, spending_svc.UNATTRIBUTED).label("team"),
-    UsageRecord.person_id.label("person"), UsageRecord.occurred_at, UsageRecord.cost_category,
-    UsageRecord.provider, UsageRecord.amount, UsageRecord.counts_toward_spend, UsageRecord.value_kind,
-    UsageRecord.import_batch_id, UsageRecord.source_kind, UsageRecord.notional_value, UsageRecord.counter_reset,
-    UsageRecord.unit,
-)
-
-
-def _spend_rows(session: Session, period_id: str) -> list[dict]:
-    rows = session.execute(select(*_SPEND_COLUMNS).where(UsageRecord.period_id == period_id)
-                           .order_by(UsageRecord.occurred_at, UsageRecord.source_record_key))
-    return [dict(r) for r in rows.mappings()]
-
-
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
 def get_spending(
     request: Request,
@@ -242,25 +224,12 @@ def get_spending(
     if period is None:
         return []
 
-    def build() -> list[dict]:
-        records = _spend_rows(session, period.id)
-        batch_ids = {r["import_batch_id"] for r in records}
-        labels = ({b.id: (b.source_label or b.filename or b.source_kind)
-                   for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))}
-                  if batch_ids else {})
-        rows = mappers.spending(records, batch_labels=labels)
-        if team_id:
-            rows = [r for r in rows if r["teamId"] == team_id]
-        if date_from:
-            rows = [r for r in rows if r["date"] >= date_from.isoformat()]
-        if date_to:
-            rows = [r for r in rows if r["date"] <= date_to.isoformat()]
-        return rows
-
-    # The full ~3 MB list is rebuilt only when the data stamp (write generation + latest usage record
-    # id, cache.py) or the query changes; repeated 1 s refreshes get the stored body.
-    key = ("spending", cache.data_stamp(session), period.id, team_id or None, date_from, date_to)
-    return cache.cached_json(request, key, list[S.SpendingRecord], build)
+    # Polled every second while the live feed appends records every few seconds: the incremental index
+    # (spending_index.py) re-maps only the rows new records touch and rebuilds fully only after an
+    # in-place change (e.g. a team re-attribution); unchanged data gets the stored body.
+    return spending_index.index_for(request.app.state).response(
+        request, session, period.id, team_id or None,
+        date_from.isoformat() if date_from else None, date_to.isoformat() if date_to else None)
 
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
@@ -291,14 +260,12 @@ def get_forecasts(request: Request, session: Session = Depends(get_session), clo
     people = _people_by_team(session)
     now = clock.now()
     key = _forecast_key(result, period, team_ids, people, now)
-    store = cache.cache_for(request.app.state)
-    body = store.get(key)
-    if body is None:
+    def build() -> cache.Body:
         raw = cache.render(list[S.Forecast], mappers.forecasts(result, period_row=period, team_ids=team_ids,
                                                                 now=now, people=people))
-        body = cache.Body(raw, keep=result)  # holding `result` keeps the object ids in its key from reuse
-        store.put(key, body)
-    return body.response(request)
+        return cache.Body(raw, keep=result)  # holding `result` keeps the object ids in its key from reuse
+
+    return cache.cache_for(request.app.state).get_or_build(key, build).response(request)  # single-flight
 
 
 def _forecast_key(result: Any, period: PlanningPeriod, team_ids: list[str], people: dict[str, list[str]],

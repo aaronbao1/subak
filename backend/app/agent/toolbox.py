@@ -99,6 +99,10 @@ class BackendToolbox:
         self.signal_ids: list[str] = []
         self.proposal_ids: list[str] = []
         self.charts: list[dict] = []  # every chart spec actually built, attached to the run output
+        # Budget refusals ("tool_budget_exhausted", "write_budget_exhausted:<tool>"): the run may have
+        # left work undone, so it is reported in the run output (the interpret CLI does not count such
+        # a run's documents as interpreted).
+        self.budget_exhausted: list[str] = []
         self._writes = {"record_signal": 0, "draft_proposal": 0}  # draft_proposal also counts rebases
 
     # ---- activity stream ---------------------------------------------------------------------
@@ -135,6 +139,8 @@ class BackendToolbox:
                 summarize: Callable[[dict], str]) -> dict:
         if self._step_seq >= MAX_TOOL_CALLS:
             err = ToolError(tool, "tool_budget_exhausted", f"a run may make at most {MAX_TOOL_CALLS} tool calls")
+            if "tool_budget_exhausted" not in self.budget_exhausted:
+                self.budget_exhausted.append("tool_budget_exhausted")
             self.emit("error", err.as_dict())
             raise err
         self._step_seq += 1
@@ -278,6 +284,8 @@ class BackendToolbox:
     def _check_write_budget(self, tool: str, limit: int, *, counter: str | None = None) -> None:
         if self._writes[counter or tool] >= limit:
             err = ToolError(tool, "write_budget_exhausted", f"a run may make at most {limit} {tool} calls")
+            if f"write_budget_exhausted:{tool}" not in self.budget_exhausted:
+                self.budget_exhausted.append(f"write_budget_exhausted:{tool}")
             self.emit("error", err.as_dict())
             raise err
 

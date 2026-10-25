@@ -18,18 +18,29 @@ can change a budget.
 
 - Runner: `DROID_RUNNER` (fake by default). `sdk` is preflighted before anything runs; if it is
   unavailable the command exits 2 and runs nothing. There is no fallback to the fake runner.
-- Credit cap: before each batch the CLI stops if `spent + max(largest batch so far, --batch-estimate)`
-  would exceed `--credit-cap`. `spent` sums provider-reported `factory_credits`
-  (`output.usage.provider_reported.factory_credits`, also parsed from a failed run's error). An sdk
-  batch that reports no credits stops the run (the cap could no longer be enforced). The fake runner
-  reports none and costs 0.
+- Credit cap (`--credit-cap`, cumulative per database): `spent` starts at the credits already reported
+  by earlier interpret-cli runs of this runner kind in this database (resuming after a stop does not
+  get a fresh cap; `--ignore-prior-spend` opts out), and adds each batch's provider-reported
+  `factory_credits` (`output.usage.provider_reported.factory_credits`, also parsed from a failed or
+  interrupted run's error). Two guards:
+  1. before each batch the CLI stops if `spent + max(largest batch so far, --batch-estimate)` would
+     exceed the cap;
+  2. each batch gets the remaining cap as `params.credit_budget`; the sdk runner stops the run once the
+     provider's streamed usage reaches it (the run then fails and its documents stay un-interpreted).
+  The cap is therefore enforced to within one provider usage update, not to the credit: the provider
+  reports usage only as it streams, so a run can overshoot by what it spends between two updates.
+  An sdk batch that reports no credits, or usage for only some of its turns, stops the run (the cap
+  could no longer be enforced). The fake runner reports none and costs 0.
 - Idempotent: a document (doc_key + version) already covered by a succeeded scoped interpret_corpus run
   with the same runner kind is skipped (`--force` re-runs). Ids change on every reload, keys do not.
+  A run that hit a toolbox budget (`output.budget_exhausted`, e.g. the 20-signal cap) may have left
+  signals unrecorded, so its documents are not counted as interpreted and are retried.
 - sdk runs append one line per batch to `backend/data/live_runs.log` (`--log` to override), in the
   evals harness format; note the evals live cap counts those lines too.
 - `--dry-run` prints the selection and batch plan and runs nothing.
 
-Exit codes: 0 done (including a stop at the cap), 1 a batch failed, 2 runner unavailable / bad input.
+Exit codes: 0 done (including a stop at the cap), 1 a batch failed, 2 runner unavailable / bad input
+(including an outdated database schema).
 Prints no secrets and no environment variables.
 """
 
@@ -100,12 +111,15 @@ def select_documents(session: Session, period: m.PlanningPeriod, *, since: date,
 
 
 def interpreted_keys(session: Session, runner_kind: str) -> set[tuple[str, int]]:
-    """doc_key+version covered by a succeeded scoped interpret_corpus run of this runner kind."""
+    """doc_key+version covered by a succeeded scoped interpret_corpus run of this runner kind that did
+    not run out of a toolbox budget (such a run may have left signals unrecorded)."""
     done: set[tuple[str, int]] = set()
     runs = session.scalars(select(m.AgentRun).where(m.AgentRun.task_type == "interpret_corpus",
                                                     m.AgentRun.status == "succeeded",
                                                     m.AgentRun.runner_kind == runner_kind))
     for run in runs:
+        if (run.output or {}).get("budget_exhausted"):
+            continue
         ids = ((run.input or {}).get("task") or {}).get("params", {}).get("document_ids") or []
         for doc_id in ids:
             d = session.get(m.CorpusDocument, doc_id)
@@ -165,13 +179,33 @@ class Report:
     skipped_done: int = 0
     batches_planned: int = 0
     results: list[BatchResult] = field(default_factory=list)
-    spent: float = 0.0
+    prior_spent: float = 0.0  # credits of earlier interpret-cli runs in this database, counted toward the cap
+    spent: float = 0.0        # prior_spent + this invocation's batches
     stopped_at_cap: bool = False
     stop_reason: str | None = None
 
     @property
     def exit_code(self) -> int:
         return 1 if any(r.status != "succeeded" for r in self.results) else 0
+
+
+def prior_credits(session: Session, runner_kind: str) -> tuple[float, int]:
+    """(credits, run count) already reported by interpret-cli interpret_corpus runs of this runner kind
+    in this database, whatever their status (a failed or interrupted run still spent credits)."""
+    total, n = 0.0, 0
+    runs = session.scalars(select(m.AgentRun).where(m.AgentRun.task_type == "interpret_corpus",
+                                                    m.AgentRun.runner_kind == runner_kind))
+    for run in runs:
+        if ((run.input or {}).get("initiated_by") or {}).get("id") != INTERPRET_CLI.id:
+            continue
+        credits = _credits(run)
+        if credits:
+            total, n = total + credits, n + 1
+    return total, n
+
+
+def _usage_incomplete(run: m.AgentRun) -> bool:
+    return bool(((run.output or {}).get("usage") or {}).get("usage_incomplete"))
 
 
 def _credits(run: m.AgentRun) -> float | None:
@@ -194,7 +228,7 @@ def _append_log(path: Path, at: str, purpose: str, result: str, usage: Any) -> N
 def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clock, ids: IdFactory,
                 runner: Any, runner_kind: str, since: date, include_announced: bool, batch_size: int,
                 credit_cap: float, batch_estimate: float = DEFAULT_BATCH_ESTIMATE, force: bool = False,
-                dry_run: bool = False, log_path: Path = DEFAULT_LOG, forecast_provider: Any = None,
+                ignore_prior_spend: bool = False, dry_run: bool = False, log_path: Path = DEFAULT_LOG, forecast_provider: Any = None,
                 out: Callable[[str], None] = print) -> Report:
     from app.providers.forecast import provider_from_settings
     from app.services import agent_runs
@@ -207,8 +241,10 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
         period = resolve_period(s, None, clock.now())
         docs = select_documents(s, period, since=since, include_announced=include_announced)
         done = set() if force else interpreted_keys(s, runner_kind)
+        prior, prior_runs = (0.0, 0) if ignore_prior_spend else prior_credits(s, runner_kind)
     finally:
         s.close()
+    report.prior_spent = report.spent = prior
     report.selected = len(docs)
     todo = [d for d in docs if d.key not in done]
     report.skipped_done = len(docs) - len(todo)
@@ -219,7 +255,9 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
     out(f"period {period.id} ({period.starts_on}..{period.ends_on}); runner {runner_kind}{label}; "
         f"selected {len(docs)} document(s) (since {since}{', + announced' if include_announced else ''}); "
         f"{report.skipped_done} already interpreted; {len(batches)} batch(es) of <= {batch_size + 1}; "
-        f"credit cap {credit_cap:,.0f}")
+        f"credit cap {credit_cap:,.0f}"
+        + (f" ({prior:,.0f} already spent by {prior_runs} earlier interpret-cli run(s) in this database)"
+           if prior else ""))
     for i, b in enumerate(batches, 1):
         teams = sorted({t for d in b for t in d.teams})
         out(f"  batch {i}: {len(b)} doc(s) [{', '.join(teams) if len(teams) <= 4 else f'{len(teams)} teams'}] "
@@ -235,28 +273,41 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
     largest = 0.0
     for i, batch in enumerate(batches, 1):
         projected = report.spent + max(largest, batch_estimate)
-        if projected > credit_cap:
+        if projected > credit_cap or report.spent >= credit_cap:
             report.stopped_at_cap = True
             report.stop_reason = (f"stopped before batch {i}: spent {report.spent:,.0f} + next-batch estimate "
                                   f"{max(largest, batch_estimate):,.0f} would exceed the cap {credit_cap:,.0f}")
             out(report.stop_reason)
             break
         keys = [f"{d.doc_key}@v{d.version}" for d in batch]
+        # The remaining cap is the run's own credit budget: the sdk runner stops the run when the
+        # provider's streamed usage reaches it (guard 2 in the module doc).
         body = AgentRunCreate(task_type="interpret_corpus", wait=True,
                               instruction=f"Batch {i}/{len(batches)} of the period-relevant corpus.",
-                              params={"document_ids": [d.id for d in batch]})
+                              params={"document_ids": [d.id for d in batch],
+                                      "credit_budget": round(credit_cap - report.spent, 2)})
+        incomplete, exhausted = False, []
         try:
             run_id, _ = agent_runs.start_run(state, body, actor=INTERPRET_CLI)
         except DomainError as exc:
             run_id = (exc.details or {}).get("run_id")
             result = BatchResult(i, run_id, "unavailable" if exc.code == "runner_unavailable" else "failed",
                                  keys, None, error=exc.message)
+            if run_id is not None:  # the stored run may still carry credits in its error text
+                s = session_factory()
+                try:
+                    run = s.get(m.AgentRun, run_id)
+                    result.credits = _credits(run) if run is not None else None
+                finally:
+                    s.close()
         else:
             s = session_factory()
             try:
                 run = s.get(m.AgentRun, run_id)
                 count = len((run.output or {}).get("signal_ids") or [])
                 result = BatchResult(i, run_id, run.status, keys, _credits(run), count, run.error)
+                incomplete = _usage_incomplete(run)
+                exhausted = list((run.output or {}).get("budget_exhausted") or [])
             finally:
                 s.close()
         report.results.append(result)
@@ -272,8 +323,16 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
                         f"{result.status}; {result.signal_count} signal(s); spent {report.spent:,.0f} of cap "
                         f"{credit_cap:,.0f}" + (f"; error: {result.error[:300]}" if result.error else ""),
                         {"factory_credits": result.credits})
+        if exhausted:
+            out(f"  batch {i}: hit a toolbox budget ({', '.join(exhausted)}); its documents are not counted as "
+                "interpreted and will be retried (consider a smaller --batch)")
         if result.status != "succeeded":
             report.stop_reason = f"batch {i} ended {result.status}; later batches were not run"
+            out(report.stop_reason)
+            break
+        if runner_kind == "sdk" and incomplete:
+            report.stop_reason = (f"batch {i} reported usage for only some of its turns; stopping because the "
+                                  "credit cap can no longer be enforced")
             out(report.stop_reason)
             break
         if runner_kind == "sdk" and result.credits is None:
@@ -283,7 +342,8 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
             break
     done_count = sum(len(r.doc_keys) for r in report.results if r.status == "succeeded")
     out(f"done: {done_count} document(s) interpreted in {sum(r.status == 'succeeded' for r in report.results)} "
-        f"batch(es); {sum(r.signal_count for r in report.results)} signal(s); credits spent {report.spent:,.0f}")
+        f"batch(es); {sum(r.signal_count for r in report.results)} signal(s); credits spent "
+        f"{report.spent - report.prior_spent:,.0f} this run, {report.spent:,.0f} toward the cap")
     return report
 
 
@@ -297,7 +357,11 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--include-announced", action="store_true",
                    help="also documents authored earlier whose effective window overlaps the current period")
     p.add_argument("--batch", type=int, default=10, help="documents per batch (default 10, +1 to keep a pair)")
-    p.add_argument("--credit-cap", type=float, default=600_000, help="stop before exceeding this many credits")
+    p.add_argument("--credit-cap", type=float, default=600_000,
+                   help="credit cap for this database's interpret runs, earlier runs included (default 600000); "
+                        "enforced to within one provider usage update, see the module doc")
+    p.add_argument("--ignore-prior-spend", action="store_true",
+                   help="do not count credits of earlier interpret-cli runs in this database toward the cap")
     p.add_argument("--batch-estimate", type=float, default=DEFAULT_BATCH_ESTIMATE,
                    help="credits assumed for the next batch before one has run (default 75000)")
     p.add_argument("--db", type=Path, default=None, help="SQLite path (default BACKEND_DB_PATH or data/app.db)")
@@ -311,7 +375,7 @@ def main(argv: Sequence[str] | None = None, *, clock: Clock | None = None, ids: 
          runner: Any = None, env: dict[str, str] | None = None, out: Callable[[str], None] = print) -> int:
     from app.agent.loader import load_runner
     from app.agent.runner import RunnerUnavailable
-    from app.db.base import check_schema, make_engine, make_session_factory
+    from app.db.base import SchemaOutdated, check_schema, create_all, make_engine, make_session_factory
 
     args = _parser().parse_args(argv)
     if args.batch < 1 or args.credit_cap <= 0 or args.batch_estimate < 0:
@@ -336,12 +400,18 @@ def main(argv: Sequence[str] | None = None, *, clock: Clock | None = None, ids: 
         return 2
     engine = make_engine(settings.db_path)
     try:
-        check_schema(engine)
+        try:
+            create_all(engine)  # like the server and the loader: adds new tables (e.g. company_profile), no data change
+            check_schema(engine)
+        except SchemaOutdated as exc:
+            out(f"database {settings.db_path} has an outdated schema: {str(exc).split(' Delete it')[0]} Reload it with the loader that "
+                "created it (e.g. datagen/load_backend.py --reset for the Uber dataset); nothing was run.")
+            return 2
         report = run_batches(make_session_factory(engine), settings=settings, clock=clock or SystemClock(),
                              ids=ids or UuidIdFactory(), runner=runner, runner_kind=kind, since=args.since,
                              include_announced=args.include_announced, batch_size=args.batch,
                              credit_cap=args.credit_cap, batch_estimate=args.batch_estimate, force=args.force,
-                             dry_run=args.dry_run, log_path=args.log, out=out)
+                             ignore_prior_spend=args.ignore_prior_spend, dry_run=args.dry_run, log_path=args.log, out=out)
     except DomainError as exc:
         out(f"{exc.code}: {exc.message}")
         return 2

@@ -3,18 +3,23 @@ body, and every kind of write the reads depend on invalidates it."""
 
 from __future__ import annotations
 
+import concurrent.futures
 import gzip
 import sqlite3
+import threading
+import time
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
+from sqlalchemy import text
 
-from app.compat import cache
+from app.compat import cache, mappers, spending_index
 from app.compat import schemas as S
 from app.config import Settings
 from app.core.clock import FrozenClock, SequentialIdFactory
+from app.db.models import ImportBatch, PlanningPeriod
 from app.main import create_app
 from app.schemas.forecasts import ForecastResult, TeamProjection
 from app.seed.northstar import seed
@@ -60,17 +65,122 @@ def import_row(c, key: str, amount: str) -> None:
     assert r.status_code in (200, 201), r.text
 
 
+def index(client) -> spending_index.SpendingIndex:
+    return spending_index.index_for(client.app.state)
+
+
+def full_body(client, **filters) -> bytes:
+    """What a from-scratch build renders now (a fresh index: one full rebuild)."""
+    s = client.app.state.session_factory()
+    try:
+        period = s.query(PlanningPeriod).one()
+        return spending_index.SpendingIndex().body(s, period.id, **filters).raw
+    finally:
+        s.close()
+
+
 def test_repeated_spending_reads_hit_the_cache_with_identical_bodies(c):
     first = c.get(f"{API}/spending")
-    h0, m0 = stats(c)
+    idx = index(c)
+    builds = (idx.full_builds, idx.incremental_updates)
     second = c.get(f"{API}/spending")
     assert second.content == first.content
-    assert stats(c) == (h0 + 1, m0)
+    assert (idx.full_builds, idx.incremental_updates) == builds == (1, 0)
     TypeAdapter(list[S.SpendingRecord]).validate_python(second.json())
-    # Query params are part of the key: a filtered read is its own entry and really filtered.
+    # A filtered query is served from the same index (no rebuild).
     rows = c.get(f"{API}/spending?teamId=product").json()
     assert rows and {r["teamId"] for r in rows} == {"product"}
-    assert stats(c)[1] == m0 + 1
+    assert (idx.full_builds, idx.incremental_updates) == (1, 0)
+
+
+def test_spending_matches_the_uncached_build_byte_for_byte(c):
+    """The rendered body equals the old full path: mappers.spending over every record, rendered once."""
+    s = c.app.state.session_factory()
+    try:
+        records = spending_index.spend_rows(s, s.query(PlanningPeriod).one().id)
+        labels = {b.id: (b.source_label or b.filename or b.source_kind) for b in s.query(ImportBatch)}
+    finally:
+        s.close()
+    expected = cache.render(list[S.SpendingRecord], mappers.spending(records, batch_labels=labels))
+    assert c.get(f"{API}/spending", headers={"Accept-Encoding": "identity"}).content == expected
+
+
+def test_live_imports_update_spending_incrementally(c):
+    """An append (live feed) re-maps only the touched rows; the result equals a full rebuild, filters too."""
+    c.get(f"{API}/spending")
+    idx = index(c)
+    import_row(c, "live-a", "1.25")   # an existing row (research, Oct 18, openai) changes
+    body = c.get(f"{API}/spending", headers={"Accept-Encoding": "identity"}).content
+    assert (idx.full_builds, idx.incremental_updates) == (1, 1)
+    assert body == full_body(c)
+    r = c.post("/api/imports", data={"source_kind": "northstar_billing"},
+               files={"file": ("new.csv", ("record_id,occurred_at,source_account,provider,cost_category,value_kind,"
+                                           "amount,unit\nlive-b,2026-10-19T00:00:00Z,ws-research,newprov,direct_api,"
+                                           "simulated,2.00,USD\n").encode(), "text/csv")},
+               headers=IMPORTER)
+    assert r.status_code in (200, 201), r.text  # a brand-new row key (new provider) is inserted in order
+    body = c.get(f"{API}/spending", headers={"Accept-Encoding": "identity"}).content
+    assert idx.full_builds == 1 and idx.incremental_updates == 2
+    assert body == full_body(c) and b"newprov" in body
+    q = "?teamId=research&from=2026-10-18&to=2026-10-19"
+    assert c.get(f"{API}/spending{q}", headers={"Accept-Encoding": "identity"}).content == \
+        full_body(c, team_id="research", date_from="2026-10-18", date_to="2026-10-19")
+
+
+def test_in_place_change_rebuilds_spending_fully(c):
+    c.get(f"{API}/spending")
+    idx = index(c)
+    r = c.put("/api/team-mappings", json={"source_kind": "northstar_billing", "source_account": "ws-research",
+                                          "team_id": "product", "effective_from": "2026-01-01"}, headers=ANALYST)
+    assert r.status_code == 200, r.text
+    body = c.get(f"{API}/spending", headers={"Accept-Encoding": "identity"}).content
+    assert idx.full_builds == 2 and body == full_body(c)
+
+
+def test_concurrent_misses_build_once():
+    """Single-flight: concurrent callers on one missing key wait for one build and share its value."""
+    store = cache.ResponseCache()
+    started, release = threading.Event(), threading.Event()
+    calls = []
+
+    def build():
+        calls.append(1)
+        started.set()
+        release.wait(5)
+        return "body"
+
+    results = []
+    threads = [threading.Thread(target=lambda: results.append(store.get_or_build("k", build))) for _ in range(4)]
+    for t in threads:
+        t.start()
+    started.wait(5)
+    time.sleep(0.05)
+    release.set()
+    for t in threads:
+        t.join(5)
+    assert results == ["body"] * 4 and len(calls) == 1 and store.builds == 1
+
+
+def test_concurrent_spending_requests_share_one_update(c):
+    c.get(f"{API}/spending")
+    idx = index(c)
+    import_row(c, "live-c", "3.00")
+    with concurrent.futures.ThreadPoolExecutor(4) as pool:
+        bodies = list(pool.map(lambda _: c.get(f"{API}/spending").content, range(4)))
+    assert len(set(bodies)) == 1 and idx.incremental_updates == 1 and idx.full_builds == 1
+
+
+def test_table_generation_tracks_in_place_writes_not_appends(c):
+    before = cache.table_generation("usage_records")
+    import_row(c, "live-d", "1.00")
+    assert cache.table_generation("usage_records") == before  # an append
+    s = c.app.state.session_factory()
+    try:
+        s.execute(text("UPDATE usage_records SET amount = amount WHERE 0"))
+        s.commit()
+    finally:
+        s.close()
+    assert cache.table_generation("usage_records") != before
 
 
 def test_new_usage_import_invalidates_spending(c):

@@ -5,6 +5,7 @@ Fake runner and fake `droid_sdk` only (tests/fake_droid_sdk.py); nothing talks t
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 from datetime import datetime, timezone
 
@@ -303,3 +304,101 @@ def test_failed_batch_is_not_counted_done(app, seeded, clock, id_factory, tmp_pa
     assert code == 1 and [r.status for r in _runs(app)] == ["failed"]
     code, out = _main(seeded, "--batch", "2", clock=clock, id_factory=id_factory)
     assert code == 0 and "0 already interpreted" in out[0]
+
+
+# ---- credit cap: per-run budget, prior spend, incomplete usage ------------------------------------------
+
+
+def test_batch_costing_more_than_the_estimate_is_stopped_at_the_remaining_cap(app, seeded, clock, id_factory,
+                                                                              tmp_path, fake_sdk):
+    """The fake run costs 10,801 credits, far above the 10-credit estimate. The remaining cap (50) is the
+    run's credit budget, so the runner stops at the first usage update (99 credits) instead of spending
+    10,801: the overshoot is bounded by one provider usage update."""
+    runner = SdkDroidRunner(executable="/nonexistent/droid", timeout_s=5)
+    code, out = _main(seeded, "--batch", "2", "--credit-cap", "50", "--batch-estimate", "10",
+                      "--log", str(tmp_path / "l.log"), runner=runner, clock=clock, id_factory=id_factory)
+    runs = _runs(app)
+    assert code == 1 and [r.status for r in runs] == ["failed"]
+    assert runs[0].input["task"]["params"]["credit_budget"] == 50
+    assert "credit budget" in runs[0].error and cli._credits(runs[0]) == 99.0
+    assert any("spent 99" in ln for ln in out)
+
+
+def test_prior_spend_in_the_database_counts_toward_the_cap(app, seeded, clock, id_factory, tmp_path, fake_sdk):
+    runner = SdkDroidRunner(executable="/nonexistent/droid", timeout_s=5)
+    args = ("--batch", "2", "--credit-cap", "25000", "--batch-estimate", "10000", "--log", str(tmp_path / "l.log"))
+    code, _ = _main(seeded, *args, runner=runner, clock=clock, id_factory=id_factory)
+    assert code == 0 and len(_runs(app)) == 2  # 21,602 spent
+    code, out = _main(seeded, *args, runner=runner, clock=clock, id_factory=id_factory)
+    assert code == 0 and len(_runs(app)) == 2  # resuming does not get a fresh cap
+    assert "21,602 already spent by 2 earlier interpret-cli run(s)" in out[0]
+    assert any("stopped before batch 1" in ln for ln in out)
+    code, _ = _main(seeded, *args, "--ignore-prior-spend", runner=runner, clock=clock, id_factory=id_factory)
+    assert code == 0 and len(_runs(app)) == 4
+
+
+class _PartialUsageSdk:
+    kind = "sdk"
+
+    def run(self, task, tools):
+        tools.search_corpus("")
+        return AgentRunOutput(summary="done", usage={"provider_reported": {"factory_credits": 5.0},
+                                                     "usage_incomplete": True})
+
+
+def test_sdk_batch_with_incomplete_usage_stops(app, seeded, clock, id_factory, tmp_path):
+    code, out = _main(seeded, "--batch", "2", "--log", str(tmp_path / "l.log"), runner=_PartialUsageSdk(),
+                      clock=clock, id_factory=id_factory)
+    assert code == 0 and len(_runs(app)) == 1
+    assert any("only some of its turns" in ln for ln in out)
+
+
+# ---- idempotency vs toolbox budgets ---------------------------------------------------------------------
+
+
+class _SignalCapRunner:
+    """Hits the per-run record_signal cap (as a large batch could), then finishes normally."""
+
+    kind = "fake"
+
+    def run(self, task, tools):
+        from app.agent.toolbox import MAX_SIGNALS
+
+        tools._writes["record_signal"] = MAX_SIGNALS
+        with pytest.raises(ToolError):
+            tools.record_signal({"summary": "x"})
+        return AgentRunOutput(summary="ran out of signal budget")
+
+
+def test_run_that_hit_a_toolbox_budget_is_not_counted_done(app, seeded, clock, id_factory):
+    code, out = _main(seeded, "--batch", "20", runner=_SignalCapRunner(), clock=clock, id_factory=id_factory)
+    runs = _runs(app)
+    assert code == 0 and [r.status for r in runs] == ["succeeded"]
+    assert runs[0].output["budget_exhausted"] == ["write_budget_exhausted:record_signal"]
+    assert any("hit a toolbox budget" in ln for ln in out)
+    code, out = _main(seeded, "--batch", "20", clock=clock, id_factory=id_factory)
+    assert code == 0 and "0 already interpreted" in out[0]
+
+
+# ---- schema ---------------------------------------------------------------------------------------------
+
+
+def test_missing_new_table_is_created_not_a_traceback(app, seeded, clock, id_factory):
+    app.state.engine.dispose()
+    con = sqlite3.connect(seeded)
+    con.execute("DROP TABLE company_profile")
+    con.commit()
+    con.close()
+    code, out = _main(seeded, "--dry-run", clock=clock, id_factory=id_factory)
+    assert code == 0 and "batch 1:" in "\n".join(out)
+
+
+def test_outdated_schema_exits_2_without_the_seed_hint(app, seeded, clock, id_factory):
+    app.state.engine.dispose()
+    con = sqlite3.connect(seeded)
+    con.execute("ALTER TABLE agent_runs DROP COLUMN finished_at")
+    con.commit()
+    con.close()
+    code, out = _main(seeded, "--dry-run", clock=clock, id_factory=id_factory)
+    assert code == 2 and "outdated schema" in out[-1] and "agent_runs.finished_at" in out[-1]
+    assert "app.seed" not in out[-1]

@@ -209,8 +209,12 @@ cd backend && BACKEND_DB_PATH=data/uber.db FORECAST_PROVIDER=forecasting_package
 
   Selection: current documents authored on or after `--since`, plus (with `--include-announced`) earlier
   documents whose effective window overlaps the current period: 64 documents in 8 batches on the default
-  dataset. Message/task pairs stay in the same batch. The cap sums provider-reported `factory_credits` and
-  stops before a batch that could exceed it; an sdk batch that reports no credits also stops the run.
+  dataset. Message/task pairs stay in the same batch. The cap sums provider-reported `factory_credits`,
+  including earlier interpret-cli runs in the same database (`--ignore-prior-spend` opts out). It stops
+  before a batch that could exceed the cap and hands each batch the remaining cap as its credit budget,
+  which the sdk runner enforces on the provider's streamed usage. So the cap holds to within one usage
+  update, not exactly. An sdk batch that reports no or partial credits also stops the run. 8 batches can
+  cost more than 600k: use a larger cap to cover them all in one go.
   Re-running skips documents already interpreted by the same runner kind (`--force` re-runs). sdk
   batches append to `data/live_runs.log`. With `DROID_RUNNER=sdk` and the SDK or key unavailable it exits
   2 and runs nothing; there is no fallback to the stand-in. The fake runner is scripted for Northstar and

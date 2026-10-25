@@ -83,9 +83,10 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
 
 
 def _scope_params(session: Session, raw: dict[str, Any]) -> dict[str, Any]:
-    """interpret_corpus takes one optional param, `document_ids`: interpret only these current documents.
-    Anything else is still `unexpected_params`."""
-    extra = sorted(k for k in raw if k != "document_ids")
+    """interpret_corpus takes `document_ids` (interpret only these current documents) and, with them,
+    an optional `credit_budget` (a positive number of factory_credits the sdk runner stops the run at;
+    the interpret CLI passes the remaining cap). Anything else is still `unexpected_params`."""
+    extra = sorted(k for k in raw if k not in ("document_ids", "credit_budget"))
     if extra:
         raise _validation([{"code": "unexpected_params",
                             "message": f"interpret_corpus takes only document_ids, not {', '.join(extra)}",
@@ -106,9 +107,17 @@ def _scope_params(session: Session, raw: dict[str, Any]) -> dict[str, Any]:
             reasons.append({"code": "document_superseded",
                             "message": f"document {doc_id!r} is superseded; scope only current documents",
                             "field": "params.document_ids"})
+    budget = raw.get("credit_budget")
+    if "credit_budget" in raw and (isinstance(budget, bool) or not isinstance(budget, (int, float))
+                                   or not budget > 0 or budget != budget):
+        reasons.append({"code": "invalid_params", "message": "credit_budget must be a positive number",
+                        "field": "params.credit_budget"})
     if reasons:
         raise _validation(reasons)
-    return {"document_ids": list(ids)}
+    out: dict[str, Any] = {"document_ids": list(ids)}
+    if "credit_budget" in raw:
+        out["credit_budget"] = float(budget)
+    return out
 
 
 def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) -> dict[str, Any]:
@@ -214,6 +223,8 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output["signal_ids"] = list(toolbox.signal_ids)
     if toolbox.charts:  # charts the toolbox actually built (a runner cannot claim one it did not build)
         output["charts"] = list(toolbox.charts)
+    if toolbox.budget_exhausted:  # a tool/write budget refused calls: the run may be incomplete
+        output["budget_exhausted"] = list(toolbox.budget_exhausted)
     output["applied_changes"] = False
     _finish(factory, clock, run_id, "succeeded", output, None)
     finished = {"status": "succeeded", "summary": out.summary, "applied_changes": False,

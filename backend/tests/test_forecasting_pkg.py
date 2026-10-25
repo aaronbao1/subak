@@ -10,6 +10,7 @@ endpoint, and failing closed when the package is missing.
 from __future__ import annotations
 
 import itertools
+import threading
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -315,3 +316,80 @@ def test_before_the_first_run_it_says_computing_not_zero(pkg_app):
 def test_settings_accept_the_provider():
     s = Settings.from_env({"FORECAST_PROVIDER": "forecasting_package"})
     assert s.forecast_provider == "forecasting_package"
+
+
+# ---- in-place changes, uncertainty text, refresh ordering --------------------------------------------
+
+
+def test_in_place_reattribution_invalidates_the_model_run(pc, pkg_app):
+    """A team mapping change moves existing rows with an UPDATE: no new rowid, same history_end. The
+    per-team history fingerprint still catches it, and the refit is fitted on the new team histories."""
+    prov = pkg_app.state.forecast_provider
+    run = prov._runs["2026-Q4"]
+    _forecast(pc)
+    prov.wait_idle()
+    assert prov._runs["2026-Q4"] is run and not run.stale
+    with transaction(pkg_app.state.session_factory) as s:
+        for rec in s.query(m.UsageRecord).filter(m.UsageRecord.team_id == "beta",
+                                                 m.UsageRecord.occurred_at < datetime(2026, 10, 1, tzinfo=timezone.utc)):
+            rec.team_id, rec.person_id = "alpha", None
+    _forecast(pc)
+    prov.wait_idle()
+    fresh = prov._runs["2026-Q4"]
+    assert run.stale and fresh is not run and not fresh.stale
+    assert fresh.teams["alpha"].history_start == run.teams["alpha"].history_start
+    assert fresh.fingerprint != run.fingerprint
+
+
+def test_unrelated_writes_do_not_invalidate_the_model_run(pc, pkg_app):
+    prov = pkg_app.state.forecast_provider
+    run = prov._runs["2026-Q4"]
+    with transaction(pkg_app.state.session_factory) as s:
+        s.get(m.Team, "gamma").name = "Gamma renamed"   # a teams write that changes no model input
+    _forecast(pc)
+    prov.wait_idle()
+    assert prov._runs["2026-Q4"] is run and not run.stale
+
+
+def test_team_deactivation_invalidates_the_model_run(pc, pkg_app):
+    prov = pkg_app.state.forecast_provider
+    run = prov._runs["2026-Q4"]
+    with transaction(pkg_app.state.session_factory) as s:
+        s.get(m.Team, "beta").active = False
+    _forecast(pc)
+    prov.wait_idle()
+    assert run.stale and "beta" not in prov._runs["2026-Q4"].teams
+
+
+def test_uncertainty_labels_mae_as_a_horizon_total(pc):
+    tp = _team(_forecast(pc), "alpha")
+    if "not validated" in tp["uncertainty"]:
+        pytest.skip("no backtest on this synthetic history")
+    assert "/day" not in tp["uncertainty"] and "-day total" in tp["uncertainty"]
+
+
+def test_refresh_waits_for_a_queued_background_run_and_wins(pkg_app):
+    """refresh() runs on the same single model worker: a background run that started earlier (and read
+    older data) finishes first, so it can never overwrite the newer forced run."""
+    prov = pkg_app.state.forecast_provider
+    gate, started = threading.Event(), threading.Event()
+    real = prov._compute
+    order = []
+
+    def slow(period_id, lib):
+        started.set()
+        gate.wait(5)
+        order.append("background")
+        return real(period_id, lib)
+
+    prov._compute = slow
+    prov._submit("2026-Q4", key=("test-bg",))
+    started.wait(5)
+    prov._compute = lambda period_id, lib: (order.append("refresh"), real(period_id, lib))[1]
+    done = []
+    t = threading.Thread(target=lambda: done.append(prov.refresh("2026-Q4")))
+    t.start()
+    gate.set()
+    t.join(30)
+    prov.wait_idle()
+    assert order == ["background", "refresh"] and done and prov._runs["2026-Q4"] is done[0]

@@ -155,6 +155,16 @@ def person(p: Any) -> dict:
 # ---- spending -----------------------------------------------------------------------------------
 
 
+def spending_group(r: Mapping[str, Any]) -> tuple[str, str, str, str, str] | None:
+    """The output row a usage record belongs to (team, person or "", day, component, provider), or None
+    for unpriced usage, which has no row. Shared with the incremental spending index (spending_index.py)."""
+    component = COMPONENT.get(r["cost_category"])
+    if component is None:  # unpriced_usage
+        return None
+    return (r["team"] or UNATTRIBUTED, r.get("person") or "", day(r["occurred_at"]), component,
+            r["provider"] or "unknown")
+
+
 def spending(records: Iterable[dict], *, batch_labels: Mapping[str, str]) -> list[dict]:
     """Group backend usage records (spending.record_out dicts) into one row per team x person x day x
     component x provider (person None = a team-level row, e.g. included usage). Included usage carries amount 0 (it is covered by the subscription fee; its notional value is
@@ -167,12 +177,9 @@ def spending(records: Iterable[dict], *, batch_labels: Mapping[str, str]) -> lis
     day after as_of) still equals `projected` while unmapped records are present."""
     groups: dict[tuple[str, str, str, str, str], list[dict]] = defaultdict(list)
     for r in records:
-        component = COMPONENT.get(r["cost_category"])
-        if component is None:  # unpriced_usage
-            continue
-        key = (r["team"] or UNATTRIBUTED, r.get("person") or "", day(r["occurred_at"]), component,
-               r["provider"] or "unknown")
-        groups[key].append(r)
+        key = spending_group(r)
+        if key is not None:
+            groups[key].append(r)
 
     out = []
     for (team, person_id, d, component, provider), recs in sorted(groups.items()):

@@ -709,6 +709,31 @@ def gate_retry_prompt(reasons: list[str]) -> str:
     )
 
 
+def credit_budget(task: Any) -> float | None:
+    """`params.credit_budget` (interpret_corpus, set by the interpret CLI): stop the run once the
+    provider-reported factory_credits reach it."""
+    value = (getattr(task, "params", None) or {}).get("credit_budget")
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0 else None
+
+
+def _credits_of(usage: dict[str, Any] | None) -> float | None:
+    value = (usage or {}).get("factory_credits")
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _credits_sum(parts: list[dict[str, Any] | None]) -> float:
+    return sum(_credits_of(p) or 0.0 for p in parts)
+
+
+def _usage_so_far(parts: list[dict[str, Any] | None]) -> tuple[dict[str, Any] | None, bool]:
+    """(usage over every turn that reported one, complete?). A single turn's usage is kept as is."""
+    known = [p for p in parts if p]
+    complete = bool(parts) and len(known) == len(parts) and all(_credits_of(p) is not None for p in known)
+    if not known:
+        return None, False
+    return (dict(known[0]) if len(known) == 1 else _sum_usage(known)), complete
+
+
 def _sum_usage(parts: list[dict[str, Any]]) -> dict[str, Any]:
     total: dict[str, Any] = {}
     for part in parts:
@@ -837,9 +862,14 @@ class SdkDroidRunner:
             session._dispatcher = gate  # raw-request gate; see module docstring
 
             result = None
-            last_usage = None
             scope: dict[str, Any] = {}
             turns: list[Any] = []
+            # Provider-reported usage per streamed turn (attempt): the turn result's usage, else the last
+            # TokenUsageUpdate seen in that turn, else None (unknown). Kept for every attempt, finished or
+            # not, so a failure, timeout or credit stop still reports what was spent (see _usage_so_far).
+            attempt_usage: list[Any] = []
+            budget = credit_budget(task)
+            over_budget: float | None = None
             try:
                 async with session:
                     scope = await self._check_tools(session, sdk)
@@ -853,17 +883,36 @@ class SdkDroidRunner:
                     for attempt in range(1 + MAX_GATE_RETRIES):
                         refused_before = len(gate.refusals)
                         turn_result = None
+                        attempt_usage.append(None)
+                        spent_before = _credits_sum(attempt_usage[:-1])
                         async with session.stream(prompt, timeout=self.timeout_s,
                                                   include_partial_messages=True) as stream:
                             async for event in stream:
                                 name = type(event).__name__
                                 if name == "TokenUsageUpdate":
-                                    last_usage = event
+                                    attempt_usage[-1] = usage_dict(event)
+                                    # Updates are treated as this turn's running total. Leaving the
+                                    # stream stops the turn: the cap holds to within one update.
+                                    now_spent = spent_before + (_credits_of(attempt_usage[-1]) or 0.0)
+                                    if budget is not None and now_spent >= budget:
+                                        over_budget = now_spent
+                                        break
                                     continue
                                 turn_result = self._on_event(event, tools) or turn_result
                         if turn_result is not None:
                             turns.append(turn_result)
                             result = turn_result
+                            attempt_usage[-1] = usage_dict(getattr(turn_result, "usage", None)) or attempt_usage[-1]
+                        if over_budget is not None:
+                            break
+                        if budget is not None and _credits_sum(attempt_usage) >= budget:
+                            # The finished turn already spent the budget: keep its result, but no
+                            # gate-retry turn may spend more.
+                            if gate.refusals[refused_before:]:
+                                tools.emit("warning", {"code": "credit_budget_reached", "budget": budget,
+                                                       "spent": _credits_sum(attempt_usage),
+                                                       "message": "credit budget reached; no gate retry"})
+                            break
                         new_refusals = gate.refusals[refused_before:]
                         # A refused Script ends Droid's turn; tell it why and let it rewrite, a bounded
                         # number of times, instead of ending the run without the requested work.
@@ -874,30 +923,51 @@ class SdkDroidRunner:
                                                "message": "Script refused by the backend gate; asking Droid to rewrite it",
                                                "reasons": new_refusals})
                         prompt = gate_retry_prompt(new_refusals)
-            except RunnerUnavailable:
+            except RunnerUnavailable as exc:
+                if attempt_usage and any(attempt_usage):  # mid-run: keep what was already spent
+                    raise RunnerUnavailable(f"{exc}; usage={json.dumps(_usage_so_far(attempt_usage)[0], default=str)}",
+                                            reason=exc.reason) from exc
                 raise
             except Exception as exc:  # map SDK connection/process errors to an honest 503
                 name = type(exc).__name__
+                spent = (f"; usage={json.dumps(_usage_so_far(attempt_usage)[0], default=str)}"
+                         if any(attempt_usage) else "")
                 if name in ("DroidConnectionError", "DroidProcessError", "DroidProtocolError"):
-                    raise RunnerUnavailable(f"Droid could not start: {name}: {exc}", reason="droid_unavailable") from exc
+                    raise RunnerUnavailable(f"Droid could not start: {name}: {exc}{spent}",
+                                            reason="droid_unavailable") from exc
+                if spent:  # e.g. a stream timeout: the error must still carry the credits spent so far
+                    raise RuntimeError(f"Droid run interrupted: {name}: {exc}{spent}") from exc
                 raise
 
+        if over_budget is not None:
+            usage, _ = _usage_so_far(attempt_usage)
+            tools.emit("warning", {"code": "credit_budget_reached", "budget": budget, "spent": over_budget,
+                                   "message": "provider-reported factory_credits reached the run's credit budget; "
+                                              "the run was stopped"})
+            raise RuntimeError(f"Droid run stopped at its credit budget ({budget:,.0f} factory_credits); "
+                               f"usage={json.dumps(usage, default=str)}")
         if result is None:
+            if any(attempt_usage):
+                raise RuntimeError("Droid stream ended without a run result; "
+                                   f"usage={json.dumps(_usage_so_far(attempt_usage)[0], default=str)}")
             raise RuntimeError("Droid stream ended without a run result")
         subtype = getattr(result, "subtype", None) or type(result).__name__
         per_turn = [usage_dict(getattr(t, "usage", None)) for t in turns]
-        if len(turns) > 1 and all(per_turn):
-            usage = _sum_usage(per_turn)
-            source = (f"droid_sdk RunResult.usage summed over {len(turns)} turns "
+        usage, complete = _usage_so_far(attempt_usage)
+        if len(attempt_usage) > 1:
+            source = (f"droid_sdk usage summed over {len(attempt_usage)} turns "
                       "(over-counts if the SDK reports cumulative usage)")
         else:
-            usage = usage_dict(getattr(result, "usage", None)) or usage_dict(last_usage)
             source = "droid_sdk RunResult.usage"
         report: dict[str, Any] = {"provider_reported": usage, "source": source,
                                   "subtype": subtype, "turn_count": getattr(result, "turn_count", None),
                                   "turns": len(turns), "gate_retries": max(0, len(turns) - 1),
                                   "permission_allowed": gate.allowed, "permission_cancelled": gate.cancelled,
                                   "scope": scope}
+        if not complete:
+            # Some turn reported no usage: the total is a lower bound (callers that enforce a credit
+            # cap must stop, e.g. the interpret CLI).
+            report["usage_incomplete"] = True
         if len(turns) > 1:
             report["per_turn_usage"] = per_turn
         durations = [getattr(t, "duration", None) for t in turns] or [getattr(result, "duration", None)]

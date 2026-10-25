@@ -10,8 +10,9 @@ Two halves, so a 1-second frontend refresh stays cheap:
   partial). A rolling-origin backtest on that history alone picks each team's model (lowest WAPE at the
   real remaining horizon), and the chosen model forecasts the remaining days of the period. The run is
   cached per (period, last complete day, history fingerprint) and recomputed in a single background
-  worker when a new complete day appears or late rows land on a complete day; `refresh()` (and
-  `POST /api/forecasts/refresh`) forces it. Requests never wait for it.
+  worker when a new complete day appears, late rows land on a complete day, or an in-place change
+  (a team re-attribution, a team (de)activation) alters the per-team history fingerprint; `refresh()`
+  (and `POST /api/forecasts/refresh`) forces it on the same worker. Requests never wait for it.
 - **Projection (per request).** `projected = recorded spend to date (incl. today's partial day, from the
   forecast service's Attribution) + cached model future for the days after today + seat fees on any
   remaining 1st of month`. Person projections split each day's team amount by share of spend to date
@@ -78,6 +79,15 @@ _PERIOD_AS_OF_SQL = text("""
     WHERE period_id = :period AND counts_toward_spend = 1 AND amount IS NOT NULL
 """)
 _MAX_ROWID_SQL = text("SELECT MAX(rowid) FROM usage_records")
+# Per-team fingerprint of everything a model run reads from complete days (history + seat fees). Run
+# only after an in-place change to usage_records or a teams write (see _check_inputs), e.g. a team
+# re-attribution, which moves rows between teams without adding a rowid.
+_FINGERPRINT_SQL = text(f"""
+    SELECT team_id, cost_category = '{SEAT_CATEGORY}' AS seat, COUNT(*), SUM({_CENTS})
+    FROM usage_records
+    WHERE counts_toward_spend = 1 AND amount IS NOT NULL AND team_id IS NOT NULL AND occurred_at < :history_end
+    GROUP BY team_id, seat
+""")
 _LATE_ROWS_SQL = text("""
     SELECT 1 FROM usage_records
     WHERE rowid > :after AND rowid <= :upto AND counts_toward_spend = 1 AND occurred_at < :history_end
@@ -212,6 +222,8 @@ class ModelRun:
     computed_at: datetime
     elapsed_ms: int
     checked_rowid: int                # every row up to here was in (or irrelevant to) this run's history
+    fingerprint: tuple = ()           # active teams + per-team (count, cents) of the history it read
+    input_gen: tuple = ()             # compat.cache.table_generation(...) when `fingerprint` was last confirmed
     teams: dict[str, TeamFit] = field(default_factory=dict)
     skipped: dict[str, str] = field(default_factory=dict)
     stale: bool = False               # late rows landed on a complete day after this run
@@ -229,6 +241,8 @@ class ForecastingPackageProvider:
         self._pending: set[tuple] = set()
         self._failed: set[tuple] = set()
         self._results: dict[tuple, ForecastResult] = {}
+        # One worker runs every model run, background and refresh() alike, so runs land in the order they
+        # were requested and an older run can never overwrite a newer one.
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="forecast-model")
         self.last_error: str | None = None
 
@@ -247,8 +261,13 @@ class ForecastingPackageProvider:
     # -- model run --
 
     def refresh(self, period_id: str | None = None) -> ModelRun | None:
-        """Recompute now (synchronously, in the caller's thread). None if the package is missing or the
-        database has no period yet."""
+        """Recompute now and wait for it. None if the package is missing or the database has no period
+        yet. Runs on the provider's single model worker (after any background run already queued), so a
+        background run that read older data cannot finish later and replace this one."""
+        return self._executor.submit(self._refresh_now, period_id).result()
+
+    def _refresh_now(self, period_id: str | None = None) -> ModelRun | None:
+        """Compute and store a run, in the model worker thread only."""
         lib = _forecasting()
         if lib is None or self._session_factory is None:
             return None
@@ -270,7 +289,7 @@ class ForecastingPackageProvider:
 
         def job():
             try:
-                self.refresh(period_id)
+                self._refresh_now(period_id)
                 self.last_error = None
             except Exception as exc:  # noqa: BLE001 - a failed run leaves the old cache; reported below
                 self.last_error = f"{type(exc).__name__}: {exc}"
@@ -293,6 +312,7 @@ class ForecastingPackageProvider:
 
         models, evaluation = lib
         t0 = time.perf_counter()
+        input_gen = _input_generation()  # read before the data: a change in between is caught next check
         with self._session_factory() as session:
             try:
                 period = resolve_period(session, period_id, self._now())
@@ -311,11 +331,13 @@ class ForecastingPackageProvider:
                 if team not in seats or month > seats[team][0]:
                     seats[team] = (month, int(cents or 0))
             period_id, period_end = period.id, period.ends_on
+            fingerprint = _fingerprint(session, history_end, teams)
 
         horizon = max(0, (period_end - history_end).days + 1)   # forecast dates history_end .. period_end
         series = build_series({t: rows[t] for t in teams if t in rows}, history_end)
         run = ModelRun(period_id=period_id, period_end=period_end, history_end=history_end, horizon=horizon,
-                       origins=0, computed_at=self._now(), elapsed_ms=0, checked_rowid=upto)
+                       origins=0, computed_at=self._now(), elapsed_ms=0, checked_rowid=upto,
+                       fingerprint=fingerprint, input_gen=input_gen)
         for t in teams:
             if t not in series:
                 run.skipped[t] = f"no counted spend history before {history_end.isoformat()}"
@@ -362,6 +384,26 @@ class ForecastingPackageProvider:
 
     # -- freshness (cheap, per request) --
 
+    def _check_inputs(self, run: ModelRun) -> None:
+        """Marks the run stale when an in-place change altered what it was fitted on: a team mapping
+        change re-attributes existing rows with an UPDATE (no new rowid, same history_end), and a team
+        (de)activation changes the team set. Cheap: the fingerprint query runs only after such a write
+        in this process (compat.cache.table_generation)."""
+        if self._session_factory is None or run.stale:
+            return
+        gen = _input_generation()
+        if gen == run.input_gen:
+            return
+        from app.db.models import Team
+
+        with self._session_factory() as session:
+            teams = list(session.scalars(select(Team.id).where(Team.active.is_(True)).order_by(Team.id)))
+            current = _fingerprint(session, run.history_end, teams)
+        if current != run.fingerprint:
+            run.stale = True
+        else:
+            run.input_gen = gen
+
     def _check_late_rows(self, run: ModelRun) -> None:
         """Marks the run stale when rows for a complete day arrived after it (or the table shrank: a
         reset). Scans only rows newer than the last check, by rowid."""
@@ -402,10 +444,12 @@ class ForecastingPackageProvider:
         with self._lock:
             run = self._runs.get(period_id)
         if run is not None:
+            self._check_inputs(run)
             self._check_late_rows(run)
         usable = run is not None and run.history_end <= wanted_end
         if run is None or run.history_end != wanted_end or run.stale:
-            self._submit(period_id, key=(period_id, wanted_end, run.checked_rowid if run else None))
+            self._submit(period_id, key=(period_id, wanted_end, run.checked_rowid if run else None,
+                                         run.input_gen if run else None))
         if not usable:
             return unavailable(self.last_error and f"{COMPUTING} (last run failed: {self.last_error})" or COMPUTING)
 
@@ -459,8 +503,10 @@ class ForecastingPackageProvider:
                                    f"(${Decimal(fit.seat_cents).scaleb(-2)}) on {', '.join(d.isoformat() for d in seat_days)}")
             if refit_note:
                 assumptions.append(refit_note)
-            uncertainty = (f"backtest WAPE {_pct(fit.wape)} at this horizon (MAE ${fit.mae:,.2f}/day); "
-                           "no prediction interval" if fit.validated and fit.mae is not None
+            # The package scores one prediction per origin: the sum over the whole backtest horizon. So
+            # MAE is the error of a {horizon}-day total, not a daily error.
+            uncertainty = (f"backtest WAPE {_pct(fit.wape)} at this horizon (MAE ${fit.mae:,.2f} on the "
+                           f"{run.horizon}-day total); no prediction interval" if fit.validated and fit.mae is not None
                            else "not validated by a backtest; no prediction interval")
             uncertainty += "; the remaining hours of today are not forecast"
             daily = None
@@ -509,6 +555,18 @@ class ForecastingPackageProvider:
             runs = dict(self._runs)
         run = runs.get(period_id) if period_id else (max(runs.values(), key=lambda r: r.computed_at) if runs else None)
         return run_summary(self.name, run, self.last_error)
+
+
+def _input_generation() -> tuple:
+    """In-process write counter for in-place usage changes and any teams write (compat/cache.py)."""
+    from app.compat import cache
+
+    return cache.table_generation("usage_records") + cache.table_generation("teams", inserts=True)
+
+
+def _fingerprint(session, history_end: date, teams: Sequence[str]) -> tuple:
+    rows = session.execute(_FINGERPRINT_SQL, {"history_end": history_end.isoformat()})
+    return (tuple(teams), tuple(sorted((t, int(seat), int(n), int(c or 0)) for t, seat, n, c in rows)))
 
 
 def _attr_key(attr: Attribution) -> tuple:

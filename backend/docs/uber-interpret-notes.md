@@ -52,29 +52,45 @@ WHERE superseded_by_document_id IS NULL
   as-of date (the announced future events).
 - Mix of the 64: slack 25, asana 15, monday 13, email 11; 57 carry `person_tags`.
 
-## Batching plan (7 batches, ~10 docs, grouped by team then time)
+## Batching plan (8 batches, up to 11 docs, grouped by team then time)
 
-Rule: group by team-tag set; company-wide and multi-team docs first; then pack whole teams greedily
-up to 10 (allow 11 rather than split a team or a message/task pair); inside a batch order by
-`authored_at`. Result for the default dataset:
+Rule: group by team-tag set; company-wide and multi-team docs first; then pack whole groups first-fit
+up to 10 (allow 11 rather than split a group or a message/task pair); inside a batch order by
+`authored_at`. This section originally planned 7 batches; the implemented packer
+(`app.interpret.plan_batches`) produces 8. Result for the default dataset
+(`python -m app.interpret --since 2026-09-01 --include-announced --batch 10 --dry-run`, 64 docs):
 
-| # | Docs | Teams | Content |
-|---|---|---|---|
-| 1 | 9 | company-wide (7) + Copilot retirement (2, 7 teams) | Labor Day, Haiku 5.5 price cut, Thanksgiving, year-end shutdown, Build Week, Fable 5.1 pilot + pricing; Copilot -> Cursor Oct 1 |
-| 2 | 10 | ai-labs + safety-trust | Fable pilot tasks (2), Jun OOO pair, Esther OOO/auto-replies, Trip Audio Review pair, Reviewer GA |
-| 3 | 10 | support-automation, infra-sre, security, marketing-comms | Reply Drafting rollout pair, Malik OOO pair, Ticket Auto-Triage v2 pair; Omar OOO pair; Kavya joins; Holiday Campaign |
-| 4 | 11 | rider-app, maps-routing, marketplace-pricing | Pickup Spot v3 pair, Mateo/Keiko OOO pairs; Ines OOO pair; Matching Latency (3) |
-| 5 | 9 | driver-app, eats-delivery | Driver Assist expansion, Earnings Explainer pair, Luis OOO pair; Anya/Amara OOO pairs |
-| 6 | 9 | people-recruiting, finance-legal | Hiring freeze + lift, Luis/Dmitri OOO pairs; Oct close, Contract Clause Extraction pair |
-| 7 | 6 | freight, payments-risk | Shipper Quote pair, AI Dispatch v2 pair (from Nov 2); Fraud Rules Migration hold pair |
-
-Without `--include-announced` batch 3 loses the rollout pair and batch 6 the freeze notice (61 docs).
+| # | Docs | Teams |
+|---|---|---|
+| 1 | 11 | company-wide and multi-team docs (16 teams) |
+| 2 | 11 | ai-labs, driver-app, eats-delivery |
+| 3 | 11 | finance-legal, freight, infra-sre, maps-routing |
+| 4 | 7 | marketing-comms, marketplace-pricing, payments-risk, security |
+| 5 | 6 | people-recruiting |
+| 6 | 6 | rider-app |
+| 7 | 6 | safety-trust |
+| 8 | 6 | support-automation |
 
 Credit estimate: the Northstar `interpret_corpus` runs (13 docs, ~4.9k chars) cost 49,921-72,548
-`factory_credits`; an Uber batch is ~4.3k chars of content, so expect ~50-75k per batch, ~350-525k
-for all 7. With `--credit-cap 600000` the CLI should stop before a batch when
-`spent + max(largest batch so far, 75000) > cap`, so it may stop after 6 batches if batches run high.
-Credits come from `output.usage.provider_reported.factory_credits` (SDK only; the fake reports none).
+`factory_credits`. Batches 1-3 carry about as much content as a Northstar run (~50-75k each); batches 4-8
+are smaller. Expect ~350-550k for all 8, which leaves little headroom under `--credit-cap 600000`: the
+CLI stops before a batch when `spent + max(largest batch so far, 75000) > cap`, so once a batch costs
+more than 75k, the last batch or two may be left for a later run. Raise the cap (e.g. 750000) to cover
+the whole selection in one go.
+
+How the cap holds (see `app/interpret.py`):
+
+- It is cumulative per database: `spent` starts at the credits of earlier interpret-cli runs in the same
+  database, so re-running after a stop does not get a fresh cap (`--ignore-prior-spend` opts out).
+- Each batch gets the remaining cap as `params.credit_budget`; the sdk runner stops the run once the
+  provider's streamed usage reaches it. So the cap holds to within one provider usage update, not to the
+  credit. A run stopped this way fails and its documents are retried next time.
+- Credits come from `output.usage.provider_reported.factory_credits`, or from the usage the runner adds
+  to the error of a failed, timed-out or interrupted run. A batch reporting no credits, or usage for only
+  some of its turns, stops the run.
+- A run that hit a toolbox budget (`MAX_SIGNALS = 20`, `MAX_TOOL_CALLS = 80`) is not counted as
+  interpreted (`output.budget_exhausted`), so its documents are retried. Use a smaller `--batch` if
+  that keeps happening.
 
 ## Scoping `interpret_corpus` to a subset: what exists today
 
