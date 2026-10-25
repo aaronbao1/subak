@@ -154,7 +154,8 @@ npm install && npm run dev                                         # http://loca
 > streamed live, labeled real or fake, with Factory's credit usage on each run. When the budget
 > moves under a pending draft, the approval is refused as stale and Droid re-drafts on the new
 > numbers and explains what changed. Live, Droid caught the superseded research thread and never
-> claimed to have saved anything. It passes 7 of 11 eval scenarios live, and we publish the 3 it failed.
+> claimed to have saved anything. It passes 7 of 11 eval scenarios live, and we publish the 3 it failed:
+> two are valid drafts that split the money differently from our answer key.
 
 Supporting docs: [`../../agent/README.md`](../../agent/README.md) (design, bounds, live results),
 [`droid-live-log.md`](droid-live-log.md) (each live run), [`../evals/results/sdk.md`](../evals/results/sdk.md).

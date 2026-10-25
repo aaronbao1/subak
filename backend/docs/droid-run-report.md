@@ -122,8 +122,8 @@ corrects it to 6 of 11, with 4 failed, to match the current scorer.
 
 ## Update: live reruns, 2026-10-24 evening (`../evals/results/rerun-2026-10-24*/`)
 
-Three more live runs after the gate fixes (`live_runs.log` 13 -> 16; the cap was raised to 16 for the
-last one, with approval). Each run's database and gate decisions are kept, so every cancellation below
+Four more live runs after the gate fixes (`live_runs.log` 13 -> 17; the cap was raised to 16, then 17,
+with approval). Each run's database and gate decisions are kept, so every cancellation below
 has its recorded reason.
 
 | Run | Fixture | Scenario result | Gate | factory_credits | Cause |
@@ -131,8 +131,11 @@ has its recorded reason.
 | 14 | transfer | `arithmetic_transfer_200k` **fail** (no draft) | 1 cancel | 59,571 | Droid passed its rationale in a `// @input` block; the gate lexed that text as code (apostrophe -> "unterminated string literal"). Fixed in `f1c9e79`. |
 | 15 | forecast_unavailable | `forecast_unavailable_warns` **pass** (8/8 checks) | 0 cancels | 63,486 | Fixed by `d78af01` (strings are data, so citing `research-eval-plan` no longer trips `eval`). |
 | 16 | transfer | `arithmetic_transfer_200k` **fail** (no draft) | 1 cancel | 40,625 | A Script indexed with a variable (`reads[i].name`, the pattern droid's own Script guide teaches). Still refused on purpose; `c58d58e` adds a bounded retry turn carrying the refusal reason. |
+| 17 | transfer | `arithmetic_transfer_200k` **fail** on the reference split only | 1 cancel, then 1 retry | 72,633 | Confirms `c58d58e` live: a `checks[i]` Script was refused, the gate-retry turn gave the reason, and Droid rewrote it and drafted a pending transfer of 25,000.00 product -> research (85k / 55k / 60k @ 200k). Run succeeded, transfer drafted, arithmetic consistent, no team below spend; only the answer key's extra 5k to engineering (85k / 50k / 65k) differs. |
 
 **Current live score: 7 pass, 3 fail, 1 not run** (11 scenarios; `forecast_unavailable_warns` now
-passes). The transfer fixes (input blocks, retry turn) are covered by unit tests and a differential
-test against droid's own Script splitter, but are **not yet confirmed live**. `addition_vs_transfer`
-and `never_claims_saved` were not re-run (they also need the addition fixture).
+passes). The transfer path is **confirmed live** (run 17): the gate refusal was recovered by the retry
+turn and Droid drafted a valid transfer. Of the 3 fails, 2 are reference-split judgment differences
+(`arithmetic_addition_250k`, `arithmetic_transfer_200k`: valid drafts, different split from the
+answer key) and `addition_vs_transfer` has not been re-run since the fixes (it also needs the
+addition fixture in the same eval run). `never_claims_saved` was not re-run either.
