@@ -93,7 +93,10 @@ def test_teams_get_frontend_color_tokens(c):
     teams = get(c, "teams")
     assert [t["id"] for t in teams] == ["engineering", "product", "research"]
     assert [t["color"] for t in teams] == ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"]
-    assert all("lead" not in t and "description" not in t for t in teams)  # not stored: omitted, not invented
+    assert all("description" not in t for t in teams)  # not stored: omitted, not invented
+    # Team.lead is derived from the person whose role ends with " lead".
+    assert {t["id"]: t["lead"] for t in teams} == {"engineering": "Arjun Rao", "product": "Maya Patel",
+                                                  "research": "Ava Chen"}
 
 
 def test_seed_totals_through_compat(c):
@@ -106,7 +109,8 @@ def test_seed_totals_through_compat(c):
     assert by_team(get(c, "budgets"), "allocated") == ALLOCATED
     assert {b["version"] for b in get(c, "budgets")} == {"1"}
     fc = get(c, "forecasts")
-    assert by_team(fc, "projected") == PROJECTED
+    team_fc = [f for f in fc if "personId" not in f]
+    assert by_team(team_fc, "projected") == PROJECTED
     assert all(f["status"] == "available" and f["basis"] == "full_period" and f["origin"] == "placeholder"
                and "low" not in f and "high" not in f for f in fc)
 
@@ -171,12 +175,14 @@ def test_context_is_empty_until_interpreted_then_cited(c):
     assert current["supersedes"] == [old["id"]]
     product = next(i for i in items if i["teamIds"] == ["product"]
                    and i["sources"][0]["title"].startswith("Product launch plan"))
-    assert product["expectedEffect"] == "unknown"  # timing shift: direction not stored, not guessed
+    # G5: a timing shift's direction comes from its typed kind (the launch is deferred -> decrease).
+    assert product["expectedEffect"] == "decrease" and product["signal"] == "project_deferred"
     for i in items:
         assert i["sources"] and all(s["excerpt"] and s["locator"].startswith("chars ") for s in i["sources"])
         assert len(i["title"]) <= mappers.TITLE_MAX
     by_product = get(c, "context?teamId=product")
-    assert product["id"] in {i["id"] for i in by_product} and all(i["teamIds"] == ["product"] for i in by_product)
+    assert product["id"] in {i["id"] for i in by_product}
+    assert all(i["teamIds"] == ["product"] or i["scope"] == "company" for i in by_product)
 
 
 def test_read_routes_never_write(c, seeded):
@@ -213,7 +219,7 @@ def test_chat_addition_then_apply_once(c):
     r = c.post(f"{API}/proposals/{pid}/apply", json={"note": "Covers the approved research plan"})
     assert r.status_code == 200, r.text
     d = S.Decision.model_validate(r.json()).model_dump(exclude_none=True)
-    assert d["action"] == "applied" and d["kind"] == "add_budget" and d["appliedBy"] == "dashboard-approver"
+    assert d["action"] == "applied" and d["kind"] == "add_budget" and d["appliedBy"] == "Finance approver (demo)"
     assert d["note"] == "Covers the approved research plan" and d["rationale"] == p["rationale"]
     assert by_team(d["lines"], "after") == OUTCOME_B
     assert d["forecastsReviewed"] == p["forecastsReviewed"]
@@ -386,9 +392,13 @@ def test_errors_are_plain_strings(c):
 
 
 def test_unseeded_database_answers_plain_errors(client):
-    assert_error(client.get(f"{API}/company"), 404)
-    assert_error(client.get(f"{API}/budgets"), 404)
-    assert client.get(f"{API}/teams").json() == []
+    body = assert_error(client.get(f"{API}/company"), 503, "The database is not seeded yet; run `python -m app.seed`.")
+    assert body["code"] == "not_seeded"
+    # Every list route the store loads answers 200 [] so nothing else fails on a fresh DB.
+    for path in ("teams", "people", "spending", "budgets", "forecasts", "context", "documents", "proposals",
+                 "decisions", "threads/main"):
+        r = client.get(f"{API}/{path}")
+        assert r.status_code == 200 and r.json() == [], (path, r.text)
 
 
 def test_forecast_unavailable_mode(tmp_path, clock, id_factory):
@@ -402,7 +412,7 @@ def test_forecast_unavailable_mode(tmp_path, clock, id_factory):
     try:
         with TestClient(app) as c:
             fc = get(c, "forecasts", list[S.Forecast])
-            assert len(fc) == 3
+            assert len([f for f in fc if "personId" not in f]) == 3 and len(fc) == 3 + 15
             assert all(f["status"] == "unavailable" and f["unavailableReason"] and "projected" not in f for f in fc)
             reply = say(c, "add 50k")  # no team, no projection to pick one: ask
             assert "Which team" in reply["content"]

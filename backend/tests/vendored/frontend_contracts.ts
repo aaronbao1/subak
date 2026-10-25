@@ -21,6 +21,40 @@ export interface Team {
   color: string;
 }
 
+/** Where a signal about a person's work came from. Document = an uploaded file or export, not a live connector. */
+export type Integration = "slack" | "asana" | "monday" | "email" | "document";
+
+/**
+ * Why an individual's usage is expected to move. project_deferred: a manager pushed work back (e.g. "stay on the
+ * design doc longer"); model_change: the person said they are moving to a different model; macro changes carry
+ * scope "company" on the ContextItem.
+ */
+export type SignalKind =
+  | "project_deferred"
+  | "project_accelerated"
+  | "model_change"
+  | "tool_change"
+  | "out_of_office"
+  | "onboarding"
+  | "steady";
+
+/**
+ * An individual whose usage rolls up into a team. Spending, forecasts and context can be attributed to a person
+ * through optional `personId` fields; team totals are always the sum over the team's people plus anything
+ * recorded at team level without a person.
+ */
+export interface Person {
+  id: string;
+  teamId: string;
+  name: string;
+  role?: string;
+  email?: string;
+  /** Integrations this person's signals arrive through (Slack, Asana, Monday). */
+  integrations?: Integration[];
+  /** Primary coding tool or API workspace, e.g. "Cursor", "Claude Code". */
+  primaryTool?: string;
+}
+
 export interface Period {
   /** ISO date, inclusive */
   start: string;
@@ -33,6 +67,8 @@ export interface Period {
 export interface SpendingRecord {
   id: string;
   teamId: string;
+  /** The individual this usage is attributed to, when attribution is known. Absent for team-level rows. */
+  personId?: string;
   /** ISO date (YYYY-MM-DD) */
   date: string;
   component: CostComponent;
@@ -56,10 +92,24 @@ export interface Budget {
   version?: string;
 }
 
+/**
+ * Optional per-day projection for days that are not yet complete: the partial day (its full-day total) and every
+ * later day in the period. For a full_period forecast, spend on complete days + the sum of these equals `projected`.
+ */
+export interface ForecastDailyPoint {
+  /** ISO date (YYYY-MM-DD) */
+  date: string;
+  projected: number;
+  low?: number;
+  high?: number;
+}
+
 /** Handoff 4: Forecast (forecasting → agent, frontend). Period comes from forecasting, never hard-coded. */
 export interface Forecast {
   id?: string;
   teamId: string;
+  /** Set on a person-level projection. Team-level forecasts have no personId; the UI never mixes the two. */
+  personId?: string;
   period: Period;
   status: "available" | "unavailable";
   /**
@@ -75,6 +125,8 @@ export interface Forecast {
   projected?: number;
   low?: number;
   high?: number;
+  /** Optional day-by-day breakdown of the projection for the days not yet complete. Same unit. */
+  daily?: ForecastDailyPoint[];
   unit: Unit;
   assumptions: string[];
   limitations: string[];
@@ -91,6 +143,10 @@ export interface SourceRef {
   locator?: string;
   date?: string;
   kind?: ContextKind;
+  /** Connector the source arrived through, e.g. a Slack message, an Asana task, a Monday board item. */
+  integration?: Integration;
+  /** Who said or did it, e.g. the manager who asked for the change. */
+  author?: string;
 }
 
 export type ContextKind = "plan" | "project_doc" | "research_note" | "correspondence";
@@ -118,6 +174,12 @@ export interface ContextItem {
   supersededBy?: string;
   /** Ids of older items this one supersedes. */
   supersedes?: string[];
+  /** Individuals this item is about. A team- or company-wide item leaves this empty. */
+  personIds?: string[];
+  /** person: one individual's work; team: the team's plan; company: a macro change such as a new model everyone moves to. */
+  scope?: "person" | "team" | "company";
+  /** Typed reason, so the UI and the assistant can say *why* usage moves without parsing the summary. */
+  signal?: SignalKind;
 }
 
 /** Adding to the overall budget and redistributing the existing budget are DIFFERENT actions. */
@@ -205,6 +267,8 @@ export interface CompanyDocument {
   body: string;
   /** Id of the document that replaces this one, if any */
   supersededBy?: string;
+  personIds?: string[];
+  integration?: Integration;
 }
 
 export interface Company {

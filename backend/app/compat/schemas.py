@@ -22,6 +22,10 @@ Provenance = Literal["reported_charge", "estimate", "usage_only"]
 ContextKind = Literal["plan", "project_doc", "research_note", "correspondence"]
 ClaimType = Literal["stated_plan", "observed_event", "interpretation"]
 ProposalKind = Literal["redistribute", "add_budget"]
+Integration = Literal["slack", "asana", "monday", "email", "document"]
+SignalKind = Literal["project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office",
+                     "onboarding", "steady"]
+Scope = Literal["person", "team", "company"]
 Number = int | float
 
 
@@ -37,6 +41,16 @@ class Team(_Model):
     color: str
 
 
+class Person(_Model):
+    id: str
+    teamId: str
+    name: str
+    role: str | None = None
+    email: str | None = None
+    integrations: list[Integration] | None = None
+    primaryTool: str | None = None
+
+
 class Period(_Model):
     start: str
     end: str
@@ -46,6 +60,7 @@ class Period(_Model):
 class SpendingRecord(_Model):
     id: str
     teamId: str
+    personId: str | None = None
     date: str
     component: CostComponent
     provider: str
@@ -64,9 +79,17 @@ class Budget(_Model):
     version: str | None = None
 
 
+class ForecastDailyPoint(_Model):
+    date: str
+    projected: Number
+    low: Number | None = None
+    high: Number | None = None
+
+
 class Forecast(_Model):
     id: str | None = None
     teamId: str
+    personId: str | None = None
     period: Period
     status: Literal["available", "unavailable"]
     basis: Literal["full_period", "remaining"] | None = None
@@ -75,6 +98,7 @@ class Forecast(_Model):
     projected: Number | None = None
     low: Number | None = None
     high: Number | None = None
+    daily: list[ForecastDailyPoint] | None = None
     unit: Unit
     assumptions: list[str]
     limitations: list[str]
@@ -89,6 +113,8 @@ class SourceRef(_Model):
     locator: str | None = None
     date: str | None = None
     kind: ContextKind | None = None
+    integration: Integration | None = None
+    author: str | None = None
 
 
 class ContextItem(_Model):
@@ -106,6 +132,9 @@ class ContextItem(_Model):
     claimType: ClaimType | None = None
     supersededBy: str | None = None
     supersedes: list[str] | None = None
+    personIds: list[str] | None = None
+    scope: Scope | None = None
+    signal: SignalKind | None = None
 
 
 class AllocationLine(_Model):
@@ -172,6 +201,8 @@ class CompanyDocument(_Model):
     origin: str
     body: str
     supersededBy: str | None = None
+    personIds: list[str] | None = None
+    integration: Integration | None = None
 
 
 class Company(_Model):
@@ -204,10 +235,10 @@ class ErrorOut(BaseModel):
 # Every interface in the TypeScript contract, by name (used by the drift test).
 CONTRACT_MODELS: dict[str, type[_Model]] = {
     m.__name__: m
-    for m in (Team, Period, SpendingRecord, Budget, Forecast, SourceRef, ContextItem, AllocationLine,
+    for m in (Team, Person, Period, SpendingRecord, Budget, ForecastDailyPoint, Forecast, SourceRef, ContextItem, AllocationLine,
               AllocationProposal, Decision, ToolCallSummary, AssistantMessage, CompanyDocument, Company)
 }
 CONTRACT_ALIASES = {
     "Unit": Unit, "CostComponent": CostComponent, "Provenance": Provenance, "ContextKind": ContextKind,
-    "ClaimType": ClaimType, "ProposalKind": ProposalKind,
+    "ClaimType": ClaimType, "ProposalKind": ProposalKind, "Integration": Integration, "SignalKind": SignalKind,
 }

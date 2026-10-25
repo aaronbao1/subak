@@ -9,6 +9,9 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
   (apply / reject, as the demo approver), so every authority rule (approver role, no self-approval,
   stale version, exactly-once) is the real service's. Droid still only drafts.
 - Errors are `{"error": "<plain English>", "code": "<backend code>"}` (see `errors.py`).
+- The frontend loads 10 GETs with `Promise.all`, so every list route answers `200 []` on an unseeded or
+  empty DB (no period, no envelope, no rows). Only `/company` refuses (503 `not_seeded`): a Company cannot
+  be built without its current period.
 - Identity: the frontend sends none. Compat uses two configured demo actors unless the request carries
   `X-Actor-Id` + `X-Actor-Role`, which then win (docs/frontend-alignment.md G9).
 """
@@ -40,6 +43,7 @@ from app.schemas.decisions import DecisionCreate
 from app.services import agent_runs as run_svc
 from app.services import budget as budget_svc
 from app.services import corpus as corpus_svc
+from app.services import people as people_svc
 from app.services import coverage as coverage_svc
 from app.services import decisions as decision_svc
 from app.services import forecasts as forecast_svc
@@ -54,6 +58,7 @@ ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
 APPROVE_NOTE = "Approved from the dashboard (no note given)"
 REJECT_NOTE = "Rejected from the dashboard"
+DISMISS_NOTE = "Dismissed from the dashboard: the budget changed after this proposal was drafted"
 MAX_MESSAGE = 4000
 MAX_THREAD_ID = 200
 
@@ -98,6 +103,21 @@ def _period(session: Session, clock: Clock) -> PlanningPeriod:
     return coverage_svc.resolve_period(session, None, clock.now())
 
 
+def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
+    """The current period, or None on an unseeded DB (list routes then answer `200 []`)."""
+    try:
+        return _period(session, clock)
+    except DomainError:
+        return None
+
+
+def _people_by_team(session: Session) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for p in people_svc.list_people(session):
+        out.setdefault(p.team_id, []).append(p.id)
+    return out
+
+
 def _active_teams(session: Session) -> list[Team]:
     return [t for t in session.scalars(select(Team).order_by(Team.id)) if t.active]
 
@@ -126,8 +146,11 @@ def _snapshot_forecasts(session: Session, refs: list[dict]) -> list[dict]:
             continue
         result = forecast_svc.snapshot_out(snap)["forecast"]
         team_ids = [p.team for p in result.projections] + list(result.missing_teams)
-        out.extend(mappers.forecasts(result, period_row=_period_row(session, result.target_period),
-                                     team_ids=sorted(set(team_ids)), now=snap.fetched_at))
+        # Team-level items only: proposal-review finds the reviewed projection by teamId, so a person
+        # item must never shadow its team (frontend-integration-design §1.1).
+        out.extend(f for f in mappers.forecasts(result, period_row=_period_row(session, result.target_period),
+                                                team_ids=sorted(set(team_ids)), now=snap.fetched_at)
+                   if "personId" not in f)
     return out
 
 
@@ -168,17 +191,22 @@ def get_company(request: Request, session: Session = Depends(get_session), clock
                 provider=Depends(get_forecast_provider)):
     meta = routes_meta.meta(request, session, clock, provider)
     if meta["period"] is None:
-        raise DomainError("no_periods", 404, "no planning periods are configured")
+        raise DomainError("not_seeded", 503, "the database is not seeded yet")
     return mappers.company(meta, company_id=COMPANY_ID, name=COMPANY_NAME)
 
 
 @router.get("/teams", response_model=list[S.Team], **JSON_OPTS)
 def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(get_clock)):
-    try:
-        unattributed = _has_unattributed(session, _period(session, clock).id)
-    except DomainError:
-        unattributed = False  # no period yet: plain team list
-    return mappers.teams(_active_teams(session), include_unattributed=unattributed)
+    period = _period_or_none(session, clock)
+    unattributed = period is not None and _has_unattributed(session, period.id)  # no period yet: plain list
+    return mappers.teams(_active_teams(session), include_unattributed=unattributed,
+                         leads=mappers.team_leads(people_svc.list_people(session)))
+
+
+@router.get("/people", response_model=list[S.Person], **JSON_OPTS)
+def get_people(session: Session = Depends(get_session)):
+    active = {t.id for t in _active_teams(session)}
+    return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
@@ -189,7 +217,9 @@ def get_spending(
     session: Session = Depends(get_session),
     clock: Clock = Depends(get_clock),
 ):
-    period = _period(session, clock)
+    period = _period_or_none(session, clock)
+    if period is None:
+        return []
     records: list[dict] = []
     offset = 0
     while True:
@@ -215,26 +245,37 @@ def get_spending(
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
 def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(get_clock)):
-    period, env = budget_svc.resolve_envelope(session, None, clock)
+    if _period_or_none(session, clock) is None:
+        return []
+    try:
+        period, env = budget_svc.resolve_envelope(session, None, clock)
+    except DomainError as exc:
+        if exc.code == "no_budget":
+            return []
+        raise
     return mappers.budgets(budget_svc.budget_state(session, period, env))
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
 def get_forecasts(session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
                   provider=Depends(get_forecast_provider)):
-    period = _period(session, clock)
+    period = _period_or_none(session, clock)
+    if period is None:
+        return []
     result = forecast_svc.forecast_for_period(session, provider, period, clock=clock)  # read only: no snapshot
     return mappers.forecasts(result, period_row=period, team_ids=forecast_svc.active_team_ids(session),
-                             now=clock.now())
+                             now=clock.now(), people=_people_by_team(session))
 
 
 @router.get("/context", response_model=list[S.ContextItem], **JSON_OPTS)
 def get_context(team_id: str | None = Query(default=None, alias="teamId"), session: Session = Depends(get_session)):
+    """A `teamId` filter returns that team's signals plus every company-scope signal (they apply to all teams)."""
+    team_ids = [t.id for t in _active_teams(session)]
     items = []
-    for sig in signal_svc.list_signals(session, team=team_id or None):
+    for sig in signal_svc.list_signals(session, team=team_id or None, include_company=True):
         out = signal_svc.signal_out(session, sig)
         docs = {c["document_id"]: session.get(CorpusDocument, c["document_id"]) for c in out["citations"]}
-        items.append(mappers.context_item(out, docs))
+        items.append(mappers.context_item(out, docs, company_team_ids=team_ids))
     return items
 
 
@@ -391,10 +432,15 @@ def reject_proposal(
     ids: IdFactory = Depends(get_ids),
     actor: Actor = Depends(_actor(APPROVER)),
 ):
+    """The dashboard's Reject and Dismiss. A stale proposal (status `stale`, or still pending on an outdated
+    budget version) is retired with DISMISS_NOTE; the decision is `rejected` and allocations are untouched.
+    The backend never stores `failed` (proposals are validated when drafted), so there is no failed case."""
     p = proposal_svc.get_proposal(session, proposal_id)
     _guard_settled(p)
-    decision_svc.decide(session, proposal_id, DecisionCreate(outcome="reject", rationale=REJECT_NOTE), actor=actor,
-                        idempotency_key=f"compat-reject-{proposal_id}", clock=clock, ids=ids)
+    stale = proposal_svc.proposal_out(session, p)["is_stale"]
+    decision_svc.decide(session, proposal_id,
+                        DecisionCreate(outcome="reject", rationale=DISMISS_NOTE if stale else REJECT_NOTE),
+                        actor=actor, idempotency_key=f"compat-reject-{proposal_id}", clock=clock, ids=ids)
     session.expire_all()
     return _proposal(session, proposal_svc.get_proposal(session, proposal_id))
 

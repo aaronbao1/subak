@@ -14,9 +14,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.errors import DomainError
 
-ALREADY_APPLIED = "This proposal was already applied."
+ALREADY_APPLIED = "This proposal was already applied; it cannot be applied or rejected again."
 ALREADY_REJECTED = "This proposal was already rejected."
-STALE = "Budgets changed since this proposal was prepared. Ask for a refreshed proposal."
+STALE = ("The budget changed after this proposal was drafted, so it was not applied. Ask the assistant for a "
+         "refreshed proposal, or dismiss this one.")
+NOT_SEEDED = "The database is not seeded yet; run `python -m app.seed`."
 
 MESSAGES: dict[str, str] = {
     "stale_proposal": STALE,
@@ -30,6 +32,7 @@ MESSAGES: dict[str, str] = {
     "proposal_state_mismatch": "The saved budget differs from what this proposal was reviewed against. Ask for a refreshed proposal.",
     "idempotency_key_reused": "A different decision was already recorded for this proposal.",
     "proposal_not_found": "That proposal does not exist.",
+    "not_seeded": NOT_SEEDED,
     "no_periods": "No planning period is configured yet. Seed the backend first (python -m app.seed).",
     "unknown_period": "Unknown planning period.",
     "no_budget": "No budget is configured for the current period. Seed the backend first (python -m app.seed).",
