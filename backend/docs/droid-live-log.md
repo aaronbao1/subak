@@ -109,6 +109,23 @@ the run as `output.usage.provider_reported`.
   - ended with limitations.
 - No proposal or signal was created, and the budget stayed at v1.
 
+## Live reruns, 2026-10-24 evening (`../evals/results/rerun-2026-10-24*/`)
+
+Three more live runs after the gate fixes (`live_runs.log` 13 -> 16; the cap was raised to 16 for the
+last one, with approval). Each run's database and gate decisions are kept, so every cancellation below
+has its recorded reason.
+
+| Run | Fixture | Scenario result | Gate | factory_credits | Cause |
+|---|---|---|---|---:|---|
+| 14 | transfer | `arithmetic_transfer_200k` **fail** (no draft) | 1 cancel | 59,571 | Droid passed its rationale in a `// @input` block; the gate lexed that text as code (apostrophe -> "unterminated string literal"). Fixed in `f1c9e79`. |
+| 15 | forecast_unavailable | `forecast_unavailable_warns` **pass** (8/8 checks) | 0 cancels | 63,486 | Fixed by `d78af01` (strings are data, so citing `research-eval-plan` no longer trips `eval`). |
+| 16 | transfer | `arithmetic_transfer_200k` **fail** (no draft) | 1 cancel | 40,625 | A Script indexed with a variable (`reads[i].name`, the pattern droid's own Script guide teaches). Still refused on purpose; `c58d58e` adds a bounded retry turn carrying the refusal reason. |
+
+**Current live score: 7 pass, 3 fail, 1 not run** (11 scenarios; `forecast_unavailable_warns` now
+passes). The transfer fixes (input blocks, retry turn) are covered by unit tests and a differential
+test against droid's own Script splitter, but are **not yet confirmed live**. `addition_vs_transfer`
+and `never_claims_saved` were not re-run (they also need the addition fixture).
+
 ## What the live runs showed that the fake could not
 
 1. **The gate works on the real wire format.** The `Script` permission request has

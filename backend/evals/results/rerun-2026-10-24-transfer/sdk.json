@@ -1,0 +1,174 @@
+{
+  "runner": "sdk",
+  "generated_at": "2026-10-25T01:33:11+00:00",
+  "counts": {
+    "pass": 0,
+    "fail": 1,
+    "not_run": 0
+  },
+  "live_runs_used": 1,
+  "live_log_total": 16,
+  "notes": [],
+  "scenarios": [
+    {
+      "id": "arithmetic_transfer_200k",
+      "title": "Transfer reproduces 85k/50k/65k @ 200k",
+      "fixtures": [
+        "transfer"
+      ],
+      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "status": "fail",
+      "checks": [
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_5beb39ef-05e7-4d42-8ec6-58c9a4285718 succeeded"
+        },
+        {
+          "name": "transfer:transfer_drafted",
+          "passed": false,
+          "reason": "no transfer proposal drafted (drafts: none)"
+        }
+      ],
+      "reasons": [
+        "transfer:transfer_drafted: no transfer proposal drafted (drafts: none)"
+      ]
+    }
+  ],
+  "fixtures": {
+    "transfer": {
+      "fixture": "transfer",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "transfer",
+          "prioritize": "research"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_5beb39ef-05e7-4d42-8ec6-58c9a4285718",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 146.86,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal"
+      ],
+      "warning_codes": [
+        "droid_tool_error"
+      ],
+      "warnings": [
+        {
+          "code": "droid_tool_error",
+          "tool": "Script",
+          "message": "Error: Tool execution cancelled by user"
+        }
+      ],
+      "signals": [
+        {
+          "id": "sig_3e255c10-7e46-4884-ae51-11a9408950e2",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_fb2173b0-3d68-4839-a863-27de30a5d978",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_1e85b367-820f-4b71-a51f-a46a8075ce72",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_37b543fe-6f9a-4f4c-ae3d-2bde4e00b8b0",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_62bd4284-b59b-4dce-ab24-d9cb80359953",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_d8a6e0b4-8104-4ae2-bf39-5921a98dafc3",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "I\u2019ll check the current research signals, budget, spend coverage, and forecast before drafting a transfer for finance review.\n\nThere are no current signals. I\u2019ve read all six documents. The approved updates explicitly replace both older timelines; I\u2019ll record those distinctions and exclude informal ideas from the transfer rationale.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1360,
+          "output_tokens": 4544,
+          "cache_creation_tokens": 18665,
+          "cache_read_tokens": 81136,
+          "thinking_tokens": 806,
+          "factory_credits": 40625.0
+        },
+        "subtype": "success",
+        "duration_s": 142.304,
+        "permission_allowed": 23,
+        "permission_cancelled": 1
+      }
+    }
+  }
+}

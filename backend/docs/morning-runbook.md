@@ -101,7 +101,8 @@ zsh -ic '.venv/bin/python -m evals.run --runner sdk --scenario stale_recovery --
 - The harness runs live only while the log has fewer than `--live-cap` (15) minus `--live-reserve` (2)
   lines. With 13 lines it runs nothing until you add `--live-reserve 0` or start a fresh log.
 - The full live set is 6 runs, about 270k credits.
-- Last night's live score is 6 pass, 4 fail, 1 not run under the current scorer. The committed
+- Current live score: 7 pass, 3 fail, 1 not run, after the evening reruns (see `evals/README.md`,
+  "Live reruns"). Last night's score was 6 pass, 4 fail, 1 not run under the current scorer. The committed
   `results/sdk.*` still say 7 / 3 / 1: they were scored before the `completed_or_declined` check
   existed, and `forecast_unavailable_warns` passed only because of that. The two runs that ended
   without drafting each had one gate cancellation that could not be examined. See `evals/README.md`.
@@ -138,20 +139,22 @@ npm install && npm run dev                                         # http://loca
 
 ## 5. The Droid integration in 60 seconds (for judges)
 
-> Northstar helps finance teams decide where AI budget should go. The hard part is reading:
-> the approved research plan, an older email thread it replaced, and a product launch that moved.
-> Factory Droid does that reading inside our backend. When finance asks "add 50k, prioritize
+> Finance teams spend most of their time digging through emails, Slack threads and plan docs just to
+> figure out what each team actually needs. The math is easy; the digging is the job: an approved
+> research plan, an older email thread it replaced, a product launch that slipped. Northstar hands that
+> digging to Factory Droid, which reads the company's documents inside our backend. When finance asks "add 50k, prioritize
 > research" or "what changed?", the backend starts a real Droid session. That session sees exactly
 > ten tools that we implement, seven to read and three to draft, enforced by a `restrict_tools`
 > allowlist we verify before every run. A permission gate cancels anything else: edits, shell,
-> file creation, network. Droid records signals whose quotes the backend checks word for word against
+> file creation, network. Droid's tool calls run as generated code, so the gate statically checks every
+> script before it runs, and we red-teamed it: no bypasses found. Droid records signals whose quotes the backend checks word for word against
 > the stored document, and it drafts proposals whose arithmetic the backend recomputes. Then it
 > stops: there is no approve tool, its role gets 403 at the decision endpoint, and a human approves.
 > Everything it did is on screen: every tool call, the citations, and the before/after figures,
 > streamed live, labeled real or fake, with Factory's credit usage on each run. When the budget
 > moves under a pending draft, the approval is refused as stale and Droid re-drafts on the new
 > numbers and explains what changed. Live, Droid caught the superseded research thread and never
-> claimed to have saved anything. It passed 6 of 11 eval scenarios live, and we publish the 4 it failed.
+> claimed to have saved anything. It passes 7 of 11 eval scenarios live, and we publish the 3 it failed.
 
 Supporting docs: [`../../agent/README.md`](../../agent/README.md) (design, bounds, live results),
 [`droid-live-log.md`](droid-live-log.md) (each live run), [`../evals/results/sdk.md`](../evals/results/sdk.md).

@@ -64,6 +64,9 @@ reported by Factory:
   Across the 41 permission requests of these five product runs (33 + 3 + 3 + 1 + 1 in the run table)
   the gate made no false refusal and nothing outside `northstar` was requested. That claim covers the
   product runs only; the eval runs below had two cancellations that could not be examined.
+- **Current live score: 7 pass, 3 fail, 1 not run** of 11 scenarios, after three reruns on the evening
+  of 2026-10-24 (`../backend/evals/README.md`, "Live reruns"): `forecast_unavailable_warns` now passes;
+  the transfer fixes are unit-tested but not yet confirmed live.
 - 5 eval runs (249,652 credits; `../backend/evals/results/sdk.md`): **6 pass, 4 fail, 1 not run** of
   11 scenarios under the current scorer. The committed `sdk.md` / `sdk.json` say 7 / 3 / 1 because they
   were scored before the `completed_or_declined` check existed; `forecast_unavailable_warns` passed only
