@@ -1190,6 +1190,57 @@
         "title": "CompanyCoverage",
         "type": "object"
       },
+      "CompanyMeta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "env",
+              "db",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "as_of",
+          "is_simulated",
+          "source",
+          "detail"
+        ],
+        "title": "CompanyMeta",
+        "type": "object"
+      },
       "CompanyOverview": {
         "properties": {
           "envelope_total": {
@@ -3437,6 +3488,9 @@
       },
       "MetaOut": {
         "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyMeta"
+          },
           "forecast_mode": {
             "enum": [
               "engine",
@@ -3508,6 +3562,7 @@
         "required": [
           "service",
           "version",
+          "company",
           "period",
           "unit",
           "money_format",
@@ -5475,7 +5530,7 @@
                 }
               }
             },
-            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`, `non_positive_amount`, `invalid_params`, `unexpected_params`"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`, `non_positive_amount`, `invalid_params`, `unexpected_params`, `unknown_document`, `document_superseded`"
           },
           "429": {
             "content": {

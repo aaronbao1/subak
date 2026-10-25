@@ -595,3 +595,54 @@ def test_sdk_gate_retries_are_bounded(fake_sdk, sdk_client):
     assert len(fake_droid_sdk.STATE["prompts"]) == 1 + sdk_runner.MAX_GATE_RETRIES
     assert out["output"]["usage"]["gate_retries"] == sdk_runner.MAX_GATE_RETRIES
     assert out["proposals"] == [] and allocations(sdk_client) == INITIAL
+
+
+# ---- credits on failed, interrupted, multi-turn and budget-stopped runs ------------------------------
+
+
+def _doc_ids(client, n=2):
+    return [d["id"] for d in client.get("/api/documents?include_superseded=false").json()["items"]][:n]
+
+
+def test_sdk_stream_timeout_still_reports_the_credits_spent(fake_sdk, sdk_client):
+    fake_sdk.RAISE = TimeoutError("stream timed out")
+    out = post_run(sdk_client, "interpret_corpus").json()
+    assert out["status"] == "failed" and "TimeoutError" in out["error"]
+    assert '"factory_credits": 99.0' in out["error"]  # the usage update seen before the timeout
+
+
+def test_sdk_process_error_mid_stream_is_unavailable_with_credits(fake_sdk, sdk_client):
+    class DroidProcessError(Exception):
+        pass
+
+    fake_sdk.RAISE = DroidProcessError("droid exited")
+    out = post_run(sdk_client, "interpret_corpus").json()
+    assert out["status"] == "unavailable" and '"factory_credits": 99.0' in out["error"]
+
+
+def test_sdk_multi_turn_usage_counts_every_turn(fake_sdk, sdk_client):
+    """A retry turn whose result carries no usage still counts the usage streamed for it."""
+    fake_sdk.TURNS = [[Step(LOAD), Step(INDEXED_READS)], [Step(LOAD)]]
+    fake_sdk.RESULTS = [fake_sdk.RunSuccess(text="first", usage=None),
+                        fake_sdk.RunSuccess(text="second", usage=fake_sdk.Usage(1, 2, 0, 0, 0, 500.0))]
+    out = post_run(sdk_client, params={"mode": "addition", "amount": "50000.00", "prioritize": "research"}).json()
+    assert out["status"] == "succeeded", out["error"]
+    usage = out["output"]["usage"]
+    assert usage["turns"] == 2 and usage["provider_reported"]["factory_credits"] == 599.0
+    assert "usage_incomplete" not in usage
+
+
+def test_sdk_run_stops_at_its_credit_budget(fake_sdk, sdk_client):
+    r = sdk_client.post("/api/agent/runs", headers=ANALYST, json={
+        "task_type": "interpret_corpus", "params": {"document_ids": _doc_ids(sdk_client), "credit_budget": 50}})
+    out = r.json()
+    assert out["status"] == "failed" and "credit budget" in out["error"]
+    assert '"factory_credits": 99.0' in out["error"]   # stopped at the first usage update, not at 10,801
+    assert any(e["type"] == "warning" and e["data"]["code"] == "credit_budget_reached" for e in out["events"])
+
+
+def test_sdk_credit_budget_above_the_spend_does_not_interfere(fake_sdk, sdk_client):
+    r = sdk_client.post("/api/agent/runs", headers=ANALYST, json={
+        "task_type": "interpret_corpus", "params": {"document_ids": _doc_ids(sdk_client), "credit_budget": 1e6}})
+    out = r.json()
+    assert out["status"] == "succeeded" and out["output"]["usage"]["provider_reported"]["factory_credits"] == 10801.0

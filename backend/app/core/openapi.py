@@ -79,7 +79,8 @@ ROUTE_ERRORS: dict[tuple[str, str], dict[int, list[str]]] = {
     ("delete", "/api/signals/{signal_id}"): {404: ["not_found"], 409: ["signal_in_use"]},
     ("put", "/api/team-mappings"): {422: ["validation_failed", "unknown_team"]},
     ("post", "/api/agent/runs"): {
-        422: ["validation_failed", "unknown_team", "non_positive_amount", "invalid_params", "unexpected_params"],
+        422: ["validation_failed", "unknown_team", "non_positive_amount", "invalid_params", "unexpected_params",
+              "unknown_document", "document_superseded"],
         429: ["runner_busy"],
         503: ["runner_unavailable"],
     },

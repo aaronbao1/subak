@@ -16,15 +16,16 @@ import concurrent.futures
 import functools
 from collections import defaultdict
 from collections.abc import Sequence
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import ForecastSnapshot, Person, PlanningPeriod, Team, UsageRecord
+from app.db.models import ForecastSnapshot, Person, PlanningPeriod, Team
 from app.providers.forecast import Attribution, ForecastProvider, TeamAttribution
 from app.schemas.forecasts import ForecastResult
 
@@ -182,8 +183,28 @@ def active_team_ids(session: Session) -> list[str]:
     return list(session.scalars(select(Team.id).where(Team.active.is_(True)).order_by(Team.id)))
 
 
+# Exact integer cents from MoneyType's canonical storage form ("1234.50" -> 123450). MoneyType always
+# writes exactly two decimal places, so dropping the point is exact (no float on the money path).
+_CENTS_SQL = "CAST(REPLACE(amount, '.', '') AS INTEGER)"
+_ATTRIBUTION_SQL = text(f"""
+    SELECT team_id, person_id, SUM({_CENTS_SQL}) AS cents, MAX(occurred_at) AS last_at
+    FROM usage_records
+    WHERE period_id = :period AND counts_toward_spend = 1 AND amount IS NOT NULL
+    GROUP BY team_id, person_id
+""")
+
+
+def _as_date(value) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    return date.fromisoformat(str(value)[:10])
+
+
 def attribution_for_period(session: Session, period: PlanningPeriod, team_ids: Sequence[str]) -> Attribution:
-    """Counted spend to date per active team and active member; anything else on the team is team-level."""
+    """Counted spend to date per active team and active member; anything else on the team is team-level.
+
+    One grouped SQL query (team x person, exact cents), so the per-request cost stays a few ms on a
+    300k-row dataset (ix_usage_records_spend_to_date covers it)."""
     members: dict[str, dict[str, Decimal]] = {t: {} for t in team_ids}
     for pid, team in session.execute(
         select(Person.id, Person.team_id).where(Person.active.is_(True), Person.team_id.in_(list(team_ids)))
@@ -191,16 +212,13 @@ def attribution_for_period(session: Session, period: PlanningPeriod, team_ids: S
         members[team][pid] = Decimal("0")
     team_level = {t: Decimal("0") for t in team_ids}
     as_of = None
-    rows = session.execute(
-        select(UsageRecord.team_id, UsageRecord.person_id, UsageRecord.amount, UsageRecord.occurred_at)
-        .where(UsageRecord.period_id == period.id, UsageRecord.counts_toward_spend.is_(True),
-               UsageRecord.amount.is_not(None))
-    )
-    for team, person, amount, occurred in rows:
-        day = occurred.date()
-        as_of = day if as_of is None or day > as_of else as_of
+    for team, person, cents, last_at in session.execute(_ATTRIBUTION_SQL, {"period": period.id}):
+        if last_at is not None:
+            day = _as_date(last_at)
+            as_of = day if as_of is None or day > as_of else as_of
         if team is None or team not in members:  # unmapped spend only moves as_of
             continue
+        amount = Decimal(int(cents or 0)).scaleb(-2)  # exact, two places
         if person is not None and person in members[team]:
             members[team][person] += amount
         else:

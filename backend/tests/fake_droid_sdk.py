@@ -280,7 +280,11 @@ class _Stream:
         if MODULE.QUESTION:
             STATE["question_answer"] = await self.session._dispatcher.handle_question({"toolCallId": "q1", "questions": []})
         yield TokenUsageUpdate(10, 20, 0, 0, 0, 99.0)
-        if MODULE.RESULT is not None:
+        if MODULE.RAISE is not None:  # e.g. a stream timeout after usage was reported
+            raise MODULE.RAISE
+        if MODULE.RESULTS:  # one result per turn (multi-turn usage tests)
+            yield MODULE.RESULTS.pop(0)
+        elif MODULE.RESULT is not None:
             yield MODULE.RESULT
         else:
             yield AssistantMessage(MODULE.FINAL_TEXT)
@@ -304,6 +308,8 @@ def build() -> types.ModuleType:
     mod.LIST_TOOLS = None
     mod.QUESTION = False
     mod.RESULT = None
+    mod.RESULTS = None
+    mod.RAISE = None
     mod.FINAL_TEXT = "Drafted a proposal for finance review; nothing was applied."
     STATE.clear()
     MODULE = mod

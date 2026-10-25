@@ -26,6 +26,8 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "BACKEND_CORS_ORIGIN_REGEX",
         "BACKEND_ALLOW_RESET",
         "BACKEND_COMPAT",
+        "BACKEND_COMPANY_ID",
+        "BACKEND_COMPANY_NAME",
         "FORECAST_PROVIDER",
         "FORECAST_DEMO",
         "FORECAST_WORKER",

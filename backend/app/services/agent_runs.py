@@ -23,11 +23,14 @@ from app.agent.runner import AgentTask, RunnerUnavailable
 from app.agent.toolbox import BackendToolbox
 from app.core.actors import Actor
 from app.core.errors import DomainError
-from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, Proposal, Team
+from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, CorpusDocument, Proposal, Team
 from app.db.session import transaction
 from app.schemas.agent import AgentRunCreate, AnswerParams, ProposeParams
 
 MAX_BACKGROUND_RUNS = 2
+# interpret_corpus `params.document_ids`: a scoped batch (python -m app.interpret). Matches the
+# toolbox's search cap, so a scoped run always sees every document it was given.
+MAX_SCOPE_DOCUMENTS = 20
 _background = threading.BoundedSemaphore(MAX_BACKGROUND_RUNS)
 
 
@@ -73,10 +76,50 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
             params = {"chart": a.chart.model_dump(exclude_none=True)}
         if a.forecast_context is not None:
             params["forecast_context"] = a.forecast_context.model_dump(exclude_none=True)
+    elif body.task_type == "interpret_corpus" and body.params:
+        params = _scope_params(session, body.params)
     elif body.params:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
     return AgentTask(type=body.task_type, instruction=body.instruction, params=params)
+
+
+def _scope_params(session: Session, raw: dict[str, Any]) -> dict[str, Any]:
+    """interpret_corpus takes `document_ids` (interpret only these current documents) and, with them,
+    an optional `credit_budget` (a positive number of factory_credits the sdk runner stops the run at;
+    the interpret CLI passes the remaining cap). Anything else is still `unexpected_params`."""
+    extra = sorted(k for k in raw if k not in ("document_ids", "credit_budget"))
+    if extra:
+        raise _validation([{"code": "unexpected_params",
+                            "message": f"interpret_corpus takes only document_ids, not {', '.join(extra)}",
+                            "field": "params"}])
+    ids = raw.get("document_ids")
+    if (not isinstance(ids, list) or not ids or len(ids) > MAX_SCOPE_DOCUMENTS
+            or not all(isinstance(i, str) and i for i in ids) or len(set(ids)) != len(ids)):
+        raise _validation([{"code": "invalid_params",
+                            "message": f"document_ids must be 1-{MAX_SCOPE_DOCUMENTS} distinct document ids",
+                            "field": "params.document_ids"}])
+    reasons = []
+    for doc_id in ids:
+        doc = session.get(CorpusDocument, doc_id)
+        if doc is None:
+            reasons.append({"code": "unknown_document", "message": f"document {doc_id!r} not found",
+                            "field": "params.document_ids"})
+        elif doc.superseded_by_document_id is not None:
+            reasons.append({"code": "document_superseded",
+                            "message": f"document {doc_id!r} is superseded; scope only current documents",
+                            "field": "params.document_ids"})
+    budget = raw.get("credit_budget")
+    if "credit_budget" in raw and (isinstance(budget, bool) or not isinstance(budget, (int, float))
+                                   or not budget > 0 or budget != budget):
+        reasons.append({"code": "invalid_params", "message": "credit_budget must be a positive number",
+                        "field": "params.credit_budget"})
+    if reasons:
+        raise _validation(reasons)
+    out: dict[str, Any] = {"document_ids": list(ids)}
+    if "credit_budget" in raw:
+        out["credit_budget"] = float(budget)
+    return out
 
 
 def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) -> dict[str, Any]:
@@ -128,7 +171,9 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
                              forecast_service=getattr(app_state, "forecast_service", None),
                              forecast_context=task.params.get("forecast_context"),
                              rebase_target=(task.params.get("stale_proposal_id")
-                                            if task.type == "propose_allocation" else None))
+                                            if task.type == "propose_allocation" else None),
+                             doc_scope=(task.params.get("document_ids")
+                                        if task.type == "interpret_corpus" else None))
     if unavailable is not None:
         toolbox.emit("error", {"code": "runner_unavailable", "reason": unavailable.reason, "message": str(unavailable)},
                      source="backend")
@@ -182,6 +227,8 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output["signal_ids"] = list(toolbox.signal_ids)
     if toolbox.charts:  # charts the toolbox actually built (a runner cannot claim one it did not build)
         output["charts"] = list(toolbox.charts)
+    if toolbox.budget_exhausted:  # a tool/write budget refused calls: the run may be incomplete
+        output["budget_exhausted"] = list(toolbox.budget_exhausted)
     if toolbox.forecast_receipts:
         output["forecast_receipts"] = list(toolbox.forecast_receipts)
     output["applied_changes"] = False

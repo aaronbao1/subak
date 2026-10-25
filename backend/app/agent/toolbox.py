@@ -12,6 +12,9 @@
   on the one proposal the run was asked to recover (`params.stale_proposal_id`, passed in as
   `rebase_target`): rebasing marks the original `stale`, so any other proposal, including a finance
   analyst's pending one, is refused with `rebase_not_permitted`.
+- `doc_scope` (interpret_corpus with `params.document_ids`, the batched CLI `python -m app.interpret`):
+  `search_corpus` lists only the scoped documents, and `read_document` or a `record_signal` citation of
+  any other document is refused with `document_out_of_scope`. Unscoped runs are unchanged.
 - There is no method that decides, applies, approves or rejects a proposal.
 """
 
@@ -163,6 +166,7 @@ class BackendToolbox:
         forecast_service: Any = None,
         start_seq: int = 0,
         rebase_target: str | None = None,
+        doc_scope: list[str] | None = None,
         forecast_context: dict | None = None,
     ) -> None:
         self._factory = session_factory
@@ -174,6 +178,8 @@ class BackendToolbox:
         self._provider = forecast_provider
         self._forecast_service = forecast_service
         self.rebase_target = rebase_target  # the only proposal rebase_proposal may touch (None: none)
+        # the only documents this run may list, read or cite (None: the whole corpus)
+        self.doc_scope: frozenset[str] | None = frozenset(doc_scope) if doc_scope else None
         self._forecast_context = deepcopy(forecast_context)
         self.actor = Actor(id=f"droid:{run_id}", role="droid_agent")
         self._lock = threading.Lock()
@@ -183,6 +189,10 @@ class BackendToolbox:
         self.proposal_ids: list[str] = []
         self.forecast_receipts: list[dict] = []
         self.charts: list[dict] = []  # every chart spec actually built, attached to the run output
+        # Budget refusals ("tool_budget_exhausted", "write_budget_exhausted:<tool>"): the run may have
+        # left work undone, so it is reported in the run output (the interpret CLI does not count such
+        # a run's documents as interpreted).
+        self.budget_exhausted: list[str] = []
         self._writes = {"record_signal": 0, "draft_proposal": 0}  # draft_proposal also counts rebases
 
     # ---- activity stream ---------------------------------------------------------------------
@@ -255,6 +265,8 @@ class BackendToolbox:
                 summarize: Callable[[dict], str]) -> dict:
         if self._step_seq >= MAX_TOOL_CALLS:
             err = ToolError(tool, "tool_budget_exhausted", f"a run may make at most {MAX_TOOL_CALLS} tool calls")
+            if "tool_budget_exhausted" not in self.budget_exhausted:
+                self.budget_exhausted.append("tool_budget_exhausted")
             self.emit("error", err.as_dict())
             raise err
         self._step_seq += 1
@@ -287,6 +299,15 @@ class BackendToolbox:
             s.add(AgentRunStep(id=self._ids.new_id("step_"), created_at=self._clock.now(), run_id=self.run_id,
                                seq=seq, tool=tool, args=args, result_summary=summary, at=self._clock.now()))
 
+    def _check_scope(self, document_ids: list[str]) -> None:
+        if self.doc_scope is None:
+            return
+        outside = sorted({d for d in document_ids if d not in self.doc_scope})
+        if outside:
+            raise DomainError("document_out_of_scope", 422,
+                              "this run may only read and cite the documents it was scoped to",
+                              {"document_ids": outside})
+
     def _period(self, s: Session):
         return coverage_svc.resolve_period(s, None, self._clock.now())
 
@@ -299,6 +320,8 @@ class BackendToolbox:
         def fn(s: Session) -> dict:
             hits = corpus_svc.search_documents(s, q=query or None, team=team, project=project,
                                                include_superseded=include_superseded)
+            if self.doc_scope is not None:
+                hits = [h for h in hits if h[0].id in self.doc_scope]
             items = [DocumentSearchItem.model_validate({**summary_dict(s, d), "score": score, "matches": m})
                      .model_dump(mode="json") for d, m, score in hits[:MAX_SEARCH_RESULTS]]
             return {"query": query, "count": len(items), "total_matches": len(hits), "items": items}
@@ -307,6 +330,7 @@ class BackendToolbox:
 
     def read_document(self, document_id: str) -> dict:
         def fn(s: Session) -> dict:
+            self._check_scope([document_id])
             d = corpus_svc.get_document(s, document_id)
             return DocumentDetail.model_validate(summary_dict(s, d, content=True)).model_dump(mode="json")
 
@@ -423,6 +447,8 @@ class BackendToolbox:
     def _check_write_budget(self, tool: str, limit: int, *, counter: str | None = None) -> None:
         if self._writes[counter or tool] >= limit:
             err = ToolError(tool, "write_budget_exhausted", f"a run may make at most {limit} {tool} calls")
+            if f"write_budget_exhausted:{tool}" not in self.budget_exhausted:
+                self.budget_exhausted.append(f"write_budget_exhausted:{tool}")
             self.emit("error", err.as_dict())
             raise err
 
@@ -432,6 +458,7 @@ class BackendToolbox:
 
         def fn(s: Session) -> dict:
             body = ContextSignalIn.model_validate({**payload, "agent_run_id": self.run_id})
+            self._check_scope([c.document_id for c in body.citations])
             existing = _same_signal(s, body)
             if existing is not None:
                 return {**ContextSignalOut.model_validate(signal_svc.signal_out(s, existing)).model_dump(mode="json"),

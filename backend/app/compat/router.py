@@ -18,8 +18,6 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
 
 from __future__ import annotations
 
-import os
-
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -28,12 +26,12 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
-from app.compat import errors, intent, mappers, threads
+from app.compat import cache, errors, intent, mappers, spending_index, threads
 from app.compat import schemas as S
 # Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
 from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
@@ -56,9 +54,6 @@ from app.services import signals as signal_svc
 from app.services import spending as spending_svc
 
 PREFIX = "/compat/api"
-# The backend stores no company row; the loaded dataset names it (datagen/demo.sh sets these for the Uber data).
-COMPANY_ID = os.environ.get("BACKEND_COMPANY_ID", "northstar")
-COMPANY_NAME = os.environ.get("BACKEND_COMPANY_NAME", "Northstar Software")
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
 MAX_MESSAGE = 4000
@@ -115,7 +110,7 @@ def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
 
 def _people_by_team(session: Session, request: Request) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
-    for p in get_people(request, session):
+    for p in _people_rows(request, session):
         out.setdefault(p["teamId"], []).append(p["id"])
     return out
 
@@ -194,7 +189,8 @@ def get_company(request: Request, session: Session = Depends(get_session), clock
     meta = routes_meta.meta(request, session, clock, provider)
     if meta["period"] is None:
         raise DomainError("not_seeded", 503, "the database is not seeded yet")
-    return mappers.company(meta, company_id=COMPANY_ID, name=COMPANY_NAME)
+    # meta["company"]: BACKEND_COMPANY_ID/NAME env vars > company_profile row > Northstar default.
+    return mappers.company(meta, company_id=meta["company"]["id"], name=meta["company"]["name"])
 
 
 @router.get("/teams", response_model=list[S.Team], **JSON_OPTS)
@@ -207,6 +203,12 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
 def get_people(request: Request, session: Session = Depends(get_session)):
+    # Polled every second; people change only on writes, which move the data stamp (cache.py).
+    return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person],
+                             lambda: _people_rows(request, session))
+
+
+def _people_rows(request: Request, session: Session) -> list[dict]:
     active = {t.id for t in _active_teams(session)}
     return [mappers.person(p) for p in people_svc.list_people(session)
             if request.app.state.settings.forecast_demo or p.team_id in active]
@@ -233,25 +235,13 @@ def get_spending(
         return [r for r in rows if (not team_id or r['teamId'] == team_id)
                 and (not date_from or r['date'] >= date_from.isoformat())
                 and (not date_to or r['date'] <= date_to.isoformat())]
-    records: list[dict] = []
-    offset = 0
-    while True:
-        page = spending_svc.list_records(session, period, offset=offset, limit=spending_svc.MAX_RECORD_PAGE)
-        records += page["items"]
-        offset += len(page["items"])
-        if not page["items"] or offset >= page["total"]:
-            break
-    batch_ids = {r["import_batch_id"] for r in records}
-    labels = {b.id: (b.source_label or b.filename or b.source_kind)
-              for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))} if batch_ids else {}
-    rows = mappers.spending(records, batch_labels=labels)
-    if team_id:
-        rows = [r for r in rows if r["teamId"] == team_id]
-    if date_from:
-        rows = [r for r in rows if r["date"] >= date_from.isoformat()]
-    if date_to:
-        rows = [r for r in rows if r["date"] <= date_to.isoformat()]
-    return rows
+
+    # Polled every second while the live feed appends records every few seconds: the incremental index
+    # (spending_index.py) re-maps only the rows new records touch and rebuilds fully only after an
+    # in-place change (e.g. a team re-attribution); unchanged data gets the stored body.
+    return spending_index.index_for(request.app.state).response(
+        request, session, period.id, team_id or None,
+        date_from.isoformat() if date_from else None, date_to.isoformat() if date_to else None)
 
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
@@ -264,7 +254,11 @@ def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(
         if exc.code == "no_budget":
             return []
         raise
-    return mappers.budgets(budget_svc.budget_state(session, period, env))
+    # Only the allocations are shown here: skip budget_state's spend-coverage report, which loads every
+    # usage record of the period (~0.4 s on the Uber dataset) for fields this route never returns.
+    allocations = budget_svc.allocation_map(env)
+    return mappers.budgets({"period": period, "unit": env.unit, "state_version": env.state_version,
+                            "allocations": [{"team": t, "amount": a} for t, a in sorted(allocations.items())]})
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
