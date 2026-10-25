@@ -26,12 +26,12 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
-from app.compat import errors, intent, mappers, threads
+from app.compat import cache, errors, intent, mappers, threads
 from app.compat import schemas as S
 # Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
 from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
@@ -202,13 +202,36 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
-def get_people(session: Session = Depends(get_session)):
-    active = {t.id for t in _active_teams(session)}
-    return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
+def get_people(request: Request, session: Session = Depends(get_session)):
+    def build() -> list[dict]:
+        active = {t.id for t in _active_teams(session)}
+        return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
+
+    # Polled every second; people change only on writes, which move the data stamp (cache.py).
+    return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person], build)
+
+
+# Only the columns mappers.spending reads, as plain rows: building ~27k ORM objects and full
+# spending.record_out dicts per rebuild cost ~0.5 s on the Uber dataset. Same order as
+# spending.list_records (mappers.spending takes each row's unit from its first record).
+_SPEND_COLUMNS = (
+    func.coalesce(UsageRecord.team_id, spending_svc.UNATTRIBUTED).label("team"),
+    UsageRecord.person_id.label("person"), UsageRecord.occurred_at, UsageRecord.cost_category,
+    UsageRecord.provider, UsageRecord.amount, UsageRecord.counts_toward_spend, UsageRecord.value_kind,
+    UsageRecord.import_batch_id, UsageRecord.source_kind, UsageRecord.notional_value, UsageRecord.counter_reset,
+    UsageRecord.unit,
+)
+
+
+def _spend_rows(session: Session, period_id: str) -> list[dict]:
+    rows = session.execute(select(*_SPEND_COLUMNS).where(UsageRecord.period_id == period_id)
+                           .order_by(UsageRecord.occurred_at, UsageRecord.source_record_key))
+    return [dict(r) for r in rows.mappings()]
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
 def get_spending(
+    request: Request,
     team_id: str | None = Query(default=None, alias="teamId"),
     date_from: date | None = Query(default=None, alias="from"),
     date_to: date | None = Query(default=None, alias="to"),
@@ -218,25 +241,26 @@ def get_spending(
     period = _period_or_none(session, clock)
     if period is None:
         return []
-    records: list[dict] = []
-    offset = 0
-    while True:
-        page = spending_svc.list_records(session, period, offset=offset, limit=spending_svc.MAX_RECORD_PAGE)
-        records += page["items"]
-        offset += len(page["items"])
-        if not page["items"] or offset >= page["total"]:
-            break
-    batch_ids = {r["import_batch_id"] for r in records}
-    labels = {b.id: (b.source_label or b.filename or b.source_kind)
-              for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))} if batch_ids else {}
-    rows = mappers.spending(records, batch_labels=labels)
-    if team_id:
-        rows = [r for r in rows if r["teamId"] == team_id]
-    if date_from:
-        rows = [r for r in rows if r["date"] >= date_from.isoformat()]
-    if date_to:
-        rows = [r for r in rows if r["date"] <= date_to.isoformat()]
-    return rows
+
+    def build() -> list[dict]:
+        records = _spend_rows(session, period.id)
+        batch_ids = {r["import_batch_id"] for r in records}
+        labels = ({b.id: (b.source_label or b.filename or b.source_kind)
+                   for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))}
+                  if batch_ids else {})
+        rows = mappers.spending(records, batch_labels=labels)
+        if team_id:
+            rows = [r for r in rows if r["teamId"] == team_id]
+        if date_from:
+            rows = [r for r in rows if r["date"] >= date_from.isoformat()]
+        if date_to:
+            rows = [r for r in rows if r["date"] <= date_to.isoformat()]
+        return rows
+
+    # The full ~3 MB list is rebuilt only when the data stamp (write generation + latest usage record
+    # id, cache.py) or the query changes; repeated 1 s refreshes get the stored body.
+    key = ("spending", cache.data_stamp(session), period.id, team_id or None, date_from, date_to)
+    return cache.cached_json(request, key, list[S.SpendingRecord], build)
 
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
@@ -249,18 +273,46 @@ def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(
         if exc.code == "no_budget":
             return []
         raise
-    return mappers.budgets(budget_svc.budget_state(session, period, env))
+    # Only the allocations are shown here: skip budget_state's spend-coverage report, which loads every
+    # usage record of the period (~0.4 s on the Uber dataset) for fields this route never returns.
+    allocations = budget_svc.allocation_map(env)
+    return mappers.budgets({"period": period, "unit": env.unit, "state_version": env.state_version,
+                            "allocations": [{"team": t, "amount": a} for t, a in sorted(allocations.items())]})
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
-def get_forecasts(session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
+def get_forecasts(request: Request, session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
                   provider=Depends(get_forecast_provider)):
     period = _period_or_none(session, clock)
     if period is None:
         return []
     result = forecast_svc.forecast_for_period(session, provider, period, clock=clock)  # read only: no snapshot
-    return mappers.forecasts(result, period_row=period, team_ids=forecast_svc.active_team_ids(session),
-                             now=clock.now(), people=_people_by_team(session))
+    team_ids = forecast_svc.active_team_ids(session)
+    people = _people_by_team(session)
+    now = clock.now()
+    key = _forecast_key(result, period, team_ids, people, now)
+    store = cache.cache_for(request.app.state)
+    body = store.get(key)
+    if body is None:
+        raw = cache.render(list[S.Forecast], mappers.forecasts(result, period_row=period, team_ids=team_ids,
+                                                                now=now, people=people))
+        body = cache.Body(raw, keep=result)  # holding `result` keeps the object ids in its key from reuse
+        store.put(key, body)
+    return body.response(request)
+
+
+def _forecast_key(result: Any, period: PlanningPeriod, team_ids: list[str], people: dict[str, list[str]],
+                  now: Any) -> tuple:
+    """Everything mappers.forecasts reads. Projections are keyed by object identity: a provider that
+    caches its results (forecasting_package) hands back the same projection objects until its inputs
+    change, so the ~0.05 s mapping of ~150 forecasts x daily points runs once per new result; a provider
+    that builds fresh objects per call (placeholder) simply never hits."""
+    return ("forecasts", result.provider, result.availability, result.reason, result.target_period,
+            result.basis, result.method_label, result.value_kind, result.generated_at,
+            result.generated_at is None and now, result.as_of,
+            tuple(id(p) for p in result.projections), tuple(id(p) for p in result.person_projections),
+            period.id, period.label, period.starts_on, period.ends_on, tuple(team_ids),
+            tuple((t, tuple(ids)) for t, ids in sorted(people.items())))
 
 
 @router.get("/context", response_model=list[S.ContextItem], **JSON_OPTS)

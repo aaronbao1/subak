@@ -497,6 +497,9 @@ class ForecastingPackageProvider:
             provider=self.name, availability=availability, reason="; ".join(reasons) or None,
             target_period=period_id, basis="full_period_total", projections=projections, missing_teams=missing,
             value_kind="estimated", method_label=METHOD_LABEL, person_projections=people, as_of=today,
+            # When this projection was built (it is reused until recorded spend or the run changes), so
+            # repeated reads of an unchanged projection are identical and the compat render cache hits.
+            generated_at=self._now(),
         )
 
     # -- reporting --

@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
 from app.core.clock import Clock, IdFactory, SystemClock, UuidIdFactory
@@ -50,6 +51,9 @@ def create_app(
     # visible 503 on the run, not a startup crash. Tests may inject a runner.
     app.state.droid_runner = droid_runner
 
+    # The dashboard polls ~3.5 MB of JSON every second (spending + forecasts on the Uber dataset);
+    # gzip cuts that ~10x. Added before CORS, so CORS stays outermost.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=settings.cors_origin_regex,
