@@ -161,6 +161,19 @@ runs on different code versions: the interpret and question scenarios come from 
 proposal, forecast and stale scenarios from runs 15-20 after the gate fixes. `arithmetic_transfer_200k`
 is from run 17 (re-scored) and run 19's transfer draft meets the same checks. Live runs used: 20.
 
+## Frontend integration live checks, 2026-10-24 night
+
+Two live checks after the people-aware frontend integration (branch `devin/frontend-integration`).
+
+| Check | Result | Gate | Duration | factory_credits |
+|---|---|---|---:|---:|
+| `python -m app.seed --live-signals` (real Droid interprets the corpus at setup; separate DB, not counted in `live_runs.log`) | 12 signals: 1 company `model_change`; 6 person signals, one per kind, each on the right person (Leila `project_deferred`, Omar `model_change`, Theo `out_of_office`, Sofia `project_accelerated`, Felix `tool_change`, Hana `onboarding`); 5 team signals, with the old research email and the August launch plan marked superseded | 31 allowed, 0 cancelled | 167 s | 92,886 |
+| Run 21: `arithmetic_addition_250k` with `DROID_CHAT_REASONING_EFFORT=low` (`../evals/results/live-2026-10-24-chat-low-effort/`) | **pass**: +50000.00 to research, pending review, flagged engineering's remaining overrun | 0 cancelled, 1 turn | 39 s | 51,762 |
+
+Chat speed: run 18 (default effort, before signal reuse) took 117 s over 2 turns and 74,459 credits for
+the same fixture; run 21 took 39 s in 1 turn and 51,762 credits. Low reasoning effort plus reusing the
+seeded current signals (no re-reading of the corpus) cut the chat round trip by about 3x on this run.
+
 ## What the live runs showed that the fake could not
 
 1. **The gate works on the real wire format.** The `Script` permission request has

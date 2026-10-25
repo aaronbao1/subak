@@ -499,3 +499,9 @@ document and one company signal; `evals` scenario `person_signals_cited` checks 
     `frontend/src/lib/data/index.ts`).
 11. **Dismissed stale proposals** become `rejected` and cannot be rebased afterwards. Ask for a
     refreshed proposal before dismissing if the change is still wanted.
+
+- **Rejected receipt totals (seen in the browser check, 2026-10-24).** Dismissing a stale proposal shows
+  "TOTAL ALLOCATION $250,000 unchanged" in the decision log: the totals of the proposal as drafted, not
+  the current envelope ($270,000 after another proposal was applied). Accurate to the proposal, but easy to
+  misread. Options: the backend sends the envelope at rejection time on rejected decisions, or the decision
+  log labels it "as drafted". Needs a decision with the frontend owner.
