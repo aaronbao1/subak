@@ -505,3 +505,39 @@ document and one company signal; `evals` scenario `person_signals_cited` checks 
   the current envelope ($270,000 after another proposal was applied). Accurate to the proposal, but easy to
   misread. Options: the backend sends the envelope at rejection time on rejected decisions, or the decision
   log labels it "as drafted". Needs a decision with the frontend owner.
+
+## 7. Uber dataset coverage (2026-10-25)
+
+Checked against `datagen/load_backend.py --reset` on the default `datagen/generate.py` output (331,731
+usage records), served with `FORECAST_PROVIDER=forecasting_package` and the fake runner. How to run it:
+[`../README.md`](../README.md#run-on-the-uber-dataset). Datagen notes for the backend live here and in
+the README; `datagen/README.md` is owned by the datagen author.
+
+| Compat route | On Uber | Notes |
+|---|---|---|
+| `/company` | `{id: "uber-sim", name: "Uber (simulated)", currentPeriod: Q4 2026}` | From the loader's `company_profile` row; `BACKEND_COMPANY_ID` / `BACKEND_COMPANY_NAME` (set by `datagen/demo.sh`) override it, Northstar is the fallback |
+| `/teams`, `/people` | 16 teams, 130 people | Every billing row carries `user_email`, so all spend is attributed to a person; no unattributed pseudo-team |
+| `/spending` | ~10k daily rows (`reported_charge` and `usage_only`) | All `complete: true` (coverage is complete per team). Response-cached; see timings in the README |
+| `/budgets` | 16 Q4 allocations, version `"1"` | From the loader's envelopes |
+| `/forecasts` | 16 team + 130 person forecasts, all `available`, `basis: "full_period"` | Model per team by rolling backtest; `assumptions` name the model, the origins, the horizon and the WAPE, and say today is partial and not used for fitting. Person items and `daily` points split the team by spend share and sum exactly |
+| `/documents` | 249 | Slack, Asana, email, monday.com; person-tagged; no supersession links in this corpus |
+| `/context` | **empty** until a live interpretation | The fake runner is scripted for Northstar and records no signals for Uber documents, by design. `python -m app.interpret --since 2026-09-01 --include-announced --credit-cap 600000` with `DROID_RUNNER=sdk` fills it (64 documents, 8 scoped runs) |
+| `/proposals`, `/decisions`, chat | work | Chat "add $50,000 prioritizing AI Labs" drafts an addition across all 16 teams for review. "What changed in the documents?" under the fake runner answers with 0 signals and the "Simulated: ..." line |
+
+### 7.1 Remaining gaps on Uber
+
+1. **Context cards need a live run.** With the fake runner the dashboard has no context items for Uber.
+   Run the interpret CLI with the real Droid before the demo (credit cap enforced; idempotent, so a second
+   run skips what is done). Not verified live in this pass (no sdk runs were made).
+2. **1 s refresh.** The backend answers a 1 s poll from cache (spending 4 ms, forecasts 16 ms warm), but
+   `frontend/src/components/shell/app-shell.tsx` clamps `NEXT_PUBLIC_LIVE_REFRESH_MS` to at least 2000 ms.
+   Going to 1 s is a frontend change (owner decision). After each live import the spending list is rebuilt
+   once (~0.4-0.8 s on this dataset) before it is cached again.
+3. **No forecast range (G6) still.** The package's dependency-free models give a point forecast only, so
+   `low`/`high` stay unset. Its learned models need numpy/scikit-learn pins not installed on Python 3.13.
+4. **Person forecasts are a split**, not person-level models (same as Northstar, stated in `limitations`).
+5. **`/api/forecasts` is not response-cached** (~50 ms per call, 450 KB); the frontend uses
+   `/compat/api/forecasts`, which is.
+6. **Refit cost.** A full refit (`POST /api/forecasts/refresh`, or the background refit on a new complete
+   day) takes ~1-3.5 s for 16 teams; requests keep serving the previous model meanwhile and say so in
+   `assumptions`.
