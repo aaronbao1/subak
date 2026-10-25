@@ -281,3 +281,15 @@ def test_sanitize_drops_unknown_person():
 def test_daily_projection_amounts_serialize_as_money_strings():
     d = DailyProjection(date=date(2026, 10, 21), amount=D("3"))
     assert d.model_dump(mode="json") == {"date": "2026-10-21", "amount": "3.00"}
+
+
+def test_unavailable_sanitization_withholds_person_money_but_keeps_issued_lineage():
+    raw=ForecastResult(provider='engine',availability='available',target_period='2026-P1',
+        projections=[TeamProjection(team='unknown-team',amount=D('123'))],
+        person_projections=[PersonProjection(person='unknown-person',team='unknown-team',amount=D('123'),spent_to_date=D('0'),share='100.0')],
+        as_of=date(2026,10,20),method_label='issued',forecast_run_id='run-kept',input_snapshot_id='snapshot-kept')
+    result=svc._sanitize(raw,object(),'2026-P1',['research'],None)
+    assert result.availability=='unavailable'
+    assert result.projections==[] and result.person_projections==[]
+    assert result.as_of is None
+    assert result.forecast_run_id=='run-kept' and result.input_snapshot_id=='snapshot-kept'

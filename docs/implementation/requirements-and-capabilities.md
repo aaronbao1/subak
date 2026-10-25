@@ -1,5 +1,11 @@
 # Requirements and capabilities
 
+This ledger records the earlier standalone reference audit. The subsequently connected product
+adds automatic bounded connector extraction, structured drivers, dashboard/Droid tools, a local
+durable worker, and outcome learning. See the [integration architecture](forecast-integration.md)
+and [current verification and limits](forecast-integration-limits.md) for those capabilities;
+the historical audit counts and narrowly scoped assertions below remain unchanged.
+
 The [206-case ledger](edge-ledger.json) preserves every original proposed assertion and its source residual limitation. `asserted_scope` states exactly what each referenced test checks. Passing evidence on a partial entry does not establish its untested conjuncts. Metadata tests validate IDs and references only.
 
 ## Requirement-to-evidence map

@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
-import { AlertTriangle, Ban, Check, ChevronRight, FileText, History, X } from "lucide-react";
+import { AlertTriangle, Ban, Check, ChevronRight, History, X } from "lucide-react";
 import type { Decision } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
-import { formatAmount, unitLabel } from "@/lib/format";
+import { formatAmount } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { fmtDate, fmtDateTime } from "@/components/team/labels";
-import { Delta, EnvelopeLine, KindBadge, kindLabel, ProposalStatusBadge, teamColor, teamName } from "./proposal-bits";
+import { AllocationTable, KindLabel, kindLabel, PairedBars, ProposalStatusBadge, Reveal, TotalBar } from "./proposal-bits";
 
 interface Props {
   proposalId?: string;
@@ -31,9 +31,6 @@ export function ProposalReview({ proposalId, onClose }: Props) {
   // Keyed by proposal id so local phase/note reset whenever a different proposal is opened.
   return <ReviewBody key={proposalId ?? "none"} proposalId={proposalId} onClose={onClose} />;
 }
-
-const TH = "eyebrow h-10 px-4 text-left align-middle whitespace-nowrap";
-const TD = "px-4 align-middle";
 
 function ReviewBody({ proposalId, onClose }: Props) {
   const { proposals, teams, spending, applyProposal, rejectProposal, refreshBudgets, askAssistant } = useAppStore();
@@ -76,6 +73,10 @@ function ReviewBody({ proposalId, onClose }: Props) {
 
   const spentFor = (teamId: string) => spending.filter((r) => r.teamId === teamId).reduce((s, r) => s + r.amount, 0);
   const reviewed = (teamId: string) => proposal?.forecastsReviewed?.find((f) => f.teamId === teamId);
+  const projectedFor = (teamId: string) => {
+    const f = reviewed(teamId);
+    return f?.status === "available" && typeof f.projected === "number" ? f.projected : undefined;
+  };
   const closed = phase.kind === "applied" || phase.kind === "rejected";
 
   return (
@@ -89,112 +90,75 @@ function ReviewBody({ proposalId, onClose }: Props) {
         ) : (
           <>
             <DialogHeader className="gap-2 pr-8">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <KindBadge kind={proposal.kind} />
+              <div className="flex flex-wrap items-center gap-2">
+                <KindLabel kind={proposal.kind} />
                 <ProposalStatusBadge status={phase.kind === "pending" ? "pending" : proposal.status} />
               </div>
               <DialogTitle className="leading-tight">{kindLabel(proposal)}</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed">
-                {proposal.kind === "add_budget"
-                  ? "New funding is added to the total allocation. No team loses allocation."
-                  : "Money moves between teams. The total allocation does not change."}
-                {" "}Prepared <span className="num">{fmtDateTime(proposal.createdAt)}</span>.
-                {proposal.revisesProposalId && " Revises an earlier proposal."}
+              <DialogDescription className="text-xs">
+                <span className="num">{fmtDateTime(proposal.createdAt)}</span>
+                {proposal.revisesProposalId && " · revises an earlier proposal"}
               </DialogDescription>
             </DialogHeader>
 
-            {/* Outcome banners */}
             {phase.kind === "applied" && <Receipt decision={phase.decision} />}
             {phase.kind === "rejected" && (
-              <Banner tone="muted" icon={<X strokeWidth={1.5} />} title={phase.dismissed ? "Dismissed and recorded" : "Rejected and recorded"}>
-                Allocations are unchanged. The {phase.dismissed ? "dismissal" : "rejection"} is in the decision history.
-              </Banner>
+              <Banner tone="muted" icon={<X strokeWidth={1.5} />} title={phase.dismissed ? "Dismissed · allocations unchanged" : "Rejected · allocations unchanged"} />
             )}
             {phase.kind === "error" && (
-              <Banner tone="destructive" icon={<AlertTriangle strokeWidth={1.5} />} title="Not applied">
-                {phase.message} Allocations are unchanged.
+              <Banner tone="destructive" icon={<AlertTriangle strokeWidth={1.5} />} title="Not applied · allocations unchanged">
+                {phase.message}
               </Banner>
             )}
             {phase.kind === "idle" && proposal.status === "stale" && (
-              <Banner tone="warn" icon={<History strokeWidth={1.5} />} title="Budgets changed since this was prepared">
-                Ask the assistant for a refreshed proposal, or dismiss this one to record that it was not used.
-              </Banner>
+              <Banner tone="warn" icon={<History strokeWidth={1.5} />} title="Budgets changed since this was prepared" />
             )}
             {phase.kind === "idle" && proposal.status === "failed" && (
-              <Banner tone="destructive" icon={<Ban strokeWidth={1.5} />} title="Refused by the backend">
-                {proposal.failureReason ?? "The backend refused this change."} Allocations are unchanged.
+              <Banner tone="destructive" icon={<Ban strokeWidth={1.5} />} title="Refused · allocations unchanged">
+                {proposal.failureReason}
               </Banner>
             )}
 
-            <EnvelopeLine before={proposal.totalBefore} after={proposal.totalAfter} unit={proposal.unit} kind={proposal.kind} />
+            {phase.kind !== "applied" && (
+              <>
+                <TotalBar before={proposal.totalBefore} after={proposal.totalAfter} unit={proposal.unit} kind={proposal.kind} />
+                <PairedBars lines={proposal.lines} unit={proposal.unit} teams={teams} kind={proposal.kind} projection={projectedFor} />
+                <Reveal show="Show table" hide="Hide table">
+                  <AllocationTable
+                    lines={proposal.lines}
+                    unit={proposal.unit}
+                    teams={teams}
+                    kind={proposal.kind}
+                    extra={[
+                      { header: "Spent", cell: (l) => <span className="text-muted-foreground">{formatAmount(spentFor(l.teamId), proposal.unit)}</span> },
+                      {
+                        header: "Projection reviewed",
+                        cell: (l) => {
+                          const f = reviewed(l.teamId);
+                          const proj = projectedFor(l.teamId);
+                          if (proj === undefined || !f) return <span className="font-sans text-muted-foreground">{f?.unavailableReason ?? "None"}</span>;
+                          return <span className={proj > l.after ? "text-destructive" : "text-muted-foreground"}>{formatAmount(proj, f.unit)}</span>;
+                        },
+                      },
+                    ]}
+                  />
+                </Reveal>
 
-            <div className="overflow-hidden rounded-xl border border-border">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border-strong">
-                      <th scope="col" className={TH}>Team <span className="normal-case tracking-normal">({unitLabel(proposal.unit)})</span></th>
-                      <th scope="col" className={cn(TH, "text-right")}>Before</th>
-                      <th scope="col" className={cn(TH, "text-right")}>After</th>
-                      <th scope="col" className={cn(TH, "text-right")}>Change</th>
-                      <th scope="col" className={cn(TH, "hidden text-right sm:table-cell")}>Spent</th>
-                      <th scope="col" className={cn(TH, "hidden text-right sm:table-cell")}>Projection reviewed</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {proposal.lines.map((l) => {
-                      const d = l.after - l.before;
-                      const f = reviewed(l.teamId);
-                      const proj = f?.status === "available" && typeof f.projected === "number" ? f.projected : undefined;
-                      const projection = proj !== undefined && f ? (
-                        <span className={cn("num", proj > l.after ? "text-destructive" : "text-muted-foreground")} title={proj > l.after ? "Projected spend exceeds the new allocation" : undefined}>
-                          {formatAmount(proj, f.unit, { compact: true })}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{f?.unavailableReason ?? "None"}</span>
-                      );
-                      return (
-                        <tr key={l.teamId} className={cn("h-12 border-b border-border transition-colors duration-300 last:border-0 hover:bg-popover", d === 0 && "text-muted-foreground")}>
-                          <td className={TD}>
-                            <span className="flex items-center gap-2">
-                              <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: teamColor(teams, l.teamId) }} />
-                              <span className="truncate">{teamName(teams, l.teamId)}</span>
-                            </span>
-                            <span className="mt-0.5 block pl-3.5 text-xs text-muted-foreground sm:hidden">
-                              Projection reviewed · {projection}
-                            </span>
-                          </td>
-                          <td className={cn(TD, "num text-right text-muted-foreground")}>{formatAmount(l.before, proposal.unit, { compact: true })}</td>
-                          <td className={cn(TD, "num text-right", d !== 0 && "font-medium")}>{formatAmount(l.after, proposal.unit, { compact: true })}</td>
-                          <td className={cn(TD, "text-right text-xs whitespace-nowrap")}><Delta n={d} unit={proposal.unit} kind={proposal.kind} compact /></td>
-                          <td className={cn(TD, "num hidden text-right text-muted-foreground sm:table-cell")}>{formatAmount(spentFor(l.teamId), proposal.unit, { compact: true })}</td>
-                          <td className={cn(TD, "hidden text-right sm:table-cell")}>{projection}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <section className="space-y-1.5">
+                <section className="space-y-1.5">
               <h3 className="eyebrow">Why</h3>
               <p className="text-sm leading-relaxed text-foreground/80">{proposal.rationale}</p>
             </section>
 
             {proposal.citations.length > 0 && (
-              <details className="group rounded-xl border border-border">
-                <summary className="flex h-10 cursor-pointer list-none items-center gap-2 px-4 text-sm select-none [&::-webkit-details-marker]:hidden">
-                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
-                  <FileText className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
+              <details className="group">
+                <summary className="flex h-8 w-fit cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors duration-300 select-none hover:text-foreground [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
                   <span>Evidence</span>
                   <span className="num text-xs text-muted-foreground">{proposal.citations.length}</span>
-                  <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Show</span>
-                  <span className="ml-auto hidden text-xs text-muted-foreground group-open:inline">Hide</span>
                 </summary>
-                <ul className="divide-y divide-border border-t border-border">
+                <ul className="mt-1 divide-y divide-border border-l border-border pl-3">
                   {proposal.citations.map((c, i) => (
-                    <li key={`${c.documentId}-${i}`} className="px-4 py-3 text-xs">
+                    <li key={`${c.documentId}-${i}`} className="py-2.5 text-xs">
                       <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                         <span className="font-medium text-foreground">{c.title}</span>
                         {c.locator && <span className="text-muted-foreground">{c.locator}</span>}
@@ -206,13 +170,14 @@ function ReviewBody({ proposalId, onClose }: Props) {
                 </ul>
               </details>
             )}
+            </>)}
 
             {canAct && (
               <div className="space-y-2">
                 <label htmlFor="decision-note" className="eyebrow block">
-                  Note for the record <span className="normal-case tracking-normal">(optional)</span>
+                  Note <span className="normal-case tracking-normal">(optional)</span>
                 </label>
-                <Textarea id="decision-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why finance is applying this" className="min-h-16 text-sm" />
+                <Textarea id="decision-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="For the record" className="min-h-16 text-sm" />
               </div>
             )}
 
@@ -248,12 +213,12 @@ function ReviewBody({ proposalId, onClose }: Props) {
   );
 }
 
-function Banner({ tone, icon, title, children }: { tone: "ok" | "muted" | "warn" | "destructive"; icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Banner({ tone, icon, title, children }: { tone: "ok" | "muted" | "warn" | "destructive"; icon: React.ReactNode; title: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div
       role="status"
       className={cn(
-        "flex gap-3 rounded-md border p-4 text-sm",
+        "flex gap-3 rounded-md border px-4 py-3 text-sm",
         tone === "ok" && "border-success/30 bg-success/10",
         tone === "muted" && "border-border bg-popover",
         tone === "warn" && "border-warning/30 bg-warning/10",
@@ -274,31 +239,38 @@ function Banner({ tone, icon, title, children }: { tone: "ok" | "muted" | "warn"
       </span>
       <div className="min-w-0 space-y-0.5">
         <div className="leading-5 font-medium">{title}</div>
-        <div className="text-xs leading-relaxed text-muted-foreground">{children}</div>
+        {children && <div className="text-xs leading-relaxed text-muted-foreground">{children}</div>}
       </div>
     </div>
   );
 }
 
-/** Receipt shown after the backend confirms. What changed, when, who. */
+/** Receipt shown after the backend confirms: one line (what, when, who), the paired bars, details collapsed. */
 export function Receipt({ decision }: { decision: Decision }) {
   const teams = useAppStore((s) => s.teams);
-  const changed = decision.lines.filter((l) => l.after !== l.before);
+  const projected = (teamId: string) => {
+    const f = decision.forecastsReviewed?.find((x) => x.teamId === teamId);
+    return f?.status === "available" && typeof f.projected === "number" ? f.projected : undefined;
+  };
+  // The why stays visible at rest: the note, else the rationale, one muted line (full text in the tooltip and details).
+  const why = decision.note?.trim() || decision.rationale?.trim();
   return (
-    <Banner tone="ok" icon={<Check strokeWidth={1.5} />} title="Applied and saved">
-      <span className="text-foreground/80">
-        {changed.length === 0
-          ? "No allocation changed."
-          : changed.map((l, i) => (
-              <span key={l.teamId}>
-                {i > 0 && <span className="text-muted-foreground"> · </span>}
-                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={decision.unit} kind={decision.kind} />
-              </span>
-            ))}
-      </span>
-      <br />
-      <span className="num">{fmtDateTime(decision.appliedAt)}</span> by {decision.appliedBy}
-      {decision.note ? <> · <span className="italic">“{decision.note}”</span></> : null}
-    </Banner>
+    <div className="space-y-4">
+      <Banner
+        tone="ok"
+        icon={<Check strokeWidth={1.5} />}
+        title={<>Applied <span className="num font-normal text-muted-foreground">· {fmtDateTime(decision.appliedAt)} · {decision.appliedBy}</span></>}
+      >
+        {why && <p className="line-clamp-1" title={why}>{why}</p>}
+      </Banner>
+      <PairedBars lines={decision.lines} unit={decision.unit} teams={teams} kind={decision.kind} projection={projected} />
+      <Reveal show="Show details" hide="Hide details">
+        <div className="space-y-3 text-sm">
+          <AllocationTable lines={decision.lines} unit={decision.unit} teams={teams} kind={decision.kind} />
+          {decision.note && <p className="text-muted-foreground italic">“{decision.note}”</p>}
+          {decision.rationale && <p className="leading-relaxed text-foreground/80">{decision.rationale}</p>}
+        </div>
+      </Reveal>
+    </div>
   );
 }

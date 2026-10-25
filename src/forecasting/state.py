@@ -75,6 +75,8 @@ class ExecutionEvent:
     billed_configuration: str = ''
 
     def __post_init__(self):
+        if type(self.qualifying) is not bool:
+            raise ValueError('qualifying execution flag must be bool')
         aware(self.occurred_at)
         aware(self.known_at)
         object.__setattr__(self, 'leaf_meter_ids', tuple(self.leaf_meter_ids))

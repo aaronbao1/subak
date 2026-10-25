@@ -128,6 +128,11 @@ def task_prompt(task: AgentTask, current_signals: list[dict[str, Any]] | None = 
             body += "\n\nInterpretation steps, if needed:\n" + load_prompt("interpret_corpus")
     else:
         body = load_prompt("answer_question")
+        if task.params.get("forecast_context"):
+            body += ("\n\nExact immutable forecast question context: " + json.dumps(task.params["forecast_context"],sort_keys=True)
+                     + ". Use explain_forecast for explain, compare_forecasts for compare, preview_forecast_scenario "
+                       "for preview, or request_forecast_refresh for refresh. Preserve the exact run_id, scope and driver_id; "
+                       "never substitute the newest run. Call the requested tool and ground the answer in its stored receipt.")
         if task.params.get("chart"):
             body += ("\n\nChart requested: call `build_chart_spec` exactly once with "
                      + json.dumps(task.params["chart"], sort_keys=True)

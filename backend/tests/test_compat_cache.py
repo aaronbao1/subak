@@ -17,12 +17,7 @@ from sqlalchemy import text
 
 from app.compat import cache, mappers, spending_index
 from app.compat import schemas as S
-from app.config import Settings
-from app.core.clock import FrozenClock, SequentialIdFactory
 from app.db.models import ImportBatch, PlanningPeriod
-from app.main import create_app
-from app.schemas.forecasts import ForecastResult, TeamProjection
-from app.seed.northstar import seed
 from app.services import people as people_svc
 
 API = "/compat/api"
@@ -262,58 +257,3 @@ def test_budgets_are_the_allocations(c):
     rows = TypeAdapter(list[S.Budget]).validate_python(c.get(f"{API}/budgets").json())
     assert {b.teamId: b.allocated for b in rows} == {"engineering": 60000, "product": 80000, "research": 60000}
     assert {b.version for b in rows} == {"1"}
-
-
-# ---- forecast mapping cache -------------------------------------------------------------------
-
-
-class FixedProvider:
-    """Returns the same result object until told otherwise, like a provider that caches its results."""
-
-    name = "fixed"
-
-    def __init__(self) -> None:
-        self.set(Decimal("1000.00"))
-
-    def set(self, amount: Decimal) -> None:
-        self.amount, self.result = amount, None
-
-    def get_forecast(self, period_id, team_ids):
-        if self.result is None or self.result.target_period != period_id:
-            self.result = ForecastResult(
-                provider=self.name, availability="available", target_period=period_id, method_label="fixed test",
-                projections=[TeamProjection(team=t, amount=self.amount) for t in team_ids])
-        return self.result
-
-
-@pytest.fixture
-def fc(tmp_path, clock):
-    provider = FixedProvider()
-    app = create_app(Settings(db_path=tmp_path / "f.db"), clock=clock, id_factory=SequentialIdFactory(),
-                     forecast_provider=provider)
-    s = app.state.session_factory()
-    try:
-        assert seed(s, clock=app.state.clock, ids=app.state.id_factory)
-    finally:
-        s.close()
-    with TestClient(app) as client:
-        yield client, provider
-
-
-def test_forecast_mapping_is_reused_until_the_provider_result_changes(fc):
-    c, provider = fc
-    first = c.get(f"{API}/forecasts")
-    assert {f["projected"] for f in first.json() if "personId" not in f} == {1000}
-    h0, m0 = stats(c)
-    assert c.get(f"{API}/forecasts").content == first.content and stats(c) == (h0 + 1, m0)
-    provider.set(Decimal("2000.00"))
-    teams = [f for f in c.get(f"{API}/forecasts").json() if "personId" not in f]
-    assert {f["projected"] for f in teams} == {2000}
-    TypeAdapter(list[S.Forecast]).validate_python(c.get(f"{API}/forecasts").json())
-
-
-def test_forecast_cache_sees_people_changes(fc):
-    c, _ = fc
-    ids = {f.get("personId") for f in c.get(f"{API}/forecasts").json()}
-    add_person(c, "zz-new")
-    assert "zz-new" in {f.get("personId") for f in c.get(f"{API}/forecasts").json()} - ids

@@ -1,31 +1,32 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, MessageSquare, SearchX } from "lucide-react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import type { Team } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PageTitle, StatTile } from "@/components/shared/stat-tile";
+import { PageTitle } from "@/components/shared/stat-tile";
 import { riseDelay, useMounted } from "@/components/shared/motion";
-import { CountUpAmount, CountUpPct } from "@/components/team/count-up";
+import { CountUpAmount } from "@/components/team/count-up";
+import { BulletBar, BulletLegend, DeltaChip, ShareMeter, Sparkline } from "@/components/team/viz";
 import { TeamSpendChart } from "@/components/team/team-spend-chart";
 import { ContextCards } from "@/components/team/context-cards";
 import { TeamDetailSkeleton } from "@/components/team/team-detail";
 import { fmtDate } from "@/components/team/labels";
-import { IntegrationChip } from "./signal-badges";
-import { WeekChange } from "./people-table";
+import { INTEGRATION_LABEL } from "./signal-badges";
 import { personContextItems, summarizePeople } from "./derive";
 
-/* Entrance (ms): link and title 0 · four tiles 60–240 (numbers count up from each tile's delay) · assumptions 300 ·
+/* Entrance (ms): link and title 0 · summary card 60 (numbers count up 60/120, meter 180) ·
    chart card 300 with its columns rising 0–1180 · day buttons 360 · context cards 420+. Last rise ends ≤1200. */
 const CHART_AT = 300;
 const CONTEXT_AT = 420;
 
 /** /teams/[teamId]/people/[personId]: one individual's spend, projection, and the connector signals that explain it. */
 export function PersonDetail({ teamId, personId }: { teamId: string; personId: string }) {
-  const { loaded, company, teams, people, spending, spendingHistory, budgets, personForecasts, context, askAssistant } = useAppStore();
+  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant } = useAppStore();
   const mounted = useMounted();
   const rise = mounted ? "animate-rise" : "opacity-0";
   if (!loaded) return <TeamDetailSkeleton />;
@@ -50,12 +51,14 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
   }
 
   const period = company?.currentPeriod ?? budgets[0]?.period;
-  const summary = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period).find((s) => s.person.id === person.id) : undefined;
+  const summary = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period, forecasts.find(f => f.teamId === team.id)).find((s) => s.person.id === person.id) : undefined;
   const unit = budgets.find((b) => b.teamId === team.id)?.unit ?? company?.budgetUnit ?? "usd";
   const records = spending.filter((r) => r.personId === person.id);
   const forecast = summary?.forecast;
   const items = personContextItems(context, person);
   // Downstream components are keyed on a Team; a person renders through the same chart and cards in the team's color.
+  // A person has no allocation; the bar's track is the high end of the projection range (or the projection itself).
+  const rangeTop = Math.max(summary?.high ?? 0, summary?.projected ?? 0, summary?.spent ?? 0) || undefined;
   const asTeam: Team = { id: person.id, name: person.name, color: team.color, lead: team.lead, description: person.role };
 
   return (
@@ -78,10 +81,7 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
               {person.role ?? "Member"} · <Link href={`/teams/${team.id}`} className="text-foreground/80 underline-offset-4 hover:underline">{team.name}</Link>
               {person.primaryTool && <> · {person.primaryTool}</>}
               {person.integrations && person.integrations.length > 0 && (
-                <span className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs">Connected</span>
-                  {person.integrations.map((i) => <IntegrationChip key={i} integration={i} />)}
-                </span>
+                <span title="Connected sources"> · via {person.integrations.map((i) => INTEGRATION_LABEL[i]).join(", ")}</span>
               )}
             </>
           }
@@ -92,57 +92,58 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
           }
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={rise} style={riseDelay(1)}>
-            <StatTile className="h-full" size="primary" card label="Spent to date" value={<CountUpAmount value={summary?.spent ?? 0} unit={unit} delay={60} />} caption={period?.label} />
-          </div>
-          <div className={rise} style={riseDelay(2)}>
-            <StatTile
-              className="h-full"
-              size="primary"
-              card
-              label="Projected for period"
-              value={summary?.projected != null ? <CountUpAmount value={summary.projected} unit={unit} delay={120} /> : "No projection"}
-              muted={summary?.projected == null}
-              caption={
-                summary?.low != null && summary?.high != null
-                  ? <span className="num">{formatAmount(summary.low, unit, { compact: true })} – {formatAmount(summary.high, unit, { compact: true })}</span>
-                  : forecast?.unavailableReason
-              }
+        <section className={cn("rounded-xl border border-border bg-card p-5", rise)} style={riseDelay(1)} aria-label="Spend and projection">
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+            <BulletLegend
+              size="lg"
+              items={[
+                { label: "Spent", mark: "fill", color: team.color, value: <CountUpAmount value={summary?.spent ?? 0} unit={unit} delay={60} /> },
+                {
+                  label: "Projected",
+                  mark: "tick",
+                  value: summary?.projected != null ? <CountUpAmount value={summary.projected} unit={unit} delay={120} /> : "None",
+                  muted: summary?.projected == null,
+                  title: summary?.projected != null
+                    ? [
+                        "Full period, includes spend to date",
+                        forecast?.status === "available" && forecast.assumptions.length > 0 ? `Assumes ${forecast.assumptions.join(" · ")}` : undefined,
+                        forecast?.generatedAt ? `Generated ${fmtDate(forecast.generatedAt)}` : undefined,
+                      ].filter(Boolean).join(" · ")
+                    : forecast?.unavailableReason,
+                },
+              ]}
             />
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-2" title={summary?.share != null ? "Share of the team's projected total" : "Needs a matching team projection"}>
+                Share of team <ShareMeter share={summary?.share} color={team.color} grow={mounted} delay={180} />
+              </span>
+              <span className="inline-flex items-center gap-2" title="Daily spend, last 14 days; change is this week vs last week">
+                <Sparkline values={summary?.recentDaily ?? []} partialLast={summary?.recentPartial} color={team.color} />
+                <DeltaChip value={summary?.weekChange} className="text-sm" />
+              </span>
+            </div>
           </div>
-          <div className={rise} style={riseDelay(3)}>
-            <StatTile
-              className="h-full"
-              size="primary"
-              card
-              label="Share of team projection"
-              value={summary?.share != null ? <CountUpPct value={summary.share * 100} delay={180} /> : "—"}
-              muted={summary?.share == null}
-              caption="Of the team's projected total"
-            />
+          <BulletBar
+            className="mt-4"
+            size="md"
+            allocation={rangeTop}
+            spent={summary?.spent ?? 0}
+            projected={summary?.projected}
+            color={team.color}
+            grow={mounted}
+            delay={120}
+          />
+          <div className="mt-2 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+            {period?.label && <span>{period.label}</span>}
+            {summary?.low != null && summary?.high != null && (
+              <span>Range <span className="num">{formatAmount(summary.low, unit, { compact: true })} – {formatAmount(summary.high, unit, { compact: true })}</span></span>
+            )}
+            {summary?.projected == null && forecast?.unavailableReason && <span>{forecast.unavailableReason}</span>}
           </div>
-          <div className={rise} style={riseDelay(4)}>
-            <StatTile
-              className="h-full"
-              size="primary"
-              card
-              label="vs last week"
-              value={<WeekChange value={summary?.weekChange} />}
-              caption="Average daily spend, complete days"
-            />
-          </div>
-        </div>
-
-        {forecast?.status === "available" && forecast.assumptions.length > 0 && (
-          <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-card px-4 py-3 text-xs", rise)} style={riseDelay(5)}>
-            <span className="font-medium text-foreground">Projection assumes</span>
-            <span className="text-muted-foreground">{forecast.assumptions.join(" · ")}</span>
-            <span className="text-muted-foreground">Generated <span className="num">{fmtDate(forecast.generatedAt)}</span></span>
-          </div>
-        )}
+        </section>
       </header>
 
+      <ForecastPanel scopeType="person" scopeId={personId} embedded />
       <TeamSpendChart team={asTeam} records={records} forecast={forecast} unit={unit} enterAt={CHART_AT} />
       <ContextCards team={asTeam} items={items} allItems={context} people={people} enterAt={CONTEXT_AT} evidenceHref={`/evidence?scope=person&team=${encodeURIComponent(team.id)}`} />
     </div>
@@ -154,14 +155,10 @@ export function PersonDetailSkeleton() {
     <div className="space-y-8">
       <Skeleton className="h-4 w-20" />
       <Skeleton className="h-7 w-48" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-2 rounded-xl border border-border bg-card p-4">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-28" />
-            <Skeleton className="h-3 w-36 max-w-full" />
-          </div>
-        ))}
+      <div className="space-y-4 rounded-xl border border-border bg-card p-5">
+        <Skeleton className="h-6 w-80 max-w-full" />
+        <Skeleton className="h-2.5 w-full" />
+        <Skeleton className="h-3 w-32" />
       </div>
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>

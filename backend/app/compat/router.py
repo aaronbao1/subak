@@ -108,10 +108,10 @@ def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
         return None
 
 
-def _people_by_team(session: Session) -> dict[str, list[str]]:
+def _people_by_team(session: Session, request: Request) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
-    for p in people_svc.list_people(session):
-        out.setdefault(p.team_id, []).append(p.id)
+    for p in _people_rows(request, session):
+        out.setdefault(p["teamId"], []).append(p["id"])
     return out
 
 
@@ -203,12 +203,15 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
 def get_people(request: Request, session: Session = Depends(get_session)):
-    def build() -> list[dict]:
-        active = {t.id for t in _active_teams(session)}
-        return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
-
     # Polled every second; people change only on writes, which move the data stamp (cache.py).
-    return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person], build)
+    return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person],
+                             lambda: _people_rows(request, session))
+
+
+def _people_rows(request: Request, session: Session) -> list[dict]:
+    active = {t.id for t in _active_teams(session)}
+    return [mappers.person(p) for p in people_svc.list_people(session)
+            if request.app.state.settings.forecast_demo or p.team_id in active]
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
@@ -223,6 +226,15 @@ def get_spending(
     period = _period_or_none(session, clock)
     if period is None:
         return []
+    if request.app.state.settings.forecast_demo:
+        from app.forecasting.fixtures import northstar_spending_records
+        try:
+            rows = northstar_spending_records(request.app.state.forecast_service.current_snapshot())
+        except ValueError as exc:
+            raise DomainError("pricing_unavailable", 422, str(exc)) from exc
+        return [r for r in rows if (not team_id or r['teamId'] == team_id)
+                and (not date_from or r['date'] >= date_from.isoformat())
+                and (not date_to or r['date'] <= date_to.isoformat())]
 
     # Polled every second while the live feed appends records every few seconds: the incremental index
     # (spending_index.py) re-maps only the rows new records touch and rebuilds fully only after an
@@ -256,30 +268,8 @@ def get_forecasts(request: Request, session: Session = Depends(get_session), clo
     if period is None:
         return []
     result = forecast_svc.forecast_for_period(session, provider, period, clock=clock)  # read only: no snapshot
-    team_ids = forecast_svc.active_team_ids(session)
-    people = _people_by_team(session)
-    now = clock.now()
-    key = _forecast_key(result, period, team_ids, people, now)
-    def build() -> cache.Body:
-        raw = cache.render(list[S.Forecast], mappers.forecasts(result, period_row=period, team_ids=team_ids,
-                                                                now=now, people=people))
-        return cache.Body(raw, keep=result)  # holding `result` keeps the object ids in its key from reuse
-
-    return cache.cache_for(request.app.state).get_or_build(key, build).response(request)  # single-flight
-
-
-def _forecast_key(result: Any, period: PlanningPeriod, team_ids: list[str], people: dict[str, list[str]],
-                  now: Any) -> tuple:
-    """Everything mappers.forecasts reads. Projections are keyed by object identity: a provider that
-    caches its results (forecasting_package) hands back the same projection objects until its inputs
-    change, so the ~0.05 s mapping of ~150 forecasts x daily points runs once per new result; a provider
-    that builds fresh objects per call (placeholder) simply never hits."""
-    return ("forecasts", result.provider, result.availability, result.reason, result.target_period,
-            result.basis, result.method_label, result.value_kind, result.generated_at,
-            result.generated_at is None and now, result.as_of,
-            tuple(id(p) for p in result.projections), tuple(id(p) for p in result.person_projections),
-            period.id, period.label, period.starts_on, period.ends_on, tuple(team_ids),
-            tuple((t, tuple(ids)) for t, ids in sorted(people.items())))
+    return mappers.forecasts(result, period_row=period, team_ids=forecast_svc.active_team_ids(session),
+                             now=clock.now(), people=_people_by_team(session, request))
 
 
 @router.get("/context", response_model=list[S.ContextItem], **JSON_OPTS)
@@ -388,7 +378,10 @@ def post_message(
     user = threads.add_message(session, thread_id, "user", content, clock=clock, ids=ids)
     session.commit()
 
-    parsed = intent.parse(content, **_intent_context(session, request, clock))
+    parsed = (intent.Intent(read_as="Explain the exact published forecast", run={
+        "task_type": "answer_question", "instruction": content,
+        "params": {"forecast_context": body.forecast_context.model_dump(exclude_none=True)},
+    }) if body.forecast_context else intent.parse(content, **_intent_context(session, request, clock)))
     if parsed.ask is not None:
         reply = threads.add_message(session, thread_id, "assistant",
                                     f"**Read as:** {parsed.read_as}.\n\n{parsed.ask}", clock=clock, ids=ids)

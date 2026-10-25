@@ -1,7 +1,7 @@
-"""Drift check: app/compat/schemas.py must mirror the frontend's TypeScript contract field for field.
+"""Current checked-out contracts (never an obsolete vendored snapshot). Drift check: app/compat/schemas.py must mirror the frontend's TypeScript contract field for field.
 
 `tests/vendored/frontend_contracts.ts` is a verbatim copy of `frontend/src/lib/contracts/index.ts` from
-origin/main (copied at e90b7f1). Set COMPAT_UPSTREAM_CHECK=1 to also check against the live
+the checked-out frontend contract. Set COMPAT_UPSTREAM_CHECK=1 to also check against the live
 `git show origin/main:frontend/src/lib/contracts/index.ts` (opt-in so a teammate's push cannot turn this
 suite red without anyone touching the backend).
 """
@@ -19,7 +19,7 @@ import pytest
 
 from app.compat import schemas as S
 
-VENDORED = Path(__file__).parent / "vendored" / "frontend_contracts.ts"
+VENDORED = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "contracts" / "index.ts"
 UPSTREAM_PATH = "frontend/src/lib/contracts/index.ts"
 
 _IFACE = re.compile(r"export interface (\w+) \{(.*?)\n\}", re.S)
@@ -88,17 +88,17 @@ def _check(text: str) -> list[str]:
 
 def test_parser_sees_the_whole_contract():
     interfaces, aliases = parse_ts(VENDORED.read_text())
-    assert len(interfaces) == len(S.CONTRACT_MODELS) == 16
+    assert len(interfaces) == len(S.CONTRACT_MODELS) == 18
     assert {"Unit", "CostComponent", "Provenance", "ContextKind", "ClaimType", "ProposalKind", "Integration",
             "SignalKind"} <= set(aliases)
-    assert len(aliases["SignalKind"]) == 7  # a multi-line union is parsed whole
+    assert len(aliases["SignalKind"]) == 10  # a multi-line union is parsed whole
     assert interfaces["Person"]["integrations"] == (True, "Integration[]")
     assert interfaces["Forecast"]["daily"] == (True, "ForecastDailyPoint[]")
     assert interfaces["Forecast"]["low"] == (True, "number")
     assert interfaces["SpendingRecord"]["complete"] == (False, "boolean")
 
 
-def test_compat_schemas_match_vendored_typescript_contract():
+def test_compat_schemas_match_current_typescript_contract():
     assert _check(VENDORED.read_text()) == []
 
 
@@ -108,7 +108,7 @@ def test_drift_is_detected():
     problems = _check(text)
     assert "SpendingRecord.newField missing in compat model" in problems
     assert any(p.startswith("type Provenance") for p in problems)
-    text = VENDORED.read_text().replace('| "steady";', '| "steady"\n  | "vacation";')
+    text = VENDORED.read_text().replace('| "project_paused";', '| "project_paused"\n  | "vacation";')
     problems = _check(text)
     assert any(p.startswith("type SignalKind") for p in problems)
 

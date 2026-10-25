@@ -124,7 +124,12 @@ def _sanitize(result: ForecastResult, provider: object, period_id: str, team_ids
         reason = result.reason or "provider returned no usable projections"
         if problems:
             reason = f"{reason}; {'; '.join(problems)}"
-        return unavailable(provider, period_id, team_ids, reason, now)
+        # An incomplete issued quarter still has an immutable evidence receipt.
+        # Preserve its lineage while withholding unsupported monetary projections.
+        return result.model_copy(update={"availability": "unavailable", "reason": reason,
+                                         "projections": [], "person_projections": [], "as_of": None,
+                                         "missing_teams": sorted(team_ids),
+                                         "generated_at": result.generated_at or now})
     availability = "available" if not missing and result.availability == "available" else "partial"
     people, people_problems = _sanitize_people(result, kept, attribution)
     reasons = [r for r in [result.reason, *problems, *people_problems] if r]

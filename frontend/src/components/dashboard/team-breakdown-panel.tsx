@@ -1,16 +1,19 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ChevronRight, FileSearch, MessageSquare, X } from "lucide-react";
-import type { CostComponent, Unit } from "@/lib/contracts";
+import type { Unit } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/shared/stat-tile";
-import { riseDelay } from "@/components/shared/motion";
 import { COMPONENT_COLOR } from "@/components/shared/components";
-import { COMPONENT_LABEL, ProvenanceBadge, StatusChip, teamStatus } from "@/components/team/labels";
+import { COMPONENT_LABEL, StatusChip, teamStatus } from "@/components/team/labels";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { dayLabel, type TeamSummary } from "./derive";
+import { dayLabel, type DailyPoint, type TeamSummary } from "./derive";
 import { ProviderLogo } from "./provider-brand";
+import { BarRow, StackedBar } from "./bars";
+import { ComponentSwatch, EstimateLegend, isUnbilled, provenanceText } from "./cost-components";
+import { BulletBar } from "@/components/team/viz";
 import type { PersonSummary } from "@/components/person/derive";
 import { SignalChip } from "@/components/person/signal-badges";
 
@@ -23,12 +26,6 @@ export interface TeamBreakdownPanelProps {
   people?: PersonSummary[];
 }
 
-/** Segments and swatches take the shared component color; included usage is a dashed outline because it is informational, not billed. */
-function segmentStyle(component: CostComponent, width?: string): React.CSSProperties {
-  const color = COMPONENT_COLOR[component];
-  return component === "included_usage" ? { width, borderColor: color } : { width, background: color };
-}
-
 export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, people = [] }: TeamBreakdownPanelProps) {
   if (!summary) return null;
 
@@ -39,128 +36,109 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
   const over = typeof projected === "number" && typeof allocated === "number" ? projected > allocated : typeof allocated === "number" && spent > allocated;
   const days = [...daily, ...dailyProjected];
   const componentTotal = byComponent.reduce((s, c) => s + c.amount, 0);
+  const componentMax = Math.max(0, ...byComponent.map((c) => c.amount));
   const money = (n: number) => formatAmount(n, unit);
+  const compact = (n: number) => formatAmount(n, unit, { compact: true });
+  const projectionTitle = forecast?.status === "available"
+    ? `${forecast.basis === "full_period" ? "Whole period, including spend to date" : "Spend to date plus the remaining projection"}${typeof low === "number" && typeof high === "number" ? ` · range ${compact(low)} to ${compact(high)}` : ""}`
+    : undefined;
+  const sortedPeople = [...people].sort((a, b) => (b.projected ?? b.spent) - (a.projected ?? a.spent));
+  const peopleMax = Math.max(0, ...people.map((p) => Math.max(p.spent, p.projected ?? 0)));
 
   return (
     <aside className="flex min-h-full min-w-0 flex-col divide-y divide-border" aria-label={`${team.name} breakdown`}>
-      <header className="flex items-start gap-3 px-4 py-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="size-2 shrink-0 rounded-full" style={{ background: team.color }} aria-hidden />
-            <h2 className="truncate text-base font-medium">{team.name}</h2>
-            <StatusChip status={status} />
-          </div>
-          {team.lead && <p className="mt-1 text-xs text-muted-foreground">Lead {team.lead}</p>}
+      <header className="flex items-center gap-3 px-4 py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="size-2 shrink-0 rounded-full" style={{ background: team.color }} aria-hidden />
+          <h2 className="truncate text-base font-medium" title={team.lead ? `Lead ${team.lead}` : undefined}>{team.name}</h2>
+          <StatusChip status={status} />
         </div>
-        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Clear selection" className="-mr-1.5 -mt-0.5 text-muted-foreground"><X strokeWidth={1.5} /></Button>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Clear selection" className="-mr-1.5 text-muted-foreground"><X strokeWidth={1.5} /></Button>
       </header>
 
-      <div className="space-y-3 px-4 py-4">
+      <div className="space-y-4 px-4 py-4">
         {/* The three figures count up when the panel opens and tick when another team is picked. */}
         <div className="grid grid-cols-3 gap-3">
           <StatTile size="compact" animate format={money} label="Allocation" value={typeof allocated === "number" ? allocated : "Not set"} muted={typeof allocated !== "number"} />
           <StatTile size="compact" animate format={money} label="Spent" value={spent} />
-          <StatTile
-            size="compact" animate format={money}
-            label="Projection"
-            value={typeof projected === "number" ? projected : "None"}
-            muted={typeof projected !== "number"}
-            caption={typeof low === "number" && typeof high === "number" ? <span className="num">{formatAmount(low, unit, { compact: true })} to {formatAmount(high, unit, { compact: true })}</span> : undefined}
-          />
+          <div title={projectionTitle}>
+            <StatTile size="compact" animate format={money} label="Projection" value={typeof projected === "number" ? projected : "None"} muted={typeof projected !== "number"} />
+          </div>
         </div>
+        <BulletBar
+          size="md" spent={spent} allocation={allocated} projected={projected} color={team.color} grow
+          title={`Spent ${money(spent)}${typeof projected === "number" ? `, projected ${money(projected)}` : ""}${typeof low === "number" && typeof high === "number" ? ` (range ${compact(low)} to ${compact(high)})` : ""}${typeof allocated === "number" ? ` of ${money(allocated)} allocated` : ", no allocation"}`}
+        />
         {forecast?.status === "unavailable" && (
           <p className="rounded-md border border-dashed border-border px-2.5 py-1.5 text-xs text-muted-foreground">
             {forecast.unavailableReason ?? "Projection unavailable."}
           </p>
         )}
-        {forecast?.status === "available" && forecast.basis === "full_period" && (
-          <p className="text-xs text-muted-foreground">Projection for the whole period, including spend to date.</p>
-        )}
+        <DailyBars days={days} lastRecorded={daily.at(-1)?.date} color={team.color} unit={unit} />
       </div>
 
-      <Section title="Cost components" hint={componentTotal > 0 ? formatAmount(componentTotal, unit, { compact: true }) : undefined}>
-        {componentTotal > 0 && (
-          <div className="flex h-1.5 w-full gap-px overflow-hidden rounded-sm bg-muted" aria-hidden>
-            {byComponent.filter((c) => c.amount > 0).map((c, i) => (
-              <div key={c.component} className={cn("animate-grow-x h-full", c.component === "included_usage" && "border border-dashed")} style={{ ...riseDelay(i), ...segmentStyle(c.component, `${(c.amount / componentTotal) * 100}%`) }} />
-            ))}
-          </div>
-        )}
-        <ul className="divide-y divide-border text-xs">
-          {byComponent.map((c) => (
-            <li key={c.component} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2">
-              <span className="flex items-center gap-1.5">
-                <span className={cn("size-2 shrink-0 rounded-sm", c.component === "included_usage" && "border border-dashed")} style={segmentStyle(c.component)} aria-hidden />
-                {COMPONENT_LABEL[c.component]}
-                {c.component === "included_usage" && <span className="text-[11px] text-muted-foreground">informational</span>}
-              </span>
-              <span className="flex items-center gap-1.5">
-                {c.provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
-                <span className={cn("num text-right", c.component === "included_usage" && "text-muted-foreground")}>
-                  {c.amount > 0 || c.provenances.length ? formatAmount(c.amount, unit) : <span className="text-muted-foreground">No records</span>}
-                </span>
-              </span>
-            </li>
-          ))}
+      <Section
+        title="Cost components"
+        hint={componentTotal > 0 ? (
+          <span className="flex items-center gap-2">
+            <StackedBar className="w-16" segments={byComponent.filter((c) => c.component !== "included_usage").map((c) => ({ key: c.component, value: c.amount, color: COMPONENT_COLOR[c.component] }))} />
+            {compact(componentTotal)}
+          </span>
+        ) : undefined}
+      >
+        {byComponent.some((c) => c.amount > 0 && isUnbilled(c.provenances)) && <EstimateLegend className="mb-2" />}
+        <ul>
+          {byComponent.map((c, i) => {
+            const informational = c.component === "included_usage";
+            const noRecords = c.amount === 0 && c.provenances.length === 0;
+            return (
+              <BarRow
+                key={c.component} index={i}
+                label={<><ComponentSwatch component={c.component} />{COMPONENT_LABEL[c.component]}</>}
+                value={c.amount} max={componentMax} color={COMPONENT_COLOR[c.component]} dashed={informational} muted={informational || noRecords}
+                title={`${money(c.amount)} · ${provenanceText(c.provenances)}${informational ? " · informational, not billed" : ""}`}
+                valueNode={noRecords ? "—" : <span className={cn(isUnbilled(c.provenances) && "underline decoration-dotted decoration-muted-foreground underline-offset-4")}>{compact(c.amount)}</span>}
+              />
+            );
+          })}
         </ul>
       </Section>
 
       {byModel.length > 0 && (
-        <Section title="By model" hint={formatAmount(apiTotal, unit, { compact: true })}>
-          <ul className="divide-y divide-border text-xs">
-            {byModel.map((m) => (
-              <li key={m.model} className="flex items-center justify-between gap-3 py-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <ProviderLogo provider={m.provider} className="size-3.5" />
-                  <span className="truncate">{m.model}</span>
-                </span>
-                <span className="flex items-baseline gap-3">
-                  {typeof m.tokens === "number" && <span className="num text-muted-foreground">{formatAmount(m.tokens, "tokens", { compact: true })}</span>}
-                  <span className="num w-14 text-right">{formatAmount(m.amount, unit, { compact: true })}</span>
-                </span>
-              </li>
+        <Section title="By model" hint={compact(apiTotal)}>
+          <ul>
+            {byModel.map((m, i) => (
+              <BarRow
+                key={m.model} index={i}
+                label={<><ProviderLogo provider={m.provider} className="size-3.5" /><span className="truncate">{m.model}</span></>}
+                value={m.amount} max={byModel[0]?.amount ?? 1} color="var(--chart-5)"
+                title={`${m.model} · ${money(m.amount)}${typeof m.tokens === "number" ? ` · ${formatAmount(m.tokens, "tokens")}` : ""}`}
+                valueNode={compact(m.amount)}
+              />
             ))}
           </ul>
-          <p className="text-[11px] text-muted-foreground">API rows only. Tokens from usage exports, dollars from cost reports.</p>
         </Section>
       )}
 
       {people.length > 0 && (
-        <Section title="People" hint={`${people.length}`}>
-          <ul className="divide-y divide-border text-xs">
-            {[...people].sort((a, b) => (b.projected ?? b.spent) - (a.projected ?? a.spent)).map((p) => (
-              <li key={p.person.id} className="py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Link href={`/teams/${team.id}/people/${p.person.id}`} className="min-w-0 truncate underline-offset-4 hover:underline">{p.person.name}</Link>
-                  <span className="num shrink-0 text-right">
-                    {formatAmount(p.spent, unit, { compact: true })}
-                    <span className="text-muted-foreground"> → {p.projected != null ? formatAmount(p.projected, unit, { compact: true }) : "—"}</span>
+        <Section title="People" hint={`${people.length}`} summaryTitle="Spent, then projected. The team projection is the sum of these.">
+          <ul className="space-y-1">
+            {sortedPeople.map((p) => (
+              <li key={p.person.id} className="py-1 text-xs">
+                <div className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto] items-center gap-3">
+                  <Link href={`/teams/${team.id}/people/${p.person.id}`} className="min-w-0 truncate text-foreground/80 underline-offset-4 hover:text-foreground hover:underline">{p.person.name}</Link>
+                  <PersonBar spent={p.spent} projected={p.projected} max={peopleMax} color={team.color} />
+                  <span className="num shrink-0 text-right" title={`${money(p.spent)} spent${p.projected != null ? `, ${money(p.projected)} projected` : ""}`}>
+                    {compact(p.spent)}
+                    <span className="text-muted-foreground"> → {p.projected != null ? compact(p.projected) : "—"}</span>
                   </span>
                 </div>
-                {p.signals.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{p.signals.slice(0, 1).map((s) => <SignalChip key={s.id} item={s} />)}</div>}
+                {p.signals.length > 0 && <div className="mt-1"><SignalChip item={p.signals[0]} /></div>}
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-muted-foreground">Spent → projected. The team projection is the sum of these.</p>
         </Section>
       )}
-
-      <Section title="Day by day" hint={days.length ? `${days.length} days` : undefined}>
-        {days.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No daily records.</p>
-        ) : (
-          <table className="w-full text-xs">
-            <tbody className="divide-y divide-border">
-              {days.map((d) => (
-                <tr key={`${d.date}-${d.projected ? "p" : "r"}`} className={cn(d.projected && "text-muted-foreground")}>
-                  <td className="num py-2 text-muted-foreground">{dayLabel(d.date)}</td>
-                  <td className="py-2 text-right text-[11px] text-muted-foreground">{d.projected ? (d.date === daily.at(-1)?.date ? "full day, projected" : "projected") : d.partial ? "recorded so far" : ""}</td>
-                  <td className="num py-2 text-right">{formatAmount(d.amount, unit, { compact: true })}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}      </Section>
 
       <footer className="mt-auto flex flex-wrap gap-2 px-4 py-3">
         <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/teams/${team.id}`} />}>
@@ -173,23 +151,94 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
           variant="ghost" size="sm" className="text-muted-foreground"
           onClick={() => askAssistant(`Why is ${team.name} tracking ${over ? "over" : "under"} its allocation?`)}
         >
-          <MessageSquare strokeWidth={1.5} /> Ask the assistant
+          <MessageSquare strokeWidth={1.5} /> Ask assistant
         </Button>
       </footer>
     </aside>
   );
 }
 
+/** Day-by-day as small columns: recorded solid, partial lighter, projected dashed. Exact values on hover. */
+function DailyBars({ days, lastRecorded, color, unit }: { days: DailyPoint[]; lastRecorded?: string; color: string; unit: Unit }) {
+  const [showTable, setShowTable] = useState(false);
+  if (days.length === 0) return <p className="text-xs text-muted-foreground">No daily records.</p>;
+  const max = Math.max(...days.map((d) => d.amount));
+  const hasPartial = days.some((d) => !d.projected && d.partial);
+  const hasProjected = days.some((d) => d.projected);
+  const noteFor = (d: DailyPoint) => (d.projected ? (d.date === lastRecorded ? "full day, projected" : "projected") : d.partial ? "recorded so far" : "recorded");
+  return (
+    <div>
+      <div className="flex h-10 items-end gap-px" role="img" aria-label={`${days.length} days of spend`}>
+        {days.map((d) => {
+          const note = noteFor(d);
+          return (
+            <div
+              key={`${d.date}-${d.projected ? "p" : "r"}`}
+              title={`${dayLabel(d.date)} · ${formatAmount(d.amount, unit)} · ${note}`}
+              className={cn("min-w-0 flex-1 rounded-t-[2px]", d.projected && "border border-b-0 border-dashed")}
+              style={{
+                height: `${max > 0 ? Math.max(4, (d.amount / max) * 100) : 4}%`,
+                ...(d.projected ? { borderColor: color } : { background: color, opacity: d.partial ? 0.45 : 0.85 }),
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="num mt-1 flex justify-between text-[11px] text-muted-foreground">
+        <span>{dayLabel(days[0].date)}</span>
+        <span>{dayLabel(days[days.length - 1].date)}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-[2px]" style={{ background: color, opacity: 0.85 }} />Recorded</span>
+        {hasPartial && <span className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-[2px]" style={{ background: color, opacity: 0.45 }} />Partial</span>}
+        {hasProjected && <span className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-[2px] border border-dashed" style={{ borderColor: color }} />Projected</span>}
+        <button type="button" onClick={() => setShowTable((v) => !v)} aria-expanded={showTable} className="ml-auto rounded-sm transition-colors duration-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          {showTable ? "Hide table" : "Show table"}
+        </button>
+      </div>
+      {showTable && (
+        <table className="mt-2 w-full text-xs">
+          <thead className="text-left text-muted-foreground">
+            <tr><th className="py-1 font-normal">Day</th><th className="py-1 text-right font-normal">Amount</th><th className="py-1 pl-3 text-right font-normal">Status</th></tr>
+          </thead>
+          <tbody className="num">
+            {days.map((d) => (
+              <tr key={`${d.date}-${d.projected ? "p" : "r"}`} className="border-t border-border">
+                <td className="py-1">{dayLabel(d.date)}</td>
+                <td className="py-1 text-right">{formatAmount(d.amount, unit)}</td>
+                <td className="py-1 pl-3 text-right text-muted-foreground">{noteFor(d)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+/** Spent solid in the team color, the projection as a dashed extension, scaled to the largest person. */
+function PersonBar({ spent, projected, max, color }: { spent: number; projected?: number; max: number; color: string }) {
+  const w = (v: number) => `${max > 0 ? Math.max(0, Math.min(100, (v / max) * 100)) : 0}%`;
+  return (
+    <span className="relative h-1.5 w-full overflow-hidden rounded-sm bg-muted" aria-hidden>
+      {typeof projected === "number" && projected > spent && (
+        <span className="absolute inset-y-0 border border-dashed" style={{ left: w(spent), width: `calc(${w(projected)} - ${w(spent)})`, borderColor: color }} />
+      )}
+      <span className="animate-grow-x absolute inset-y-0 left-0" style={{ width: w(spent), background: color }} />
+    </span>
+  );
+}
+
 /** Collapsed by default: the headline figures answer the first question; details open on demand. One divider row, no nested card. */
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({ title, hint, summaryTitle, children }: { title: string; hint?: React.ReactNode; summaryTitle?: string; children: React.ReactNode }) {
   return (
     <details className="group">
-      <summary className="flex h-10 cursor-pointer list-none items-center gap-2 px-4 text-sm text-foreground transition-colors duration-300 hover:bg-popover [&::-webkit-details-marker]:hidden">
+      <summary title={summaryTitle} className="flex h-10 cursor-pointer list-none items-center gap-2 px-4 text-sm text-foreground transition-colors duration-300 hover:bg-popover [&::-webkit-details-marker]:hidden">
         <ChevronRight className="size-4 text-muted-foreground transition-transform duration-150 group-open:rotate-90" strokeWidth={1.5} />
         <span>{title}</span>
         {hint && <span className="num ml-auto text-xs text-muted-foreground">{hint}</span>}
       </summary>
-      <div className="space-y-2 px-4 pb-4 pt-1">{children}</div>
+      <div className="px-4 pb-4 pt-1">{children}</div>
     </details>
   );
 }

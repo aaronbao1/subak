@@ -65,6 +65,22 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
     def get_forecast() -> str:
         return _respond(lambda: toolbox.call("get_forecast", {}))
 
+    def explain_forecast(run_id: str, scope_type: str = "company", scope_id: str | None = None,
+                         driver_id: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("explain_forecast", {"run_id":run_id,"scope_type":scope_type,
+                                                                  "scope_id":scope_id,"driver_id":driver_id}))
+
+    def compare_forecasts(run_ids: list[str], scope_type: str = "company", scope_id: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("compare_forecasts", {"run_ids":run_ids,"scope_type":scope_type,"scope_id":scope_id}))
+
+    def preview_forecast_scenario(run_id: str, drivers: list[dict[str, Any]], scope_type: str = "company",
+                                  scope_id: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("preview_forecast_scenario", {"run_id":run_id,"drivers":drivers,
+                                                                          "scope_type":scope_type,"scope_id":scope_id}))
+
+    def request_forecast_refresh(idempotency_key: str) -> str:
+        return _respond(lambda: toolbox.call("request_forecast_refresh", {"idempotency_key":idempotency_key}))
+
     def list_signals(status: str | None = None, team: str | None = None, include_company: bool = True) -> str:
         return _respond(lambda: toolbox.call("list_signals", {"status": status, "team": team,
                                                               "include_company": include_company}))
@@ -100,8 +116,8 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
         return _respond(lambda: toolbox.call("rebase_proposal", {"proposal_id": proposal_id, "rationale": rationale}))
 
     fns = {f.__name__: f for f in (search_corpus, read_document, get_spend_summary, get_budgets, get_forecast,
-                                   list_signals, list_people, build_chart_spec, record_signal, draft_proposal,
-                                   rebase_proposal)}
+                                   list_signals, list_people, build_chart_spec, record_signal, draft_proposal, rebase_proposal,
+                                   explain_forecast, compare_forecasts, preview_forecast_scenario, request_forecast_refresh)}
     return [(t.name, t.description, fns[t.name]) for t in TOOLS]
 
 

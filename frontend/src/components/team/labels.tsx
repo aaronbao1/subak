@@ -31,6 +31,9 @@ export const PROVENANCE_LABEL: Record<Provenance, string> = {
   usage_only: "Usage only",
 };
 
+/** Short visible provenance cue for a set of records: the one label when they agree, "Mixed" when they differ. */
+export const provenanceNote = (set: Provenance[]) => (set.length === 0 ? undefined : set.length === 1 ? PROVENANCE_LABEL[set[0]] : "Mixed");
+
 const PROVENANCE_TITLE: Record<Provenance, string> = {
   reported_charge: "Amount billed by the provider",
   estimate: "Estimated; not a bill",

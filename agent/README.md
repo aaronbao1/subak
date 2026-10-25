@@ -2,8 +2,27 @@
 
 Northstar is an AI-spend planning workspace for finance teams. Factory Droid runs **inside the running
 backend** as the analyst that reads the company's documents and drafts budget changes. It works only
-through tools the backend implements, and it cannot apply anything: every change waits for a human
-finance approver.
+through tools the backend implements. Budget changes require a human finance approver; forecast
+refreshes and isolated scenarios can run automatically within the supported tool contract.
+
+## Forecast tools and exact-run answers
+
+`explain_forecast` retrieves stored evidence and calculation receipts; `compare_forecasts` compares
+immutable runs; `preview_forecast_scenario` creates an isolated durable scenario; and
+`request_forecast_refresh` enqueues an idempotent publication job. The same four methods are exposed
+by the backend toolbox and SDK MCP wrapper. They do not approve budgets or change vendor resources.
+
+The dashboard's Ask Droid action sends structured `forecast_context` with action, exact run, scope,
+and optional driver IDs. Replies ground amounts in stored calculations and preserve source revisions.
+Scenario drivers replace the complete global set for that run; a scoped omission keeps unrelated
+company drivers. Pending jobs are receipts, never fabricated completed forecasts. Source interpretation
+in this fixture integration uses the deterministic bounded connector extractor; a live model-assisted
+extractor is not claimed.
+
+The [integrated acceptance journey](../docs/implementation/forecast-integration-runbook.md) checks the
+exact cited passage, source revision, and paired numerical effect using the deterministic runner.
+No new live SDK run was performed for these forecast tools; earlier live evidence below keeps its
+original scope.
 
 ## For the Factory track judges
 
@@ -17,16 +36,16 @@ or a chat message in the Next.js app through `/compat/api/threads/{id}/messages`
 | An approval refused as stale (409 `stale_proposal`) | `propose_allocation` + `stale_proposal_id` | re-drafts the same lines on the current budget and explains what moved it |
 | Any other question, optionally with a chart | `answer_question` | read-only answer with backend-built Vega-Lite chart specs |
 
-**Which tools, and why read + draft only.** Eleven tools, all served by the backend's own service layer
+**Which tools, and why finance approval remains separate.** Fifteen tools, all served by the backend's own service layer
 under role `droid_agent`: eight read tools (`search_corpus`, `read_document`, `get_spend_summary`,
 `get_budgets`, `get_forecast`, `list_signals`, `list_people`, `build_chart_spec`) and three draft tools
-(`record_signal`, `draft_proposal`, `rebase_proposal`). Moving money between teams is a finance
+(`record_signal`, `draft_proposal`, `rebase_proposal`), plus the four forecast tools described above. Moving money between teams is a finance
 decision, so the authority to decide stays with a person. Droid's job is the slow part: reading
 everything, connecting facts across documents, and doing arithmetic the backend can check. There is
 no apply, approve, decide or reject tool.
 
-**How access is bounded** (each layer is enforced in code, and the first three were checked on live runs):
-1. `restrict_tools` allowlist set to exactly the ten `northstar___*` ids; before sending the prompt the
+**How access is bounded** (each layer is enforced in code; prior live runs checked the original tool set, while the four new forecast tools have local contract tests):
+1. `restrict_tools` allowlist set to exactly the declared `northstar___*` ids; before sending the prompt the
    runner calls `list_tools()` and refuses to run if anything else is allowed (except the three
    code-mode meta tools the SDK cannot remove).
 2. A raw-request permission gate approves only `northstar` MCP calls and `Script`s that call nothing but
@@ -162,11 +181,11 @@ Not a model: a fixed playbook that does real work through the toolbox.
 **SdkDroidRunner** (`DROID_RUNNER=sdk`, events `source=droid_sdk`, signals `produced_by=droid_sdk`).
 Uses `droid-sdk` (Python, import `droid_sdk`). Each run gets its own `Session`, set up like this:
 - the in-process `northstar` MCP server, whose tools Droid sees as `northstar___<tool>`;
-- `restrict_tools` set to exactly those ten ids;
+- `restrict_tools` set to exactly those declared ids;
 - Autonomy LOW, built-in skills disabled, and an empty temp directory as cwd.
 
 Before the prompt is sent, the runner calls `list_tools()`. It refuses to run
-(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our ten ids plus
+(`tool_allowlist_mismatch` / `tools_not_visible`) unless the allowed set is exactly our declared ids plus
 `Script`, `ToolSearch` and `WaitForScript`. Those three are code-mode meta tools that the allowlist
 cannot remove.
 

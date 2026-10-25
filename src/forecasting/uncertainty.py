@@ -118,7 +118,7 @@ def cumulative_interval(point, records, *, cutoff, horizon, procedure_id, scope,
         if b.target_start < a.target_end:
             raise ValueError('overlapping calibration target periods')
     n=len(eligible)
-    rank = math.ceil((n+1)*(1-alpha))
+    rank = math.ceil((n+1)*(1-Fraction(str(alpha))))
     try:
         scores = sorted(abs(_checked(r.actual-r.prediction)) for r in eligible)
         if rank > n:

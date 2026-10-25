@@ -235,7 +235,8 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
     A team without a projection is `unavailable` with the provider's reason, and so is every active
     person on it (`people`: team -> person ids); no number is filled in. Person items are the provider's
     proportional split of the team placeholder, already reconciled by `forecasts._sanitize`
-    (sum of person amounts + team-level remainder == team amount). The backend has no low/high: omitted."""
+    (sum of person amounts + team-level remainder == team amount). Engine amounts retain their
+    full-quarter meaning; absent person projections stay unavailable. Optional bounds are passed through."""
     r = result if isinstance(result, Mapping) else result.model_dump(mode="python")
     p = period(period_row)
     by_team = {pr["team"]: pr for pr in r.get("projections") or []}
@@ -245,6 +246,7 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
     generated = iso(r.get("generated_at")) or iso(now)
     origin = "placeholder" if r.get("provider") == "placeholder" else "forecasting_service"
     basis = "remaining" if r.get("basis") == "remaining" else "full_period"
+    person_limitations = [PERSON_SPLIT_LIMITATION] if origin == "placeholder" else []
     method = [r["method_label"]] if r.get("method_label") else []
     simulated = [SIMULATED_LIMITATION] if r.get("value_kind") == "simulated" else []
     teams_out, persons_out = [], []
@@ -260,7 +262,7 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
             for pid in sorted((people or {}).get(team, ())):
                 persons_out.append({**base, "id": f"fc-{team}-{r['target_period']}-{pid}", "personId": pid,
                                     "status": "unavailable", "unavailableReason": reason, "assumptions": [],
-                                    "limitations": limitations + [PERSON_SPLIT_LIMITATION]})
+                                    "limitations": limitations + person_limitations})
             continue
         if pr.get("uncertainty"):
             limitations = limitations + [pr["uncertainty"]]
@@ -269,14 +271,17 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
         assumptions = list(pr.get("assumptions") or [])
         split = sorted(persons_by_team.get(team, []), key=lambda pp: pp["person"])
         if split:
-            assumptions.append(f"Sum of {len(split)} individual placeholder projections" if origin == "placeholder"
-                               else f"Sum of {len(split)} person projections (team projection split by share of spend to date)")
+            label = "individual placeholder" if origin == "placeholder" else "individual"
+            assumptions.append(f"Sum of {len(split)} {label} projections")
             team_level = Decimal(str(pr["amount"])) - sum((Decimal(str(pp["amount"])) for pp in split), Decimal("0"))
             if team_level > 0:
                 assumptions.append(f"Includes {money_text(team_level)} of team-level spend not attributed to a person")
         item = {**base, "status": "available", "basis": basis, "kind": "forecast",
                 "projected": num(pr["amount"]), "unit": unit(pr.get("unit")),
                 "assumptions": assumptions, "limitations": limitations}
+        for field in ("low", "high"):
+            if pr.get(field) is not None:
+                item[field] = num(pr[field])
         if pr.get("daily") is not None:
             item["daily"] = _daily(pr["daily"])
         teams_out.append(item)
@@ -286,13 +291,18 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
             for pid in sorted((people or {}).get(team, ())):
                 persons_out.append({**base, "id": f"fc-{team}-{r['target_period']}-{pid}", "personId": pid,
                                     "status": "unavailable", "unavailableReason": reason, "assumptions": [],
-                                    "limitations": method + simulated + [PERSON_SPLIT_LIMITATION]})
+                                    "limitations": method + simulated + person_limitations})
         for pp in split:
             person_item = {**base, "id": f"fc-{team}-{r['target_period']}-{pp['person']}", "personId": pp["person"],
                            "status": "available", "basis": "full_period", "kind": "forecast",
                            "projected": num(pp["amount"]), "unit": unit(pp.get("unit")),
                            "assumptions": [_capitalize(a) for a in pp.get("assumptions") or []],
-                           "limitations": method + simulated + [PERSON_SPLIT_LIMITATION]}
+                           "limitations": method + simulated + person_limitations}
+            if pp.get("uncertainty") and pp["uncertainty"] not in person_item["limitations"]:
+                person_item["limitations"] = person_item["limitations"] + [pp["uncertainty"]]
+            for field in ("low", "high"):
+                if pp.get(field) is not None:
+                    person_item[field] = num(pp[field])
             if pp.get("daily") is not None:
                 person_item["daily"] = _daily(pp["daily"])
             persons_out.append(person_item)

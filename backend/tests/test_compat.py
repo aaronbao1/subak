@@ -537,3 +537,29 @@ def test_mapper_scalars():
     long = "word " * 40
     assert len(mappers.derived_title(long)) <= mappers.TITLE_MAX and mappers.derived_title(long).endswith("…")
     assert mappers.team_color(5) == "var(--chart-1)"
+
+
+def test_engine_forecast_mapping_preserves_full_quarter_and_unavailable_people(clock):
+    """A canonical 28-day view cannot replace the separately issued quarter amount."""
+    result = {
+        "provider": "engine", "target_period": "2026-P1", "basis": "full_period_total",
+        "value_kind": "estimated", "method_label": "conditional quarter continuation",
+        "projections": [{"team": "research", "amount": "12345.67", "low": "12000.00",
+                         "high": "13000.00", "assumptions": ["complete quarter continuation"],
+                         "view": {"projection": {"base": 28}, "quarter_outlook": {"base": 12345.67}}}],
+        "missing_teams": ["product"], "reason": "full quarter unavailable for product",
+    }
+    rows = mappers.forecasts(result, period_row={"starts_on": "2026-10-01", "ends_on": "2026-12-31",
+                                                "label": "Quarter"},
+                             team_ids=["research", "product"], now=clock.now(),
+                             people={"research": ["real-person"], "product": ["other-person"]})
+    research, product, *persons = rows
+    assert research["projected"] == 12345.67
+    assert research["basis"] == "full_period" and research["origin"] == "forecasting_service"
+    assert research["low"] == 12000 and research["high"] == 13000
+    assert "daily" not in research and "baseline" not in research and "adjustments" not in research
+    assert product["status"] == "unavailable" and "projected" not in product
+    assert len(persons) == 2 and all(p["status"] == "unavailable" and "projected" not in p for p in persons)
+    assert all(mappers.PERSON_SPLIT_LIMITATION not in p["limitations"] for p in persons)
+    for row in rows:
+        S.Forecast.model_validate(row)

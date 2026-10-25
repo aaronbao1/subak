@@ -13,13 +13,10 @@ DB="${BACKEND_DB_PATH:-$ROOT/backend/data/uber.db}"
 PORT="${BACKEND_PORT:-8787}"
 
 [ -x "$PY" ] || { echo "backend/.venv missing: python3 -m venv backend/.venv && backend/.venv/bin/pip install -e 'backend[dev]'"; exit 1; }
-# Backend-owner edit: projections come from the repo-root forecasting package (FORECAST_PROVIDER below);
-# install it into the backend venv once (core install, no third-party dependencies).
-"$PY" -c "import forecasting" 2>/dev/null || "$PY" -m pip install -q -e "$ROOT"
 [ -f "$ROOT/datagen/out/backend/reference.json" ] || python3 "$ROOT/datagen/generate.py" --quiet
 "$PY" "$ROOT/datagen/load_backend.py" --db "$DB"
 
-(cd "$ROOT/backend" && BACKEND_DB_PATH="$DB" BACKEND_PORT="$PORT" BACKEND_COMPANY_ID="${BACKEND_COMPANY_ID:-uber-sim}" BACKEND_COMPANY_NAME="${BACKEND_COMPANY_NAME:-Uber (simulated)}" FORECAST_PROVIDER="${FORECAST_PROVIDER:-forecasting_package}" exec "$PY" -m app.main) &
+(cd "$ROOT/backend" && PYTHONPATH="$ROOT/src:$ROOT/backend:$ROOT/agent${PYTHONPATH:+:$PYTHONPATH}" BACKEND_DB_PATH="$DB" BACKEND_PORT="$PORT" BACKEND_COMPANY_ID="${BACKEND_COMPANY_ID:-uber-sim}" BACKEND_COMPANY_NAME="${BACKEND_COMPANY_NAME:-Uber (simulated)}" exec "$PY" -m app.main) &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 "$PY" - "$PORT" <<'PY'

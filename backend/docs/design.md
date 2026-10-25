@@ -332,8 +332,9 @@ class PlaceholderForecastProvider:
     #   value_kind simulated, method_label "shared placeholder (not a forecast model)"
     # unavailable: availability "unavailable", reason "forecast provider not connected", projections []
 ```
-Selected by env `FORECAST_PROVIDER=placeholder|unavailable|forecasting_package` (default `placeholder`).
-`forecasting_package` is `app/providers/forecasting_pkg.py` (see `docs/forecasting-integration-notes.md` §6).
+Selected by env `FORECAST_PROVIDER=engine|placeholder|unavailable` (default `engine`). `engine` is
+`app/providers/engine.py`, a read-only adapter over the runs `app/forecasting` publishes (see
+`../../docs/implementation/forecast-integration.md`).
 `services/forecasts.py` wraps every call: exceptions or timeouts -> `unavailable` result with the
 error as `reason`; it never raises into spend/budget endpoints and never substitutes zero.
 

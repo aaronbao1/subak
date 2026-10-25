@@ -37,7 +37,7 @@ class MetaOut(OutModel):
     money_format: str
     runner_kind: Literal["fake", "sdk"]
     forecast_provider: str
-    forecast_mode: Literal["placeholder", "unavailable", "forecasting_package"]
+    forecast_mode: Literal["engine", "placeholder", "unavailable"]
     identity_mode: Literal["demo_headers_unauthenticated"]
     roles: list[str]
     real_vs_simulated: list[RealVsSimulated]

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronRight, FileText } from "lucide-react";
 import type { AssistantMessage, SourceRef } from "@/lib/contracts";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
@@ -22,7 +21,7 @@ const THREAD = "main";
  * and an inline proposal card when the assistant prepared one. Review/apply happens in ProposalReview.
  */
 export function AssistantDrawer() {
-  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded } = useAppStore();
+  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded, forecastQuestionContext, askAssistant } = useAppStore();
   const messages = threads[THREAD] ?? [];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -78,7 +77,7 @@ export function AssistantDrawer() {
       ? `We have another ${formatAmount(extra, unit)} to allocate this week; how should we split it?`
       : "We have additional budget to allocate this week; how should we split it?",
   ];
-  const showPrompts = messages.length <= 1 && !sending;
+  const showPrompts = messages.length <= 1 && !sending && !forecastQuestionContext;
 
   return (
     /* Non-modal: the dashboard stays visible and usable, so the hero updates in plain sight when a proposal is applied. */
@@ -86,9 +85,10 @@ export function AssistantDrawer() {
       <SheetContent side="right" overlay={false} className="w-full gap-0 sm:max-w-md">
         <SheetHeader className="h-14 justify-center gap-0 border-b border-border px-4 py-0 pr-12">
           <SheetTitle className="text-base leading-tight font-medium">Assistant</SheetTitle>
-          <SheetDescription className="text-xs leading-tight">Asks questions, prepares proposals. Nothing changes until you apply it.</SheetDescription>
+          <SheetDescription className="sr-only">Ask about spend or request a proposal. Nothing changes until you apply it.</SheetDescription>
         </SheetHeader>
 
+        {forecastQuestionContext && <div className="space-y-2 border-b border-border bg-muted/20 px-4 py-3 text-xs"><p className="break-all text-muted-foreground">Issued run {forecastQuestionContext.run_id} · {forecastQuestionContext.scope_type} {forecastQuestionContext.scope_id}{forecastQuestionContext.driver_id && ` · driver ${forecastQuestionContext.driver_id}`}</p><button className="text-xs underline underline-offset-2" onClick={() => askAssistant(text)}>Clear forecast context</button></div>}
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {!loaded ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
@@ -160,7 +160,6 @@ export function AssistantDrawer() {
               <ArrowUp className="size-4" strokeWidth={1.5} />
             </Button>
           </form>
-          <p className="mt-1.5 text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line</p>
         </div>
 
         {/* Nested inside the drawer so Esc closes only the topmost dialog. */}
@@ -215,7 +214,7 @@ function Message({ m, teams, proposal, onReview, onSource }: {
       <div className="min-w-0 space-y-2.5">
         <Markdown>{m.content}</Markdown>
         {hasMeta && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {m.toolCalls && m.toolCalls.length > 0 && <WorkRecord calls={m.toolCalls} />}
             {m.citations && m.citations.length > 0 && <Sources citations={m.citations} onSource={onSource} />}
           </div>
@@ -229,7 +228,7 @@ function Message({ m, teams, proposal, onReview, onSource }: {
 
 const humanize = (name: string) => name.replace(/_/g, " ");
 
-/** Compact timeline of what the assistant did. Human sentences, not a console. */
+/** What the assistant did, collapsed to one line ("3 steps") until opened. */
 function WorkRecord({ calls }: { calls: NonNullable<AssistantMessage["toolCalls"]> }) {
   return (
     <details className="group text-xs">
@@ -254,19 +253,18 @@ function Sources({ citations, onSource }: { citations: SourceRef[]; onSource: (d
   const seen = new Set<string>();
   const unique = citations.filter((c) => (seen.has(c.documentId) ? false : (seen.add(c.documentId), true)));
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Sources">
+    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Sources">
       {unique.map((c) => (
         <li key={c.documentId} className="min-w-0 max-w-full">
-          <Badge
-            variant="outline"
-            render={<button type="button" onClick={() => onSource(c.documentId)} />}
-            title={c.excerpt ? `“${c.excerpt}”` : c.title}
-            className="max-w-[240px] cursor-pointer gap-1.5 text-muted-foreground transition-colors duration-300 hover:border-border-strong hover:text-foreground"
+          <button
+            type="button"
+            onClick={() => onSource(c.documentId)}
+            title={[c.title, c.date && fmtDate(c.date), c.excerpt && `“${c.excerpt}”`].filter(Boolean).join(" · ")}
+            className="inline-flex max-w-[220px] items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors duration-300 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <FileText aria-hidden strokeWidth={1.5} />
-            <span className="truncate">{c.title}</span>
-            {c.date && <span className="num shrink-0">{fmtDate(c.date)}</span>}
-          </Badge>
+            <FileText aria-hidden className="size-3 shrink-0" strokeWidth={1.5} />
+            <span className="truncate underline decoration-border underline-offset-4">{c.title}</span>
+          </button>
         </li>
       ))}
     </ul>

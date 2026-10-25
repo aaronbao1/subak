@@ -13,7 +13,7 @@ DEFAULT_PORT = 8787
 # Any port on localhost / 127.0.0.1 (frontend dev servers). No credentials are allowed.
 DEFAULT_CORS_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
-FORECAST_PROVIDERS = ("placeholder", "unavailable", "forecasting_package")
+FORECAST_PROVIDERS = ("engine", "placeholder", "unavailable")
 DROID_RUNNERS = ("fake", "sdk")
 
 
@@ -30,7 +30,9 @@ class Settings:
     db_path: Path = DEFAULT_DB_PATH
     port: int = DEFAULT_PORT
     cors_origin_regex: str = DEFAULT_CORS_ORIGIN_REGEX
-    forecast_provider: str = "placeholder"
+    forecast_provider: str = "engine"
+    forecast_demo: bool = False
+    forecast_worker: bool = True
     droid_runner: str = "fake"
     allow_reset: bool = False
     # Frontend compatibility layer under /compat/api (app/compat). On unless BACKEND_COMPAT=0.
@@ -54,7 +56,7 @@ class Settings:
         if not 1 <= port <= 65535:
             raise SettingsError(f"BACKEND_PORT out of range: {port}")
 
-        forecast_provider = (env.get("FORECAST_PROVIDER") or "placeholder").strip().lower()
+        forecast_provider = (env.get("FORECAST_PROVIDER") or "engine").strip().lower()
         if forecast_provider not in FORECAST_PROVIDERS:
             raise SettingsError(
                 f"FORECAST_PROVIDER must be one of {FORECAST_PROVIDERS}, got {forecast_provider!r}"
@@ -69,6 +71,8 @@ class Settings:
             port=port,
             cors_origin_regex=env.get("BACKEND_CORS_ORIGIN_REGEX") or DEFAULT_CORS_ORIGIN_REGEX,
             forecast_provider=forecast_provider,
+            forecast_demo=_truthy(env.get("FORECAST_DEMO")),
+            forecast_worker=_truthy(env.get("FORECAST_WORKER") or "1"),
             droid_runner=droid_runner,
             allow_reset=_truthy(env.get("BACKEND_ALLOW_RESET")),
             compat=_truthy(env.get("BACKEND_COMPAT") or "1"),

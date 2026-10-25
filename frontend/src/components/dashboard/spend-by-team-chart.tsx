@@ -11,14 +11,14 @@ import { cn } from "@/lib/utils";
 import { formatAmount, unitNoun } from "@/lib/format";
 import { WEEKEND_PATTERN_ID, isWeekend } from "@/components/shared/components";
 import { EASE_CSS, ENTER_STAGGER_MS, usePrefersReducedMotion } from "@/components/shared/motion";
-import { dateLabel, dayLabel, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
+import { dateLabel, dayLabel, hasProjectedAmount, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
 import { TeamPicker } from "./team-picker";
 
 const HALF_DAY = 43_200_000;
 /** Up to two weeks of days get one tick per day with a weekday label; longer ranges fall back to weekly ticks. */
 const DAILY_TICK_LIMIT = 14;
 /** How much of the history is in view. 0 means everything. */
-const ZOOMS = [{ days: 7, label: "Week" }, { days: 28, label: "4 weeks" }, { days: 0, label: "All" }] as const;
+const ZOOMS = [{ days: 7, label: "Week" }, { days: 28, label: "Month" }, { days: 0, label: "All" }] as const;
 type ZoomDays = (typeof ZOOMS)[number]["days"];
 /** The categorical palette has 8 slots. Past that, the smallest teams fold into one neutral "Other" line. */
 const MAX_LINES = 8;
@@ -210,11 +210,12 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   }, [rows, daily]);
 
   const weekendTs = useMemo(() => rows.filter((r) => isWeekend(r.date)).map((r) => r.ts), [rows]);
-  const projectedStart = useMemo(() => rows.find((r) => r.kind === "projected")?.ts, [rows]);
-  const projectedDays = useMemo(() => rows.filter((r) => r.kind === "projected").length, [rows]);
+  const projectedRows = useMemo(() => rows.filter(r => series.some(s => hasProjectedAmount(r, s.id))), [rows, series]);
+  const projectedStart = projectedRows[0]?.ts;
+  const projectedDays = projectedRows.length;
   const hasProjection = projectedStart !== undefined;
   /** Index of the first projected row, so projected dots pop from the boundary rather than from the chart's left edge. */
-  const projectedIdx0 = useMemo(() => Math.max(0, rows.findIndex((r) => r.kind === "projected")), [rows]);
+  const projectedIdx0 = useMemo(() => Math.max(0, rows.findIndex(r => r.ts === projectedStart)), [rows, projectedStart]);
   const showDots = daily && (!animating || phase >= PHASE.dots);
   const showProjectedDots = daily && (!animating || phase >= PHASE.projectedDots);
   const tickLabel = (v: number) => (daily ? dayLabel(v) : dateLabel(v));
@@ -235,7 +236,6 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span className="num">{rangeLabel}</span>
             {inPeriod && period?.label && <span> · {period.label}</span>}
-            {maxOffset > 0 && <span className="hidden sm:inline"> · swipe or drag sideways for earlier weeks</span>}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -283,7 +283,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           </div>
         ) : (
           <div
-            ref={plotRef} className={cn("sbt-plot h-64 w-full touch-pan-y select-none rounded-md focus-visible:ring-2 focus-visible:ring-ring md:h-72", maxOffset > 0 && "cursor-grab active:cursor-grabbing", animating && phase < PHASE.areas && "sbt-areas-pending")}
+            ref={plotRef} title={maxOffset > 0 ? "Swipe or drag sideways for earlier weeks" : undefined} className={cn("sbt-plot h-64 w-full touch-pan-y select-none rounded-md focus-visible:ring-2 focus-visible:ring-ring md:h-72", maxOffset > 0 && "cursor-grab active:cursor-grabbing", animating && phase < PHASE.areas && "sbt-areas-pending")}
             onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -295,11 +295,9 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                   </pattern>
                 </defs>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
-                {weekendTs.map((ts, i) => (
-                  <ReferenceArea
-                    key={`w-${ts}`} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill={`url(#${WEEKEND_PATTERN_ID})`} stroke="none"
-                    label={daily && (i === 0 || !weekendTs.includes(ts - 2 * HALF_DAY)) ? { value: "Weekend", position: "insideBottom", ...AREA_LABEL } : undefined}
-                  />
+                {/* Weekend hatch; explained by its legend swatch, not a label on the plot. */}
+                {weekendTs.map((ts) => (
+                  <ReferenceArea key={`w-${ts}`} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill={`url(#${WEEKEND_PATTERN_ID})`} stroke="none" />
                 ))}
                 <XAxis
                   dataKey="ts" type="number" scale="time" domain={domain} ticks={ticks}
@@ -324,10 +322,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                 {partialDates.map((d) => {
                   const ts = toTs(d);
                   return (
-                    <ReferenceArea
-                      key={d} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="var(--foreground)" fillOpacity={0.045} stroke="none"
-                      label={daily ? { value: "Partial", position: "insideTop", ...AREA_LABEL } : undefined}
-                    />
+                    <ReferenceArea key={d} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="var(--foreground)" fillOpacity={0.045} stroke="none" />
                   );
                 })}
                 <Tooltip
@@ -345,11 +340,12 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         const value = typeof recorded === "number" ? recorded : typed(projected);
                         if (value === undefined) return null;
                         const fullDay = row.partial && typeof recorded === "number" && typeof projected === "number" ? projected : undefined;
-                        return { s, value, projected: isProjected, fullDay };
+                        return { s, value, projected: typeof recorded !== "number", fullDay };
                       })
                       .filter((x): x is { s: Series; value: number; projected: boolean; fullDay: number | undefined } => x !== null)
                       .sort((a, b) => b.value - a.value);
                     if (items.length === 0) return null;
+                    const mixed = items.some(i => i.projected) && items.some(i => !i.projected);
                     const total = items.reduce((s, i) => s + i.value, 0);
                     const fullDayTotal = row.partial && items.every((i) => i.fullDay !== undefined) ? items.reduce((s, i) => s + (i.fullDay ?? 0), 0) : undefined;
                     return (
@@ -357,7 +353,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         <div className="mb-1.5 flex items-center justify-between gap-3">
                           <span className="text-foreground">{dayLabel(Number(label), { month: true })}</span>
                           <span className="text-muted-foreground">
-                            {isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
+                            {mixed ? "recorded + projected" : isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
                           </span>
                         </div>
                         {row.partial && !isProjected && (
@@ -461,7 +457,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         const k = key ?? undefined;
                         // The anchor point on the last recorded day already has a solid dot.
                         // Hollow dots only where the value is a projection: projected days and the partial day's full-day total.
-                        const show = payload?.kind === "projected" || (payload?.partial && payload[teamKey(s.id)] !== null && payload[projectedKey(s.id)] !== payload[teamKey(s.id)]);
+                        const show = payload && hasProjectedAmount(payload, s.id);
                         if (!showProjectedDots || !show || cx === undefined || cy === undefined) return <g key={k} />;
                         return (
                           <circle
@@ -488,25 +484,13 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
         )}
       </div>
 
-      <footer className="space-y-2.5 px-5 pb-5 pt-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <EncodingLegend hasProjection={hasProjection} />
-          <ChartLegend series={series} selectedId={selectedId} onSelect={onSelect} />
-        </div>
-        {(folded.length > 0 || partialDates.length > 0 || hasProjection || weekendTs.length > 0) && (
-          <p className="text-xs text-muted-foreground">
-            {folded.length > 0 && (
-              <>Showing the {MAX_LINES} largest teams by spend this period; {folded.length} more {folded.length === 1 ? "is" : "are"} summed into Other. Hide a team in the picker to swap another in. </>
-            )}
-            {weekendTs.length > 0 && <>Hatched days are weekends; usage is usually lower than Monday to Friday. </>}
-            {partialDates.length > 0 && (
-              <>Shaded {partialDates.length === 1 ? "day is" : "days are"} partial (<span className="num">{partialDates.map(dateLabel).join(", ")}</span>): some sources have not reported yet. </>
-            )}
-            {hasProjection && (
-              <>Dashed lines and hollow dots are projections ({projectedDays} {projectedDays === 1 ? "day" : "days"} ahead), not recorded usage.</>
-            )}
-          </p>
-        )}
+      {/* Legends only: what each mark means is a swatch, and the detail sits in each swatch's tooltip. */}
+      <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 pb-5 pt-3">
+        <EncodingLegend
+          hasProjection={hasProjection} projectedDays={projectedDays}
+          weekend={weekendTs.length > 0} partialDates={partialDates}
+        />
+        <ChartLegend series={series} selectedId={selectedId} onSelect={onSelect} />
       </footer>
     </section>
   );
@@ -530,18 +514,35 @@ function LineKey({ color, dashed }: { color: string; dashed?: boolean }) {
   );
 }
 
-/** Recorded vs projected key, drawn in neutral ink so it reads independently of team colors. */
-function EncodingLegend({ hasProjection }: { hasProjection: boolean }) {
+/** Mark key in neutral ink (recorded, projected, partial, weekend), so it reads independently of team colors. */
+function EncodingLegend({ hasProjection, projectedDays, weekend, partialDates }: { hasProjection: boolean; projectedDays: number; weekend: boolean; partialDates: string[] }) {
+  const partialTitle = `Partial ${partialDates.length === 1 ? "day" : "days"} (${partialDates.map(dateLabel).join(", ")}): some sources have not reported yet`;
   return (
-    <ul className="flex items-center gap-3 text-xs text-muted-foreground" aria-label="Line styles">
-      <li className="flex items-center gap-1.5">
+    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Chart key">
+      <li className="flex items-center gap-1.5" title="Recorded usage">
         <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><circle cx="11" cy="5" r="4" fill="currentColor" stroke="var(--card)" strokeWidth="2" /></svg>
         Recorded
       </li>
       {hasProjection && (
-        <li className="flex items-center gap-1.5">
+        <li className="flex items-center gap-1.5" title={`Dashed lines and hollow dots are projections (${projectedDays} ${projectedDays === 1 ? "day" : "days"}), not recorded usage`}>
           <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" strokeOpacity="0.7" strokeWidth="2" strokeDasharray="4 3" strokeLinecap="round" /><circle cx="11" cy="5" r="3.5" fill="var(--card)" stroke="currentColor" strokeWidth="2" /></svg>
           Projected
+        </li>
+      )}
+      {partialDates.length > 0 && (
+        <li className="flex items-center gap-1.5" title={partialTitle}>
+          <span className="size-2.5 shrink-0 rounded-sm bg-foreground/15" aria-hidden />
+          Partial
+          <span className="sr-only">{partialTitle}</span>
+        </li>
+      )}
+      {weekend && (
+        <li className="flex items-center gap-1.5" title="Weekends; usage is usually lower">
+          <svg width="10" height="10" viewBox="0 0 10 10" className="shrink-0 rounded-sm" aria-hidden>
+            <rect width="10" height="10" fill="var(--foreground)" fillOpacity="0.04" />
+            <path d="M-2 4 L4 -2 M-2 9 L9 -2 M3 12 L12 3 M8 12 L12 8" stroke="var(--foreground)" strokeOpacity="0.35" strokeWidth="1.25" />
+          </svg>
+          Weekend
         </li>
       )}
     </ul>
@@ -568,7 +569,7 @@ function ChartLegend({ series, selectedId, onSelect }: { series: Series[]; selec
           return (
             <li key={s.id}>
               <Popover.Root>
-                <Popover.Trigger className={cn(CHIP, "data-popup-open:border-border data-popup-open:bg-popover", dim && "text-muted-foreground")} aria-label={`${s.name}: which teams are summed`}>
+                <Popover.Trigger className={cn(CHIP, "data-popup-open:border-border data-popup-open:bg-popover", dim && "text-muted-foreground")} aria-label={`${s.name}: which teams are summed`} title={`The ${MAX_LINES} largest teams by spend are drawn; the rest are summed here`}>
                   {swatch}
                   {s.name}
                 </Popover.Trigger>
@@ -584,7 +585,7 @@ function ChartLegend({ series, selectedId, onSelect }: { series: Series[]; selec
                           </li>
                         ))}
                       </ul>
-                      <p className="px-2 pb-1.5 pt-1 text-[11px] text-muted-foreground">Hide a team in the picker to swap one of these in.</p>
+                      <p className="px-2 pb-1.5 pt-1 text-[11px] text-muted-foreground">Hide a team to swap one in.</p>
                     </Popover.Popup>
                   </Popover.Positioner>
                 </Popover.Portal>

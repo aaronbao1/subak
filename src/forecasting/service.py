@@ -150,6 +150,8 @@ class ForecastService:
                     recorded_by[entity]=exact_sum((recorded_by.get(entity,Decimal(0)),amount))
             limitations.extend('incurred_gap:'+v for v in recorded_supplement.limitations)
         recorded = exact_sum(recorded_by.values()) if request.output=='full_period' else Decimal(0)
+        incurred_complete = (request.output=='remainder' or request.period_start>=min(origin,request.period_end)
+            or (snapshot.ready and (not lag or (recorded_supplement is not None and recorded_supplement.ready))))
         # Remainder means future service only. Past unreported charges are a separate full-period component.
         late = late_estimate if request.output=='full_period' and request.period_start<origin else Decimal(0)
         if available:
@@ -203,7 +205,8 @@ class ForecastService:
                   'recorded_supplement_id':recorded_supplement.snapshot_id if recorded_supplement is not None else None,
                   'source_exclusions':sorted(source_exclusions),'package_version':__version__,'model_requested':request.model,'model_used':model_used,
                   'model_config':model_config or {},'fallback_policy':fallback,'late_estimate':late,
-                  'fixed_obligations':fixed_obligations,'seed':(model_config or {}).get('seed',0),
+                  'fixed_obligations':fixed_obligations,'incurred_complete':incurred_complete,
+                  'seed':(model_config or {}).get('seed',0),
                   'resolved_predictions':{entity:{'model':value['model'],'model_metadata':value['model_metadata']}
                                           for entity,value in entities.items()},
                   # Identity includes resolved behavior, not only requested inputs.
@@ -224,7 +227,7 @@ class ForecastService:
         supplement_artifact=self.store.put(request.target.tenant_id,'snapshot',recorded_supplement.to_dict(),request.target.sources) if recorded_supplement is not None else None
         payload={'schema_version':'1.0','result':result.to_dict(),'variable_total':str(result.variable_total) if result.variable_total is not None else None,
                  'known_plus_future':str(exact_sum((recorded,future_total))) if available else None,
-                 'entities':entities,'coherence':coherent if available else None,
+                 'entities':entities,'coherence':coherent if available else None,'incurred_complete':incurred_complete,
                  'capabilities':{'point':available,'mean':available and statistic=='mean','quantiles':False,'interval':False,
                                  'event_probability':False,'joint_paths':False,'safe_transfer':False},
                  'manifest':manifest,'recorded_supplement_artifact_id':supplement_artifact,'snapshot_artifact_id':snapshot_artifact,'fallback':fallback_record,

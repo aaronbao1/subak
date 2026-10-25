@@ -62,8 +62,8 @@ export function StatTile({ label, value, size = "secondary", muted, caption, ton
         {shown}
       </div>
       {caption && (
-        <div className={cn("mt-2 flex items-center gap-1.5 text-xs leading-snug", TONE[tone])}>
-          {tone !== "neutral" && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}
+        <div className={cn("mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-tight md:text-xs", TONE[tone])}>
+          {tone !== "neutral" && <span className="size-1 shrink-0 rounded-full bg-current" aria-hidden />}
           <span className="min-w-0">{caption}</span>
         </div>
       )}

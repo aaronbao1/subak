@@ -100,8 +100,8 @@
   --brand-soft: oklch(0.892 0.176 114.7 / 12%);
 
   /* Lines and focus: 1px low-alpha borders everywhere, no resting shadows */
-  --border: oklch(1 0 0 / 8%);
-  --border-strong: oklch(1 0 0 / 14%);
+  --border: oklch(1 0 0 / 7%);
+  --border-strong: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.892 0.176 114.7 / 55%);
 
@@ -129,7 +129,7 @@
   --sidebar-primary-foreground: oklch(0.146 0.006 69.2);
   --sidebar-accent: oklch(0.21 0.007 260);
   --sidebar-accent-foreground: oklch(0.95 0.005 260);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.892 0.176 114.7 / 55%);
 }
 

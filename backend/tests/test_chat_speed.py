@@ -226,7 +226,8 @@ def test_stale_recovery_and_other_tasks_do_not_pre_read(fake_sdk, tmp_path, cloc
 
 
 def test_fake_runner_propose_after_interpret_makes_no_reads(tmp_path, clock, id_factory):
-    app = create_app(Settings(db_path=tmp_path / "f.db"), clock=clock, id_factory=id_factory,
+    app = create_app(Settings(db_path=tmp_path / "f.db", forecast_provider="placeholder"),
+                     clock=clock, id_factory=id_factory,
                      droid_runner=FakeDroidRunner())
     s = app.state.session_factory()
     seed(s, clock=clock, ids=id_factory, interpret="fake")

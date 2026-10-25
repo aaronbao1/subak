@@ -1,4 +1,4 @@
-# AI Spend Planner — frontend
+# Subak — frontend
 
 Finance workspace for an enterprise FP&A team: AI token spending, projections, company context, and an assistant that proposes internal budget allocations. Read `../docs/frontend-plan.md` first (the frontend plan of record), then `../docs/forecasting-plan.md` (how to present projections), then `../docs/ai-spend-master-plan.md`. This folder is the frontend workstream only.
 

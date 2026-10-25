@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { PageTitle } from "@/components/shared/stat-tile";
 import { riseDelay, useMounted } from "@/components/shared/motion";
 import {
-  applyFilters, buildRows, indexAdjustments, isDefaultFilters, macroBuckets, parseFilters, peopleAffected, projectionTotals,
-  serializeFilters, teamImpacts, todayIso, type EvidenceFilters,
+  applyFilters, buildRows, indexAdjustments, macroBuckets, parseFilters, peopleAffected, projectionTotals,
+  scopeSteps, serializeFilters, teamImpacts, todayIso, type EvidenceFilters,
 } from "./derive";
 import { ProjectionStrip } from "./projection-strip";
 import { FilterRow } from "./filter-row";
@@ -16,6 +16,8 @@ import { ImpactByTeam } from "./impact-by-team";
 import { MacroWatch } from "./macro-watch";
 import { PeopleAffected } from "./people-affected";
 import { EvidenceSkeleton } from "./skeleton";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
+import { scopeView } from "@/components/dashboard/forecast-derive";
 
 const MACRO_WINDOW_DAYS = 14;
 
@@ -24,7 +26,7 @@ const MACRO_WINDOW_DAYS = 14;
  * into its own evidence; the filters write back to the URL with `replace` so the back button is not spammed.
  */
 export function EvidencePage() {
-  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, spending } = useAppStore();
+  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, spending, forecastBundle, forecastEvidence } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -46,46 +48,59 @@ export function EvidencePage() {
 
   const totals = useMemo(() => projectionTotals(forecasts, teams, unit), [forecasts, teams, unit]);
   const impacts = useMemo(() => teamImpacts(teams, rowsSansTeam, forecasts, budgets, spending, unit), [teams, rowsSansTeam, forecasts, budgets, spending, unit]);
-  const buckets = useMemo(() => macroBuckets(rows, todayIso(), MACRO_WINDOW_DAYS), [rows]);
+  const steps = useMemo(() => scopeSteps(forecasts, rows), [forecasts, rows]);
+  const today = todayIso();
+  const buckets = useMemo(() => macroBuckets(rows, today, MACRO_WINDOW_DAYS), [rows, today]);
   const affected = useMemo(() => peopleAffected(filtered, teams), [filtered, teams]);
+  const issuedCompany = scopeView(forecastBundle, "company");
 
   if (!loaded) return <EvidenceSkeleton />;
 
   const enter = (i: number) => ({ className: cn("min-w-0", mounted ? "animate-rise" : "opacity-0"), style: riseDelay(i) });
 
+  const showPanel = !!(forecastBundle || forecastEvidence.length);
+  const showStrip = !issuedCompany && totals.teamsProjected > 0;
+
   return (
     <div className="min-w-0 space-y-6">
       <div {...enter(0)}>
-        <PageTitle
-          title="Evidence"
-          description="What moves the projections beyond the trend: company changes, team plans and what individual people are doing, each with its source."
-        />
+        <PageTitle title="Evidence" />
       </div>
 
-      <div {...enter(1)}>
-        <ProjectionStrip totals={totals} />
-      </div>
-
-      <div {...enter(2)}>
-        <FilterRow filters={filters} teams={teams} onChange={setFilters} shown={filtered.length} total={rows.length} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <div className="min-w-0">
-          <EvidenceFeed rows={filtered} unit={unit} mounted={mounted} enterAt={180} onClearFilters={clearFilters} filtersActive={!isDefaultFilters(filters)} />
+      {(showPanel || showStrip) && (
+        <div {...enter(1)} className={cn(enter(1).className, "space-y-6")}>
+          {showPanel && <ForecastPanel />}
+          {showStrip && <ProjectionStrip totals={totals} steps={steps} mounted={mounted} />}
         </div>
-        <aside className="min-w-0 space-y-6 lg:sticky lg:top-6 lg:self-start" aria-label="Evidence summary">
-          <div {...enter(3)}>
-            <ImpactByTeam impacts={impacts} selectedTeam={filters.team} onSelect={(team) => setFilters({ ...filters, team })} hasAnyAdjustments={totals.hasAdjustments} mounted={mounted} />
+      )}
+
+      {rows.length === 0 ? (
+        <p {...enter(2)} className={cn(enter(2).className, "text-sm text-muted-foreground")}>No company context linked yet.</p>
+      ) : (
+        <>
+          {!showPanel && !showStrip && !issuedCompany && <p className="text-sm text-muted-foreground">No projection for this period yet.</p>}
+          <div {...enter(2)}>
+            <FilterRow filters={filters} teams={teams} onChange={setFilters} shown={filtered.length} total={rows.length} />
           </div>
-          <div {...enter(4)}>
-            <MacroWatch buckets={buckets} windowDays={MACRO_WINDOW_DAYS} />
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+            <div className="min-w-0">
+              <EvidenceFeed rows={filtered} unit={unit} mounted={mounted} enterAt={180} onClearFilters={clearFilters} />
+            </div>
+            <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start" aria-label="Evidence summary">
+              <div {...enter(3)}>
+                <ImpactByTeam impacts={impacts} selectedTeam={filters.team} onSelect={(team) => setFilters({ ...filters, team })} hasAnyAdjustments={totals.hasAdjustments} mounted={mounted} />
+              </div>
+              <div {...enter(4)}>
+                <MacroWatch buckets={buckets} today={today} windowDays={MACRO_WINDOW_DAYS} />
+              </div>
+              <div {...enter(5)}>
+                <PeopleAffected people={affected} />
+              </div>
+            </aside>
           </div>
-          <div {...enter(5)}>
-            <PeopleAffected people={affected} />
-          </div>
-        </aside>
-      </div>
+        </>
+      )}
     </div>
   );
 }

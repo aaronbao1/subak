@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, asdict
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -28,6 +29,18 @@ def _aware(value):
 def _finite(values):
     if any(not math.isfinite(x) for x in values):
         raise ValueError('finite metric values required')
+
+
+def _metric_mean(values):
+    """Finite mean without overflowing sums or squaring large errors."""
+    values=tuple(values)
+    _finite(values)
+    if not values:
+        return None
+    scale=max(abs(v) for v in values)
+    result=scale*(math.fsum(v/scale for v in values)/len(values)) if scale else 0.
+    _finite((result,))
+    return result
 
 
 @dataclass(frozen=True)
@@ -189,11 +202,19 @@ def point_metrics(predictions,actuals):
     _finite(tuple(predictions)+tuple(actuals))
     n=len(actuals)
     errors=[p-y for p,y in zip(predictions,actuals)]
-    scale=sum(abs(y) for y in actuals)
-    return dict(n=n,mae=sum(abs(e) for e in errors)/n if n else None,
-                rmse=math.sqrt(sum(e*e for e in errors)/n) if n else None,
-                bias=sum(errors)/n if n else None,
-                wape=sum(abs(e) for e in errors)/scale if scale else None)
+    _finite(errors)
+    mae=_metric_mean(abs(e) for e in errors)
+    scale=max((abs(e) for e in errors),default=0.)
+    rmse=scale*math.sqrt(math.fsum((e/scale)**2 for e in errors)/n) if scale else (0. if n else None)
+    # WAPE is a ratio of sums, so a subnormal denominator must not first
+    # underflow through an intermediate mean (or overflow through a sum).
+    truth_sum=sum((Fraction(float(abs(y))) for y in actuals),Fraction())
+    try:
+        wape=float(sum((Fraction(float(abs(e))) for e in errors),Fraction())/truth_sum) if truth_sum else None
+    except OverflowError as exc:
+        raise ValueError('finite metric values required') from exc
+    _finite(v for v in (rmse,wape) if v is not None)
+    return dict(n=n,mae=mae,rmse=rmse,bias=_metric_mean(errors),wape=wape)
 
 
 def quantile_metrics(quantiles, actuals):
@@ -205,8 +226,11 @@ def quantile_metrics(quantiles, actuals):
         _finite(quantiles[q])
     if any(quantiles[a][i]>quantiles[b][i] for a,b in zip(levels,levels[1:]) for i in range(len(actuals))):
         raise ValueError('crossed quantiles')
-    scores={q:(sum(max(q*(y-p),(q-1)*(y-p)) for p,y in zip(quantiles[q],actuals))/len(actuals) if actuals else None) for q in levels}
-    return dict(n=len(actuals),pinball_by_quantile=scores,pinball_mean=sum(scores.values())/len(scores) if actuals else None)
+    errors={q:tuple(y-p for p,y in zip(quantiles[q],actuals)) for q in levels}
+    for values in errors.values():
+        _finite(values)
+    scores={q:_metric_mean(max(q*e,(q-1)*e) for e in errors[q]) for q in levels}
+    return dict(n=len(actuals),pinball_by_quantile=scores,pinball_mean=_metric_mean(scores.values()) if actuals else None)
 
 
 def interval_metrics(lower,upper,actuals,alpha):
@@ -219,7 +243,7 @@ def interval_metrics(lower,upper,actuals,alpha):
     widths=[b-a for a,b in zip(lower,upper)]
     scores=[b-a+2/alpha*(a-y if y<a else y-b if y>b else 0) for a,b,y in zip(lower,upper,actuals)]
     return dict(n=n,coverage=sum(a<=y<=b for a,b,y in zip(lower,upper,actuals))/n if n else None,
-                width=sum(widths)/n if n else None,interval_score=sum(scores)/n if n else None)
+                width=_metric_mean(widths),interval_score=_metric_mean(scores))
 
 
 def weighted_interval_score(median, intervals, actuals):
@@ -234,7 +258,9 @@ def weighted_interval_score(median, intervals, actuals):
         if any(not lo<=m<=hi for lo,m,hi in zip(lower,median,upper)):
             raise ValueError('median outside central interval')
         score+=alpha/2*interval_metrics(lower,upper,actuals,alpha)['interval_score']
-    return score/(len(intervals)+.5)
+    result=score/(len(intervals)+.5)
+    _finite((result,))
+    return result
 
 
 def event_metrics(probabilities,events,threshold=.5):

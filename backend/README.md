@@ -12,15 +12,17 @@ FastAPI + SQLite backend for the Northstar AI-spend planning workspace.
   [`docs/edge-cases.md`](docs/edge-cases.md). Overnight report: [`docs/overnight-report.md`](docs/overnight-report.md).
 Product plans live in the repo-level `docs/` folder and are authoritative.
 
-This workstream only touches `backend/` and `agent/`. No UI code, no forecasting models.
+The backend calls the numerical package directly and serves the dashboard and Droid forecast tools.
+Start the connected forecast demo with the [integration runbook](../docs/implementation/forecast-integration-runbook.md).
 
 ## Setup
 
-Python 3.12+ (developed on 3.13). From the repo root:
+Use Python 3.12 for the integrated numerical runtime and its pinned model dependencies.
+The backend alone supports Python 3.12+. From the repo root:
 
 ```bash
-python3 -m venv backend/.venv
-backend/.venv/bin/pip install -e "backend[dev]"
+python3.12 -m venv backend/.venv
+backend/.venv/bin/pip install -e '.[models,test]' -e './backend[dev]'
 ```
 
 ## Run
@@ -41,9 +43,12 @@ cd backend
 
 Health check: `curl http://127.0.0.1:8787/health` (also `/api/health`).
 
-There are no migrations: tables are created on startup. After pulling a schema change, delete
-`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`. Startup and
-`python -m app.seed` refuse an outdated file with a message naming the missing columns.
+Canonical forecasting tables use versioned, idempotent SQLite migrations on startup.
+Legacy finance tables are checked for missing columns; startup refuses an outdated native
+schema with a `SchemaOutdated` message. Preserve and back up databases containing evidence,
+forecast history, or decisions before a reviewed native-schema upgrade. The explicitly enabled
+admin reset is a separate destructive operation for disposable demo databases, and recreates
+both finance and canonical forecasting tables before reseeding and stand-in interpretation.
 
 ## Test
 
@@ -64,7 +69,9 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `BACKEND_DB_PATH` | `backend/data/app.db` | SQLite file (directory is created; `data/` is gitignored) |
 | `BACKEND_PORT` | `8787` | Port used by `python -m app.main` |
 | `BACKEND_CORS_ORIGIN_REGEX` | localhost / 127.0.0.1, any port | Allowed browser origins; credentials are never allowed |
-| `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model), `unavailable`, or `forecasting_package` (per-team models from the repo-root forecasting package, chosen by rolling backtest; install with `.venv/bin/pip install -e ..`; `POST /api/forecasts/refresh` refits now; see `docs/forecasting-integration-notes.md` §6) |
+| `FORECAST_PROVIDER` | `engine` | Numerical `engine`, explicit simulated `placeholder`, or `unavailable` |
+| `FORECAST_DEMO` | off | `1` opts into deterministic synthetic usage/exposure/pricing fixtures |
+| `FORECAST_WORKER` | on | `0` disables scheduled and background processing for controlled tests |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
@@ -79,8 +86,11 @@ key from the environment only when `DROID_RUNNER=sdk`.
 
 ## Conventions
 
-- Money is `decimal.Decimal`, two decimal places, never float. On the wire it is a JSON string
+- Legacy financial ledger money is `decimal.Decimal`, two decimal places, never float. On the wire it is a JSON string
   (`"60000.00"`); in SQLite it is stored as a canonical string. Binding a float raises `TypeError`.
+- Canonical forecast views expose finite numeric estimates with declared units and basis; supported
+  commercial calculations price full pools before summaries. Compatibility adapters round only at
+  the legacy ledger boundary.
 - Every error response is `{"error": {"code", "message", "details"}}`.
 - All timestamps are timezone-aware UTC.
 
@@ -114,6 +124,10 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 | `GET /api/coverage` | completeness per team, unattributed bucket, contributing batches |
 | `GET /api/budget`, `GET /api/budget/history` | current allocations + version, immutable snapshots |
 | `GET /api/forecasts`, `POST /api/forecasts/snapshots` | ForecastProvider result (200 even when unavailable), citable snapshot |
+| `GET /api/forecast-views`, `POST /api/forecast-refreshes` | Immutable scoped views/current actuals; idempotent manual job |
+| `GET /api/forecast-refreshes/{id}` | Durable job status and failure |
+| `GET /api/forecast-runs/{id}/explanation`, `POST /api/forecast-runs/{id}/scenarios` | Stored source/calculation chain; isolated what-if job |
+| `GET /api/forecast-scenarios/{id}`, `GET/POST /api/forecast-evidence` | Scenario receipt; included/queued/context-only evidence and ingestion |
 | `GET /api/overview` | spend + budget + forecast; each section degrades independently |
 | `GET /api/documents[?q=]`, `GET /api/documents/{id}`, `.../by-key/{key}/versions` | corpus search/read |
 | `GET/POST /api/signals`, `GET/PATCH/DELETE /api/signals/{id}` | context signals with verified citations |
@@ -169,33 +183,32 @@ fake runner unless you set `DROID_RUNNER=sdk` yourself.
 
 ```bash
 # one command (from the repo root): generate if needed, load once into backend/data/uber.db, start the
-# backend with FORECAST_PROVIDER=forecasting_package and the Uber company name, stream live usage
+# backend (default FORECAST_PROVIDER=engine) with the Uber company name, stream live usage
 datagen/demo.sh                               # --interval 1 --speed 100 for a faster feed
 
 # or by hand
 python3 datagen/generate.py --quiet           # writes datagen/out/ (gitignored)
-backend/.venv/bin/pip install -e .            # the repo-root forecasting package (no third-party deps)
 backend/.venv/bin/python datagen/load_backend.py --db backend/data/uber.db --reset   # ~45 s
-cd backend && BACKEND_DB_PATH=data/uber.db FORECAST_PROVIDER=forecasting_package .venv/bin/python -m app.main
+cd backend && PYTHONPATH=../src:.:../agent BACKEND_DB_PATH=data/uber.db .venv/bin/python -m app.main
 ```
 
 - **Company.** The loader writes a `company_profile` row, so `/compat/api/company` says "Uber
   (simulated)" without env vars. `BACKEND_COMPANY_ID` / `BACKEND_COMPANY_NAME` (set by `demo.sh`) win
   over the row; Northstar is the default when neither exists.
-- **Forecasts** (`FORECAST_PROVIDER=forecasting_package`). Per team: projected = recorded spend to date
-  (live SQL per request, includes today) + the cached model's daily future for the rest of the period +
-  carried seat fees. The model is picked per team by a rolling backtest on history only (complete days
-  before the latest record; holdout files are never read); each forecast's `assumptions` name the
-  chosen model and its backtest WAPE. The cache refits in the background when a new complete day
-  arrives or late rows change history; requests never wait for it. Person forecasts and daily points are
-  the team's split by share of spend to date and sum exactly to the team. Refit now and see each team's
-  model and error:
+- **Forecasts** (default `FORECAST_PROVIDER=engine`). The numerical engine from the repo-root
+  `src/forecasting` package (install and `PYTHONPATH` as in Setup) publishes immutable runs; read paths
+  never recompute. No load step publishes: the worker queues the current week's job on its first poll
+  after startup, or request one by hand and poll it:
 
   ```bash
-  curl -X POST http://127.0.0.1:8787/api/forecasts/refresh
+  curl -X POST http://127.0.0.1:8787/api/forecast-refreshes -H 'Idempotency-Key: uber-1'
+  curl http://127.0.0.1:8787/api/forecast-refreshes/<id>
   ```
 
-  Details: [`docs/forecasting-integration-notes.md`](docs/forecasting-integration-notes.md) §6.
+  Repository usage carries no exposure or complete pricing pool, so team totals can stay qualified and
+  `/compat/api/forecasts` can report a team as unavailable; that is the honest result, not a bug.
+  Startup captures all current repository rows for the forecast store, which takes longer on ~331k rows.
+  Details: [`../docs/implementation/forecast-integration-runbook.md`](../docs/implementation/forecast-integration-runbook.md).
 - **Live interpretation of the corpus** (`python -m app.interpret`). Selects the period-relevant
   documents, runs one scoped `interpret_corpus` Droid run per batch, and stops before the credit cap:
 
@@ -224,19 +237,17 @@ cd backend && BACKEND_DB_PATH=data/uber.db FORECAST_PROVIDER=forecasting_package
 - **Live refresh in the UI.** In `frontend/.env.local` set `NEXT_PUBLIC_API_URL=http://localhost:8787/compat`
   and `NEXT_PUBLIC_LIVE_REFRESH_MS=1000`. The frontend currently clamps the interval to at least 2 s
   (`frontend/src/components/shell/app-shell.tsx`); the backend is built to answer every 1 s. Responses are
-  gzipped, and `/compat/api/spending`, `/people` and `/forecasts` keep their rendered JSON keyed by a data
+  gzipped, and `/compat/api/spending` and `/people` keep their rendered JSON keyed by a data
   stamp (write generation + latest usage row id) plus query parameters, so an unchanged poll is a cache hit
   ([`app/compat/cache.py`](app/compat/cache.py)).
 
-Measured on the default dataset (331,731 records, in-process TestClient, fake runner, 2026-10-25):
+Measured on the default dataset (331,731 records, in-process TestClient, fake runner, 2026-10-25; forecast
+reads are served from the engine's stored publication and are not response-cached here):
 
 | Request | First call | Warm (cached) |
 |---|---|---|
-| `POST /api/forecasts/refresh` (16 teams, backtest + fit) | 3.4 s | n/a |
 | `GET /compat/api/spending` (~3 MB JSON before gzip) | 358 ms | 4 ms |
-| `GET /compat/api/forecasts` | 127 ms | 16 ms |
 | `GET /compat/api/people` | 7 ms | 2 ms |
-| `GET /api/forecasts` | 48 ms | 52 ms (not response-cached) |
 
 After a live import the next spending read rebuilds once (~0.4-0.8 s), then is cached again.
 
@@ -295,7 +306,7 @@ judge feedback, and how it is handled or why it is out of scope, is listed in
 | Northstar spend, budgets, corpus, people | simulated (`value_kind=simulated`, `is_simulated=true`); 15 fictional people with `@northstar.example` emails |
 | Per-person projections | proportional split of the team placeholder by spend to date, not a person-level model |
 | Codex session parser | real format; real samples import as `measured` tokens, `unpriced_usage` unless priced |
-| Projections | `placeholder` (default, Northstar): shared projections, not a model. `forecasting_package`: per-team models chosen by rolling backtest on simulated history (Uber dataset); `unavailable` mode available |
+| Projections | `engine` (default): numerical engine publications from the `src/forecasting` package; `placeholder`: shared simulated projections, not a model; `unavailable` mode available |
 | Uber dataset | simulated by `datagen/` ("Uber (simulated)"); not Uber data |
 | Droid | `FakeDroidRunner` (deterministic) by default; `DROID_RUNNER=sdk` runs real Factory Droid (live-verified 2026-10-24); `runner_kind` always reported |
 | Identity | demo headers, not authentication; authority rules themselves are enforced |

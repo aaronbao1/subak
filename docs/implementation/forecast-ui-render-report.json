@@ -1,0 +1,250 @@
+{
+  "status": "passed",
+  "generated_at": "2026-10-25T07:36:27.793Z",
+  "harness": "frontend/tests/render-forecast.cjs",
+  "harness_sha256": "e9e923de80d53c2626181d1cbd83e703322beb87f4a9cd7d515e53508804eea5",
+  "frontend": "frontend",
+  "node": "v25.6.1",
+  "runtime": {
+    "next": {
+      "installed": "16.3.4",
+      "requested": "16.4.3"
+    },
+    "react": {
+      "installed": "19.2.8",
+      "requested": "19.3.0"
+    },
+    "react-dom": {
+      "installed": "19.2.8",
+      "requested": "19.3.0"
+    },
+    "zustand": {
+      "installed": "5.0.12",
+      "requested": "^5.0.16"
+    },
+    "recharts": {
+      "installed": "3.8.1",
+      "requested": "^3.10.1"
+    },
+    "typescript": {
+      "installed": "5.9.3",
+      "requested": "^5"
+    }
+  },
+  "sourceSha256": {
+    "frontend/src/components/context/context-card.tsx": "524f1783b042664f701ee57ad8d5c362c63ac82a6f954d9a869c19294f564403",
+    "frontend/src/components/context/source-brand.tsx": "91e93721d7d5fdfe97e9165b2fd0d7e8425c6b883486b98e14999becb7e86238",
+    "frontend/src/components/dashboard/forecast-derive.ts": "f312543071529bb0fa19501528ac6d1a02aa5719c1e9a1c3c675fe924571f996",
+    "frontend/src/components/evidence/derive.ts": "f63c75e2108542bc77f0ab0129329d7aac4eb838799ff01b57397af3215b7cc7",
+    "frontend/src/components/evidence/evidence-card.tsx": "dce91842e0943c60608543634ba774407361ed0dbd6c173e49d81d9d06e329f4",
+    "frontend/src/components/evidence/evidence-feed.tsx": "23013199fb44d0547a068d164bfb33ad0197bde1d83096f3406afdfd53d71c17",
+    "frontend/src/components/evidence/evidence-page.tsx": "f7dc29867255c38966176fd290c02576bc0274ab7a4d54968bb4fe1861943bd9",
+    "frontend/src/components/evidence/filter-row.tsx": "0c40686db7b022266ff7c04eb45e8aaece82f405e6823fc17d3658cdbdd0a6b5",
+    "frontend/src/components/evidence/impact-by-team.tsx": "0e8a24e2ffdd9da6c3a11b938eb656f5862deefba591914a6133f57b275b46ed",
+    "frontend/src/components/evidence/labels.ts": "5d5ed09a11b21585569d985af399849681921d60c3829babda86e3fdc3ef2092",
+    "frontend/src/components/evidence/macro-watch.tsx": "d5f1d44b923d63139598b3b68080dc8c9060eb4720b5353d30fd39312a59e00a",
+    "frontend/src/components/evidence/people-affected.tsx": "7d85f41bea52219399914924424941e8c4b86a5cdebb2cc59ad669380e9f1611",
+    "frontend/src/components/evidence/projection-strip.tsx": "bf31796dd340ccf7284155c185e4f516ecaceced0a03cc2d787fefab0c06c48b",
+    "frontend/src/components/evidence/skeleton.tsx": "7ebd5077aa45f22847346297b600719c47db312a3b016f8b33301898d0875313",
+    "frontend/src/components/forecast/forecast-panel.tsx": "75f3ca84bc9b237234003af54d60ec92473e6fafbd67b7dfb7b70bb3128acfad",
+    "frontend/src/components/person/signal-badges.tsx": "3ee75e4a132b96641ff18faae270b0656d4d46e5ffe64cef617df4180d15d91a",
+    "frontend/src/components/shared/components.ts": "a15567eb6ccc4a083c854270d071d4adb8e983a2a8b375b0c203aa0db75ed249",
+    "frontend/src/components/shared/motion.ts": "44aba8b41bd5fd4d7921a4417ad73aca90d15ca3680208aef4bb37d7b04cd0ea",
+    "frontend/src/components/shared/stat-tile.tsx": "c834d350474bf54122c736e7d10acf5dbed272593de26ad06367e487d1aeadcd",
+    "frontend/src/components/team/count-up.tsx": "17c13800e535a27aa625ee76e26389a0ff9214fb4a4085fec1afe01176dea196",
+    "frontend/src/components/team/labels.tsx": "35dc2cd9f2490091f7c0d4f1fa5c33974e0100b3ce193fec561d3b3eee945380",
+    "frontend/src/components/team/source-sheet.tsx": "f6aef65152962bf3754ada9e87f42152f65b97dd241d7d512e711b9985044904",
+    "frontend/src/components/ui/badge.tsx": "a1c4cdbd4f7734fe8e7d2fab2c61a462affdf8a8cb83ef743466d9b10ee193df",
+    "frontend/src/components/ui/button.tsx": "b2d7b3c1726f24caf9d0272dc3741e31050d9ffe51ced6c51d4aac7b1aee978e",
+    "frontend/src/components/ui/scroll-area.tsx": "e652587392e216b54cd7a6a226e098d4527b4cd4f32b909b6cf7f5ee5e2e3fd9",
+    "frontend/src/components/ui/select.tsx": "d1d7c79162a3c98511b8cfb2c57e786ae0912996f322633b8c6695f3ae78b250",
+    "frontend/src/components/ui/sheet.tsx": "2991fda5c2eec25063028964d7dd58f3790842de4c0b2acb61399a356817d435",
+    "frontend/src/components/ui/skeleton.tsx": "6f284543f3b0079df074a39e2f06e8163cbb42d8b69dfe74e7ba037a4b52e407",
+    "frontend/src/fixtures/generate.ts": "4cb8baafdd4f28482fc0cf6ba45d40efdf81b18a349ddc955bf564ff055a406d",
+    "frontend/src/fixtures/index.ts": "7905f44ceff61b8200ad926f75e418c62d3d71f928e93e611bb234b67e4a71d6",
+    "frontend/src/lib/data/http-client.ts": "b856e58558e5865aa01c8cddbeff8d88d67c4a7c57324b2fe38f7db15173b65c",
+    "frontend/src/lib/data/index.ts": "2e025c592b1ee808d19b41707ce41111b99b0cd08a989307e4c8b94a76df2eb6",
+    "frontend/src/lib/data/mock-client.ts": "57df20145a84199fa35d205ec96b4868115c6af63570b1798034b5f7c207ea11",
+    "frontend/src/lib/data/mock-forecast.ts": "42a75e5e650d15a55aa8473dd51473da25e5b8594406862c120d295cada23020",
+    "frontend/src/lib/data/scenario-job.ts": "13929c4654dcdc8a1e70fb7d1ac292634805c2357dca59f2e037fdc63fb773ad",
+    "frontend/src/lib/data/thread-merge.ts": "68c8c81d38f213727860b5df0d17cf97e864af5852fed872f878e98259b3a6f5",
+    "frontend/src/lib/format.ts": "f5ce4e134da32e217b2a4316043f70238aafda4315a31c9ceccf854a90f2bf10",
+    "frontend/src/lib/store.ts": "33bd6ddba44c9bdb50f17628d43c66d7eb7728ca3f3f61a9cba33d3d7bcbeac3",
+    "frontend/src/lib/utils.ts": "d1f1e0d62cb8d8d1e04c26e14de842d8a151f75812d81b046c65b5d1fe8e4b27"
+  },
+  "publication": {
+    "artifact": "artifacts/northstar-architecture-final/published-forecast.json",
+    "sha256": "c199e924cda48b9fe327b29ddf3bde45a102bfb45cd52ffd9b35a4c878cd09fd",
+    "scopes": [
+      {
+        "scope": {
+          "id": "northstar",
+          "name": "northstar",
+          "type": "company"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 5,
+        "html": null,
+        "bytes": 17658,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "engineering",
+          "name": "Engineering",
+          "type": "team"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 1,
+        "html": null,
+        "bytes": 15022,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "product",
+          "name": "Product",
+          "type": "team"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 5,
+        "html": null,
+        "bytes": 16843,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "research",
+          "name": "Research",
+          "type": "team"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 4,
+        "html": null,
+        "bytes": 16352,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "liam",
+          "name": "Liam Brooks",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 2,
+        "html": null,
+        "bytes": 15568,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "maya",
+          "name": "Maya Chen",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 4,
+        "html": null,
+        "bytes": 16352,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "noah",
+          "name": "Noah Patel",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 1,
+        "html": null,
+        "bytes": 15006,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "owen",
+          "name": "Owen Park",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 2,
+        "html": null,
+        "bytes": 15569,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "priya",
+          "name": "Priya Rao",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 3,
+        "html": null,
+        "bytes": 15937,
+        "passed": true
+      },
+      {
+        "scope": {
+          "id": "zoe",
+          "name": "Zoe Kim",
+          "type": "person"
+        },
+        "run_id": "run_3a8575ea9674462892b25e31c73c188c",
+        "daily_rows": 7,
+        "included_drivers": 1,
+        "html": null,
+        "bytes": 15004,
+        "passed": true
+      }
+    ],
+    "unavailable_scope_passed": true,
+    "pending_refresh_passed": true
+  },
+  "evidence_page": {
+    "status": "passed",
+    "artifact": ".coordination/architecture-audit-20261025/findings/frontend-evidence-payload.json",
+    "sha256": "03db360f9319aea5fad4165172195d5cec02d955e0cb340c4fe89c4761abe9b6",
+    "canonical_evidence_items": 3,
+    "legacy_context_items": 0,
+    "company_quarter": 1793.60827875,
+    "team_sum": 1743.74827875,
+    "shared_residual": 49.8599999999999,
+    "rendered_status_counts": {
+      "Included": 5,
+      "Queued": 1,
+      "Context only": 3
+    },
+    "new_canonical_source": "monday:item:982331",
+    "new_canonical_driver": "drv_87eece200f6fdff71744",
+    "queued_driver": "drv_4281a907ad31c12c2cdb",
+    "context_only_driver": "drv_9d7c5a3e3488d3253b77",
+    "html": null
+  },
+  "current_actuals_unavailable": {
+    "status": "passed",
+    "artifact": ".coordination/architecture-audit-20261025/current-actuals-unavailable.json",
+    "sha256": "e94195fe0b25be4e3aeef5b0e5866cfca7c0dd6125bc8d59094594817f02cafb",
+    "run_id": "run_85203dec5b134c24a5e0306ccb779cce",
+    "actuals_status": "unavailable",
+    "reason": "Current actuals could not be loaded. The issued forecast is unchanged.",
+    "html": null
+  },
+  "limitations": [
+    "Backend-generated synthetic fixture inputs do not establish enterprise accuracy or live-provider behavior.",
+    "Actual store initial snapshot and real Next contexts supplied for SSR; navigation forbidden.",
+    "No browser, hydration, effects, event-handler, network, chart geometry, CSS, font, or production-build verification.",
+    "Recharts has no layout dimensions during SSR; its dimension warnings are expected and do not verify charts.",
+    "Installed versus requested dependency versions are recorded; a successful run does not prove compatibility with other versions.",
+    "Optional cases reported not_requested were not exercised."
+  ]
+}

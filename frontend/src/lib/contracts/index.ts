@@ -129,7 +129,8 @@ export interface Budget {
 
 /**
  * Optional per-day projection for days that are not yet complete: the partial day (its full-day total) and every
- * later day in the period. For a full_period forecast, spend on complete days + the sum of these equals `projected`.
+ * later day in the period. With the default period_remainder coverage, a full_period forecast's complete-day
+ * spend + the sum of these equals `projected`. Published details explicitly declare a shorter horizon.
  */
 export interface ForecastDailyPoint {
   /** ISO date (YYYY-MM-DD) */
@@ -162,6 +163,8 @@ export interface Forecast {
   high?: number;
   /** Optional day-by-day breakdown of the projection for the days not yet complete. Same unit. */
   daily?: ForecastDailyPoint[];
+  /** Published detail covers only supplied dates; it is not a decomposition of the quarter total. */
+  dailyCoverage?: "period_remainder" | "published_detail";
   /** Trend-only projection before evidence adjustments; `projected = baseline + sum(adjustments)` when both are set. */
   baseline?: number;
   /** Evidence items that moved this projection, with the signed amount each contributed. */
@@ -324,3 +327,5 @@ export interface Company {
   budgetUnit: Unit;
   currentPeriod: Period;
 }
+
+export type { ForecastView, ForecastBundle, ForecastScope, ForecastPoint, ForecastBand, ForecastDriver, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, ForecastScenarioReceipt, ForecastScenarioResponse } from "./forecast-view";

@@ -86,6 +86,8 @@ class ContextEvent:
 
     def __post_init__(self):
         _aware(self.available_at)
+        if type(self.approval_verified) is not bool:
+            raise ValueError('approval_verified must be bool')
         for stamp in (self.ingested_at,self.reviewed_at,self.publication_at):
             if stamp is not None:
                 _aware(stamp)
@@ -205,9 +207,22 @@ class ContextLedger:
         eligible = [e for e in self._events.values() if e.tenant == tenant
                     and e.known_at <= as_of]
         superseded = {eid for e in eligible for eid in e.supersedes}
-        # Supersession of one assertion also retires canonical forwarded copies.
-        old_signatures = {_duplicate_signature(e) for e in eligible if e.event_id in superseded}
-        superseded.update(e.event_id for e in eligible if _duplicate_signature(e) in old_signatures)
+        # Supersession retires every copy of the predecessor's assertion. A
+        # same-content reaffirmation is a new authority action, but must itself
+        # retire if a later action supersedes one of its canonical copies.
+        # Ledger insertion order breaks equal knowledge-time ties: predecessors
+        # must already exist when a supersession action is added.
+        by_id = {e.event_id:e for e in eligible}
+        order = {e.event_id:(e.known_at,index) for index,e in enumerate(eligible)}
+        retired_at = {}
+        for action in eligible:
+            for predecessor_id in action.supersedes:
+                signature = _duplicate_signature(by_id[predecessor_id])
+                retired_at[signature] = max(retired_at.get(signature,order[action.event_id]),order[action.event_id])
+        for event in eligible:
+            retirement = retired_at.get(_duplicate_signature(event))
+            if retirement is not None and (not event.supersedes or order[event.event_id] < retirement):
+                superseded.add(event.event_id)
         active = [e for e in eligible if e.event_id not in superseded]
         def visible(event):
             return all(principal in self._access[(tenant,r.document_id,r.version)]
