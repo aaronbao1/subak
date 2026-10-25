@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { Team, Unit } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
+import { displayCopy, displaySourceText, displayReference } from "@/lib/display-copy";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CLAIM_LABEL, CONFIDENCE_LABEL, fmtDate, Tag } from "@/components/team/labels";
@@ -44,19 +45,19 @@ function AdjustmentSummary({ adjustments, teams, title }: { adjustments: ItemAdj
         <span className="text-muted-foreground">Moves</span>
         <span className="text-foreground">{adjustments.length} team projections</span>
         <span className="text-muted-foreground">by</span>
-        <span className={cn("text-foreground", total > 0 && "text-warning")}>{signedAmount(total, unit)}</span>
+        <span className={cn("text-foreground", total > 0 ? "text-warning" : total < 0 ? "text-success" : "")}>{signedAmount(total, unit)}</span>
         <span className="text-muted-foreground">in total</span>
       </p>
       <ul className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground">
         {shown.map((a, i) => (
           <li key={`${a.teamId}-${a.level}`} className="inline-flex items-center gap-x-2">
             {i > 0 && <span aria-hidden>·</span>}
-            <span><span className="text-foreground/80">{teams.find((t) => t.id === a.teamId)?.name ?? a.teamId}</span> {signedAmount(a.amount, a.unit)}</span>
+            <span><span className="text-foreground/80">{displaySourceText(teams.find((t) => t.id === a.teamId)?.name, displayReference(a.teamId, "Team"))}</span> {signedAmount(a.amount, a.unit)}</span>
           </li>
         ))}
         {more > 0 && <li className="inline-flex items-center gap-x-2"><span aria-hidden>·</span><span>+{more} more</span></li>}
       </ul>
-      {notes.map((n) => <p key={n} className="text-muted-foreground">— {n}</p>)}
+      {notes.map((n) => <p key={n} className="text-muted-foreground">— {displayCopy(n)}</p>)}
     </div>
   );
 }
@@ -86,10 +87,10 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
         className,
       )}
     >
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <h3 id={`${item.id}-title`} className={cn("min-w-0 text-base leading-snug font-medium", superseded && "text-muted-foreground line-through decoration-muted-foreground")}>
-            {item.title}
+            {displaySourceText(item.title, "Context update")}
           </h3>
           {superseded ? <Badge variant="outline" className="shrink-0 text-muted-foreground">Superseded</Badge> : <EffectChip effect={item.expectedEffect} className="shrink-0" />}
         </div>
@@ -98,15 +99,17 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
           <p className="text-xs text-muted-foreground">
             Replaced by{" "}
             {newer ? (
-              <a href={`#${newer.id}`} className="text-foreground/80 underline underline-offset-4 decoration-border-strong hover:decoration-foreground">{newer.title}</a>
+              <a href={`#${newer.id}`} className="text-foreground/80 underline underline-offset-4 decoration-border-strong hover:decoration-foreground">{displaySourceText(newer.title, "Context update")}</a>
             ) : (
-              <span className="text-foreground/80">{item.supersededBy}</span>
+              <span className="text-foreground/80">{displayReference(item.supersededBy, "Updated context")}</span>
             )}
             . Not current; never cited in the projection.
           </p>
         )}
 
-        <p className={cn("text-sm leading-relaxed", superseded ? "text-muted-foreground" : "text-foreground/80")}>{item.summary}</p>
+        <p className={cn("line-clamp-2 text-sm leading-relaxed", superseded ? "text-muted-foreground" : "text-foreground/80")}>{displaySourceText(item.summary)}</p>
+
+        <details className="text-xs"><summary className="cursor-pointer text-muted-foreground hover:text-foreground">Explanation and affected teams</summary><div className="mt-3 space-y-3"><p className="text-sm leading-relaxed text-muted-foreground">{displaySourceText(item.summary)}</p>
 
         {/* Badge row: every qualifier is text, so nothing here depends on color. */}
         <div className="flex flex-wrap items-center gap-1.5">
@@ -132,8 +135,8 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
               return (
                 <span key={p.id} className="inline-flex items-center gap-1.5">
                   {i > 0 && <span aria-hidden className="text-muted-foreground">·</span>}
-                  <Link href={`/teams/${p.teamId}/people/${p.id}`} className="underline-offset-4 decoration-border-strong hover:underline">{p.name}</Link>
-                  {team && <span className="text-muted-foreground">({team.name})</span>}
+                  <Link href={`/teams/${p.teamId}/people/${p.id}`} className="underline-offset-4 decoration-border-strong hover:underline">{displaySourceText(p.name, "Person")}</Link>
+                  {team && <span className="text-muted-foreground">({displaySourceText(team.name, "Team")})</span>}
                 </span>
               );
             })
@@ -144,14 +147,14 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
               <span key={t.id} className="inline-flex items-center gap-1.5">
                 {i > 0 && <span aria-hidden className="text-muted-foreground">·</span>}
                 <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: t.color }} />
-                <Link href={`/teams/${t.id}`} className="underline-offset-4 decoration-border-strong hover:underline">{t.name}</Link>
+                <Link href={`/teams/${t.id}`} className="underline-offset-4 decoration-border-strong hover:underline">{displaySourceText(t.name, "Team")}</Link>
               </span>
             ))
           ) : (
             <span className="text-muted-foreground">no team named</span>
           )}
           <span aria-hidden className="text-muted-foreground">·</span>
-          {magnitude ? <span>{magnitude}</span> : <span className="text-muted-foreground">size not stated</span>}
+          {magnitude ? <span>{displaySourceText(magnitude)}</span> : <span className="text-muted-foreground">size not stated</span>}
           {item.effectiveFrom && <><span aria-hidden className="text-muted-foreground">·</span><span>from {fmtDate(item.effectiveFrom)}</span></>}
         </div>
 
@@ -161,13 +164,13 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
             {adjustments.map((a) => {
               const team = teams.find((t) => t.id === a.teamId);
               return (
-                <li key={`${a.teamId}-${a.level}`} title={a.note} className="inline-flex flex-wrap items-center gap-x-1.5">
+                <li key={`${a.teamId}-${a.level}`} title={displayCopy(a.note)} className="inline-flex flex-wrap items-center gap-x-1.5">
                   <span className="text-muted-foreground">Moves the</span>
-                  <span className="text-foreground">{team?.name ?? a.teamId}</span>
+                  <span className="text-foreground">{displaySourceText(team?.name, displayReference(a.teamId, "Team"))}</span>
                   <span className="text-muted-foreground">projection</span>
-                  <span className={cn("text-foreground", a.amount > 0 && "text-warning")}>{signedAmount(a.amount, a.unit)}</span>
+                  <span className={cn("text-foreground", a.amount > 0 ? "text-warning" : a.amount < 0 ? "text-success" : "")}>{signedAmount(a.amount, a.unit)}</span>
                   {a.level === "person" && <span className="text-muted-foreground">(summed from people)</span>}
-                  {a.note && <span className="text-muted-foreground">— {a.note}</span>}
+                  {a.note && <span className="text-muted-foreground">— {displayCopy(a.note)}</span>}
                 </li>
               );
             })}
@@ -178,13 +181,14 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {range && <span className="num">{range}</span>}
           {range && attribution && <span aria-hidden>·</span>}
-          {attribution && <span className="text-foreground/80">{attribution}</span>}
+          {attribution && <span className="text-foreground/80">{displaySourceText(attribution)}</span>}
           {!range && !attribution && <span>No date or attribution stated</span>}
         </div>
 
         {item.uncertainty && (
-          <p className="text-xs text-muted-foreground"><span className="text-foreground/80">Unresolved:</span> {item.uncertainty}</p>
+          <p className="text-xs text-muted-foreground"><span className="text-foreground/80">Unresolved:</span> {displaySourceText(item.uncertainty, "Additional context needs review.")}</p>
         )}
+        </div></details>
       </div>
 
       {sources.length > 0 && (
@@ -200,10 +204,10 @@ export function EvidenceCard({ row, unit, onViewSource, className }: Props) {
                   <span className="flex min-w-0 flex-col gap-0.5 text-xs">
                     <span className="flex min-w-0 items-center gap-2">
                       <SourceBadge integration={sourceOf(s)} size="xs" />
-                      <span className="truncate text-foreground/80">{s.title}</span>
+                      <span className="truncate text-foreground/80">{displaySourceText(s.title, "Source document")}</span>
                       {s.date && <span className="num shrink-0 text-muted-foreground">{fmtDate(s.date, { year: true })}</span>}
                     </span>
-                    {s.excerpt && <span className="line-clamp-2 text-muted-foreground">&ldquo;{s.excerpt}&rdquo;</span>}
+                    {s.excerpt && <span className="line-clamp-2 text-muted-foreground">&ldquo;{displaySourceText(s.excerpt)}&rdquo;</span>}
                   </span>
                   <Button variant="ghost" size="xs" className="-mr-2 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => onViewSource(s.documentId)}>
                     Open <ChevronRight className="size-3.5" strokeWidth={1.5} />

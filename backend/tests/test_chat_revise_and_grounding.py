@@ -102,7 +102,7 @@ def test_negative_amount_through_chat_drafts_nothing(c):
 def test_revise_prefill_on_one_pending_proposal_asks_what_to_change(c):
     pid = say(c, "add 50k prioritizing research")["proposalId"]
     reply = say(c, "Revise this proposal: ")
-    assert reply.get("proposalId") is None and f"What should change in {pid}?" in reply["content"]
+    assert reply.get("proposalId") is None and "What should change in this draft?" in reply["content"]
     assert get(c, f"proposals/{pid}")["status"] == "proposed"
 
 
@@ -111,8 +111,9 @@ def test_revise_with_a_change_replaces_the_open_proposal(c):
     reply = say(c, "Revise this proposal: make it 40k for research instead")
     new = reply["proposalId"]
     assert new and new != pid, reply["content"]
-    assert reply["content"].startswith(f"**Read as:** revise {pid}: add $40,000.00 to the envelope")
-    assert f"{new} replaces {pid}" in reply["content"]
+    assert reply["content"].startswith("**Read as:** revise the selected draft: add $40,000.00 to the envelope")
+    assert "This draft replaces the earlier version" in reply["content"]
+    assert "prop_" not in reply["content"]
     p = get(c, f"proposals/{new}")
     assert p["revisesProposalId"] == pid and p["addedAmount"] == 40000 and p["status"] == "proposed"
     assert get(c, f"proposals/{pid}")["status"] == "revised"
@@ -134,7 +135,7 @@ def test_revise_prefill_on_a_stale_proposal_refreshes_that_proposal(c):
     assert c.post(f"{API}/proposals/{add}/apply", json={}).status_code == 200
     assert get(c, f"proposals/{tid}")["status"] == "stale"
     reply = say(c, "Revise this proposal: ")
-    assert reply["content"].startswith(f"**Read as:** refresh stale proposal {tid}"), reply["content"]
+    assert reply["content"].startswith("**Read as:** refresh the outdated draft"), reply["content"]
     new = reply["proposalId"]
     assert new and get(c, f"proposals/{new}")["revisesProposalId"] == tid
 
@@ -145,12 +146,12 @@ def test_revise_prefill_with_several_open_proposals_asks_which(c):
     reply = say(c, "Revise this proposal: ")
     assert reply.get("proposalId") is None
     assert "Which proposal should I revise?" in reply["content"]
-    assert tid in reply["content"] and aid in reply["content"]
+    assert "Select a draft" in reply["content"] and "prop_" not in reply["content"]
     assert {p["id"]: p["status"] for p in get(c, "proposals")} == {tid: "proposed", aid: "proposed"}
     # naming one revises that one, keeping its mode (a transfer: the amount caps what moves)
     reply = say(c, f"Revise {tid}: 10k")
     new = reply["proposalId"]
-    assert reply["content"].startswith(f"**Read as:** revise {tid}: redistribute"), reply["content"]
+    assert reply["content"].startswith("**Read as:** revise the selected draft: redistribute"), reply["content"]
     p = get(c, f"proposals/{new}")
     assert p["kind"] == "redistribute" and p["revisesProposalId"] == tid
     statuses = {p["id"]: p["status"] for p in get(c, "proposals")}
@@ -166,7 +167,7 @@ def test_refresh_with_several_stale_proposals_asks_then_refreshes_the_named_one(
     reply = say(c, "refresh the proposal")
     assert reply.get("proposalId") is None and "Which proposal should I refresh?" in reply["content"]
     reply = say(c, f"refresh {older}")
-    assert reply["content"].startswith(f"**Read as:** refresh stale proposal {older}")
+    assert reply["content"].startswith("**Read as:** refresh the outdated draft")
     assert get(c, f"proposals/{reply['proposalId']}")["revisesProposalId"] == older
     assert get(c, f"proposals/{newer}")["status"] == "stale"
 

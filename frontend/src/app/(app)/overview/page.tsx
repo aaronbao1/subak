@@ -1,122 +1,45 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
-import { companyQuarterProjection, scopeView } from "@/components/dashboard/forecast-derive";
-import { ForecastPanel } from "@/components/forecast/forecast-panel";
-import { useAppStore } from "@/lib/store";
-import { Hero, HeroSkeleton } from "@/components/dashboard/hero";
-import { SpendByTeamChart, SpendByTeamChartSkeleton } from "@/components/dashboard/spend-by-team-chart";
-import { TeamBreakdownPanel } from "@/components/dashboard/team-breakdown-panel";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { CostComponents, CostComponentsSkeleton } from "@/components/dashboard/cost-components";
-import { RecentEvidence } from "@/components/dashboard/recent-evidence";
+import { useEffect, useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { scopeView } from "@/components/dashboard/forecast-derive";
+import { WeeklySpendOverview } from "@/components/forecast/weekly-spend-overview";
+import { BudgetOverviewBar } from "@/components/dashboard/budget-overview-bar";
+import { BudgetRequestsOverview } from "@/components/requests/budget-requests-overview";
+import { TeamAllocationSummary } from "@/components/dashboard/team-allocation-summary";
+import { CostComponents } from "@/components/dashboard/cost-components";
 import { ModelBreakdown } from "@/components/dashboard/model-breakdown";
-import { buildDailyRows, completion, dateLabel, summarizeTeams } from "@/components/dashboard/derive";
-import { summarizePeople } from "@/components/person/derive";
-import { cn } from "@/lib/utils";
-import { riseDelay, useMounted } from "@/components/shared/motion";
-
+import { DailySpendByTeam } from "@/components/dashboard/daily-spend-by-team";
+import { AllocationWorkbench } from "@/components/allocation/allocation-workbench";
+import { HeroSkeleton } from "@/components/dashboard/hero";
+import { useAppStore } from "@/lib/store";
+import { defaultWeeklyHistoryQuery } from "@/lib/data/weekly-history";
+import { Button } from "@/components/ui/button";
+import { PageTitle } from "@/components/shared/stat-tile";
 
 export default function OverviewPage() {
-  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant, forecastBundle } = useAppStore();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const toggleTeam = useCallback((id: string) => setSelectedId((cur) => (cur === id ? null : id)), []);
-  // Entrance: hero, chart and cost components rise in with a 60ms stagger (0 / 60 / 120ms, 700ms each, done by 820ms).
-  // The class is only applied once the client has mounted, so it never flashes during hydration and never replays on re-render.
-  const mounted = useMounted();
-  const enter = (i: number) => ({ className: cn("min-w-0", mounted ? "animate-rise" : "opacity-0"), style: riseDelay(i) });
-
-  const unit = company?.budgetUnit ?? budgets[0]?.unit ?? "usd";
-  const summaries = useMemo(() => summarizeTeams(teams, spending, budgets, forecasts), [teams, spending, budgets, forecasts]);
-  const period = forecasts.find((f) => f.period.label)?.period ?? budgets.find((b) => b.period.label)?.period ?? company?.currentPeriod;
-  // The chart gets the full history so finance can scroll back and see growth; totals stay on the period.
-  const rows = useMemo(() => buildDailyRows(teams, spendingHistory, forecasts, period), [teams, spendingHistory, forecasts, period]);
-  const { asOf, partialDates } = useMemo(() => completion(spending), [spending]);
-
-  const spent = spending.filter(r => r.unit === unit).reduce((sum, r) => sum + r.amount, 0);
-  const envelope = budgets.length ? budgets.reduce((s, b) => s + b.allocated, 0) : undefined;
-  const withProjection = summaries.filter((s) => typeof s.projected === "number");
-  // Teams without a projection are counted at their spend to date (a floor, never a forecast), so the company
-  // projection can never read below the company spend. The hero names those teams and says they are counted at spend.
-  const legacyProjected = withProjection.length
-    ? summaries.reduce((s, t) => s + (typeof t.projected === "number" ? t.projected : t.spent), 0)
-    : undefined;
-  const issuedCompany = scopeView(forecastBundle, "company");
-  const projected = companyQuarterProjection(forecastBundle, legacyProjected);
-  const unavailableCount = teams.length - withProjection.length;
-  const unavailableTeams = useMemo(() => summaries.filter((s) => typeof s.projected !== "number").map((s) => s.team.name), [summaries]);
-  const hasPlaceholder = forecasts.some((f) => f.origin === "placeholder");
-  const periodRange = period ? `${dateLabel(period.start)} to ${dateLabel(period.end)}` : undefined;
-
-  // Drop a selection that no longer exists (e.g. dataset switched).
-  const selected = selectedId !== null ? summaries.find((s) => s.team.id === selectedId) ?? null : null;
-  const selectedPeople = useMemo(
-    () => (selected && period ? summarizePeople(people, selected.team.id, spending, spendingHistory, personForecasts, context, period, selected.forecast) : []),
-    [selected, period, people, spending, spendingHistory, personForecasts, context],
-  );
-
-  if (!loaded) {
-    return (
-      <div className="min-w-0 space-y-6">
-        <HeroSkeleton />
-        <SpendByTeamChartSkeleton />
-        <CostComponentsSkeleton />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-w-0 space-y-6">
-      <ForecastPanel />
-      <div {...enter(0)}>
-        <Hero
-          unit={unit} spent={spent} envelope={envelope} projected={projected}
-          projectedTeamCount={withProjection.length} unavailableCount={unavailableCount} unavailableTeams={unavailableTeams} teamCount={teams.length}
-          periodLabel={period?.label} periodRange={periodRange} asOf={asOf}
-          hasPlaceholder={hasPlaceholder}
-          projectionCoverageNote={issuedCompany ? "Issued conditional quarter includes shared residuals. Missing inputs leave the company projection unavailable; current actuals do not rebase the issued forecast." : undefined}
-          summaries={summaries}
-        />
-      </div>
-
-      {teams.length === 0 ? (
-        <div className="flex flex-col items-center rounded-xl border border-border bg-card px-6 py-16 text-center">
-          <p className="eyebrow">No teams yet</p>
-          <p className="mt-3 text-sm text-muted-foreground">Add teams and budgets to start planning.</p>
-          <Button variant="outline" className="mt-6" nativeButton={false} render={<Link href="/teams" />}>Go to teams</Button>
-        </div>
-      ) : (
-        <>
-          <section aria-label="Daily spend" {...enter(1)}>
-            <SpendByTeamChart
-              teams={teams} rows={rows} partialDates={partialDates} unit={unit} period={period}
-              selectedId={selectedId} onSelect={toggleTeam} placeholder={hasPlaceholder}
-            />
-          </section>
-
-          {/* Team breakdown slides in from the right when a line or legend chip is clicked. */}
-          {/* Non-modal so the chart and hero stay visible and clickable while a team's breakdown is open. */}
-          <Sheet open={selected !== null} onOpenChange={(open) => { if (!open) setSelectedId(null); }} modal={false} disablePointerDismissal>
-            <SheetContent side="right" overlay={false} showCloseButton={false} className="w-full gap-0 overflow-y-auto border-l border-border p-0 shadow-2xl sm:max-w-md">
-              {selected && <SheetTitle className="sr-only">{selected.team.name} breakdown</SheetTitle>}
-              <TeamBreakdownPanel summary={selected} unit={unit} onClose={() => setSelectedId(null)} askAssistant={askAssistant} people={selectedPeople} />
-            </SheetContent>
-          </Sheet>
-
-          <div {...enter(2)}>
-            <RecentEvidence items={context} teams={teams} people={people} />
-          </div>
-
-          <div {...enter(3)}>
-            <CostComponents spending={spending} unit={unit} />
-          </div>
-
-          <div {...enter(4)}>
-            <ModelBreakdown spending={spending} unit={unit} />
-          </div>
-        </>
-      )}
+  const { loaded, company, teams, spending, forecastBundle, forecastRefresh, forecastError, refreshForecast, weeklyHistory, weeklyHistoryState, weeklyHistoryError, loadWeeklyHistory } = useAppStore();
+  const [allocation, setAllocation] = useState<{ open: boolean; teamId?: string }>({ open: false });
+  const [initialAsOf] = useState(() => new Date().toISOString());
+  const issued = scopeView(forecastBundle, "company");
+  const asOf = String(issued?.publication?.information_cutoff ?? issued?.information_cutoff ?? issued?.generated_at ?? initialAsOf);
+  const query = useMemo(() => defaultWeeklyHistoryQuery(asOf, { type: "company", id: company?.id ?? null }, 4, 3), [asOf, company?.id]);
+  useEffect(() => { if (loaded) void loadWeeklyHistory(query); }, [loaded, query, loadWeeklyHistory]);
+  const updatingForecast = ["pending", "queued", "running"].includes(forecastRefresh?.status ?? "");
+  if (!loaded) return <div className="space-y-6"><PageTitle title="Overview" /><HeroSkeleton /></div>;
+  return <div className="min-w-0 space-y-5">
+    <PageTitle title="Overview" actions={<Button onClick={() => setAllocation({ open: true })} className="bg-brand text-brand-foreground hover:bg-brand-hover"><SlidersHorizontal className="size-4" />Adjust allocations</Button>} />
+    <BudgetOverviewBar />
+    {forecastError && <p role="alert" className="rounded-md border border-warning/30 px-4 py-3 text-sm">{forecastError}</p>}
+    <WeeklySpendOverview history={weeklyHistory} loading={weeklyHistoryState === "loading" || weeklyHistoryState === "idle"} error={weeklyHistoryError} onRetry={() => void loadWeeklyHistory(query)} onUpdateForecast={() => void refreshForecast()} updatingForecast={updatingForecast} />
+    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)]">
+      <TeamAllocationSummary onAdjust={teamId => setAllocation({ open: true, teamId })} compact showBudgetSummary={false} />
+      <BudgetRequestsOverview />
     </div>
-  );
+    {company && <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
+      <CostComponents spending={spending} period={company.currentPeriod} unit={company.budgetUnit} />
+      <ModelBreakdown spending={spending} period={company.currentPeriod} unit={company.budgetUnit} />
+    </div>}
+    {company && <DailySpendByTeam records={spending} teams={teams} period={company.currentPeriod} unit="usd" />}
+    <AllocationWorkbench open={allocation.open} initialTeamId={allocation.teamId} onOpenChange={open => setAllocation(previous => ({ ...previous, open }))} />
+  </div>;
 }

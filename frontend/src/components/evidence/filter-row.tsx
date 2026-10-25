@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import type { Team } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,15 +31,15 @@ export function FilterRow({ filters, teams, onChange, shown, total }: Props) {
       <div className="flex items-center gap-2">
         <span className="eyebrow">Team</span>
         <Select value={filters.team ?? ALL_TEAMS} onValueChange={(v) => set("team", v && v !== ALL_TEAMS ? v : undefined)}>
-          <SelectTrigger size="sm" aria-label="Team" className="h-8 min-w-36 rounded-md border-border bg-popover text-xs hover:border-border-strong dark:bg-popover dark:hover:bg-popover">
-            <SelectValue>{(v: string | null) => (v && v !== ALL_TEAMS ? teams.find((t) => t.id === v)?.name ?? v : "All teams")}</SelectValue>
+          <SelectTrigger size="sm" aria-label="Team" className="h-8 min-w-36 rounded-md border-border bg-popover text-xs hover:border-border-strong">
+            <SelectValue>{(v: string | null) => (v && v !== ALL_TEAMS ? displaySourceText(teams.find((t) => t.id === v)?.name, "Selected team") : "All teams")}</SelectValue>
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={false}>
             <SelectItem value={ALL_TEAMS}>All teams</SelectItem>
             {teams.map((t) => (
               <SelectItem key={t.id} value={t.id}>
                 <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: t.color }} />
-                {t.name}
+                {displaySourceText(t.name, "Team")}
               </SelectItem>
             ))}
           </SelectContent>

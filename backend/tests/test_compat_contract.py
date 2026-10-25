@@ -32,7 +32,9 @@ def parse_ts(text: str) -> tuple[dict[str, dict[str, tuple[bool, str]]], dict[st
     """-> ({interface: {field: (optional, type_text)}}, {alias: {string literals}})."""
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     text = re.sub(r"//[^\n]*", "", text)
-    aliases = {name: set(_LITERALS.findall(body)) for name, body in _ALIAS.findall(text)}
+    # Only a literal-union alias is an enum. Object types may contain their own literal fields.
+    aliases = {name: set(_LITERALS.findall(body)) for name, body in _ALIAS.findall(text)
+               if "{" not in body and "import(" not in body}
     interfaces = {name: {f: (bool(opt), t.strip()) for f, opt, t in _FIELD.findall(body)}
                   for name, body in _IFACE.findall(text)}
     return interfaces, aliases
@@ -76,7 +78,8 @@ def _check(text: str) -> list[str]:
                 continue
             if optional == ours[f].is_required():
                 problems.append(f"{name}.{f}: TS optional={optional}, compat required={ours[f].is_required()}")
-            ts_lits = set(_LITERALS.findall(ts_type)) or aliases.get(ts_type.strip().removesuffix("[]"), set())
+            ts_lits = ((set(_LITERALS.findall(ts_type)) if "import(" not in ts_type and "{" not in ts_type else set())
+                       or aliases.get(ts_type.strip().removesuffix("[]"), set()))
             if ts_lits:
                 mine = _literals(ours[f].annotation)
                 if mine != ts_lits:

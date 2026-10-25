@@ -41,6 +41,7 @@ from app.schemas.people import PersonOut
 from app.schemas.proposals import ProposalOut
 from app.schemas.signals import ContextSignalOut, SignalList
 from app.schemas.spending import SpendRecordList, SpendSummary
+from app.schemas.usage import DailyUsageResponse
 from app.seed.northstar import seed
 
 DEFAULT_OUT = BACKEND_ROOT / "contract"
@@ -69,6 +70,7 @@ SCHEMAS: dict[str, Any] = {
     "TeamMappingUpsertResult": TeamMappingUpsertResult,
     "BudgetState": BudgetState, "BudgetHistory": BudgetHistory, "SpendSummary": SpendSummary,
     "SpendRecordList": SpendRecordList, "CoverageReport": CoverageReport, "ImportResult": ImportResult,
+    "DailyUsageResponse": DailyUsageResponse,
     "ForecastResult": ForecastResult, "ForecastSnapshotOut": ForecastSnapshotOut, "Overview": Overview,
     "DocumentList": DocumentList, "DocumentDetail": DocumentDetail, "DocumentVersions": DocumentVersions,
     "DocumentIngestResult": DocumentIngestResult,
@@ -395,6 +397,11 @@ def scenario_main(r: Recorder) -> None:
     r.call("document_duplicate", "POST", "/api/documents", headers=IMPORTER, json_body=doc,
            schema="DocumentIngestResult", expect=200,
            description="identical content and metadata again: created=false, nothing changes")
+    r.call("usage_daily", "GET", "/api/usage/daily", schema="DailyUsageResponse", expect=200,
+           params={"scope_type": "team", "scope_id": "research", "start_date": "2026-10-19",
+                   "end_date_exclusive": "2026-10-22"},
+           description="bounded UTC observed daily ledger; exact simulated costs, separate included notional, "
+                       "unknown token telemetry and missing days never become known zero")
 
 
 def scenario_addition(r: Recorder) -> None:

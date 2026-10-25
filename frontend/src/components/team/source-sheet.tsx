@@ -1,4 +1,5 @@
 "use client";
+import { displayCopy, displayReference, displaySourceText } from "@/lib/display-copy";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { History } from "lucide-react";
@@ -16,7 +17,7 @@ interface Props {
 }
 
 type Loaded =
-  | { id: string; status: "missing" }
+  | { id: string; status: "missing" | "error" }
   | { id: string; status: "ready"; doc: CompanyDocument; newer?: CompanyDocument };
 
 type LoadState = Loaded | { status: "loading" };
@@ -38,21 +39,27 @@ const MARKDOWN =
 /** Full source document in a side sheet, rendered from markdown with origin, date and supersession notice. */
 export function SourceSheet({ documentId, onClose }: Props) {
   const [loaded, setLoaded] = useState<Loaded | undefined>();
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!documentId) return;
     let cancelled = false;
     (async () => {
-      const client = getDataClient();
-      const doc = await client.getDocument(documentId);
-      if (cancelled) return;
-      if (!doc) { setLoaded({ id: documentId, status: "missing" }); return; }
-      const newer = doc.supersededBy ? await client.getDocument(doc.supersededBy) : undefined;
-      if (cancelled) return;
-      setLoaded({ id: documentId, status: "ready", doc, newer });
+      try {
+        const client = getDataClient();
+        const doc = await client.getDocument(documentId);
+        if (cancelled) return;
+        if (!doc) { setLoaded({ id: documentId, status: "missing" }); return; }
+        // A failed linked-version lookup must not hide the received source itself.
+        const newer = doc.supersededBy ? await client.getDocument(doc.supersededBy).catch(() => undefined) : undefined;
+        if (cancelled) return;
+        setLoaded({ id: documentId, status: "ready", doc, newer });
+      } catch {
+        if (!cancelled) setLoaded({ id: documentId, status: "error" });
+      }
     })();
     return () => { cancelled = true; };
-  }, [documentId]);
+  }, [documentId, attempt]);
 
   // Loading is derived: the stored result belongs to a different (or no) document id.
   const state: LoadState = loaded && loaded.id === documentId ? loaded : { status: "loading" };
@@ -76,10 +83,18 @@ export function SourceSheet({ documentId, onClose }: Props) {
           </>
         )}
 
+        {state.status === "error" && <>
+          <SheetHeader className="pr-12">
+            <SheetTitle>Source could not be loaded</SheetTitle>
+            <SheetDescription className="text-xs">The source is temporarily unavailable. Try again.</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pt-3"><button type="button" onClick={() => { setLoaded(undefined); setAttempt(value => value + 1); }} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Retry source</button></div>
+        </>}
+
         {state.status === "missing" && (
           <SheetHeader className="pr-12">
             <SheetTitle>Source not found</SheetTitle>
-            <SheetDescription className="text-xs">No document with id <code className="rounded-sm bg-popover px-1 font-mono text-xs">{documentId}</code> is available.</SheetDescription>
+            <SheetDescription className="text-xs">The requested document is unavailable. Reference: <code className="rounded-sm bg-popover px-1 font-mono text-xs">{displayReference(documentId, "Saved document")}</code>.</SheetDescription>
           </SheetHeader>
         )}
 
@@ -91,11 +106,11 @@ export function SourceSheet({ documentId, onClose }: Props) {
                 <span aria-hidden className="text-muted-foreground/60">·</span>
                 <div className="eyebrow">{KIND_LABEL[state.doc.kind]}</div>
               </div>
-              <SheetTitle className="leading-snug">{state.doc.title}</SheetTitle>
+              <SheetTitle className="leading-snug">{displaySourceText(state.doc.title, "Source document")}</SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-x-1.5 text-xs">
                 <span className="num">{fmtDate(state.doc.date, { year: true })}</span>
                 <span aria-hidden>·</span>
-                <span>{state.doc.origin}</span>
+                <span>{displayCopy(state.doc.origin, "Saved source")}</span>
               </SheetDescription>
             </SheetHeader>
             <ScrollArea className="min-h-0 flex-1">
@@ -106,14 +121,14 @@ export function SourceSheet({ documentId, onClose }: Props) {
                     <div>
                       <div className="font-medium text-foreground/80">Superseded document</div>
                       <p className="mt-0.5">
-                        Replaced by <span className="text-foreground/80">{state.newer?.title ?? state.doc.supersededBy}</span>
+                        Replaced by <span className="text-foreground/80">{state.newer ? displaySourceText(state.newer.title, "Updated document") : displayReference(state.doc.supersededBy, "Updated document")}</span>
                         {state.newer?.date && <> (<span className="num">{fmtDate(state.newer.date, { year: true })}</span>)</>}. Kept for traceability; not current.
                       </p>
                     </div>
                   </div>
                 )}
                 <div className={MARKDOWN}>
-                  <ReactMarkdown>{state.doc.body}</ReactMarkdown>
+                  <ReactMarkdown>{displaySourceText(state.doc.body, "Document content is unavailable.")}</ReactMarkdown>
                 </div>
               </div>
             </ScrollArea>

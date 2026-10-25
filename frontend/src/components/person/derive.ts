@@ -1,4 +1,5 @@
 import type { ContextItem, Forecast, Period, Person, SpendingRecord } from "@/lib/contracts";
+import { billableAmount, sumMoney } from "@/lib/finance-summary";
 
 export type Trend = "up" | "down" | "flat" | "unknown";
 
@@ -29,7 +30,7 @@ function dailyAverage(records: SpendingRecord[], dates: Set<string>) {
   const rows = records.filter((r) => dates.has(r.date));
   const days = new Set(rows.map((r) => r.date));
   if (days.size === 0) return undefined;
-  return rows.reduce((s, r) => s + r.amount, 0) / days.size;
+  return sumMoney(rows.map(billableAmount)) / days.size;
 }
 
 /**
@@ -60,17 +61,20 @@ export function summarizePeople(
   teamForecast?: Forecast,
 ): PersonSummary[] {
   const members = people.filter((p) => p.teamId === teamId);
-  const teamSpent = spending.filter(r => r.teamId === teamId && r.unit === teamForecast?.unit).reduce((sum, r) => sum + r.amount, 0);
-  const teamProjected = teamForecast?.status === "available" && Number.isFinite(teamForecast.projected)
+  const inPeriod = (record: SpendingRecord) => record.date >= period.start && record.date <= period.end;
+  const matchesPeriod = (forecast: Forecast | undefined) => forecast?.period.start === period.start && forecast?.period.end === period.end;
+  const teamSpent = sumMoney(spending.filter(r => r.teamId === teamId && r.unit === teamForecast?.unit && inPeriod(r)).map(billableAmount));
+  const teamProjected = matchesPeriod(teamForecast) && teamForecast?.status === "available" && Number.isFinite(teamForecast.projected)
     ? teamForecast.projected! + (teamForecast.basis === "remaining" ? teamSpent : 0)
     : undefined;
 
   return members.map((person) => {
-    const own = spending.filter((r) => r.personId === person.id);
-    const ownHistory = spendingHistory.filter((r) => r.personId === person.id);
-    const spent = own.reduce((s, r) => s + r.amount, 0);
     const forecast = personForecasts.find((f) => f.personId === person.id);
-    const available = forecast?.status === "available" && forecast.projected != null;
+    const unit = forecast?.unit ?? teamForecast?.unit ?? spending.find(r => r.personId === person.id)?.unit;
+    const own = spending.filter((r) => r.personId === person.id && r.unit === unit && inPeriod(r));
+    const ownHistory = spendingHistory.filter((r) => r.personId === person.id && r.unit === unit);
+    const spent = sumMoney(own.map(billableAmount));
+    const available = matchesPeriod(forecast) && forecast?.status === "available" && forecast.projected != null;
     const projected = available ? (forecast!.basis === "remaining" ? spent + forecast!.projected! : forecast!.projected) : undefined;
     // Directory membership is current metadata, not proof that the person's frozen
     // whole-period total belongs to this team. Canonical person views leave teamId unknown.
@@ -84,8 +88,8 @@ export function summarizePeople(
       .sort((a, b) => (a.supersededBy ? 1 : 0) - (b.supersededBy ? 1 : 0) || (b.effectiveFrom ?? "").localeCompare(a.effectiveFrom ?? ""));
     return {
       person, spent, forecast, projected,
-      low: available ? forecast!.low : undefined,
-      high: available ? forecast!.high : undefined,
+      low: available && forecast!.low != null ? forecast!.low + (forecast!.basis === "remaining" ? spent : 0) : undefined,
+      high: available && forecast!.high != null ? forecast!.high + (forecast!.basis === "remaining" ? spent : 0) : undefined,
       share: available && comparable && teamProjected !== undefined && teamProjected > 0 ? (projected as number) / teamProjected : undefined,
       weekChange, trend, signals,
     };

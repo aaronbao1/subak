@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { FileText, Mail } from "lucide-react";
 import type { ContextItem, Integration, SourceRef } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
+import { displaySourceText } from "@/lib/display-copy";
 
 /**
  * Where a piece of evidence came from, drawn the way finance would recognise it: the app's own mark,
@@ -12,7 +13,7 @@ export type SourceMedium = "message" | "task" | "document";
 
 export interface SourceMeta {
   label: string;
-  /** Accent used for the card rule, avatar and quote wash. Tuned for the dark surface. */
+  /** Accent used for the card rule, avatar and quote wash. Tuned for readable text on light surfaces. */
   accent: string;
   medium: SourceMedium;
   /** What a locator means for this app, e.g. a channel, a task status or a section. */
@@ -20,16 +21,16 @@ export interface SourceMeta {
 }
 
 export const SOURCE_META: Record<Integration, SourceMeta> = {
-  slack: { label: "Slack", accent: "oklch(0.74 0.14 335)", medium: "message", noun: "channel" },
-  gmail: { label: "Gmail", accent: "oklch(0.70 0.17 25)", medium: "message", noun: "thread" },
-  email: { label: "Email", accent: "oklch(0.72 0.10 250)", medium: "message", noun: "thread" },
-  asana: { label: "Asana", accent: "oklch(0.73 0.15 20)", medium: "task", noun: "task" },
-  linear: { label: "Linear", accent: "oklch(0.70 0.13 282)", medium: "task", noun: "issue" },
-  monday: { label: "monday.com", accent: "oklch(0.74 0.14 160)", medium: "task", noun: "board" },
-  notion: { label: "Notion", accent: "oklch(0.88 0 0)", medium: "document", noun: "page" },
-  google_docs: { label: "Google Docs", accent: "oklch(0.70 0.14 255)", medium: "document", noun: "doc" },
-  pdf: { label: "PDF", accent: "oklch(0.68 0.16 22)", medium: "document", noun: "page" },
-  document: { label: "Document", accent: "oklch(0.78 0 0)", medium: "document", noun: "section" },
+  slack: { label: "Slack", accent: "#8B3A70", medium: "message", noun: "channel" },
+  gmail: { label: "Gmail", accent: "#B23A31", medium: "message", noun: "thread" },
+  email: { label: "Email", accent: "#35618E", medium: "message", noun: "thread" },
+  asana: { label: "Asana", accent: "#B23C46", medium: "task", noun: "task" },
+  linear: { label: "Linear", accent: "#5546AE", medium: "task", noun: "issue" },
+  monday: { label: "monday.com", accent: "#24734F", medium: "task", noun: "board" },
+  notion: { label: "Notion", accent: "var(--foreground)", medium: "document", noun: "page" },
+  google_docs: { label: "Google Docs", accent: "#285FB0", medium: "document", noun: "doc" },
+  pdf: { label: "PDF", accent: "#B7373F", medium: "document", noun: "page" },
+  document: { label: "Document", accent: "var(--muted-foreground)", medium: "document", noun: "section" },
 };
 
 /** The integration a context item is primarily sourced from: the first source that names one. */
@@ -100,7 +101,7 @@ function GmailMark(p: SvgProps) {
 function NotionMark(p: SvgProps) {
   return (
     <svg {...base(p)}>
-      <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" fill="#FFFFFF" />
+      <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" fill="#FFFFFF" stroke="#111111" strokeWidth="0.8" />
       <path d="M8.2 17V7.6l7.6 9.4V7.2" fill="none" stroke="#111111" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -156,14 +157,15 @@ export function SourceLogo({ integration, className }: { integration: Integratio
 /** Logo plus app name and, when known, the channel, task state or section the quote is from. */
 export function SourceBadge({ integration, locator, className, size = "sm" }: { integration: Integration; locator?: string; className?: string; size?: "sm" | "xs" }) {
   const meta = SOURCE_META[integration];
+  const locatorLabel = displaySourceText(locator);
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-1.5", size === "xs" ? "text-[11px]" : "text-xs", className)}>
       <SourceLogo integration={integration} className={size === "xs" ? "size-3.5" : "size-4"} />
       <span className="font-medium text-foreground/90">{meta.label}</span>
-      {locator && (
+      {locatorLabel && (
         <>
           <span aria-hidden className="text-muted-foreground/60">·</span>
-          <span className="truncate text-muted-foreground">{locator}</span>
+          <span className="truncate text-muted-foreground">{locatorLabel}</span>
         </>
       )}
     </span>
@@ -176,9 +178,9 @@ export function Avatar({ name, accent, className }: { name: string; accent: stri
     <span
       aria-hidden
       className={cn("flex size-7 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-medium", className)}
-      style={{ background: wash(accent, 22), color: accent }}
+      style={{ background: wash(accent, 12), color: accent }}
     >
-      {initials(name) || "?"}
+      {initials(displaySourceText(name)) || "?"}
     </span>
   );
 }

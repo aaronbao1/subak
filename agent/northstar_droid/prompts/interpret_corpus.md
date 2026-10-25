@@ -34,8 +34,16 @@ Interpret the company corpus for the current planning period.
    which document is current and why. Do not merge them silently, and do not let an older timeline
    leak into the current signal's summary.
 4. `record_signal` for each relevant finding:
+   - Use flat tool arguments, not a nested `signal` object. Required fields are `summary`,
+     `change_type`, `status`, `uncertainty`, and `citations`. `change_type` must be exactly:
+     `expansion` (more work/usage), `reduction` (less), `continuation` (steady), `timing_shift`
+     (a changed schedule), or `other`. Never send `increase` or `decrease`.
+   - A citation input has only `document_id` and `quote`, optionally both `char_start` and `char_end`.
+     Do not copy response-only `version`, `doc_key`, `title`, citation `id` or currency fields into it.
+     The document id already identifies the exact stored version. Prefer omitting both offsets;
+     the backend locates the exact quote and returns verified offsets and version metadata.
    - Every citation quotes the stored `content` of a specific document version EXACTLY. Copy the
-     characters; keep line breaks that are inside the quote; include `char_start`/`char_end` computed
+     characters; keep line breaks that are inside the quote. If offsets are provided, compute them
      from that same text. Prefer one or two short complete sentences per citation. The backend
      rejects a quote that is not verbatim; if that happens, re-read the document and copy again.
    - Status `current` only for signals backed by a current, non-cancelled document. Record the older

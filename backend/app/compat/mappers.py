@@ -20,14 +20,16 @@ UNATTRIBUTED = "unattributed"
 UNATTRIBUTED_TEAM = {"id": UNATTRIBUTED, "name": "Unattributed", "color": "var(--muted-foreground)",
                      "description": "Spend from source accounts with no team mapping yet. It counts toward the "
                                     "company total but toward no team."}
-CHART_TOKENS = 5  # the frontend defines --chart-1 .. --chart-5
+CHART_TOKENS = 8  # preserve the frontend's existing --chart-1 .. --chart-8 palette
+TEAM_COLOR_EXTENSION = ("#df8b46", "#1f93a8", "#b67ac6", "#7582db",
+                        "#789947", "#915a35", "#c65e92", "#526174")
 
 COMPONENT = {"subscription_fee": "subscription", "included_usage": "included_usage",
-             "billable_overage": "extra_usage", "direct_api": "api"}
-# Weakest provenance wins when a grouped row mixes kinds.
-PROVENANCE = {"reported": "reported_charge", "simulated": "reported_charge", "measured": "usage_only",
+             "billable_overage": "extra_usage", "direct_api": "api", "unpriced_usage": "unpriced_usage"}
+PROVENANCE = {"reported": "reported_charge", "simulated": "simulated", "measured": "measured",
               "estimated": "estimate"}
-_PROVENANCE_RANK = {"reported_charge": 0, "usage_only": 1, "estimate": 2}
+TOKEN_FIELDS = {"input_tokens": "inputTokens", "cached_input_tokens": "cachedInputTokens",
+                "output_tokens": "outputTokens", "reasoning_tokens": "reasoningTokens"}
 DOC_KIND = {"plan": "plan", "update": "project_doc", "note": "project_doc", "correspondence": "correspondence"}
 DOC_ORIGIN = {"upload": "Uploaded document", "email_export": "Email export", "slack_export": "Slack export",
               "seed": "Seeded demo document"}
@@ -99,7 +101,14 @@ def period(p: Any) -> dict:
 
 
 def team_color(index: int) -> str:
-    return f"var(--chart-{index % CHART_TOKENS + 1})"
+    if index < CHART_TOKENS:
+        return f"var(--chart-{index + 1})"
+    extension = index - CHART_TOKENS
+    if extension < len(TEAM_COLOR_EXTENSION):
+        return TEAM_COLOR_EXTENSION[extension]
+    # Larger directories retain distinct deterministic swatches instead of wrapping at five teams.
+    hue = (index * 137.508) % 360
+    return f"hsl({hue:.3f} 57% 43%)"
 
 
 # ---- company / teams ----------------------------------------------------------------------------
@@ -155,48 +164,63 @@ def person(p: Any) -> dict:
 # ---- spending -----------------------------------------------------------------------------------
 
 
+def spending_group(record: dict) -> tuple[str, str, str, str, str, str, str] | None:
+    """One canonical identity shared by full mapping and the incremental spending index."""
+    component = COMPONENT.get(record["cost_category"])
+    if component is None:
+        return None
+    return (record["team"] or UNATTRIBUTED, record.get("person") or "", day(record["occurred_at"]), component,
+            record["provider"] or "unknown", record.get("model") or "", record["value_kind"])
+
+
 def spending(records: Iterable[dict], *, batch_labels: Mapping[str, str]) -> list[dict]:
     """Group backend usage records (spending.record_out dicts) into one row per team x person x day x
-    component x provider (person None = a team-level row, e.g. included usage). Included usage carries amount 0 (it is covered by the subscription fee; its notional value is
-    named in `source`). Unpriced token rows have no frontend equivalent that would not be summed into dollars,
-    so they are left out.
+    component x provider x model x native value kind (person None = a team-level row). Included and
+    unpriced usage carry amount 0 because neither is a charge. Included notional value is kept separately.
+    Missing token telemetry stays unknown; cached/reasoning subsets never add to input/output totals.
 
     `complete` is per row and day, never the period-wide coverage status (which turns every team `partial`
     as soon as any record in the period is unattributed): a row is partial only when its own records are
     unattributed or include a cumulative counter reset. So spend on complete days + forecast.daily (from the
     day after as_of) still equals `projected` while unmapped records are present."""
-    groups: dict[tuple[str, str, str, str, str], list[dict]] = defaultdict(list)
+    groups: dict[tuple[str, str, str, str, str, str, str], list[dict]] = defaultdict(list)
     for r in records:
-        component = COMPONENT.get(r["cost_category"])
-        if component is None:  # unpriced_usage
-            continue
-        key = (r["team"] or UNATTRIBUTED, r.get("person") or "", day(r["occurred_at"]), component,
-               r["provider"] or "unknown")
-        groups[key].append(r)
+        key = spending_group(r)
+        if key is not None:
+            groups[key].append(r)
 
     out = []
-    for (team, person_id, d, component, provider), recs in sorted(groups.items()):
-        if component == "included_usage":
+    for (team, person_id, d, component, provider, model, value_kind), recs in sorted(groups.items()):
+        if component in {"included_usage", "unpriced_usage"}:
             amount = Decimal("0")
-            provenance = "usage_only"
         else:
             amount = sum((Decimal(str(r["amount"])) for r in recs if r["counts_toward_spend"] and r["amount"] is not None),
                          Decimal("0"))
-            provenance = max((PROVENANCE[r["value_kind"]] for r in recs), key=_PROVENANCE_RANK.__getitem__)
         labels = sorted({batch_labels.get(r["import_batch_id"], r["source_kind"]) for r in recs})
         source = "; ".join(labels)
-        if any(r["value_kind"] == "simulated" for r in recs) and "simulated" not in source.lower():
+        if value_kind == "simulated" and "simulated" not in source.lower():
             source += " (simulated)"
+        notional = None
         if component == "included_usage":
-            notional = sum((Decimal(str(r["notional_value"])) for r in recs if r["notional_value"] is not None),
-                           Decimal("0"))
-            source += (f"; included in the subscription fee, notional value {money_text(notional)} "
+            if all(r.get("notional_value") is not None for r in recs):
+                notional = sum((Decimal(str(r["notional_value"])) for r in recs), Decimal("0"))
+            notional_label = money_text(notional) if notional is not None else "unavailable"
+            source += (f"; included in the subscription fee, notional value {notional_label} "
                        "is not counted as spend")
+        telemetry = {
+            target: sum(r[field] for r in recs) if all(r.get(field) is not None for r in recs) else None
+            for field, target in TOKEN_FIELDS.items()
+        }
+        total_tokens = (telemetry["inputTokens"] + telemetry["outputTokens"]
+                        if telemetry["inputTokens"] is not None and telemetry["outputTokens"] is not None else None)
         complete = team != UNATTRIBUTED and not any(r["counter_reset"] for r in recs)
-        row_id = f"{team}:{person_id}:{d}:{component}:{provider}" if person_id else f"{team}:{d}:{component}:{provider}"
+        row_id = (f"{team}:{person_id}:{d}:{component}:{provider}:{model}:{value_kind}" if person_id
+                  else f"{team}:{d}:{component}:{provider}:{model}:{value_kind}")
         out.append({
             "id": row_id, "teamId": team, **({"personId": person_id} if person_id else {}), "date": d, "component": component, "provider": provider,
-            "amount": num(amount), "unit": unit(recs[0]["unit"]), "provenance": provenance,
+            **({"model": model} if model else {}), "tokens": total_tokens, **telemetry,
+            **({"includedUsageNotional": num(notional)} if component == "included_usage" else {}),
+            "amount": num(amount), "unit": unit(recs[0]["unit"]), "provenance": PROVENANCE[value_kind],
             "source": source, "complete": complete,
         })
     return out

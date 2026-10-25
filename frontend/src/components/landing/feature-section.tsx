@@ -14,6 +14,7 @@ export interface FeatureSectionProps {
   href: string;
   mediaSrc: string;
   mediaAlt: string;
+  cropRecordedHeader?: boolean;
   /** Quiet JSX mock rendered inside the frame until the video loads. */
   placeholder?: ReactNode;
   /** Media on the right (default) or on the left at lg and up. Stacks text-first on phones either way. */
@@ -28,6 +29,7 @@ export function FeatureSection({
   href,
   mediaSrc,
   mediaAlt,
+  cropRecordedHeader,
   placeholder,
   mediaSide = "right",
 }: FeatureSectionProps) {
@@ -46,7 +48,7 @@ export function FeatureSection({
             See it in the dashboard
           </ArrowLink>
         </div>
-        <MediaSlot src={mediaSrc} alt={mediaAlt} placeholder={placeholder} className={cn(mediaSide === "left" && "lg:order-1")} />
+        <MediaSlot cropRecordedHeader={cropRecordedHeader} src={mediaSrc} alt={mediaAlt} placeholder={placeholder} className={cn(mediaSide === "left" && "lg:order-1")} />
       </Reveal>
     </section>
   );

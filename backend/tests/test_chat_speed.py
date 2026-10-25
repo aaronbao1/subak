@@ -172,7 +172,7 @@ def test_propose_prompt_reuses_current_signals(fake_sdk, tmp_path, clock, id_fac
     try:
         out = _run(app, "propose_allocation", PROPOSE)
         assert out["status"] == "succeeded", out["error"]
-        assert [s["tool"] for s in out["steps"]] == ["list_signals"]
+        assert [s["tool"] for s in out["steps"]] == ["list_signals", "list_budget_requests"]
         assert out["steps"][0]["args"] == {"status": "current", "team": None}
         prompt = fake_droid_sdk.STATE["prompt"]
         assert INTERPRET_MARKER not in prompt and REUSE_SIGNALS_NOTE in prompt
@@ -192,7 +192,7 @@ def test_propose_prompt_includes_interpretation_without_current_signals(fake_sdk
                interpreted=False)
     try:
         out = _run(app, "propose_allocation", PROPOSE)
-        assert [s["tool"] for s in out["steps"]] == ["list_signals"]
+        assert [s["tool"] for s in out["steps"]] == ["list_signals", "list_budget_requests"]
         prompt = fake_droid_sdk.STATE["prompt"]
         assert INTERPRET_MARKER in prompt and REUSE_SIGNALS_NOTE not in prompt
     finally:
@@ -213,19 +213,20 @@ def test_task_prompt_needs_a_signal_for_the_prioritized_team():
     assert sdk_runner.task_prompt(task) == sdk_runner.task_prompt(task, [])
 
 
-def test_stale_recovery_and_other_tasks_do_not_pre_read(fake_sdk, tmp_path, clock, id_factory):
+def test_only_chat_tasks_read_current_requests(fake_sdk, tmp_path, clock, id_factory):
     fake_sdk.SCENARIO = [fake_droid_sdk.Step(LOAD)]
     app = _app(tmp_path, clock, id_factory, SdkDroidRunner(executable="/nonexistent/droid", timeout_s=5),
                interpreted=True)
     try:
-        for task_type in ("answer_question", "interpret_corpus"):
+        for task_type, expected in (("answer_question", ["list_budget_requests"]), ("interpret_corpus", [])):
             out = _run(app, task_type)
-            assert out["status"] == "succeeded" and out["steps"] == []
+            assert out["status"] == "succeeded"
+            assert [step["tool"] for step in out["steps"]] == expected
     finally:
         app.state.engine.dispose()
 
 
-def test_fake_runner_propose_after_interpret_makes_no_reads(tmp_path, clock, id_factory):
+def test_fake_runner_propose_after_interpret_still_checks_current_requests_and_sources(tmp_path, clock, id_factory):
     app = create_app(Settings(db_path=tmp_path / "f.db", forecast_provider="placeholder"),
                      clock=clock, id_factory=id_factory,
                      droid_runner=FakeDroidRunner())
@@ -235,7 +236,8 @@ def test_fake_runner_propose_after_interpret_makes_no_reads(tmp_path, clock, id_
     try:
         out = _run(app, "propose_allocation", PROPOSE)
         tools = [st["tool"] for st in out["steps"]]
-        assert "search_corpus" not in tools and "read_document" not in tools and tools[0] == "list_signals"
+        assert "search_corpus" not in tools and "read_document" not in tools
+        assert tools[:2] == ["list_budget_requests", "list_signals"]
         assert out["proposals"] and out["proposals"][0]["status"] == "pending_review"
     finally:
         app.state.engine.dispose()

@@ -18,6 +18,9 @@ def test_forecast_tool_manifest_sdk_and_inputs_match():
 def test_fake_runner_forecast_question_uses_frozen_exact_context_and_grounded_receipt():
     class Tools:
         calls = []
+        def list_budget_requests(self, **args):
+            assert args == {'include_closed': False}
+            return {'items': [], 'source_updates': {'items': []}}
         def explain_forecast(self, **args):
             self.calls.append(args)
             return {'run_id':'run-1','scope':{'type':'person','id':'maya'},'driver_id':'drv-1',
@@ -53,8 +56,8 @@ def test_stored_agent_forecast_explanation_and_scenario_receipts_preserve_baseli
     assert response.status_code==201,response.text
     data=response.json()
     assert data['status']=='succeeded',data
-    assert data['steps'][0]['tool']=='explain_forecast'
-    assert data['steps'][0]['args']['run_id']==run
+    assert [step['tool'] for step in data['steps']] == ['list_budget_requests', 'explain_forecast']
+    assert data['steps'][1]['args']['run_id']==run
     assert data['output']['forecast_receipts'][0]['receipt']['run_id']==run
     assert driver in data['summary']
     scenario=service.scenario(run,drivers=[])

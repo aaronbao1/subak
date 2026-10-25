@@ -159,11 +159,16 @@ def test_spending_person_ids_and_row_ids(c):
     person_rows = [r for r in rows if "personId" in r]
     team_rows = [r for r in rows if "personId" not in r]
     assert person_rows and team_rows and all(r["component"] == "included_usage" for r in team_rows)
-    r = person_rows[0]
-    assert r["id"] == f"{r['teamId']}:{r['personId']}:{r['date']}:{r['component']}:{r['provider']}"
-    t = team_rows[0]
-    assert t["id"] == f"{t['teamId']}:{t['date']}:{t['component']}:{t['provider']}"
+    # Models and provenance partition otherwise identical provider rows. IDs must retain both
+    # dimensions, including the empty model position, for person and team-level observations.
+    native_kind = {"reported_charge": "reported", "estimate": "estimated",
+                   "measured": "measured", "simulated": "simulated"}
+    for row in rows:
+        owner = f"{row['teamId']}:{row['personId']}" if "personId" in row else row["teamId"]
+        assert row["id"] == (f"{owner}:{row['date']}:{row['component']}:{row['provider']}:"
+                             f"{row.get('model', '')}:{native_kind[row['provenance']]}")
     assert len({r["id"] for r in rows}) == len(rows)
+    assert [row["id"] for row in get(c, "spending")] == [row["id"] for row in rows]
     assert not any(r["personId"] == "research-hana-sato" for r in person_rows)  # not a research person
     hana = [r for r in person_rows if r["personId"] == "engineering-hana-sato"]
     assert hana and min(r["date"] for r in hana) >= "2026-10-13"  # joined Oct 13

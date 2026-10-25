@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const load = async path => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(fs.readFileSync(new URL(path, import.meta.url), 'utf8'))).toString('base64')}`);
-const { summarizePeople } = await load('./derive.ts');
+const { summarizePeople } = withProductModules((require, frontend) => require(path.join(frontend, 'src/components/person/derive.ts')));
 const { quarterForecasts } = await load('../dashboard/forecast-derive.ts');
 const period = { start: '2026-10-01', end: '2026-12-31' };
 const person = { id: 'p', teamId: 't', name: 'Pat' };
@@ -138,3 +138,18 @@ test('one team reporting complete actuals does not erase another team issued dai
   const html = renderToStaticMarkup(React.createElement(SpendByTeamChart, { teams, rows: [row], partialDates: [], unit: 'usd', period, selectedId: null, onSelect() {} }));
   assert.match(html, /Dashed lines and hollow dots are projections/);
 }));
+
+test('person current-period spend excludes covered, unpriced and out-of-period amounts', () => {
+  const planningPeriod = { start: '2026-10-19', end: '2026-10-25' };
+  const row = (id, amount, extra = {}) => ({ id, teamId: 't', personId: 'p', date: '2026-10-20', amount, component: 'api', provider: 'a', unit: 'usd', provenance: 'reported_charge', complete: true, ...extra });
+  const spending = [row('charge', 30), row('included', 90, { component: 'included_usage' }), row('unpriced', 80, { component: 'unpriced_usage' }), row('outside', 200, { date: '2026-10-18' })];
+  const [result] = summarizePeople([person], 't', spending, [], [], [], planningPeriod);
+  assert.equal(result.spent, 30);
+});
+
+test('person table withholds a quarter outlook when the selected period is a week', () => {
+  const planningPeriod = { start: '2026-10-19', end: '2026-10-25' };
+  const [result] = summarizePeople([person], 't', [], [], [forecast(50, { personId: 'p' })], [], planningPeriod, forecast(100));
+  assert.equal(result.projected, undefined);
+  assert.equal(result.share, undefined);
+});

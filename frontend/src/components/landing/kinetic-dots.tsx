@@ -43,7 +43,7 @@ export function KineticDots({ className }: { className?: string }) {
 
     let w = 0;
     let h = 0;
-    let ink = "#fff";
+    let ink = getComputedStyle(canvas).color;
     const mouse = { x: 0, y: 0 };
     const target = { x: 0, y: 0 };
     let strength = 0; // 0 = pointer away, 1 = pointer over the hero

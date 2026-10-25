@@ -5,12 +5,13 @@ import type { ContextItem, Person, SourceRef, Team } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { displaySourceText, displayReference } from "@/lib/display-copy";
 import { CLAIM_LABEL, CONFIDENCE_LABEL, fmtDate, KIND_LABEL } from "@/components/team/labels";
 import { Avatar, primarySource, SOURCE_META, SourceBadge, SourceLogo, sourceOf, wash } from "./source-brand";
 
 const EFFECT = {
   increase: { Icon: ArrowUpRight, label: "Increases spend", className: "text-warning" },
-  decrease: { Icon: ArrowDownRight, label: "Decreases spend", className: "text-muted-foreground" },
+  decrease: { Icon: ArrowDownRight, label: "Decreases spend", className: "text-success" },
   neutral: { Icon: Minus, label: "Neutral", className: "text-muted-foreground" },
   unknown: { Icon: CircleHelp, label: "Effect unknown", className: "text-muted-foreground" },
 } as const;
@@ -36,7 +37,10 @@ export function EffectChip({ effect, className }: { effect: ContextItem["expecte
 export function SourceQuote({ source, compact, className }: { source: SourceRef; compact?: boolean; className?: string }) {
   const integration = sourceOf(source);
   const meta = SOURCE_META[integration];
-  const text = source.excerpt;
+  const text = displaySourceText(source.excerpt);
+  const title = displaySourceText(source.title, "Source document");
+  const author = displaySourceText(source.author, "Unknown sender");
+  const locator = displaySourceText(source.locator);
   if (!text) return null;
   const date = source.date ? fmtDate(source.date) : undefined;
 
@@ -46,17 +50,17 @@ export function SourceQuote({ source, compact, className }: { source: SourceRef;
       <figure className={cn("rounded-lg border border-border px-3 py-2.5", className)} style={{ background: wash(meta.accent, 6) }}>
         {isMail && !compact && (
           <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border/70 pb-2 text-[11px] text-muted-foreground">
-            <span><span className="text-muted-foreground/70">From</span> <span className="text-foreground/90">{source.author ?? "Unknown sender"}</span></span>
-            {source.locator && <span><span className="text-muted-foreground/70">To</span> <span className="text-foreground/90">{source.locator}</span></span>}
-            <span className="min-w-0 basis-full truncate"><span className="text-muted-foreground/70">Subject</span> <span className="text-foreground/90">{source.title.replace(/^email:\s*/i, "")}</span></span>
+            <span><span className="text-muted-foreground/70">From</span> <span className="text-foreground/90">{author}</span></span>
+            {locator && <span><span className="text-muted-foreground/70">To</span> <span className="text-foreground/90">{locator}</span></span>}
+            <span className="min-w-0 basis-full truncate"><span className="text-muted-foreground/70">Subject</span> <span className="text-foreground/90">{title.replace(/^email:\s*/i, "")}</span></span>
           </div>
         )}
         <div className="flex gap-2.5">
-          <Avatar name={source.author ?? "?"} accent={meta.accent} className={cn(compact && "size-6 text-[9px]")} />
+          <Avatar name={author} accent={meta.accent} className={cn(compact && "size-6 text-[9px]")} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-              <span className="font-medium text-foreground">{source.author ?? "Unknown"}</span>
-              {!isMail && source.locator && <span className="text-muted-foreground">{source.locator}</span>}
+              <span className="font-medium text-foreground">{author}</span>
+              {!isMail && locator && <span className="text-muted-foreground">{locator}</span>}
               {date && <span className="num text-[11px] text-muted-foreground">{date}</span>}
             </div>
             <blockquote className={cn("mt-0.5 text-sm leading-relaxed text-foreground/90", compact && "line-clamp-2 text-xs")}>{text}</blockquote>
@@ -75,12 +79,12 @@ export function SourceQuote({ source, compact, className }: { source: SourceRef;
           <StateIcon aria-hidden strokeWidth={1.75} className="mt-0.5 size-4 shrink-0" style={{ color: meta.accent }} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-              <span className="font-medium text-foreground">{source.title.replace(/^(asana|linear|monday(\.com)?):\s*/i, "")}</span>
-              {source.locator && <span className="text-muted-foreground">{source.locator}</span>}
+              <span className="font-medium text-foreground">{title.replace(/^(asana|linear|monday(\.com)?):\s*/i, "")}</span>
+              {locator && <span className="text-muted-foreground">{locator}</span>}
               {date && <span className="num text-[11px] text-muted-foreground">{date}</span>}
             </div>
             <blockquote className={cn("mt-0.5 text-sm leading-relaxed text-foreground/90", compact && "line-clamp-2 text-xs")}>{text}</blockquote>
-            {source.author && !compact && <div className="mt-1 text-[11px] text-muted-foreground">by {source.author}</div>}
+            {source.author && !compact && <div className="mt-1 text-[11px] text-muted-foreground">by {author}</div>}
           </div>
         </div>
       </figure>
@@ -95,10 +99,10 @@ export function SourceQuote({ source, compact, className }: { source: SourceRef;
         {text}
       </blockquote>
       <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-        <span className="truncate text-foreground/80">{source.title}</span>
-        {source.locator && <span>{source.locator}</span>}
+        <span className="truncate text-foreground/80">{title}</span>
+        {locator && <span>{locator}</span>}
         {date && <span className="num">{date}</span>}
-        {source.author && !compact && <span>· {source.author}</span>}
+        {source.author && !compact && <span>· {author}</span>}
       </figcaption>
     </figure>
   );
@@ -123,7 +127,7 @@ export function ContextCard({ item, allItems, people = [], onViewSource, classNa
   const superseded = !!item.supersededBy;
   const newer = superseded ? allItems.find((c) => c.id === item.supersededBy) : undefined;
   const claim = item.claimType ?? "interpretation";
-  const about = (item.personIds ?? []).map((id) => people.find((p) => p.id === id)?.name ?? id);
+  const about = (item.personIds ?? []).map((id) => displaySourceText(people.find((p) => p.id === id)?.name, displayReference(id, "Person")));
   const [lead, ...rest] = item.sources;
   const accent = superseded ? "var(--border-strong)" : meta.accent;
 
@@ -146,16 +150,16 @@ export function ContextCard({ item, allItems, people = [], onViewSource, classNa
         </div>
 
         <h3 className={cn("text-[15px] leading-snug font-medium text-foreground", superseded && "text-muted-foreground line-through decoration-muted-foreground")}>
-          {item.title}
+          {displaySourceText(item.title, "Context update")}
         </h3>
 
         {superseded && (
           <p className="text-xs text-muted-foreground">
             Replaced by{" "}
             {newer ? (
-              <a href={`#${newer.id}`} className="text-foreground/80 underline underline-offset-4 decoration-border-strong hover:decoration-foreground">{newer.title}</a>
+              <a href={`#${newer.id}`} className="text-foreground/80 underline underline-offset-4 decoration-border-strong hover:decoration-foreground">{displaySourceText(newer.title, "Context update")}</a>
             ) : (
-              <span className="text-foreground/80">{item.supersededBy}</span>
+              <span className="text-foreground/80">{displayReference(item.supersededBy, "Updated context")}</span>
             )}
             . Not current; kept for traceability.
           </p>
@@ -163,7 +167,7 @@ export function ContextCard({ item, allItems, people = [], onViewSource, classNa
 
         {lead && <SourceQuote source={lead} className={cn(superseded && "opacity-60 grayscale")} />}
 
-        <p className={cn("text-sm leading-relaxed", superseded ? "text-muted-foreground" : "text-foreground/80")}>{item.summary}</p>
+        <p className={cn("text-sm leading-relaxed", superseded ? "text-muted-foreground" : "text-foreground/80")}>{displaySourceText(item.summary)}</p>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span title={claim === "interpretation" ? "Assistant interpretation, not a source statement" : `${CLAIM_LABEL[claim]} from a source`} className={cn(claim !== "interpretation" && "text-foreground/80")}>
@@ -187,7 +191,7 @@ export function ContextCard({ item, allItems, people = [], onViewSource, classNa
         </div>
 
         {item.uncertainty && (
-          <p className="text-xs text-muted-foreground"><span className="text-foreground/80">Unresolved:</span> {item.uncertainty}</p>
+          <p className="text-xs text-muted-foreground"><span className="text-foreground/80">Unresolved:</span> {displaySourceText(item.uncertainty, "Additional context needs review.")}</p>
         )}
       </div>
 
@@ -230,7 +234,7 @@ function SourceLine({ source, onView }: { source: SourceRef; onView: () => void 
     <li className="flex items-center justify-between gap-3 px-5 py-2">
       <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
         <SourceLogo integration={integration} className="size-3.5" />
-        <span className="truncate">{source.title}</span>
+        <span className="truncate">{displaySourceText(source.title, "Source document")}</span>
         {source.date && <span className="num shrink-0">· {fmtDate(source.date, { year: true })}</span>}
       </span>
       <Button variant="ghost" size="xs" className="-mr-2 shrink-0 text-muted-foreground hover:text-foreground" onClick={onView}>
@@ -261,7 +265,7 @@ export function ContextCardCompact({ item, team, person, onOpen, className }: { 
         <EffectChip effect={item.expectedEffect} className="text-[11px]" />
       </div>
       <button type="button" onClick={onOpen} className="text-left focus-visible:outline-none">
-        <h3 className="line-clamp-2 text-sm leading-snug font-medium text-foreground group-hover:underline group-hover:decoration-border-strong group-hover:underline-offset-4">{item.title}</h3>
+        <h3 className="line-clamp-2 text-sm leading-snug font-medium text-foreground group-hover:underline group-hover:decoration-border-strong group-hover:underline-offset-4">{displaySourceText(item.title, "Context update")}</h3>
       </button>
       {lead?.excerpt && <SourceQuote source={lead} compact />}
       <div className="mt-auto flex items-center justify-between gap-3 pt-1 text-[11px] text-muted-foreground">
@@ -269,12 +273,12 @@ export function ContextCardCompact({ item, team, person, onOpen, className }: { 
           {team ? (
             <Link href={`/teams/${team.id}`} className="flex min-w-0 items-center gap-1.5 hover:text-foreground">
               <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: team.color }} />
-              <span className="truncate">{team.name}</span>
+              <span className="truncate">{displaySourceText(team.name, "Team")}</span>
             </Link>
           ) : (
             <span>Company-wide</span>
           )}
-          {person && <span className="truncate">· {person.name}</span>}
+          {person && <span className="truncate">· {displaySourceText(person.name, "Person")}</span>}
         </span>
         {lead?.date && <span className="num shrink-0">{fmtDate(lead.date)}</span>}
       </div>

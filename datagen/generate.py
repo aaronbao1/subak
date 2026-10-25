@@ -14,6 +14,7 @@ import random
 import shutil
 import sys
 import time
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,9 +34,11 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent / "out"), help="output directory (default datagen/out)")
     ap.add_argument("--seed", type=int, default=C.SEED)
     ap.add_argument("--no-holdout", action="store_true", help="skip the synthetic future truth (Oct 25 - Dec 31)")
+    ap.add_argument("--complete-as-of-day", action="store_true", help="generate a full final recorded day instead of the default partial day")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
     C.SEED = args.seed
+    C.COMPLETE_AS_OF_DAY = args.complete_as_of_day
     t0 = time.time()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -47,7 +50,21 @@ def main(argv=None) -> int:
     people = build_people(teams, rnd)
     story = build_storylines(teams, people, rnd)
     calendar = build_calendar(C.YEAR_START, C.HORIZON_END)
-    usage_rows, seat_rows = generate_usage(teams, people, story.events, calendar, rnd, C.YEAR_START, C.AS_OF)
+    if C.COMPLETE_AS_OF_DAY:
+        usage_rows, seat_rows = generate_usage(teams, people, story.events, calendar, rnd,
+                                               C.YEAR_START, C.AS_OF - timedelta(days=1))
+        final_day_rng = random.Random()
+        final_day_rng.setstate(rnd.getstate())
+        # Preserve the default random state for subsequent budget allocations.
+        # Higher final-day volume can cross thresholds that consume extra draws.
+        partial_calendar = {**calendar, C.AS_OF: replace(calendar[C.AS_OF], partial=True)}
+        generate_usage(teams, people, story.events, partial_calendar, rnd, C.AS_OF, C.AS_OF)
+        final_usage, final_seats = generate_usage(teams, people, story.events, calendar, final_day_rng,
+                                                 C.AS_OF, C.AS_OF)
+        usage_rows.extend(final_usage)
+        seat_rows.extend(final_seats)
+    else:
+        usage_rows, seat_rows = generate_usage(teams, people, story.events, calendar, rnd, C.YEAR_START, C.AS_OF)
     if args.no_holdout:
         holdout_rows, holdout_seats = [], []
     else:

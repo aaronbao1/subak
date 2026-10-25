@@ -104,8 +104,8 @@ def test_sdk_run_records_real_tool_steps_and_leaves_budget_unchanged(fake_sdk, s
     out = r.json()
     assert out["status"] == "succeeded", out["error"]
     assert out["runner_kind"] == "sdk" and out["simulated"] is False and out["applied_changes"] is False
-    # the runner's own pre-read of current signals is a recorded step, then Droid's calls
-    assert [s["tool"] for s in out["steps"]] == ["list_signals", "search_corpus", "read_document", "record_signal",
+    # The runner's independent signal/request/source reads are recorded before Droid's calls.
+    assert [s["tool"] for s in out["steps"]] == ["list_signals", "list_budget_requests", "search_corpus", "read_document", "record_signal",
                                                   "get_budgets", "draft_proposal"]
     # every Droid-side event carries source droid_sdk; lifecycle and runner settings are the backend's
     for e in out["events"]:
@@ -229,7 +229,7 @@ def test_sdk_stale_recovery_rebases_into_a_new_pending_draft(fake_sdk, sdk_clien
     assert r.status_code == 201, r.text
     out = r.json()
     assert out["status"] == "succeeded" and out["applied_changes"] is False
-    assert [s["tool"] for s in out["steps"]] == ["rebase_proposal"]
+    assert [s["tool"] for s in out["steps"]] == ["list_budget_requests", "rebase_proposal"]
     assert len(out["proposals"]) == 1 and out["proposals"][0]["status"] == "pending_review"
     new = sdk_client.get(f"/api/proposals/{out['proposals'][0]['id']}").json()
     assert new["rebased_from_proposal_id"] == b["id"] and new["base_version"] == 2
@@ -554,7 +554,7 @@ def test_sdk_answer_with_chart_attaches_only_the_chart_the_toolbox_built(fake_sd
     assert r.status_code == 201, r.text
     out = r.json()
     assert out["status"] == "succeeded", out["error"]
-    assert [s["tool"] for s in out["steps"]] == ["build_chart_spec"]
+    assert [s["tool"] for s in out["steps"]] == ["list_budget_requests", "build_chart_spec"]
     (spec,) = out["output"]["charts"]
     assert spec["kind"] == "spend_vs_allocation" and spec["spec"]["$schema"].endswith("vega-lite/v5.json")
     assert "build_chart_spec" in fake_droid_sdk.STATE["prompt"]
@@ -595,3 +595,85 @@ def test_sdk_gate_retries_are_bounded(fake_sdk, sdk_client):
     assert len(fake_droid_sdk.STATE["prompts"]) == 1 + sdk_runner.MAX_GATE_RETRIES
     assert out["output"]["usage"]["gate_retries"] == sdk_runner.MAX_GATE_RETRIES
     assert out["proposals"] == [] and allocations(sdk_client) == INITIAL
+
+
+def test_sdk_retry_answer_uses_completed_turn_not_earlier_progress(fake_sdk, sdk_client):
+    progress = "I'll check spending and the forecast."
+    answer = "Recorded spending is below the current allocation. No budget changed."
+    fake_sdk.TURNS = [
+        [Step(LOAD, lambda call: setattr(fake_sdk, "FINAL_TEXT", progress)), Step(INDEXED_READS)],
+        [Step(LOAD, lambda call: setattr(fake_sdk, "FINAL_TEXT", answer))],
+    ]
+    out = post_run(sdk_client, "answer_question").json()
+    assert out["status"] == "succeeded", out.get("error")
+    assert out["output"]["summary"] == answer
+    assert out["output"]["usage"]["turns"] == 2
+    assert out["output"]["usage"]["gate_retries"] == 1
+    assert allocations(sdk_client) == INITIAL
+
+
+# ---- credits on failed, interrupted, multi-turn and budget-stopped runs ------------------------------
+
+
+def _doc_ids(client, n=2):
+    return [d["id"] for d in client.get("/api/documents?include_superseded=false").json()["items"]][:n]
+
+
+def test_sdk_stream_timeout_still_reports_the_credits_spent(fake_sdk, sdk_client):
+    fake_sdk.RAISE = TimeoutError("stream timed out")
+    out = post_run(sdk_client, "interpret_corpus").json()
+    assert out["status"] == "failed" and "TimeoutError" in out["error"]
+    assert '"factory_credits": 99.0' in out["error"]  # the usage update seen before the timeout
+
+
+def test_sdk_process_error_mid_stream_is_unavailable_with_credits(fake_sdk, sdk_client):
+    class DroidProcessError(Exception):
+        pass
+
+    fake_sdk.RAISE = DroidProcessError("droid exited")
+    out = post_run(sdk_client, "interpret_corpus").json()
+    assert out["status"] == "unavailable" and '"factory_credits": 99.0' in out["error"]
+
+
+def test_sdk_multi_turn_usage_counts_every_turn(fake_sdk, sdk_client):
+    """A retry turn whose result carries no usage still counts the usage streamed for it."""
+    fake_sdk.TURNS = [[Step(LOAD), Step(INDEXED_READS)], [Step(LOAD)]]
+    fake_sdk.RESULTS = [fake_sdk.RunSuccess(text="first", usage=None),
+                        fake_sdk.RunSuccess(text="second", usage=fake_sdk.Usage(1, 2, 0, 0, 0, 500.0))]
+    out = post_run(sdk_client, params={"mode": "addition", "amount": "50000.00", "prioritize": "research"}).json()
+    assert out["status"] == "succeeded", out["error"]
+    usage = out["output"]["usage"]
+    assert usage["turns"] == 2 and usage["provider_reported"]["factory_credits"] == 599.0
+    assert "usage_incomplete" not in usage
+
+
+def test_sdk_run_stops_at_its_credit_budget(fake_sdk, sdk_client):
+    r = sdk_client.post("/api/agent/runs", headers=ANALYST, json={
+        "task_type": "interpret_corpus", "params": {"document_ids": _doc_ids(sdk_client), "credit_budget": 50}})
+    out = r.json()
+    assert out["status"] == "failed" and "credit budget" in out["error"]
+    assert '"factory_credits": 99.0' in out["error"]   # stopped at the first usage update, not at 10,801
+    assert any(e["type"] == "warning" and e["data"]["code"] == "credit_budget_reached" for e in out["events"])
+
+
+def test_sdk_credit_budget_above_the_spend_does_not_interfere(fake_sdk, sdk_client):
+    r = sdk_client.post("/api/agent/runs", headers=ANALYST, json={
+        "task_type": "interpret_corpus", "params": {"document_ids": _doc_ids(sdk_client), "credit_budget": 1e6}})
+    out = r.json()
+    assert out["status"] == "succeeded" and out["output"]["usage"]["provider_reported"]["factory_credits"] == 10801.0
+
+
+def test_budgeted_sdk_does_not_retry_after_unreported_usage(fake_sdk, sdk_client):
+    fake_sdk.TURNS = [[Step(LOAD), Step(INDEXED_READS)], [Step(LOAD)]]
+    fake_sdk.USAGES = [None, None]
+    fake_sdk.RESULTS = [fake_sdk.RunSuccess(text='rewrite needed', usage=None),
+                        fake_sdk.RunSuccess(text='second attempt', usage=None)]
+    response = sdk_client.post('/api/agent/runs', headers=ANALYST, json={
+        'task_type': 'interpret_corpus',
+        'params': {'document_ids': _doc_ids(sdk_client), 'credit_budget': 1000},
+    })
+    result = response.json()
+    assert result['status'] == 'succeeded', result['error']
+    assert len(fake_droid_sdk.STATE['prompts']) == 1
+    assert result['output']['usage']['usage_incomplete'] is True
+    assert any(event['data'].get('code') == 'credit_usage_unknown' for event in result['events'])

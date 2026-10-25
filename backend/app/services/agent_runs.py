@@ -9,8 +9,10 @@
 
 from __future__ import annotations
 
+import math
 import threading
 import traceback
+from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
@@ -23,11 +25,14 @@ from app.agent.runner import AgentTask, RunnerUnavailable
 from app.agent.toolbox import BackendToolbox
 from app.core.actors import Actor
 from app.core.errors import DomainError
-from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, Proposal, Team
+from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, CorpusDocument, Proposal, Team
 from app.db.session import transaction
 from app.schemas.agent import AgentRunCreate, AnswerParams, ProposeParams
 
 MAX_BACKGROUND_RUNS = 2
+# interpret_corpus `params.document_ids`: a scoped batch (python -m app.interpret). Matches the
+# toolbox's search cap, so a scoped run always sees every document it was given.
+MAX_SCOPE_DOCUMENTS = 20
 _background = threading.BoundedSemaphore(MAX_BACKGROUND_RUNS)
 
 
@@ -52,6 +57,14 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
         if team is None or not team.active:
             reasons.append({"code": "unknown_team", "message": f"unknown or inactive team {p.prioritize!r}",
                             "field": "params.prioritize"})
+        if p.source_team is not None:
+            source = session.get(Team, p.source_team)
+            if source is None or not source.active:
+                reasons.append({"code": "unknown_team", "message": f"unknown or inactive team {p.source_team!r}",
+                                "field": "params.source_team"})
+            if p.mode != "transfer" or p.source_team == p.prioritize:
+                reasons.append({"code": "invalid_source_team", "message": "source_team requires a transfer to a different team",
+                                "field": "params.source_team"})
         amount = p.amount
         if p.mode == "addition" and amount is None:
             amount = Decimal("50000.00")
@@ -61,6 +74,8 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
         if reasons:
             raise _validation(reasons)
         params = {"mode": p.mode, "prioritize": p.prioritize}
+        if p.source_team is not None:
+            params["source_team"] = p.source_team
         if amount is not None:
             params["amount"] = str(amount)
     elif body.task_type == "answer_question" and body.params:
@@ -73,10 +88,50 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
             params = {"chart": a.chart.model_dump(exclude_none=True)}
         if a.forecast_context is not None:
             params["forecast_context"] = a.forecast_context.model_dump(exclude_none=True)
+    elif body.task_type == "interpret_corpus" and body.params:
+        params = _scope_params(session, body.params)
     elif body.params:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
     return AgentTask(type=body.task_type, instruction=body.instruction, params=params)
+
+
+def _scope_params(session: Session, raw: dict[str, Any]) -> dict[str, Any]:
+    """interpret_corpus takes `document_ids` (interpret only these current documents) and, with them,
+    an optional `credit_budget` (a positive number of factory_credits the sdk runner stops the run at;
+    the interpret CLI passes the remaining cap). Anything else is still `unexpected_params`."""
+    extra = sorted(k for k in raw if k not in ("document_ids", "credit_budget"))
+    if extra:
+        raise _validation([{"code": "unexpected_params",
+                            "message": f"interpret_corpus takes only document_ids, not {', '.join(extra)}",
+                            "field": "params"}])
+    ids = raw.get("document_ids")
+    if (not isinstance(ids, list) or not ids or len(ids) > MAX_SCOPE_DOCUMENTS
+            or not all(isinstance(i, str) and i for i in ids) or len(set(ids)) != len(ids)):
+        raise _validation([{"code": "invalid_params",
+                            "message": f"document_ids must be 1-{MAX_SCOPE_DOCUMENTS} distinct document ids",
+                            "field": "params.document_ids"}])
+    reasons = []
+    for doc_id in ids:
+        doc = session.get(CorpusDocument, doc_id)
+        if doc is None:
+            reasons.append({"code": "unknown_document", "message": f"document {doc_id!r} not found",
+                            "field": "params.document_ids"})
+        elif doc.superseded_by_document_id is not None:
+            reasons.append({"code": "document_superseded",
+                            "message": f"document {doc_id!r} is superseded; scope only current documents",
+                            "field": "params.document_ids"})
+    budget = raw.get("credit_budget")
+    if "credit_budget" in raw and (isinstance(budget, bool) or not isinstance(budget, (int, float))
+                                   or not math.isfinite(budget) or not budget > 0):
+        reasons.append({"code": "invalid_params", "message": "credit_budget must be a finite positive number",
+                        "field": "params.credit_budget"})
+    if reasons:
+        raise _validation(reasons)
+    out: dict[str, Any] = {"document_ids": list(ids)}
+    if "credit_budget" in raw:
+        out["credit_budget"] = float(budget)
+    return out
 
 
 def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) -> dict[str, Any]:
@@ -91,7 +146,9 @@ def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) ->
     return {"stale_proposal_id": proposal_id}
 
 
-def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[str, bool]:
+def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor,
+              on_created: Callable[[str], None] | None = None,
+              on_created_in_session: Callable[[Session, str], None] | None = None) -> tuple[str, bool]:
     """Create and execute (or schedule) a run. Returns (run_id, finished)."""
     settings = app_state.settings
     clock, ids = app_state.clock, app_state.id_factory
@@ -122,13 +179,20 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
             error=str(unavailable) if unavailable else None, started_at=now,
             finished_at=now if unavailable else None,
         ))
+        if on_created_in_session is not None:
+            s.flush()
+            on_created_in_session(s, run_id)
+    if on_created is not None:
+        on_created(run_id)
     source = "droid_sdk" if kind == "sdk" else "fake_runner"
     toolbox = BackendToolbox(session_factory=factory, run_id=run_id, source=source, runner_kind=kind,
                              clock=clock, ids=ids, forecast_provider=app_state.forecast_provider,
                              forecast_service=getattr(app_state, "forecast_service", None),
                              forecast_context=task.params.get("forecast_context"),
                              rebase_target=(task.params.get("stale_proposal_id")
-                                            if task.type == "propose_allocation" else None))
+                                            if task.type == "propose_allocation" else None),
+                             doc_scope=(task.params.get("document_ids")
+                                        if task.type == "interpret_corpus" else None))
     if unavailable is not None:
         toolbox.emit("error", {"code": "runner_unavailable", "reason": unavailable.reason, "message": str(unavailable)},
                      source="backend")
@@ -182,6 +246,8 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output["signal_ids"] = list(toolbox.signal_ids)
     if toolbox.charts:  # charts the toolbox actually built (a runner cannot claim one it did not build)
         output["charts"] = list(toolbox.charts)
+    if toolbox.budget_exhausted:  # a tool/write budget refused calls: the run may be incomplete
+        output["budget_exhausted"] = list(toolbox.budget_exhausted)
     if toolbox.forecast_receipts:
         output["forecast_receipts"] = list(toolbox.forecast_receipts)
     output["applied_changes"] = False

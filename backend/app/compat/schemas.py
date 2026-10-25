@@ -12,14 +12,14 @@ Money fields are JSON numbers here (the frontend contract) and are produced only
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.agent import ForecastQuestionContext
 
 Unit = Literal["credits", "usd", "tokens"]
-CostComponent = Literal["subscription", "included_usage", "extra_usage", "api"]
-Provenance = Literal["reported_charge", "estimate", "usage_only"]
+CostComponent = Literal["subscription", "included_usage", "extra_usage", "api", "unpriced_usage"]
+Provenance = Literal["reported_charge", "estimate", "usage_only", "measured", "simulated"]
 ContextKind = Literal["plan", "project_doc", "research_note", "correspondence"]
 ClaimType = Literal["stated_plan", "observed_event", "interpretation"]
 ProposalKind = Literal["redistribute", "add_budget"]
@@ -80,6 +80,11 @@ class SpendingRecord(_Model):
     provider: str
     model: str | None = None
     tokens: Number | None = None
+    inputTokens: Number | None = None
+    outputTokens: Number | None = None
+    cachedInputTokens: Number | None = None
+    reasoningTokens: Number | None = None
+    includedUsageNotional: Number | None = None
     amount: Number
     unit: Unit
     provenance: Provenance
@@ -167,6 +172,7 @@ class AllocationLine(_Model):
 
 class AllocationProposal(_Model):
     id: str
+    version: int | None = None
     kind: ProposalKind
     unit: Unit
     period: Period
@@ -212,6 +218,10 @@ class AssistantMessage(_Model):
     proposalId: str | None = None
     citations: list[SourceRef] | None = None
     toolCalls: list[ToolCallSummary] | None = None
+    clientMessageId: str | None = None
+    conversationContext: dict[str, Any] | None = None
+    actionDraft: dict[str, Any] | None = None
+    delivery: Literal["sending", "failed", "unknown", "sent"] | None = None
 
 
 class CompanyDocument(_Model):
@@ -238,9 +248,33 @@ class Company(_Model):
 # ---- request bodies (frontend -> compat) ------------------------------------------------------
 
 
+class ConversationDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["addition", "transfer"]
+    amount: str | None = Field(default=None, max_length=100)
+    prioritize: str | None = Field(default=None, max_length=200)
+    source_team: str | None = Field(default=None, max_length=200)
+
+
+class ConversationContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    intent: Literal["explain", "scenario", "allocation"] | None = None
+    selected_proposal_id: str | None = Field(default=None, max_length=200)
+    selected_proposal_version: int | None = Field(default=None, ge=1)
+    pending_slot: Literal["amount", "team", "change", "proposal", "effective_date"] | None = None
+    draft: ConversationDraft | None = None
+    scope_type: Literal["company", "team", "person", "shared"] | None = None
+    scope_id: str | None = Field(default=None, max_length=200)
+    period: str | None = Field(default=None, max_length=200)
+    forecast_run_id: str | None = Field(default=None, max_length=200)
+    effective_date_text: str | None = Field(default=None, max_length=4000)
+
+
 class MessageIn(BaseModel):
     content: str
     forecast_context: ForecastQuestionContext | None = None
+    client_message_id: str | None = Field(default=None, min_length=1, max_length=200, pattern=r"^\S+$")
+    conversation_context: ConversationContext | None = None
 
 
 class ApplyIn(BaseModel):

@@ -85,9 +85,29 @@ export interface ForecastView {
   is_synthetic?: boolean;
   [key: string]: unknown;
 }
+/** Effect totals are quarter comparisons unless an explicit horizon says otherwise.
+ * In a ForecastView, omitted run/target/horizon metadata inherits that immutable view.
+ * Scope is never inherited: an absent scope has unknown applicability. */
+export interface ForecastDriverEffectPoint {
+  start: string;
+  end: string;
+  base_delta: number | null;
+  without_base: number | null;
+  with_base: number | null;
+}
 export interface ForecastDriverEffect {
   scope?: ForecastScope;
-  driver_id: string; base_delta: number | null; without_base: number | null; with_base: number | null; available: boolean; qualification?: string;
+  run_id?: string;
+  target?: ForecastView["target"];
+  horizon?: { kind: "quarter" | "daily" | "weekly"; start: string; end: string };
+  driver_id: string;
+  base_delta: number | null;
+  without_base: number | null;
+  with_base: number | null;
+  available: boolean;
+  qualification?: string;
+  daily?: ForecastDriverEffectPoint[];
+  weekly?: ForecastDriverEffectPoint[];
 }
 export interface ForecastBundle {
   driver_effects?: ForecastDriverEffect[];

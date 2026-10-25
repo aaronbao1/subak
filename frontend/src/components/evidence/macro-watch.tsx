@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import { ArrowDownRight, ArrowUpRight, CircleHelp, Minus } from "lucide-react";
 import type { ContextItem } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
@@ -58,9 +59,9 @@ function TimelineRow({ item, superseded, muted }: { item: ContextItem; supersede
       <span className="num w-14 shrink-0 pt-px text-muted-foreground">{item.effectiveFrom ? fmtDate(item.effectiveFrom) : "undated"}</span>
       <span className="relative mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground/60" aria-hidden />
       <a href={`#${item.id}`} className={cn("min-w-0 flex-1 leading-snug underline-offset-4 decoration-border-strong hover:underline", muted || superseded ? "text-muted-foreground" : "text-foreground/90", superseded && "line-through")}>
-        {item.title}
+        {displaySourceText(item.title, "Context update")}
       </a>
-      <span className={cn("inline-flex shrink-0 items-center gap-1 text-muted-foreground", item.expectedEffect === "increase" && !muted && "text-warning")} title={EFFECT_TEXT[item.expectedEffect]}>
+      <span className={cn("inline-flex shrink-0 items-center gap-1 text-muted-foreground", !muted && (item.expectedEffect === "increase" ? "text-warning" : item.expectedEffect === "decrease" ? "text-success" : ""))} title={EFFECT_TEXT[item.expectedEffect]}>
         <Icon aria-hidden className="size-3.5" strokeWidth={1.75} />
         <span className="sr-only">{EFFECT_TEXT[item.expectedEffect]}</span>
       </span>

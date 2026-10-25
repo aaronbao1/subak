@@ -1,5 +1,7 @@
 "use client";
+import { displayCopy, displaySourceText } from "@/lib/display-copy";
 import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { AllocationProposal, Decision } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,17 @@ import { ProposalReview } from "./proposal-review";
 export function DecisionLog() {
   const { loaded, decisions, proposals, teams, setAssistantOpen } = useAppStore();
   const [reviewId, setReviewId] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const status = searchParams.get("status") ?? "all";
+  const team = searchParams.get("team") ?? "all";
+  const period = searchParams.get("period") ?? "all";
+  function updateFilter(name: string, value: string) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value === "all") next.delete(name); else next.set(name, value);
+    router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+  }
 
   if (!loaded) {
     return (
@@ -29,11 +42,32 @@ export function DecisionLog() {
     );
   }
 
-  const attention = proposals.filter((p) => p.status === "proposed" || p.status === "stale" || p.status === "failed");
+  const periodKey = (p: AllocationProposal) => `${p.period.start}_${p.period.end}`;
+  const periods = [...new Map(proposals.map(p => [periodKey(p), p.period])).entries()];
+  const attention = proposals.filter((p) => (p.status === "proposed" || p.status === "stale" || p.status === "failed")
+    && (status === "all" || status === "pending")
+    && (team === "all" || p.lines.some(l => l.teamId === team && l.after !== l.before))
+    && (period === "all" || periodKey(p) === period));
+  const history = decisions.filter(d => (status === "all" || d.action === status)
+    && (team === "all" || d.lines.some(l => l.teamId === team && l.after !== l.before))
+    && (period === "all" || proposals.some(p => p.id === d.proposalId && periodKey(p) === period)));
 
   return (
     <div className="space-y-8">
-      <PageTitle title="Decisions" description="Every applied or rejected allocation change, with what finance reviewed at the time." />
+      <PageTitle title="Decisions" description="Review proposed changes and see exactly what was saved." />
+
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3">
+        <label className="flex min-w-36 flex-1 flex-col gap-1.5 text-xs text-muted-foreground">Status
+          <select value={status} onChange={e => updateFilter("status", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"><option value="all">All statuses</option><option value="pending">Needs review</option><option value="applied">Applied</option><option value="rejected">Rejected</option></select>
+        </label>
+        <label className="flex min-w-36 flex-1 flex-col gap-1.5 text-xs text-muted-foreground">Team
+          <select value={team} onChange={e => updateFilter("team", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"><option value="all">All teams</option>{teams.map(t => <option key={t.id} value={t.id}>{displaySourceText(t.name, "Team")}</option>)}</select>
+        </label>
+        <label className="flex min-w-36 flex-1 flex-col gap-1.5 text-xs text-muted-foreground">Budget period
+          <select value={period} onChange={e => updateFilter("period", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"><option value="all">All periods</option>{periods.map(([key, p]) => <option key={key} value={key}>{displayCopy(p.label, "Budget period")}</option>)}</select>
+        </label>
+        {(status !== "all" || team !== "all" || period !== "all") && <Button variant="ghost" onClick={() => router.replace(pathname, { scroll: false })}>Clear filters</Button>}
+      </div>
 
       {attention.length > 0 && (
         <section className="space-y-3" aria-label="Needs attention">
@@ -48,19 +82,19 @@ export function DecisionLog() {
 
       <section className="space-y-3" aria-label="History">
         {attention.length > 0 && <h2 className="eyebrow">History</h2>}
-        {decisions.length === 0 ? (
+        {history.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-xl border border-border px-6 py-16 text-center">
             <div className="space-y-1">
-              <div className="eyebrow">No decisions yet</div>
+              <div className="eyebrow">{decisions.length ? "No matching decisions" : "No decisions yet"}</div>
               <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Ask the assistant for a proposal, review it, and apply or reject it. The receipt lands here.
+                {decisions.length ? "Change your filters to see more receipts." : "Ask the assistant for a proposal, review it, and apply or reject it. The receipt lands here."}
               </p>
             </div>
             <Button variant="outline" size="lg" onClick={() => setAssistantOpen(true)}>Ask the assistant</Button>
           </div>
         ) : (
           <ol className="divide-y divide-border rounded-xl border border-border bg-card">
-            {decisions.map((d) => (
+            {history.map((d) => (
               <li key={d.id}><DecisionReceipt d={d} teams={teams} /></li>
             ))}
           </ol>
@@ -103,9 +137,9 @@ function AttentionRow({ p, onOpen }: { p: AllocationProposal; onOpen: () => void
         <div className={cn("text-xs leading-snug text-muted-foreground", p.status === "failed" && "text-destructive")}>
           {p.status === "proposed" && <>Prepared <span className="num">{fmtDateTime(p.createdAt)}</span>. Not saved until applied.</>}
           {p.status === "stale" && "Budgets changed since this was prepared. Ask for a refreshed proposal or dismiss it."}
-          {p.status === "failed" && (p.failureReason ?? "Refused by the backend.")}
+          {p.status === "failed" && displayCopy(p.failureReason, "This change could not be applied.")}
         </div>
-        {error && <div className="text-xs text-destructive">{error}</div>}
+        {error && <div className="text-xs text-destructive">{displayCopy(error, "The dismissal could not be recorded.")}</div>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {dismissable && (
@@ -138,7 +172,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
             </span>
             <span className="num text-xs text-muted-foreground">{fmtDateTime(d.appliedAt)}</span>
             <span aria-hidden className="text-xs text-muted-foreground">·</span>
-            <span className="text-xs text-muted-foreground">{d.appliedBy}</span>
+            <span className="text-xs text-muted-foreground">{displaySourceText(d.appliedBy === "finance-demo" ? "Finance" : d.appliedBy, "Finance")}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <KindBadge kind={d.kind} />
@@ -171,7 +205,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
         ) : "Allocations left unchanged."}
       </p>
 
-      {d.note && <p className="text-sm leading-relaxed text-muted-foreground italic">“{d.note}”</p>}
+      {d.note && <p className="text-sm leading-relaxed text-muted-foreground italic">“{displaySourceText(d.note)}”</p>}
 
       <div>
         <Button variant="link" size="xs" className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
@@ -186,7 +220,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
             {d.rationale && (
               <div className="space-y-1.5">
                 <div className="eyebrow">Why</div>
-                <p className="text-sm leading-relaxed text-foreground/80">{d.rationale}</p>
+                <p className="text-sm leading-relaxed text-foreground/80">{displayCopy(d.rationale, "No explanation available.")}</p>
               </div>
             )}
             {d.forecastsReviewed && d.forecastsReviewed.length > 0 && (
@@ -199,7 +233,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
                     <li key={f.teamId} className="flex h-10 items-center justify-between gap-3">
                       <span>{teamName(teams, f.teamId)}</span>
                       <span className="inline-flex items-center gap-2 text-muted-foreground">
-                        <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : f.unavailableReason ?? "Unavailable"}</span>                      </span>
+                        <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : displayCopy(f.unavailableReason, "Unavailable")}</span>                      </span>
                     </li>
                   ))}
                 </ul>

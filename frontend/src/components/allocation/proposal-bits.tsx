@@ -1,4 +1,5 @@
 "use client";
+import { displayReference, displaySourceText } from "@/lib/display-copy";
 import type { AllocationLine, AllocationProposal, Decision, ProposalKind, Team, Unit } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/format";
@@ -92,7 +93,8 @@ export function Delta({ n, unit, kind, className, compact }: { n: number; unit: 
 }
 
 export function teamName(teams: Team[], id: string) {
-  return teams.find((t) => t.id === id)?.name ?? id;
+  const name = teams.find((t) => t.id === id)?.name;
+  return name ? displaySourceText(name, "Team") : displayReference(id, "Team");
 }
 
 export function teamColor(teams: Team[], id: string) {

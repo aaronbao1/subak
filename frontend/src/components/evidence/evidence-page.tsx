@@ -1,97 +1,61 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { useAppStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import { PageTitle } from "@/components/shared/stat-tile";
-import { riseDelay, useMounted } from "@/components/shared/motion";
-import {
-  applyFilters, buildRows, indexAdjustments, isDefaultFilters, macroBuckets, parseFilters, peopleAffected, projectionTotals,
-  serializeFilters, teamImpacts, todayIso, type EvidenceFilters,
-} from "./derive";
-import { ProjectionStrip } from "./projection-strip";
+import { applyFilters, buildRows, indexAdjustments, isDefaultFilters, parseFilters, serializeFilters, type EvidenceFilters } from "./derive";
 import { FilterRow } from "./filter-row";
 import { EvidenceFeed } from "./evidence-feed";
-import { ImpactByTeam } from "./impact-by-team";
-import { MacroWatch } from "./macro-watch";
-import { PeopleAffected } from "./people-affected";
 import { EvidenceSkeleton } from "./skeleton";
-import { ForecastPanel } from "@/components/forecast/forecast-panel";
+import { SourceLibrary } from "./source-library";
+import { DriverOverview } from "@/components/forecast/driver-overview";
 import { scopeView } from "@/components/dashboard/forecast-derive";
 
-const MACRO_WINDOW_DAYS = 14;
-
-/**
- * Why the projections are what they are. Reads `?scope=&effect=&category=&team=` so a team page can link straight
- * into its own evidence; the filters write back to the URL with `replace` so the back button is not spammed.
- */
+/** Evidence starts with finding sources. Forecast explanations are a focused secondary view. */
 export function EvidencePage() {
-  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, spending, forecastBundle, forecastEvidence } = useAppStore();
+  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, forecastBundle, forecastEvidence } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const mounted = useMounted();
-
   const filters = useMemo(() => parseFilters(params, teams), [params, teams]);
-  const setFilters = useCallback(
-    (next: EvidenceFilters) => router.replace(`${pathname}${serializeFilters(next)}`, { scroll: false }),
-    [router, pathname],
-  );
-  const clearFilters = useCallback(() => setFilters({ scope: "all", effect: "all", category: "all", team: undefined }), [setFilters]);
-
+  const search = params.get("q") ?? "";
+  const selectedView = params.get("view");
+  const tab = selectedView === "changes" ? "changes" : selectedView === "assessments" ? "assessments" : "sources";
+  const visibleCount = Math.max(8, Number(params.get("limit")) || 8);
+  const setParam = useCallback((key: string, value: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (value) next.set(key, value); else next.delete(key);
+    if (key !== "limit") next.delete("limit");
+    router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+  }, [router, pathname, params]);
+  const setFilters = useCallback((next: EvidenceFilters) => {
+    const query = new URLSearchParams(serializeFilters(next));
+    if (search) query.set("q", search);
+    if (tab !== "sources") query.set("view", tab);
+    router.replace(`${pathname}${query.size ? `?${query}` : ""}`, { scroll: false });
+  }, [router, pathname, search, tab]);
+  const clearFilters = useCallback(() => router.replace(`${pathname}${tab === "sources" ? "" : `?view=${tab}`}`, { scroll: false }), [router, pathname, tab]);
   const unit = company?.budgetUnit ?? budgets[0]?.unit ?? "usd";
   const adjustments = useMemo(() => indexAdjustments(forecasts, personForecasts), [forecasts, personForecasts]);
   const rows = useMemo(() => buildRows(context, teams, people, adjustments), [context, teams, people, adjustments]);
-  const filtered = useMemo(() => applyFilters(rows, filters), [rows, filters]);
-  // The team panel ignores the team filter itself so every row stays clickable while one team is selected.
-  const rowsSansTeam = useMemo(() => applyFilters(rows, { ...filters, team: undefined }), [rows, filters]);
-
-  const totals = useMemo(() => projectionTotals(forecasts, teams, unit), [forecasts, teams, unit]);
-  const impacts = useMemo(() => teamImpacts(teams, rowsSansTeam, forecasts, budgets, spending, unit), [teams, rowsSansTeam, forecasts, budgets, spending, unit]);
-  const buckets = useMemo(() => macroBuckets(rows, todayIso(), MACRO_WINDOW_DAYS), [rows]);
-  const affected = useMemo(() => peopleAffected(filtered, teams), [filtered, teams]);
-  const issuedCompany = scopeView(forecastBundle, "company");
-
+  const filtered = useMemo(() => applyFilters(rows, filters).filter(row => !search.trim() || `${row.item.title} ${row.item.summary} ${row.teams.map(team => team.name).join(" ")}`.toLowerCase().includes(search.trim().toLowerCase())), [rows, filters, search]);
+  const view = filters.team ? scopeView(forecastBundle, "team", filters.team) : scopeView(forecastBundle, "company");
   if (!loaded) return <EvidenceSkeleton />;
-
-  const enter = (i: number) => ({ className: cn("min-w-0", mounted ? "animate-rise" : "opacity-0"), style: riseDelay(i) });
-
-  return (
-    <div className="min-w-0 space-y-6">
-      <div {...enter(0)}>
-        <PageTitle
-          title="Evidence"
-          description="What moves the projections beyond the trend: company changes, team plans and what individual people are doing, each with its source."
-        />
+  return <div className="min-w-0 space-y-5">
+    <PageTitle title="Evidence" description="Find the plans, messages and sources behind spending decisions." />
+    <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-border" role="group" aria-label="Evidence views">{[{ key: "sources", label: "Sources" }, { key: "assessments", label: "Assessments" }, { key: "changes", label: "Forecast changes" }].map(item => <button key={item.key} aria-pressed={tab === item.key} onClick={() => setParam("view", item.key === "sources" ? "" : item.key)} className={`border-b-2 pb-3 text-sm ${tab === item.key ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{item.label}</button>)}</div>
+    {tab === "sources" ? <SourceLibrary teams={teams} search={search} onSearch={value => setParam("q", value)} teamId={params.get("team") || undefined} onTeamChange={value => setParam("team", value ?? "")} /> : tab === "assessments" ? <>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-3"><label className="flex min-w-56 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3"><Search className="size-4 text-muted-foreground" /><input aria-label="Search assessments" placeholder="Search assessed plans or teams" value={search} onChange={event => setParam("q", event.target.value)} className="h-9 w-full bg-transparent text-sm outline-none" /></label><span className="text-xs text-muted-foreground">{filtered.length} assessments</span></div>
+        <details className="mt-3" open={!isDefaultFilters(filters)}><summary className="cursor-pointer text-xs text-muted-foreground">Filter by team, scope and category</summary><div className="mt-4"><FilterRow filters={filters} teams={teams} onChange={setFilters} shown={filtered.length} total={rows.length} /></div></details>
       </div>
-
-      <div {...enter(1)}>
-        {forecastBundle || forecastEvidence.length ? <ForecastPanel /> : null}
-        {!issuedCompany && <ProjectionStrip totals={totals} />}
-      </div>
-
-      <div {...enter(2)}>
-        <h2 className="mb-2 text-base font-medium">Company context</h2>
-        <p className="mb-4 text-xs text-muted-foreground">Linked plans, documents and messages. Published driver inclusion and paired omission effects are shown separately above; those effects are not additive adjustments.</p>
-        <FilterRow filters={filters} teams={teams} onChange={setFilters} shown={filtered.length} total={rows.length} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <div className="min-w-0">
-          <EvidenceFeed rows={filtered} unit={unit} mounted={mounted} enterAt={180} onClearFilters={clearFilters} filtersActive={!isDefaultFilters(filters)} />
-        </div>
-        <aside className="min-w-0 space-y-6 lg:sticky lg:top-6 lg:self-start" aria-label="Evidence summary">
-          <div {...enter(3)}>
-            <ImpactByTeam impacts={impacts} selectedTeam={filters.team} onSelect={(team) => setFilters({ ...filters, team })} hasAnyAdjustments={totals.hasAdjustments} mounted={mounted} />
-          </div>
-          <div {...enter(4)}>
-            <MacroWatch buckets={buckets} windowDays={MACRO_WINDOW_DAYS} />
-          </div>
-          <div {...enter(5)}>
-            <PeopleAffected people={affected} />
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
+      {rows.length ? <EvidenceFeed rows={filtered.slice(0, visibleCount)} unit={unit} mounted enterAt={0} onClearFilters={clearFilters} filtersActive={!isDefaultFilters(filters) || !!search} /> : <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">No source assessments yet. Received documents are available in Sources.</p>}
+      {filtered.length > visibleCount && <button onClick={() => setParam("limit", String(visibleCount + 8))} className="w-full rounded-lg border border-border py-3 text-sm hover:bg-muted">Show 8 more assessments <span className="ml-1 text-muted-foreground">({filtered.length - visibleCount} remaining)</span></button>}
+    </> : <>
+      <label className="flex items-center gap-3 text-sm">Scope<select aria-label="Forecast changes scope" value={filters.team ?? ""} onChange={event => setFilters({ ...filters, team: event.target.value || undefined })} className="rounded-md border border-border bg-card p-2"><option value="">Company</option>{teams.map(team => <option key={team.id} value={team.id}>{displaySourceText(team.name, "Team")}</option>)}</select></label>
+      {view ? <DriverOverview view={view} evidence={forecastEvidence} /> : <p className="rounded-xl border border-border p-5 text-sm text-muted-foreground">No published forecast is available for this scope.</p>}
+    </>}
+  </div>;
 }

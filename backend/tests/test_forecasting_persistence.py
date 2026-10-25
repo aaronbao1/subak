@@ -113,3 +113,38 @@ def test_missed_schedule_cannot_replace_newer_information_cutoff(store):
     old = store.claim('old','2026-10-30T12:00:01Z')
     store.complete(old['id'],old['lease_token'],{'views':[]},'2026-10-30T12:00:02Z')
     assert store.publication()['run_id'] == fresh['run_id']
+
+
+def test_pure_reads_do_not_acquire_writer_lock_or_observe_uncommitted_changes(store):
+    """A concurrent intake write must not block unrelated reads of issued state."""
+    with sqlite3.connect(store.path) as connection:
+        connection.execute('PRAGMA journal_mode=WAL')
+    store.save_snapshot(snap())
+    record = store.append_input('evidence', 'one', '1', {'value': 1}, available_at='2026-10-25T00:00:00Z')
+    job = store.enqueue('northstar', 'readable', 's1', '2026-10-26T00:00:00Z')
+    claim = store.claim('worker', '2026-10-26T00:00:00Z')
+    store.complete(job['id'], claim['lease_token'], {'views': []}, '2026-10-26T00:00:01Z')
+    scenario = store.save_scenario(job['run_id'], [], {'scenario_id': 'scenario-read'}, '2026-10-26T00:00:02Z')
+    expected_publication = store.publication()
+
+    def read_all():
+        assert store.publication() == expected_publication
+        assert store.get_run(job['run_id'])['bundle'] == {'views': []}
+        assert store.get_snapshot('s1') == snap()
+        assert store.get_job(job['id'])['status'] == 'succeeded'
+        assert store.find_job('northstar', 'readable')['id'] == job['id']
+        assert store.find_run_job(job['run_id'])['id'] == job['id']
+        assert len(store.list_jobs()) == 1
+        assert store.find_input('evidence', 'one', '1') == record
+        assert store.input_records('2026-10-26T00:00:00Z') == [record]
+        assert store.get_scenario('scenario-read') == scenario
+        return True
+
+    with ThreadPoolExecutor(max_workers=1) as pool, sqlite3.connect(store.path, isolation_level=None) as writer:
+        writer.execute('BEGIN IMMEDIATE')
+        writer.execute("UPDATE forecast_publications SET sequence=999")
+        pending = pool.submit(read_all)
+        try:
+            assert pending.result(timeout=2) is True
+        finally:
+            writer.rollback()

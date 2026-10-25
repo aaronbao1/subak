@@ -97,6 +97,21 @@ class _IdMixin:
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
 
 
+class CompanyProfile(Base):
+    """Persisted identity/provenance of the loaded dataset; one row, separate from its ledger."""
+
+    __tablename__ = "company_profile"
+
+    slot: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    company_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    as_of: Mapped[date | None] = mapped_column(Date)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (CheckConstraint("slot = 1", name="single_row"),)
+
+
 # ---- 3.1 / 3.2 / 3.3 -------------------------------------------------------------------------
 
 
@@ -245,6 +260,9 @@ class UsageRecord(_IdMixin, Base):
         Index("ix_usage_records_team_period", "team_id", "period_id"),
         Index("ix_usage_records_team_person_period", "team_id", "person_id", "period_id"),
         Index("ix_usage_records_stream", "source_kind", "stream_key", "occurred_at"),
+        # Covers exact-cent attribution grouped by team/person for one planning period.
+        Index("ix_usage_records_spend_to_date", "period_id", "counts_toward_spend", "team_id", "person_id",
+              "occurred_at", "amount"),
     )
 
     @staticmethod
@@ -319,6 +337,37 @@ class BudgetSnapshot(_IdMixin, Base):
     decision_id: Mapped[str | None] = mapped_column(ForeignKey("decisions.id"))
 
     __table_args__ = (UniqueConstraint("envelope_id", "state_version"),)
+
+
+class BudgetRequest(_IdMixin, Base):
+    """Immutable submitted planning evidence; status is derived from native decision receipts."""
+
+    __tablename__ = "budget_requests"
+    client_request_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    submitted_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), nullable=False)
+    period_id: Mapped[str] = mapped_column(ForeignKey("planning_periods.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    request_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    project_name: Mapped[str | None] = mapped_column(String(300))
+    narrative: Mapped[str] = mapped_column(Text, nullable=False)
+    requested_amount: Mapped[Decimal | None] = mapped_column(MoneyType)
+    unit: Mapped[str] = mapped_column(String(16), nullable=False, default="USD")
+    source_ref: Mapped[str | None] = mapped_column(String(1000))
+    evidence_refs: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    __table_args__ = (UniqueConstraint("submitted_by", "client_request_id"),)
+
+
+class AllocationDraftSubmission(Base):
+    """Actor-scoped durable recovery of a submitted draft, including request-linked drafts."""
+
+    __tablename__ = "allocation_draft_submissions"
+    actor_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    idempotency_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("proposals.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
 
 
 # ---- 3.7 / 3.8 proposals and decisions ------------------------------------------------------
@@ -586,4 +635,32 @@ class AssistantMessage(_IdMixin, Base):
     __table_args__ = (
         UniqueConstraint("thread_id", "seq"),
         CheckConstraint(_in("role", ASSISTANT_ROLES), name="role"),
+    )
+
+
+class AssistantRequest(_IdMixin, Base):
+    """Durable acceptance receipt. Company/actor identity is the demo backend's configured identity.
+
+    A separate table keeps existing message databases readable without adding columns or rewriting history.
+    Accepting a client identity happens before running tools; its payload and outcome are immutable on retry.
+    """
+
+    __tablename__ = "assistant_requests"
+
+    company_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    thread_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    client_message_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    user_message_id: Mapped[str | None] = mapped_column(ForeignKey("assistant_messages.id"))
+    reply_message_id: Mapped[str | None] = mapped_column(ForeignKey("assistant_messages.id"))
+    agent_run_id: Mapped[str | None] = mapped_column(ForeignKey("agent_runs.id"))
+    interpretation: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    conversation_context: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    response: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "actor_id", "thread_id", "client_message_id"),
+        CheckConstraint(_in("status", ("pending", "completed")), name="status"),
     )

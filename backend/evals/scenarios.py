@@ -16,7 +16,7 @@ from typing import Any
 from evals import textcheck as tc
 
 READ_TOOLS = {"search_corpus", "read_document", "get_spend_summary", "get_budgets", "get_forecast",
-              "list_signals", "list_people", "build_chart_spec"}
+              "list_signals", "list_people", "list_budget_requests", "build_chart_spec"}
 NOT_CURRENT_PLAN_STATUSES = {"informal", "cancelled", "draft"}
 
 
@@ -403,10 +403,12 @@ def score_stale(c: dict[str, RunCtx]) -> list[Check]:
                       f"(drafts: {[(p['id'], p['status'], p['base_version']) for p in ctx.proposals]})"))
     checks.append(_budget_unchanged(ctx))
     text = ctx.text().lower()
-    explains = ("version 2" in text or "v2" in text) and "review" in text
+    # Version correctness comes from the stored proposal, not implementation labels in the reply.
+    explains_change = any(phrase in text for phrase in ("budget changed", "current allocations", "version", "v2"))
+    explains = bool(good) and explains_change and "review" in text
     checks.append(_ok("explains_version_and_review", explains,
-                      "explains the version change and that the draft needs a fresh review",
-                      "summary does not mention version 2 and a fresh finance review"))
+                      "stored draft uses the current budget version; reply explains the change and need for review",
+                      "current-budget draft evidence or an explanation of the change and fresh review is missing"))
     checks.append(_no_unnegated_claims(ctx))
     return checks
 

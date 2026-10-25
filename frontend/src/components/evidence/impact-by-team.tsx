@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import { cn } from "@/lib/utils";
 import type { TeamImpact } from "./derive";
 import { signedAmount } from "./labels";
@@ -14,7 +15,7 @@ interface Props {
 
 /**
  * One row per team: items, net adjustment, and a diverging bar centered at zero. Decreases run left in
- * --success, increases right in --destructive; the signed number beside the bar carries the value, so the
+ * --success, increases right in --warning; the signed number beside the bar carries the value, so the
  * color is reinforcement rather than the only encoding. Clicking a row filters the feed to that team.
  */
 export function ImpactByTeam({ impacts, selectedTeam, onSelect, hasAnyAdjustments, mounted }: Props) {
@@ -48,7 +49,7 @@ export function ImpactByTeam({ impacts, selectedTeam, onSelect, hasAnyAdjustment
                   <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: row.team.color }} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-sm">{row.team.name}</span>
+                      <span className="truncate text-sm">{displaySourceText(row.team.name, "Team")}</span>
                       <span className={cn("num shrink-0 text-sm", row.overAllotment ? "text-destructive" : row.hasAdjustments ? "text-foreground" : "text-muted-foreground")}>
                         {row.hasAdjustments ? signedAmount(row.net, row.unit, { compact: true }) : "—"}
                       </span>
@@ -61,7 +62,7 @@ export function ImpactByTeam({ impacts, selectedTeam, onSelect, hasAnyAdjustment
                           <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-strong" />
                           {row.net !== 0 && (
                             <span
-                              className={cn("absolute inset-y-0", mounted && "animate-grow-x", row.net < 0 ? "right-1/2 mr-0.5 rounded-l-full bg-success" : "left-1/2 ml-0.5 rounded-r-full bg-destructive")}
+                              className={cn("absolute inset-y-0", mounted && "animate-grow-x", row.net < 0 ? "right-1/2 mr-0.5 rounded-l-full bg-success" : "left-1/2 ml-0.5 rounded-r-full bg-warning")}
                               style={{ width: `calc(${half}% - 2px)`, transformOrigin: row.net < 0 ? "right center" : "left center", ["--rise-delay" as string]: `${i * 40}ms` }}
                             />
                           )}

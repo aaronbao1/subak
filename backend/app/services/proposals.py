@@ -25,6 +25,7 @@ from app.core.money import MoneyError, money_str, parse_money
 from app.db.models import (
     AgentRun,
     BudgetEnvelope,
+    BudgetRequest,
     ContextSignal,
     CorpusDocument,
     Decision,
@@ -247,6 +248,11 @@ def check_evidence(session: Session, refs: list[EvidenceRef]) -> tuple[list[dict
             if sig.status != "current":
                 warnings.append({"code": "cites_non_current_signal",
                                  "message": f"signal {sig.id} is {sig.status}, not a current plan"})
+        elif ref.kind == "budget_request":
+            if session.get(BudgetRequest, ref.id) is None:
+                reasons.append(_reason("unknown_evidence", f"budget request {ref.id!r} not found", line=i,
+                                       field_name="evidence_refs"))
+                continue
         elif ref.kind == "forecast_snapshot":
             snap = session.get(ForecastSnapshot, ref.id)
             if snap is None:
@@ -461,6 +467,26 @@ def rebase(session: Session, proposal_id: str, body: RebaseIn, *, actor: Actor, 
     return new
 
 
+def _request_revision_refs(session: Session, original: Proposal, refs: list[EvidenceRef]) -> list[EvidenceRef]:
+    """Keep request provenance and the nearest forecast basis unless explicitly replaced."""
+    ancestors = lineage(session, original)
+    request_refs = [r for p in ancestors for r in p.evidence_refs if r.get("kind") == "budget_request"]
+    if not request_refs:
+        return refs
+    inherited = list(request_refs)
+    if not any(r.kind == "forecast_snapshot" for r in refs):
+        inherited.extend(next(([r for r in p.evidence_refs if r.get("kind") == "forecast_snapshot"]
+                               for p in ancestors if any(r.get("kind") == "forecast_snapshot" for r in p.evidence_refs)), []))
+    merged = list(refs)
+    present = {(r.kind, r.id) for r in refs}
+    for ref in inherited:
+        key = (ref["kind"], ref["id"])
+        if key not in present:
+            merged.append(EvidenceRef.model_validate(ref))
+            present.add(key)
+    return merged
+
+
 def revise(session: Session, proposal_id: str, body: AdditionCreate | TransferCreate, *, actor: Actor,
            clock: Clock, ids: IdFactory) -> Proposal:
     """Finance replaces a pending (or stale) proposal with changed lines. Original -> `revised`."""
@@ -468,6 +494,7 @@ def revise(session: Session, proposal_id: str, body: AdditionCreate | TransferCr
     if p.status not in REVISABLE_STATUSES:
         raise DomainError("proposal_not_pending", 409, f"proposal is {p.status}; only pending or stale proposals "
                           "can be revised", {"status": p.status})
+    body = body.model_copy(update={"evidence_refs": _request_revision_refs(session, p, body.evidence_refs)})
     new = create_proposal(session, body, actor=actor, clock=clock, ids=ids, revises=p)
     if not claim_status(session, p, "revised", from_statuses=REVISABLE_STATUSES, now=clock.now()):
         raise _moved_error(session, p)
@@ -489,6 +516,17 @@ def link_revision(session: Session, original_id: str, new_id: str, *, actor: Act
         return False
     if not claim_status(session, p, "revised", from_statuses=REVISABLE_STATUSES, now=clock.now()):
         return False
+    inherited = _request_revision_refs(session, p, [EvidenceRef.model_validate(r) for r in new.evidence_refs])
+    reasons, warnings, refs = check_evidence(session, inherited)
+    if reasons:
+        raise validation_failed(reasons)
+    new.evidence_refs = refs
+    new.warnings = [*new.warnings, *warnings]
+    from app.services.forecast_freshness import stale_forecast_refs
+    if stale_forecast_refs(session, refs, clock.now()):
+        new.status = "stale"
+        new.warnings = [*new.warnings, {"code": "forecast_evidence_changed",
+                         "message": "The revised request retains stale forecast evidence; publish and review a new forecast."}]
     new.revises_proposal_id = p.id
     new.updated_at = clock.now()
     session.flush()

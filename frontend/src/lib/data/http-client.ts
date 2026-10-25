@@ -1,7 +1,10 @@
+import { adaptBudgetRequest, adaptAllocationState, budgetRequestBody, allocationTargetsBody, type BudgetRequestWire, type AllocationStateWire } from "./budget-requests";
+import { adaptWeeklyHistory, validateWeeklyHistoryQuery, type WeeklyHistoryWireResponse } from "./weekly-history";
+import { hydrateForecastDashboard } from "./forecast-dashboard";
 import type { DataClient, SpendingFilter } from "./client";
 import type {
-  AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast,
-  Person, SpendingRecord, Team, ForecastBundle, ForecastRefresh, ForecastEvidence, ForecastDriver, ForecastQuestionContext, ForecastScenarioResponse,
+  AllocationTargetsInput, AllocationDraftReceipt, BudgetRequestInput, BudgetRequestDraftInput, WeeklyHistoryQuery, MessageOptions, MessageReconciliation, AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast,
+  Person, SpendingRecord, Team, ForecastRefresh, ForecastEvidence, ForecastDriver, ForecastQuestionContext, ForecastScenarioResponse,
 } from "@/lib/contracts";
 
 /**
@@ -22,15 +25,48 @@ export class HttpDataClient implements DataClient {
     });
     if (!res.ok) {
       let message = `${path} → ${res.status}`;
-      try { const j = await res.json(); if (j?.error) message = j.error; else if (j?.detail) message = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); } catch { /* ignore */ }
-      throw new Error(message);
+      try { const j = await res.json(); if (typeof j?.error === "string") message = j.error; else if (typeof j?.error?.message === "string") message = j.error.message; else if (j?.detail) message = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); } catch { /* ignore */ }
+      throw Object.assign(new Error(message), { status: res.status, definiteFailure: res.status >= 400 && res.status < 500 && res.status !== 408 });
     }
     return res.json();
   }
 
-  getForecastViews(filter: { scope_type?: string; scope_id?: string; run_id?: string } = {}) {
+  async getAllocationState() { return adaptAllocationState(await this.get<AllocationStateWire>("/api/allocation-state")); }
+  async getBudgetRequests() { return (await this.get<{ items: BudgetRequestWire[] }>("/api/budget-requests")).items.map(adaptBudgetRequest); }
+  async getBudgetRequest(id: string) {
+    const response = await fetch(`${this.baseUrl}/api/budget-requests/${encodeURIComponent(id)}`, { cache: "no-store" });
+    if (response.status === 404) return undefined;
+    if (!response.ok) throw new Error("Request could not be loaded.");
+    return adaptBudgetRequest(await response.json());
+  }
+  async ingestTeamUpdate(input: BudgetRequestInput) { return adaptBudgetRequest(await this.post<BudgetRequestWire>("/api/budget-requests", budgetRequestBody(input))); }
+  async prepareBudgetRequestDraft(id: string, input: BudgetRequestDraftInput, operationId: string): Promise<AllocationDraftReceipt> {
+    const receipt = await this.post<{request: BudgetRequestWire; proposal: {id: string}}>(`/api/budget-requests/${encodeURIComponent(id)}/draft`,
+      {base_version:input.baseVersion,action_type:input.actionType,source_team_id:input.sourceTeamId ?? null}, {"Idempotency-Key":operationId});
+    return {proposalId:receipt.proposal.id,request:adaptBudgetRequest(receipt.request)};
+  }
+  async prepareAllocationProposal(input: AllocationTargetsInput, operationId: string): Promise<AllocationDraftReceipt> {
+    const receipt = await this.post<{id: string}>("/api/allocation-drafts", allocationTargetsBody(input), {"Idempotency-Key":operationId});
+    return {proposalId:receipt.id};
+  }
+  async reconcileAllocationProposal(operationId: string): Promise<AllocationDraftReceipt | undefined> {
+    const response = await fetch(`${this.baseUrl}/api/allocation-drafts/${encodeURIComponent(operationId)}`, {cache:"no-store"});
+    if (response.status === 404) return undefined;
+    if (!response.ok) throw new Error("Draft status could not be checked.");
+    const receipt: {id:string} = await response.json();
+    return {proposalId:receipt.id};
+  }
+  async getWeeklyForecastHistory(query: WeeklyHistoryQuery) {
+    validateWeeklyHistoryQuery(query);
+    const params = new URLSearchParams({ scope_type: query.scopeType, start_date: query.startDate, end_date_exclusive: query.endDateExclusive });
+    if (query.scopeId) params.set("scope_id", query.scopeId);
+    const response = await this.get<WeeklyHistoryWireResponse>(`/api/forecast-weekly-history?${params}`);
+    return adaptWeeklyHistory(response, query);
+  }
+  async getForecastViews(filter: { scope_type?: string; scope_id?: string; run_id?: string } = {}) {
     const q = new URLSearchParams(Object.entries(filter).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
-    return this.get<ForecastBundle>(`/api/forecast-views${q.size ? `?${q}` : ""}`);
+    q.set("compact", "true");
+    return hydrateForecastDashboard(await this.get<unknown>(`/api/forecast-views?${q}`));
   }
   refreshForecast(idempotencyKey: string) { return this.post<ForecastRefresh>("/api/forecast-refreshes", {}, { "Idempotency-Key": idempotencyKey }); }
   getForecastRefresh(id: string) { return this.get<ForecastRefresh>(`/api/forecast-refreshes/${encodeURIComponent(id)}`); }
@@ -58,11 +94,18 @@ export class HttpDataClient implements DataClient {
   getProposal(id: string) { return this.get<AllocationProposal | undefined>(`/api/proposals/${encodeURIComponent(id)}`); }
   getDecisions() { return this.get<Decision[]>("/api/decisions"); }
   getThread(threadId: string) { return this.get<AssistantMessage[]>(`/api/threads/${encodeURIComponent(threadId)}`); }
-  sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext) {
-    return this.post<AssistantMessage[]>(`/api/threads/${encodeURIComponent(threadId)}/messages`, { content, ...(forecastContext ? { forecast_context: forecastContext } : {}) });
+  sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext, options?: MessageOptions) {
+    return this.post<AssistantMessage[]>(`/api/threads/${encodeURIComponent(threadId)}/messages`, { content, ...(forecastContext ? { forecast_context: forecastContext } : {}), ...(options?.clientMessageId ? { client_message_id: options.clientMessageId } : {}), ...(options?.conversationContext ? { conversation_context: options.conversationContext } : {}) });
   }
-  applyProposal(proposalId: string, note?: string) {
-    return this.post<Decision>(`/api/proposals/${encodeURIComponent(proposalId)}/apply`, { note });
+  async reconcileMessage(threadId: string, clientMessageId: string): Promise<MessageReconciliation> {
+    const path = `/api/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(clientMessageId)}`;
+    const response = await fetch(`${this.baseUrl}${path}`, { cache: "no-store" });
+    if (response.status === 404) return { status: "not_found" };
+    if (!response.ok) throw new Error("Message status could not be checked.");
+    return response.json();
+  }
+  applyProposal(proposalId: string, note?: string, operationId?: string) {
+    return this.post<Decision>(`/api/proposals/${encodeURIComponent(proposalId)}/apply`, { note }, operationId ? { "Idempotency-Key": operationId } : undefined);
   }
   rejectProposal(proposalId: string) {
     return this.post<AllocationProposal>(`/api/proposals/${encodeURIComponent(proposalId)}/reject`, {});

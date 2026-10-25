@@ -76,9 +76,9 @@ def test_sdk_forecast_action_reaches_real_persisted_tool(fake_sdk, sdk_client, p
         args = {'idempotency_key': context['idempotency_key']}
     output, observed = sdk_forecast_request(fake_sdk, sdk_client, context, tool, args)
     assert output['status'] == 'succeeded', output
-    assert len(NORTHSTAR_TOOL_IDS) == 15
-    assert [step['tool'] for step in output['steps']] == [tool]
-    assert output['steps'][0]['args'] == args
+    assert len(NORTHSTAR_TOOL_IDS) == 16
+    assert [step['tool'] for step in output['steps']] == ['list_budget_requests', tool]
+    assert output['steps'][1]['args'] == args
     assert observed and not observed[0].get('error') and not observed[0].get('truncated')
     receipt = output['output']['forecast_receipts'][0]
     assert receipt == {'tool': tool, 'args': args, 'receipt': observed[0]}

@@ -410,3 +410,22 @@ def test_adapter_dependency_change_isolates_issued_procedure_identity(tmp_path, 
     original=next(r for r in records if r['run_id']==first['run_id'])
     revised=next(r for r in records if r['run_id']==second['run_id'])
     assert original['implementation_sha256']!=revised['implementation_sha256']
+
+
+def test_actuals_ignore_learning_receipts_and_returned_views_cannot_mutate_issuance(tmp_path):
+    svc, clock = service(tmp_path)
+    job = svc.refresh('initial')
+    assert ForecastWorker(svc).process_one()
+    before = svc.current_actuals()
+    svc.store.append_input('issued_targets', 'unrelated', '1', {'unrelated': 'learning receipt'}, available_at=clock[0])
+    assert svc.current_actuals() == before
+    original = svc.views(include_current_actuals=False)
+    altered = svc.views(include_current_actuals=False)
+    altered['views'][0]['value'] = 999
+    altered['calculations'].clear()
+    assert svc.views(include_current_actuals=False) == original
+    assert svc.store.get_run(job['run_id'])['bundle']['views'][0]['value'] == 3
+    svc.store.append_input('observations', 'new-actuals', '1', [{'quantity': 7}], available_at=clock[0])
+    after = svc.current_actuals()
+    assert after['observations'] == [{'quantity': 7}]
+    assert after['revision'] != before['revision']

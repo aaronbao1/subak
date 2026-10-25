@@ -849,6 +849,16 @@
       "scenario": "main",
       "schema": "TeamOut[]",
       "status": 200
+    },
+    {
+      "description": "bounded UTC observed daily ledger; exact simulated costs, separate included notional, unknown token telemetry and missing days never become known zero",
+      "file": "usage_daily.json",
+      "method": "GET",
+      "name": "usage_daily",
+      "path": "/api/usage/daily",
+      "scenario": "main",
+      "schema": "DailyUsageResponse",
+      "status": 200
     }
   ],
   "generated_with": {

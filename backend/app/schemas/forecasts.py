@@ -92,3 +92,33 @@ class ForecastSnapshotOut(OutModel):
     availability: Availability
     fetched_at: datetime
     forecast: ForecastResult
+
+
+class CompanyProjectionScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["company"] = "company"
+    id: str | None
+
+
+class CompanyProjectionOut(BaseModel):
+    """SDK-only exact issued company receipt; it never changes the native snapshot."""
+
+    model_config = ConfigDict(extra="forbid")
+    availability: Literal["available", "unavailable"] = "unavailable"
+    reason: str | None = None
+    # Unlike native allocation amounts, an issued forecast can have sub-cent precision.
+    amount: str | None = None
+    scope: CompanyProjectionScope
+    period_id: str
+    period_start: _dt.date
+    period_end_exclusive: _dt.date
+    unit: Literal["USD"] = "USD"
+    basis: Literal["planning"] = "planning"
+    quantity: Literal["spend"] = "spend"
+    timezone: Literal["UTC"] = "UTC"
+    projection_basis: Literal["full_period_total"] = "full_period_total"
+    run_id: str | None = None
+    input_snapshot_id: str | None = None
+    information_cutoff: datetime | None = None
+    value_kind: Literal["simulated", "estimated"]
+    qualification: str = "Issued company total includes shared spend; conditional on the recorded run's inputs."

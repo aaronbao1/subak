@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from types import MappingProxyType
 
 from .evaluation import interval_metrics, weighted_interval_score
 
@@ -164,6 +165,10 @@ def historical_error_interval(target, issued, truth_revisions, *, cutoff, covera
     if coverage not in (.8,.95):
         raise ValueError('supported coverage levels are 0.8 and 0.95')
     rows,excluded=_matched(target,issued,truth_revisions,cutoff)
+    return _interval_from_matches(target,rows,excluded,coverage)
+
+
+def _interval_from_matches(target,rows,excluded,coverage):
     n=len(rows)
     rank=math.ceil((n+1)*Fraction(str(coverage)))
     errors=sorted(abs(_finite(t['value']-r['prediction'])) for r,t in rows)
@@ -190,6 +195,92 @@ def historical_error_interval(target, issued, truth_revisions, *, cutoff, covera
                 qualification=QUALIFICATION)
 
 
+def _validated_interval_history(issued,truth_revisions):
+    """Validate the entire archive once; retain read-only per-call lookup data.
+
+    Keep the validation order and duplicate rules of ``_matched`` even for
+    unrelated or future evidence. Records are immutable JSON values owned by
+    the snapshot; neither this index nor its consumers modify those records.
+    """
+    inventory={}
+    for row in issued:
+        _validate_target(row)
+        identity=row['target_id']
+        if identity in inventory and inventory[identity]!=row:
+            raise ValueError('issued target identity changed')
+        inventory[identity]=row
+    versions={}; truths=[]
+    for row in truth_revisions:
+        if not isinstance(row['revision'],int) or row['revision']<1 or row['status'] not in ('mature','pending','disputed'):
+            raise ValueError('invalid truth revision/status')
+        _finite(row['value'])
+        available,mature=_time(row['available_at']),_time(row['mature_at'])
+        if available>mature:
+            raise ValueError('truth maturity precedes availability')
+        original=inventory.get(row['target_id'])
+        if original and mature.date()<_day(original['end']):
+            raise ValueError('truth matures before target end')
+        key=(row['target_id'],row['revision'])
+        if key in versions and versions[key]!=row:
+            raise ValueError('conflicting truth revision')
+        versions[key]=row
+        truths.append((row,available,mature))
+    return (tuple((row,_time(row['issued_at']),_day(row['end'])) for row in inventory.values()),
+            tuple(truths))
+
+
+def _interval_stratum_key(target):
+    key=tuple(target.get(k) for k in STRATUM)+(bool(target.get('is_synthetic',False)),)
+    try:
+        hash(key)
+    except TypeError:
+        # Legacy validation permits unhashable stratum values. Keep these in a
+        # fallback bucket, still comparing with the original equality rules.
+        return None
+    return key
+
+
+def _interval_history_at(history,cutoff):
+    """Index eligible latest truth by exact stratum at one publication cutoff."""
+    inventory,truths=history
+    latest={}
+    for truth,available,mature in truths:
+        identity=truth['target_id']
+        if available<=cutoff and (identity not in latest or truth['revision']>latest[identity][0]['revision']):
+            latest[identity]=(truth,mature)
+    groups={}
+    for row,issued_at,end in inventory:
+        version=latest.get(row['target_id'])
+        if issued_at>cutoff or end>cutoff.date() or version is None:
+            continue
+        truth,mature=version
+        if truth['status']!='mature' or mature>cutoff:
+            continue
+        if bool(truth.get('is_synthetic',False))!=bool(row.get('is_synthetic',False)):
+            continue
+        groups.setdefault(_interval_stratum_key(row),[]).append((row,truth,end))
+    return MappingProxyType({key:tuple(sorted(rows,key=lambda item:(item[0]['end'],item[0]['start'],item[0]['issued_at'],item[0]['target_id'])))
+                             for key,rows in groups.items()})
+
+
+def _matched_interval_history(target,groups):
+    key=_interval_stratum_key(target)
+    candidates=(tuple(item for rows in groups.values() for item in rows) if key is None
+                else groups.get(key,())+groups.get(None,()))
+    start=_day(target['start'])
+    eligible=[(row,truth) for row,truth,end in candidates if end<=start
+              and not any(row.get(k)!=target.get(k) for k in STRATUM)
+              and bool(row.get('is_synthetic',False))==bool(target.get('is_synthetic',False))]
+    # Normal buckets are already sorted. A fallback bucket may interleave rows.
+    if key is None or None in groups:
+        eligible.sort(key=lambda pair:(pair[0]['end'],pair[0]['start'],pair[0]['issued_at'],pair[0]['target_id']))
+    selected=[]; end=None
+    for pair in eligible:
+        if end is None or pair[0]['start']>=end:
+            selected.append(pair); end=pair[0]['end']
+    return selected,len(eligible)-len(selected)
+
+
 def enrich_intervals(bundle,snapshot):
     """Add per-target 80/95 intervals before publication, without changing bases."""
     result=deepcopy(bundle)
@@ -201,6 +292,7 @@ def enrich_intervals(bundle,snapshot):
     if base_procedure is not None: result['effective_procedure_id']=str(base_procedure)+'@'+implementation
     targets=archive_issued_targets(result,snapshot)
     indexed={(r['run_id'],r['scope_type'],r['scope_id'],r['aggregation'],r['start'],r['end']):r for r in targets}
+    history=None; history_by_cutoff={}
     for view in result.get('views',[result]):
         view['implementation_sha256']=implementation
         view['procedure_dependencies']=deepcopy(dependencies)
@@ -210,7 +302,13 @@ def enrich_intervals(bundle,snapshot):
                 key=(view['run_id'],view['scope']['type'],view['scope']['id'],aggregation,point.get('start',point.get('date')),point.get('end'))
                 target=indexed.get(key)
                 if target:
-                    point['historical_error_interval']={str(int(c*100)):historical_error_interval(target,snapshot.get('issued_targets',[]),snapshot.get('truth_revisions',[]),cutoff=view['publication'].get('information_cutoff',view['publication']['generated_at']),coverage=c) for c in (.8,.95)}
+                    cutoff=_time(view['publication'].get('information_cutoff',view['publication']['generated_at']))
+                    if history is None:
+                        history=_validated_interval_history(snapshot.get('issued_targets',[]),snapshot.get('truth_revisions',[]))
+                    if cutoff not in history_by_cutoff:
+                        history_by_cutoff[cutoff]=_interval_history_at(history,cutoff)
+                    rows,excluded=_matched_interval_history(target,history_by_cutoff[cutoff])
+                    point['historical_error_interval']={str(int(c*100)):_interval_from_matches(target,rows,excluded,c) for c in (.8,.95)}
         view['historical_error_interval']=deepcopy(view.get('cumulative',[])[-1].get('historical_error_interval')) if view.get('cumulative') else None
     return result
 

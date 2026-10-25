@@ -153,6 +153,8 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
         "billing_files": files,
         "corpus_documents": len(corpus),
     }
+    if C.COMPLETE_AS_OF_DAY:
+        reference["company"]["complete_through"] = C.AS_OF.isoformat()
     (bdir / "reference.json").write_text(json.dumps(reference, indent=2), encoding="utf-8")
     return reference
 
@@ -186,7 +188,7 @@ def export_frontend(out: Path, *, teams, people, story, usage_rows, seat_rows, b
             "provider": r.provider, "model": r.model_name, "tokens": r.input_tokens + r.output_tokens,
             "amount": round(r.cost_usd, 2), "unit": "usd",
             "provenance": "usage_only" if r.cost_category == "included_usage" else ("estimate" if r.cost_category == "billable_overage" else "reported_charge"),
-            "source": source_label(r.provider) + (" (simulated)"), "complete": r.day < C.AS_OF,
+            "source": source_label(r.provider) + (" (simulated)"), "complete": r.day < C.AS_OF or C.COMPLETE_AS_OF_DAY,
         })
     for s in seat_rows:
         spending.append({
@@ -207,7 +209,7 @@ def export_frontend(out: Path, *, teams, people, story, usage_rows, seat_rows, b
         row = {"id": f"{team}:{day}:{comp}:{prov}" + (f":{slug(model)}" if model else ""), "teamId": team, "date": day, "component": comp,
                "provider": prov, "amount": round(v["amount"], 2), "unit": "usd",
                "provenance": "usage_only" if comp == "included_usage" else ("estimate" if comp == "extra_usage" else "reported_charge"),
-               "source": source_label(prov) + " (simulated)", "complete": day < export_date}
+               "source": source_label(prov) + " (simulated)", "complete": day < export_date or C.COMPLETE_AS_OF_DAY}
         if model:
             row["model"] = model
             row["tokens"] = v["tokens"]
@@ -288,7 +290,7 @@ def export_forecasting(out: Path, *, teams, usage_rows, seat_rows, holdout_rows,
             recs.append({"record_id": f"{team}:{day.isoformat()}:variable", "source_id": "billing", "entity_id": f"team:{team}",
                          "service_date": day.isoformat(), "value": money(val), "unit": "USD", "currency": "USD", "category": "variable",
                          "known_at": known, "ingested_at": known, "processed_at": known, "revision": 1,
-                         "status": "partial" if day == C.AS_OF else "observed"})
+                         "status": "partial" if day == C.AS_OF and not C.COMPLETE_AS_OF_DAY else "observed"})
         for (team, day), val in sorted(fixed.items(), key=lambda kv: (kv[0][1], kv[0][0])):
             known = datetime.combine(day + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc).isoformat()
             recs.append({"record_id": f"{team}:{day.isoformat()}:fixed", "source_id": "seats", "entity_id": f"team:{team}",
@@ -305,7 +307,8 @@ def export_forecasting(out: Path, *, teams, usage_rows, seat_rows, holdout_rows,
     truth = {"schema_version": "1.0", "note": "SYNTHETIC GROUND TRUTH for Oct 25 - Dec 31 2026. Never feed to a model; use only to score forecasts.",
              "records": records(holdout_rows, []) + records([], holdout_seats)}
     (fdir / "uber-holdout-truth.json").write_text(json.dumps(truth, indent=1), encoding="utf-8")
-    as_of = datetime.combine(C.AS_OF, datetime.min.time(), tzinfo=timezone.utc).isoformat()
+    coverage_end = C.AS_OF + timedelta(days=int(C.COMPLETE_AS_OF_DAY))
+    as_of = datetime.combine(coverage_end, datetime.min.time(), tzinfo=timezone.utc).isoformat()
     config = {
         "schema_version": "1.0",
         "request": {"request_id": "uber-sim-q4-v1",
@@ -313,7 +316,7 @@ def export_forecasting(out: Path, *, teams, usage_rows, seat_rows, holdout_rows,
                                "currency": "USD", "sources": ["billing"], "categories": ["variable"]},
                     "as_of": as_of, "period_start": "2026-10-01", "period_end": "2026-12-31", "model": "trailing_mean"},
         "export": "uber-observations.json", "source_id": "billing", "history_start": C.YEAR_START.isoformat(),
-        "coverage": [{"source_id": "billing", "start": C.YEAR_START.isoformat(), "end": C.AS_OF.isoformat(), "state": "complete", "maturity": "finalized", "known_at": as_of}],
+        "coverage": [{"source_id": "billing", "start": C.YEAR_START.isoformat(), "end": coverage_end.isoformat(), "state": "complete", "maturity": "finalized", "known_at": as_of}],
         "evidence_class": "synthetic_fixture",
     }
     (fdir / "uber-config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
@@ -380,7 +383,8 @@ def measured_effect(ev, usage_rows_by_person_day: dict, people_by_id: dict, cale
     """Mean weekday cost per affected person inside the window vs the 28 days before it (weekdays, non-holiday)."""
     if ev.starts_on > C.AS_OF:
         return None
-    end = min(ev.ends_on or C.AS_OF, C.AS_OF - timedelta(days=1))
+    last_complete = C.AS_OF if C.COMPLETE_AS_OF_DAY else C.AS_OF - timedelta(days=1)
+    end = min(ev.ends_on or C.AS_OF, last_complete)
     if end < ev.starts_on:
         return None
     pids = ev.person_ids or [pid for pid, p in people_by_id.items() if (ev.scope == "company" or p.team_id in ev.team_ids)]
@@ -390,7 +394,8 @@ def measured_effect(ev, usage_rows_by_person_day: dict, people_by_id: dict, cale
         d = start
         while d <= stop:
             c = calendar.get(d)
-            if c is not None and c.is_weekend == weekend and c.holiday is None and C.YEAR_START <= d < C.AS_OF:
+            if (c is not None and c.is_weekend == weekend and c.holiday is None
+                    and C.YEAR_START <= d <= C.AS_OF and not c.partial):
                 vals.append(sum(usage_rows_by_person_day.get((pid, d), 0.0) for pid in pids))
             d += timedelta(days=1)
         return statistics.mean(vals) if vals else None
@@ -414,7 +419,7 @@ def write_answer_key(out: Path, *, teams, people, story, calendar, usage_rows) -
     for t in story.tasks:
         msgs[t.event_id].append(f"{t.id} ({INTEGRATION_LABEL[t.tool]}, {t.status_changed_at.strftime('%b %-d')})")
     lines = ["# Answer key: planted storylines", "",
-             f"Dataset: {C.COMPANY_NAME}, {C.YEAR_START} to {C.AS_OF} (as-of, partial day). Seed {C.SEED}.", "",
+             f"Dataset: {C.COMPANY_NAME}, {C.YEAR_START} to {C.AS_OF} (as-of, {'complete' if C.COMPLETE_AS_OF_DAY else 'partial'} day). Seed {C.SEED}.", "",
              "Every event below is in `events` (SQLite), `csv/events.csv` and `frontend/context.json`; its evidence is in `messages` / `tasks`,",
              "`backend/corpus/*.md` and `frontend/documents.json`. 'Planted' is the multiplier the generator applied to the affected",
              "people's daily volume inside the window. 'Measured' is the ratio of mean weekday cost per affected group inside the window to the",
@@ -464,8 +469,8 @@ def write_summary(out: Path, *, teams, people, story, calendar, usage_rows, seat
     daily = defaultdict(float)
     for r in usage_rows:
         daily[r.day] += r.input_tokens + r.output_tokens
-    wk = [v for d, v in daily.items() if not calendar[d].is_weekend and calendar[d].holiday is None and d < C.AS_OF]
-    we = [v for d, v in daily.items() if calendar[d].is_weekend and d < C.AS_OF]
+    wk = [v for d, v in daily.items() if not calendar[d].is_weekend and calendar[d].holiday is None and not calendar[d].partial]
+    we = [v for d, v in daily.items() if calendar[d].is_weekend and not calendar[d].partial]
     hol = [v for d, v in daily.items() if calendar[d].holiday is not None and not calendar[d].is_weekend]
     by_provider = defaultdict(float)
     for r in usage_rows:
@@ -477,7 +482,7 @@ def write_summary(out: Path, *, teams, people, story, calendar, usage_rows, seat
         by_channel[t.tool] += 1
     budget_q4 = {b["team_id"]: b["allocated_usd"] for b in budgets if b["period_id"] == "2026-Q4"}
     lines = [f"# {C.COMPANY_NAME} AI spend dataset — summary", "",
-             f"Generated in {elapsed:.1f}s with seed {C.SEED}. Period {C.YEAR_START} to {C.AS_OF} (as-of; {C.AS_OF.strftime('%A')}, partial). All data is synthetic.", "",
+             f"Generated in {elapsed:.1f}s with seed {C.SEED}. Period {C.YEAR_START} to {C.AS_OF} (as-of; {C.AS_OF.strftime('%A')}, {'complete' if C.COMPLETE_AS_OF_DAY else 'partial'}). All data is synthetic.", "",
              "| Metric | Value |", "|---|---|",
              f"| Teams | {len(teams)} |", f"| People | {len(people)} (joiners {sum(1 for p in people if p.start_date >= C.YEAR_START)}, leavers {sum(1 for p in people if p.end_date)}) |",
              f"| Usage rows (person × day × model × category) | {len(usage_rows):,} |", f"| Seat rows | {len(seat_rows):,} |",

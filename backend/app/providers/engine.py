@@ -29,12 +29,15 @@ class EngineForecastProvider:
             start, end = period.starts_on.isoformat(), (period.ends_on + timedelta(days=1)).isoformat()
         # This adapter consumes only the issued quarter. Current actuals have
         # separate acquisition and availability and must not gate a stored run.
-        bundle = self.service.views(include_current_actuals=False)
+        with self.service.store.operation():
+            publication = self.service.store.publication()
+            if not publication:
+                return unavailable('no published forecast; request a refresh')
+            run, snapshot = self.service.store.get_issued_quarter_inputs(publication['run_id'])
+        bundle = run['bundle']
         run_id = bundle.get('run_id')
         if not run_id:
             return unavailable('no published forecast; request a refresh')
-        run = self.service.store.get_run(run_id)
-        snapshot = self.service.store.get_snapshot(run['snapshot_id'])
         projections = []
         for view in bundle.get('views', []):
             team = view['scope']['id']

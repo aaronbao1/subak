@@ -39,11 +39,11 @@
         "at": "2026-10-24T12:03:00Z",
         "data": {
           "args": {
-            "status": "current",
+            "include_closed": false,
             "team": null
           },
           "step": 1,
-          "tool": "list_signals"
+          "tool": "list_budget_requests"
         },
         "seq": 2,
         "source": "fake_runner",
@@ -54,8 +54,8 @@
         "data": {
           "is_error": false,
           "step": 1,
-          "summary": "10 signal(s)",
-          "tool": "list_signals"
+          "summary": "0 current-period request(s); 11 current source version(s) checked",
+          "tool": "list_budget_requests"
         },
         "seq": 3,
         "source": "fake_runner",
@@ -64,9 +64,12 @@
       {
         "at": "2026-10-24T12:03:00Z",
         "data": {
-          "args": {},
+          "args": {
+            "status": "current",
+            "team": null
+          },
           "step": 2,
-          "tool": "get_budgets"
+          "tool": "list_signals"
         },
         "seq": 4,
         "source": "fake_runner",
@@ -77,8 +80,8 @@
         "data": {
           "is_error": false,
           "step": 2,
-          "summary": "envelope 200000.00 USD, version 1",
-          "tool": "get_budgets"
+          "summary": "10 signal(s)",
+          "tool": "list_signals"
         },
         "seq": 5,
         "source": "fake_runner",
@@ -89,7 +92,7 @@
         "data": {
           "args": {},
           "step": 3,
-          "tool": "get_spend_summary"
+          "tool": "get_budgets"
         },
         "seq": 6,
         "source": "fake_runner",
@@ -100,8 +103,8 @@
         "data": {
           "is_error": false,
           "step": 3,
-          "summary": "company total 95000.00 USD, coverage complete",
-          "tool": "get_spend_summary"
+          "summary": "envelope 200000.00 USD, version 1",
+          "tool": "get_budgets"
         },
         "seq": 7,
         "source": "fake_runner",
@@ -112,7 +115,7 @@
         "data": {
           "args": {},
           "step": 4,
-          "tool": "get_forecast"
+          "tool": "get_spend_summary"
         },
         "seq": 8,
         "source": "fake_runner",
@@ -123,8 +126,8 @@
         "data": {
           "is_error": false,
           "step": 4,
-          "summary": "available (placeholder), snapshot fcs_000002",
-          "tool": "get_forecast"
+          "summary": "company total 95000.00 USD, coverage complete",
+          "tool": "get_spend_summary"
         },
         "seq": 9,
         "source": "fake_runner",
@@ -133,12 +136,9 @@
       {
         "at": "2026-10-24T12:03:00Z",
         "data": {
-          "args": {
-            "status": "superseded",
-            "team": null
-          },
+          "args": {},
           "step": 5,
-          "tool": "list_signals"
+          "tool": "get_forecast"
         },
         "seq": 10,
         "source": "fake_runner",
@@ -149,10 +149,36 @@
         "data": {
           "is_error": false,
           "step": 5,
+          "summary": "available (placeholder), snapshot fcs_000002",
+          "tool": "get_forecast"
+        },
+        "seq": 11,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:03:00Z",
+        "data": {
+          "args": {
+            "status": "superseded",
+            "team": null
+          },
+          "step": 6,
+          "tool": "list_signals"
+        },
+        "seq": 12,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:03:00Z",
+        "data": {
+          "is_error": false,
+          "step": 6,
           "summary": "1 signal(s)",
           "tool": "list_signals"
         },
-        "seq": 11,
+        "seq": 13,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -232,13 +258,13 @@
                   "to_team": "engineering"
                 }
               ],
-              "rationale": "Transfer between teams, prioritizing research: existing funds move from teams projected below their allocation (never below their recorded spend) to projected overruns, research first; the envelope is unchanged. Context (research, current): Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next. Evidence: \"This plan expands model-evaluation work during the current planning period.\" (research-eval-plan v1); \"This plan supersedes the earlier email thread that proposed pushing the expansion to next period.\" (research-eval-plan v1). Context (product, current): Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period). Evidence: \"The general-availability launch milestone for the assistant workspace lands in the current period.\" (product-launch-plan v1); \"The general-availability launch milestone moves to the following period after customer pilot\nfeedback.\" (product-launch-plan v2). Context (engineering, current): Engineering platform migration continues through the current period at the current pace; seats stay flat. Evidence: \"Platform migration work continues through the current period at the current pace.\" (engineering-platform-note v1). Context (research, current): Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch. Evidence: \"Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03.\" (research-harness-asana v1); \"I will pause the implementation branch and keep my API runs to the design spikes.\" (research-harness-asana v1). Context (research, current): Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs. Evidence: \"from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.\" (research-model-switch-slack v1); \"just the cheaper tier for everything except the final comparison runs.\" (research-model-switch-slack v1). Context (research, current): Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away. Evidence: \"Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away.\" (research-availability-monday v1). Context (engineering, current): Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover. Evidence: \"the cutover regression suite now starts 2026-10-22 instead of mid-November.\" (engineering-cutover-monday v1); \"Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes.\" (engineering-cutover-monday v1). Context (engineering, current): Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date. Evidence: \"Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13.\" (engineering-welcome-slack v1). Context (product, current): Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage. Evidence: \"From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly.\" (product-tool-switch-slack v1); \"it will show up as API usage instead of seat overage.\" (product-tool-switch-slack v1). Context (company, current): From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known. Evidence: \"Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week.\" (company-model-announcement-slack v1); \"the net effect on each team's bill is not known yet.\" (company-model-announcement-slack v1). Not relied on: Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan. (superseded). Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Drafted by Droid for finance review; nothing is applied until a finance approver decides."
+              "rationale": "Transfer between teams, prioritizing research: existing funds move from teams projected below their allocation (never below their recorded spend) to projected overruns, research first; the envelope is unchanged. Context (research, current): Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next. Evidence: \"This plan expands model-evaluation work during the current planning period.\" (research-eval-plan v1); \"This plan supersedes the earlier email thread that proposed pushing the expansion to next period.\" (research-eval-plan v1). Context (product, current): Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period). Evidence: \"The general-availability launch milestone for the assistant workspace lands in the current period.\" (product-launch-plan v1); \"The general-availability launch milestone moves to the following period after customer pilot\nfeedback.\" (product-launch-plan v2). Context (engineering, current): Engineering platform migration continues through the current period at the current pace; seats stay flat. Evidence: \"Platform migration work continues through the current period at the current pace.\" (engineering-platform-note v1). Context (research, current): Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch. Evidence: \"Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03.\" (research-harness-asana v1); \"I will pause the implementation branch and keep my API runs to the design spikes.\" (research-harness-asana v1). Context (research, current): Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs. Evidence: \"from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.\" (research-model-switch-slack v1); \"just the cheaper tier for everything except the final comparison runs.\" (research-model-switch-slack v1). Context (research, current): Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away. Evidence: \"Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away.\" (research-availability-monday v1). Context (engineering, current): Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover. Evidence: \"the cutover regression suite now starts 2026-10-22 instead of mid-November.\" (engineering-cutover-monday v1); \"Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes.\" (engineering-cutover-monday v1). Context (engineering, current): Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date. Evidence: \"Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13.\" (engineering-welcome-slack v1). Context (product, current): Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage. Evidence: \"From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly.\" (product-tool-switch-slack v1); \"it will show up as API usage instead of seat overage.\" (product-tool-switch-slack v1). Context (company, current): From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known. Evidence: \"Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week.\" (company-model-announcement-slack v1); \"the net effect on each team's bill is not known yet.\" (company-model-announcement-slack v1). Not relied on: Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan. (superseded). Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Drafted by Droid for finance review; nothing is applied until a finance approver decides.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
             }
           },
-          "step": 6,
+          "step": 7,
           "tool": "draft_proposal"
         },
-        "seq": 12,
+        "seq": 14,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -246,11 +272,11 @@
         "at": "2026-10-24T12:03:00Z",
         "data": {
           "is_error": false,
-          "step": 6,
+          "step": 7,
           "summary": "proposal prop_000002 transfer pending_review; not applied",
           "tool": "draft_proposal"
         },
-        "seq": 13,
+        "seq": 15,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -288,16 +314,16 @@
           "status": "pending_review",
           "warnings": []
         },
-        "seq": 14,
+        "seq": 16,
         "source": "fake_runner",
         "type": "proposal_drafted"
       },
       {
         "at": "2026-10-24T12:03:00Z",
         "data": {
-          "text": "Drafted proposal prop_000002 (transfer between teams) for finance review: engineering 65000.00, product 50000.00, research 85000.00; envelope 200000.00 USD. It is pending_review and has NOT been applied; saved allocations remain at version 1 until a finance approver decides."
+          "text": "Drafted a $30,000.00 redistribution between teams for finance review. The company budget would stay at $200,000.00. Nothing has been applied.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
         },
-        "seq": 15,
+        "seq": 17,
         "source": "fake_runner",
         "type": "assistant_text"
       },
@@ -310,9 +336,9 @@
           ],
           "signal_ids": [],
           "status": "succeeded",
-          "summary": "Drafted proposal prop_000002 (transfer between teams) for finance review: engineering 65000.00, product 50000.00, research 85000.00; envelope 200000.00 USD. It is pending_review and has NOT been applied; saved allocations remain at version 1 until a finance approver decides."
+          "summary": "Drafted a $30,000.00 redistribution between teams for finance review. The company budget would stay at $200,000.00. Nothing has been applied.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
         },
-        "seq": 16,
+        "seq": 18,
         "source": "backend",
         "type": "run_finished"
       }
@@ -328,6 +354,26 @@
     "output": {
       "applied_changes": false,
       "findings": [
+        {
+          "authored_at": "2026-10-16T00:00:00Z",
+          "doc_key": "marketing-ideas-slack",
+          "doc_type": "correspondence",
+          "document_id": "doc_000006",
+          "effective_from": null,
+          "effective_to": null,
+          "excerpt": "[2026-10-16 10:02] m.chen: what if we generated personalized demo videos for every enterprise lead?\n[2026-10-16 10:05] j.ortiz: fun idea, no budget or approval for it yet though\n[2026-10-16 10:06] m.chen: just brainstorming, not a plan\n",
+          "has_current_signal": false,
+          "plan_status": "informal",
+          "project_tags": [
+            "campaigns"
+          ],
+          "team_tags": [
+            "marketing"
+          ],
+          "title": "#marketing-ideas: AI campaign brainstorm",
+          "type": "source_update",
+          "version": 1
+        },
         {
           "allocation": "60000.00",
           "projected": "65000.00",
@@ -358,7 +404,7 @@
       ],
       "session_id": null,
       "signal_ids": [],
-      "summary": "Drafted proposal prop_000002 (transfer between teams) for finance review: engineering 65000.00, product 50000.00, research 85000.00; envelope 200000.00 USD. It is pending_review and has NOT been applied; saved allocations remain at version 1 until a finance approver decides.",
+      "summary": "Drafted a $30,000.00 redistribution between teams for finance review. The company budget would stay at $200,000.00. Nothing has been applied.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them.",
       "usage": null,
       "warnings": []
     },
@@ -381,33 +427,43 @@
     "steps": [
       {
         "args": {
+          "include_closed": false,
+          "team": null
+        },
+        "at": "2026-10-24T12:03:00Z",
+        "result_summary": "0 current-period request(s); 11 current source version(s) checked",
+        "seq": 1,
+        "tool": "list_budget_requests"
+      },
+      {
+        "args": {
           "status": "current",
           "team": null
         },
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "10 signal(s)",
-        "seq": 1,
+        "seq": 2,
         "tool": "list_signals"
       },
       {
         "args": {},
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "envelope 200000.00 USD, version 1",
-        "seq": 2,
+        "seq": 3,
         "tool": "get_budgets"
       },
       {
         "args": {},
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "company total 95000.00 USD, coverage complete",
-        "seq": 3,
+        "seq": 4,
         "tool": "get_spend_summary"
       },
       {
         "args": {},
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "available (placeholder), snapshot fcs_000002",
-        "seq": 4,
+        "seq": 5,
         "tool": "get_forecast"
       },
       {
@@ -417,7 +473,7 @@
         },
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "1 signal(s)",
-        "seq": 5,
+        "seq": 6,
         "tool": "list_signals"
       },
       {
@@ -494,16 +550,16 @@
                 "to_team": "engineering"
               }
             ],
-            "rationale": "Transfer between teams, prioritizing research: existing funds move from teams projected below their allocation (never below their recorded spend) to projected overruns, research first; the envelope is unchanged. Context (research, current): Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next. Evidence: \"This plan expands model-evaluation work during the current planning period.\" (research-eval-plan v1); \"This plan supersedes the earlier email thread that proposed pushing the expansion to next period.\" (research-eval-plan v1). Context (product, current): Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period). Evidence: \"The general-availability launch milestone for the assistant workspace lands in the current period.\" (product-launch-plan v1); \"The general-availability launch milestone moves to the following period after customer pilot\nfeedback.\" (product-launch-plan v2). Context (engineering, current): Engineering platform migration continues through the current period at the current pace; seats stay flat. Evidence: \"Platform migration work continues through the current period at the current pace.\" (engineering-platform-note v1). Context (research, current): Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch. Evidence: \"Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03.\" (research-harness-asana v1); \"I will pause the implementation branch and keep my API runs to the design spikes.\" (research-harness-asana v1). Context (research, current): Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs. Evidence: \"from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.\" (research-model-switch-slack v1); \"just the cheaper tier for everything except the final comparison runs.\" (research-model-switch-slack v1). Context (research, current): Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away. Evidence: \"Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away.\" (research-availability-monday v1). Context (engineering, current): Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover. Evidence: \"the cutover regression suite now starts 2026-10-22 instead of mid-November.\" (engineering-cutover-monday v1); \"Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes.\" (engineering-cutover-monday v1). Context (engineering, current): Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date. Evidence: \"Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13.\" (engineering-welcome-slack v1). Context (product, current): Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage. Evidence: \"From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly.\" (product-tool-switch-slack v1); \"it will show up as API usage instead of seat overage.\" (product-tool-switch-slack v1). Context (company, current): From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known. Evidence: \"Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week.\" (company-model-announcement-slack v1); \"the net effect on each team's bill is not known yet.\" (company-model-announcement-slack v1). Not relied on: Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan. (superseded). Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Drafted by Droid for finance review; nothing is applied until a finance approver decides."
+            "rationale": "Transfer between teams, prioritizing research: existing funds move from teams projected below their allocation (never below their recorded spend) to projected overruns, research first; the envelope is unchanged. Context (research, current): Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next. Evidence: \"This plan expands model-evaluation work during the current planning period.\" (research-eval-plan v1); \"This plan supersedes the earlier email thread that proposed pushing the expansion to next period.\" (research-eval-plan v1). Context (product, current): Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period). Evidence: \"The general-availability launch milestone for the assistant workspace lands in the current period.\" (product-launch-plan v1); \"The general-availability launch milestone moves to the following period after customer pilot\nfeedback.\" (product-launch-plan v2). Context (engineering, current): Engineering platform migration continues through the current period at the current pace; seats stay flat. Evidence: \"Platform migration work continues through the current period at the current pace.\" (engineering-platform-note v1). Context (research, current): Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch. Evidence: \"Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03.\" (research-harness-asana v1); \"I will pause the implementation branch and keep my API runs to the design spikes.\" (research-harness-asana v1). Context (research, current): Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs. Evidence: \"from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.\" (research-model-switch-slack v1); \"just the cheaper tier for everything except the final comparison runs.\" (research-model-switch-slack v1). Context (research, current): Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away. Evidence: \"Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away.\" (research-availability-monday v1). Context (engineering, current): Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover. Evidence: \"the cutover regression suite now starts 2026-10-22 instead of mid-November.\" (engineering-cutover-monday v1); \"Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes.\" (engineering-cutover-monday v1). Context (engineering, current): Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date. Evidence: \"Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13.\" (engineering-welcome-slack v1). Context (product, current): Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage. Evidence: \"From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly.\" (product-tool-switch-slack v1); \"it will show up as API usage instead of seat overage.\" (product-tool-switch-slack v1). Context (company, current): From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known. Evidence: \"Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week.\" (company-model-announcement-slack v1); \"the net effect on each team's bill is not known yet.\" (company-model-announcement-slack v1). Not relied on: Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan. (superseded). Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Drafted by Droid for finance review; nothing is applied until a finance approver decides.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
           }
         },
         "at": "2026-10-24T12:03:00Z",
         "result_summary": "proposal prop_000002 transfer pending_review; not applied",
-        "seq": 6,
+        "seq": 7,
         "tool": "draft_proposal"
       }
     ],
-    "summary": "Drafted proposal prop_000002 (transfer between teams) for finance review: engineering 65000.00, product 50000.00, research 85000.00; envelope 200000.00 USD. It is pending_review and has NOT been applied; saved allocations remain at version 1 until a finance approver decides.",
+    "summary": "Drafted a $30,000.00 redistribution between teams for finance review. The company budget would stay at $200,000.00. Nothing has been applied.\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them.",
     "task_type": "propose_allocation"
   },
   "scenario": "agent",

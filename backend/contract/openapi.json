@@ -451,6 +451,77 @@
         "title": "AgentStepOut",
         "type": "object"
       },
+      "AllocationDraftCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "allocations": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "maxProperties": 100,
+            "title": "Allocations",
+            "type": "object"
+          },
+          "base_version": {
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "period_end_exclusive": {
+            "format": "date",
+            "title": "Period End Exclusive",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 10000,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "request_ids": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Request Ids",
+            "type": "array"
+          },
+          "unit": {
+            "const": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_version",
+          "period_start",
+          "period_end_exclusive",
+          "unit",
+          "allocations",
+          "rationale"
+        ],
+        "title": "AllocationDraftCreate",
+        "type": "object"
+      },
       "AllocationOut": {
         "properties": {
           "amount": {
@@ -487,6 +558,164 @@
           "coverage_status"
         ],
         "title": "AllocationOut",
+        "type": "object"
+      },
+      "AllocationPeriod": {
+        "properties": {
+          "end_date_exclusive": {
+            "format": "date",
+            "title": "End Date Exclusive",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "start_date",
+          "end_date_exclusive",
+          "label"
+        ],
+        "title": "AllocationPeriod",
+        "type": "object"
+      },
+      "AllocationState": {
+        "properties": {
+          "allocated_total": {
+            "title": "Allocated Total",
+            "type": "string"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationStateRow"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "envelope_total": {
+            "title": "Envelope Total",
+            "type": "string"
+          },
+          "last_decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Decision Id"
+          },
+          "note": {
+            "default": "internal planning allocations; no provider credits are transferred or enforced",
+            "title": "Note",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/AllocationPeriod"
+          },
+          "spend_coverage": {
+            "$ref": "#/components/schemas/BudgetSpendCoverage"
+          },
+          "state_version": {
+            "title": "State Version",
+            "type": "integer"
+          },
+          "unallocated_amount": {
+            "title": "Unallocated Amount",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "unit",
+          "state_version",
+          "envelope_total",
+          "allocated_total",
+          "unallocated_amount",
+          "allocations",
+          "updated_at",
+          "last_decision_id",
+          "spend_coverage"
+        ],
+        "title": "AllocationState",
+        "type": "object"
+      },
+      "AllocationStateRow": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "coverage_status": {
+            "enum": [
+              "complete",
+              "partial",
+              "missing"
+            ],
+            "title": "Coverage Status",
+            "type": "string"
+          },
+          "recorded_spend": {
+            "title": "Recorded Spend",
+            "type": "string"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "amount",
+          "recorded_spend",
+          "remaining",
+          "coverage_status"
+        ],
+        "title": "AllocationStateRow",
+        "type": "object"
+      },
+      "AvailableDonor": {
+        "properties": {
+          "headroom": {
+            "title": "Headroom",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "headroom"
+        ],
+        "title": "AvailableDonor",
         "type": "object"
       },
       "BlockedAttemptOut": {
@@ -625,6 +854,352 @@
           "snapshots"
         ],
         "title": "BudgetHistory",
+        "type": "object"
+      },
+      "BudgetRequestCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_request_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Request Id",
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "maxItems": 98,
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "narrative": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Narrative",
+            "type": "string"
+          },
+          "period_end_exclusive": {
+            "format": "date",
+            "title": "Period End Exclusive",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "request_kind": {
+            "default": "team",
+            "enum": [
+              "team",
+              "project",
+              "initiative"
+            ],
+            "title": "Request Kind",
+            "type": "string"
+          },
+          "requested_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Amount"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_request_id",
+          "team_id",
+          "title",
+          "narrative",
+          "period_start",
+          "period_end_exclusive"
+        ],
+        "title": "BudgetRequestCreate",
+        "type": "object"
+      },
+      "BudgetRequestDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "enum": [
+              "addition",
+              "transfer"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "base_version": {
+            "minimum": 1.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "source_team_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Team Id"
+          }
+        },
+        "required": [
+          "base_version",
+          "action_type"
+        ],
+        "title": "BudgetRequestDraft",
+        "type": "object"
+      },
+      "BudgetRequestDraftOut": {
+        "properties": {
+          "proposal": {
+            "$ref": "#/components/schemas/ProposalOut"
+          },
+          "request": {
+            "$ref": "#/components/schemas/BudgetRequestOut"
+          }
+        },
+        "required": [
+          "request",
+          "proposal"
+        ],
+        "title": "BudgetRequestDraftOut",
+        "type": "object"
+      },
+      "BudgetRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BudgetRequestList",
+        "type": "object"
+      },
+      "BudgetRequestOut": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_amount": {
+            "title": "Approved Amount",
+            "type": "string"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/RequestAssessment"
+          },
+          "client_request_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Request Id",
+            "type": "string"
+          },
+          "decision_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decision Ids",
+            "type": "array"
+          },
+          "evidence_refs": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "maxItems": 98,
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "linked_proposal_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Linked Proposal Ids",
+            "type": "array"
+          },
+          "narrative": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Narrative",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/RequestPeriod"
+          },
+          "period_end_exclusive": {
+            "format": "date",
+            "title": "Period End Exclusive",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "remaining_requested_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Requested Amount"
+          },
+          "request_kind": {
+            "default": "team",
+            "enum": [
+              "team",
+              "project",
+              "initiative"
+            ],
+            "title": "Request Kind",
+            "type": "string"
+          },
+          "requested_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Amount"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RequestSource"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "status": {
+            "enum": [
+              "submitted",
+              "pending_review",
+              "needs_revision",
+              "partially_funded",
+              "approved_applied",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_request_id",
+          "team_id",
+          "title",
+          "narrative",
+          "period_start",
+          "period_end_exclusive",
+          "id",
+          "period",
+          "source",
+          "status",
+          "linked_proposal_ids",
+          "decision_ids",
+          "approved_amount",
+          "remaining_requested_amount",
+          "assessment"
+        ],
+        "title": "BudgetRequestOut",
         "type": "object"
       },
       "BudgetSnapshotOut": {
@@ -1188,6 +1763,57 @@
           "notes"
         ],
         "title": "CompanyCoverage",
+        "type": "object"
+      },
+      "CompanyMeta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "env",
+              "db",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "as_of",
+          "is_simulated",
+          "source",
+          "detail"
+        ],
+        "title": "CompanyMeta",
         "type": "object"
       },
       "CompanyOverview": {
@@ -1774,6 +2400,225 @@
           "amount"
         ],
         "title": "DailyProjection",
+        "type": "object"
+      },
+      "DailyUsageBucket": {
+        "properties": {
+          "breakdowns": {
+            "items": {
+              "$ref": "#/components/schemas/UsageBreakdown"
+            },
+            "title": "Breakdowns",
+            "type": "array"
+          },
+          "costs_by_value_kind": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "measured",
+                "estimated",
+                "reported",
+                "simulated"
+              ]
+            },
+            "title": "Costs By Value Kind",
+            "type": "object"
+          },
+          "coverage": {
+            "enum": [
+              "complete",
+              "partial",
+              "missing",
+              "unknown",
+              "future"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "included_usage_notional": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Usage Notional"
+          },
+          "record_count": {
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "recorded_spend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded Spend"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "token_observed_record_counts": {
+            "$ref": "#/components/schemas/TokenObservedRecordCounts"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/UsageTokens"
+          }
+        },
+        "required": [
+          "recorded_spend",
+          "costs_by_value_kind",
+          "included_usage_notional",
+          "tokens",
+          "token_observed_record_counts",
+          "record_count",
+          "date",
+          "coverage",
+          "revision",
+          "breakdowns",
+          "source_refs"
+        ],
+        "title": "DailyUsageBucket",
+        "type": "object"
+      },
+      "DailyUsageResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "available_end_date_exclusive": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available End Date Exclusive"
+          },
+          "available_start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Start Date"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/DailyUsageBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "dataset_id": {
+            "const": "repository-ledger",
+            "default": "repository-ledger",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "dataset_revision": {
+            "title": "Dataset Revision",
+            "type": "string"
+          },
+          "end_date_exclusive": {
+            "format": "date",
+            "title": "End Date Exclusive",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/UsageFilters"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/UsageScope"
+          },
+          "source_coverage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageSourceCoverage"
+            },
+            "title": "Source Coverage",
+            "type": "array"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "timezone": {
+            "const": "UTC",
+            "default": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "start_date",
+          "end_date_exclusive",
+          "dataset_revision",
+          "synthetic",
+          "as_of",
+          "filters",
+          "available_start_date",
+          "available_end_date_exclusive",
+          "buckets",
+          "source_coverage",
+          "notes"
+        ],
+        "title": "DailyUsageResponse",
         "type": "object"
       },
       "DataLabels": {
@@ -2965,7 +3810,8 @@
               "signal",
               "document",
               "forecast_snapshot",
-              "spend_summary"
+              "spend_summary",
+              "budget_request"
             ],
             "title": "Kind",
             "type": "string"
@@ -3437,6 +4283,9 @@
       },
       "MetaOut": {
         "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyMeta"
+          },
           "forecast_mode": {
             "enum": [
               "engine",
@@ -3508,6 +4357,7 @@
         "required": [
           "service",
           "version",
+          "company",
           "period",
           "unit",
           "money_format",
@@ -4062,6 +4912,210 @@
           }
         },
         "title": "RebaseIn",
+        "type": "object"
+      },
+      "RequestAssessment": {
+        "properties": {
+          "amount_included_in_forecast": {
+            "const": false,
+            "default": false,
+            "title": "Amount Included In Forecast",
+            "type": "boolean"
+          },
+          "assessed_at": {
+            "format": "date-time",
+            "title": "Assessed At",
+            "type": "string"
+          },
+          "available_donors": {
+            "items": {
+              "$ref": "#/components/schemas/AvailableDonor"
+            },
+            "title": "Available Donors",
+            "type": "array"
+          },
+          "budget_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Version"
+          },
+          "envelope_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Total"
+          },
+          "forecast_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Amount"
+          },
+          "forecast_basis": {
+            "const": "full_period_total",
+            "default": "full_period_total",
+            "title": "Forecast Basis",
+            "type": "string"
+          },
+          "forecast_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Run Id"
+          },
+          "forecast_status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Forecast Status",
+            "type": "string"
+          },
+          "forecast_unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Forecast Unit",
+            "type": "string"
+          },
+          "projected_headroom": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Headroom"
+          },
+          "qualification": {
+            "title": "Qualification",
+            "type": "string"
+          },
+          "recorded_spend": {
+            "title": "Recorded Spend",
+            "type": "string"
+          },
+          "requested_allocation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Allocation"
+          },
+          "team_allocation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Allocation"
+          }
+        },
+        "required": [
+          "assessed_at",
+          "budget_version",
+          "envelope_total",
+          "team_allocation",
+          "recorded_spend",
+          "forecast_amount",
+          "forecast_run_id",
+          "forecast_status",
+          "projected_headroom",
+          "requested_allocation",
+          "available_donors",
+          "qualification"
+        ],
+        "title": "RequestAssessment",
+        "type": "object"
+      },
+      "RequestPeriod": {
+        "properties": {
+          "end_date_exclusive": {
+            "format": "date",
+            "title": "End Date Exclusive",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "start_date",
+          "end_date_exclusive",
+          "label"
+        ],
+        "title": "RequestPeriod",
+        "type": "object"
+      },
+      "RequestSource": {
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_by": {
+            "title": "Submitted By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "submitted_by",
+          "submitted_at"
+        ],
+        "title": "RequestSource",
         "type": "object"
       },
       "Requester": {
@@ -4978,6 +6032,39 @@
         "title": "TeamSpendWithCoverage",
         "type": "object"
       },
+      "TokenObservedRecordCounts": {
+        "properties": {
+          "cached_input_tokens": {
+            "title": "Cached Input Tokens",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "reasoning_tokens": {
+            "title": "Reasoning Tokens",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens",
+          "reasoning_tokens",
+          "total_tokens"
+        ],
+        "title": "TokenObservedRecordCounts",
+        "type": "object"
+      },
       "TokenTotals": {
         "properties": {
           "cached_input_tokens": {
@@ -5266,6 +6353,276 @@
         "title": "UnattributedSpend",
         "type": "object"
       },
+      "UsageBreakdown": {
+        "properties": {
+          "costs_by_value_kind": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "measured",
+                "estimated",
+                "reported",
+                "simulated"
+              ]
+            },
+            "title": "Costs By Value Kind",
+            "type": "object"
+          },
+          "included_usage_notional": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Usage Notional"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "record_count": {
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "recorded_spend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded Spend"
+          },
+          "token_observed_record_counts": {
+            "$ref": "#/components/schemas/TokenObservedRecordCounts"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/UsageTokens"
+          }
+        },
+        "required": [
+          "recorded_spend",
+          "costs_by_value_kind",
+          "included_usage_notional",
+          "tokens",
+          "token_observed_record_counts",
+          "record_count",
+          "provider",
+          "model"
+        ],
+        "title": "UsageBreakdown",
+        "type": "object"
+      },
+      "UsageFilters": {
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "title": "UsageFilters",
+        "type": "object"
+      },
+      "UsageScope": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "enum": [
+              "company",
+              "team",
+              "person",
+              "shared"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "UsageScope",
+        "type": "object"
+      },
+      "UsageSourceCoverage": {
+        "properties": {
+          "coverage": {
+            "enum": [
+              "complete",
+              "partial",
+              "missing",
+              "unknown",
+              "future"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "last_record_at": {
+            "format": "date-time",
+            "title": "Last Record At",
+            "type": "string"
+          },
+          "record_count": {
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "source_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Account"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_kind",
+          "source_account",
+          "record_count",
+          "coverage",
+          "last_record_at"
+        ],
+        "title": "UsageSourceCoverage",
+        "type": "object"
+      },
+      "UsageTokens": {
+        "properties": {
+          "cached_input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cached Input Tokens"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "reasoning_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Tokens"
+          },
+          "total_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
+          }
+        },
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens",
+          "reasoning_tokens",
+          "total_tokens"
+        ],
+        "title": "UsageTokens",
+        "type": "object"
+      },
       "WarningOut": {
         "properties": {
           "code": {
@@ -5293,6 +6650,397 @@
           "message"
         ],
         "title": "WarningOut",
+        "type": "object"
+      },
+      "WeeklyActual": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "corrected": {
+            "title": "Corrected",
+            "type": "boolean"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "source": {
+            "enum": [
+              "observed_outcome",
+              "repository_ledger",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "mature",
+              "partial",
+              "missing",
+              "pending",
+              "disputed",
+              "future"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "status",
+          "source",
+          "dataset_id",
+          "revision",
+          "corrected",
+          "source_refs"
+        ],
+        "title": "WeeklyActual",
+        "type": "object"
+      },
+      "WeeklyHistoryResponse": {
+        "properties": {
+          "actuals_revision": {
+            "title": "Actuals Revision",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "basis": {
+            "const": "planning",
+            "title": "Basis",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "end_date_exclusive": {
+            "format": "date",
+            "title": "End Date Exclusive",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "quantity": {
+            "const": "spend",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/UsageScope"
+          },
+          "selection_policy": {
+            "const": "latest_published_before_week_start",
+            "title": "Selection Policy",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "timezone": {
+            "const": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "unit": {
+            "const": "USD",
+            "title": "Unit",
+            "type": "string"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyHistoryRow"
+            },
+            "maxItems": 26,
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scope",
+          "start_date",
+          "end_date_exclusive",
+          "timezone",
+          "unit",
+          "basis",
+          "quantity",
+          "dataset_id",
+          "as_of",
+          "synthetic",
+          "actuals_revision",
+          "selection_policy",
+          "weeks",
+          "notes"
+        ],
+        "title": "WeeklyHistoryResponse",
+        "type": "object"
+      },
+      "WeeklyHistoryRow": {
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/WeeklyActual"
+          },
+          "end_exclusive": {
+            "format": "date",
+            "title": "End Exclusive",
+            "type": "string"
+          },
+          "outlook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeeklyOutlook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prior_forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeeklyPriorForecast"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "closed",
+              "current",
+              "future"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "variance": {
+            "$ref": "#/components/schemas/WeeklyVariance"
+          }
+        },
+        "required": [
+          "start",
+          "end_exclusive",
+          "state",
+          "actual",
+          "prior_forecast",
+          "outlook",
+          "variance"
+        ],
+        "title": "WeeklyHistoryRow",
+        "type": "object"
+      },
+      "WeeklyOutlook": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "end_exclusive": {
+            "format": "date",
+            "title": "End Exclusive",
+            "type": "string"
+          },
+          "information_cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Information Cutoff"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "run_id",
+          "issued_at",
+          "information_cutoff",
+          "start",
+          "end_exclusive",
+          "partial",
+          "dataset_id"
+        ],
+        "title": "WeeklyOutlook",
+        "type": "object"
+      },
+      "WeeklyPriorForecast": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "end_exclusive": {
+            "format": "date",
+            "title": "End Exclusive",
+            "type": "string"
+          },
+          "information_cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Information Cutoff"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "run_id",
+          "target_id",
+          "issued_at",
+          "information_cutoff",
+          "start",
+          "end_exclusive",
+          "dataset_id"
+        ],
+        "title": "WeeklyPriorForecast",
+        "type": "object"
+      },
+      "WeeklyVariance": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "status",
+          "reason"
+        ],
+        "title": "WeeklyVariance",
         "type": "object"
       }
     }
@@ -5662,6 +7410,280 @@
         ]
       }
     },
+    "/api/allocation-drafts": {
+      "post": {
+        "operationId": "create_allocation_draft_api_allocation_drafts_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationDraftCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Create Allocation Draft",
+        "tags": [
+          "allocation planning"
+        ]
+      }
+    },
+    "/api/allocation-drafts/{idempotency_key}": {
+      "get": {
+        "operationId": "recover_allocation_draft_api_allocation_drafts__idempotency_key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "idempotency_key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Role"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Recover Allocation Draft",
+        "tags": [
+          "allocation planning"
+        ]
+      }
+    },
+    "/api/allocation-state": {
+      "get": {
+        "operationId": "get_allocation_state_api_allocation_state_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Get Allocation State",
+        "tags": [
+          "allocation planning"
+        ]
+      }
+    },
     "/api/budget": {
       "get": {
         "operationId": "get_budget_api_budget_get",
@@ -5718,6 +7740,302 @@
         "summary": "Get Budget",
         "tags": [
           "budget"
+        ]
+      }
+    },
+    "/api/budget-requests": {
+      "get": {
+        "operationId": "list_budget_requests_api_budget_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Budget Requests",
+        "tags": [
+          "budget requests"
+        ]
+      },
+      "post": {
+        "operationId": "create_budget_request_api_budget_requests_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-actor-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Create Budget Request",
+        "tags": [
+          "budget requests"
+        ]
+      }
+    },
+    "/api/budget-requests/{request_id}": {
+      "get": {
+        "operationId": "get_budget_request_api_budget_requests__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Get Budget Request",
+        "tags": [
+          "budget requests"
+        ]
+      }
+    },
+    "/api/budget-requests/{request_id}/draft": {
+      "post": {
+        "operationId": "create_budget_request_draft_api_budget_requests__request_id__draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-actor-role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Actor-Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetRequestDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetRequestDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Identity headers missing (`actor_required`). `error.code`: `actor_required`"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed. `error.code`: `unknown_role`, `role_forbidden`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Create Budget Request Draft",
+        "tags": [
+          "budget requests"
         ]
       }
     },
@@ -6926,6 +9244,16 @@
               ],
               "title": "Run Id"
             }
+          },
+          {
+            "in": "query",
+            "name": "compact",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Compact",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -6949,6 +9277,90 @@
           }
         },
         "summary": "Views",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-weekly-history": {
+      "get": {
+        "description": "Read prospective weekly vintages without rerunning or changing a publication.",
+        "operationId": "forecast_weekly_history_api_forecast_weekly_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date_exclusive",
+            "required": true,
+            "schema": {
+              "title": "End Date Exclusive",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_type",
+            "required": false,
+            "schema": {
+              "default": "company",
+              "enum": [
+                "company",
+                "team",
+                "person",
+                "shared"
+              ],
+              "title": "Scope Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Forecast Weekly History",
         "tags": [
           "forecasting"
         ]
@@ -9074,6 +11486,123 @@
         "summary": "List Teams",
         "tags": [
           "teams"
+        ]
+      }
+    },
+    "/api/usage/daily": {
+      "get": {
+        "operationId": "usage_daily_api_usage_daily_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date_exclusive",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date Exclusive",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_type",
+            "required": false,
+            "schema": {
+              "default": "company",
+              "enum": [
+                "company",
+                "team",
+                "person",
+                "shared"
+              ],
+              "title": "Scope Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyUsageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Usage Daily",
+        "tags": [
+          "usage"
         ]
       }
     },

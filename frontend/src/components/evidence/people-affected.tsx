@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,11 +30,11 @@ export function PeopleAffected({ people }: { people: AffectedPerson[] }) {
                 <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: team?.color ?? "var(--border-strong)" }} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="truncate text-sm">{person.name}</span>
-                    {team && <span className="truncate text-xs text-muted-foreground">{team.name}</span>}
+                    <span className="truncate text-sm">{displaySourceText(person.name, "Person")}</span>
+                    {team && <span className="truncate text-xs text-muted-foreground">{displaySourceText(team.name, "Team")}</span>}
                   </span>
                   <span className={cn("mt-0.5 block truncate text-xs", item.supersededBy ? "text-muted-foreground line-through" : "text-foreground/80")}>
-                    {item.signal ? SIGNAL_LABEL[item.signal] : item.title}
+                    {item.signal ? SIGNAL_LABEL[item.signal] : displaySourceText(item.title, "Context update")}
                     {more > 0 && <span className="num text-muted-foreground no-underline"> +{more}</span>}
                   </span>
                 </span>

@@ -18,6 +18,7 @@ from typing import Any, Callable
 
 from app.agent.runner import ToolError
 from app.agent.tools import TOOL_NAMES, TOOLS
+from app.schemas.signals import ChangeType, CitationIn, SignalKind, SignalScope, SignalStatus
 
 SERVER_NAME = "northstar"
 MAX_RESULT_CHARS = 60_000
@@ -88,14 +89,18 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
     def list_people(team: str | None = None) -> str:
         return _respond(lambda: toolbox.call("list_people", {"team": team}))
 
+    def list_budget_requests(team: str | None = None, include_closed: bool = False) -> str:
+        return _respond(lambda: toolbox.call("list_budget_requests", {"team": team,
+                                                                       "include_closed": include_closed}))
+
     def build_chart_spec(kind: str, team: str | None = None, metric: str | None = None) -> str:
         return _respond(lambda: toolbox.call("build_chart_spec", {"kind": kind, "team": team, "metric": metric}))
 
-    def record_signal(summary: str, change_type: str, status: str, uncertainty: str,
-                      citations: list[dict[str, Any]], team: str | None = None, project: str | None = None,
+    def record_signal(summary: str, change_type: ChangeType, status: SignalStatus, uncertainty: str,
+                      citations: list[CitationIn], team: str | None = None, project: str | None = None,
                       applies_from: str | None = None, applies_to: str | None = None,
-                      supersedes_signal_id: str | None = None, scope: str = "team",
-                      person_ids: list[str] | None = None, signal_kind: str | None = None,
+                      supersedes_signal_id: str | None = None, scope: SignalScope = "team",
+                      person_ids: list[str] | None = None, signal_kind: SignalKind | None = None,
                       title: str | None = None) -> str:
         signal = {"summary": summary, "change_type": change_type, "status": status, "uncertainty": uncertainty,
                   "citations": citations, "team": team, "project": project, "applies_from": applies_from,
@@ -116,7 +121,8 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
         return _respond(lambda: toolbox.call("rebase_proposal", {"proposal_id": proposal_id, "rationale": rationale}))
 
     fns = {f.__name__: f for f in (search_corpus, read_document, get_spend_summary, get_budgets, get_forecast,
-                                   list_signals, list_people, build_chart_spec, record_signal, draft_proposal, rebase_proposal,
+                                   list_signals, list_people, list_budget_requests, build_chart_spec,
+                                   record_signal, draft_proposal, rebase_proposal,
                                    explain_forecast, compare_forecasts, preview_forecast_scenario, request_forecast_refresh)}
     return [(t.name, t.description, fns[t.name]) for t in TOOLS]
 

@@ -71,7 +71,12 @@ class ForecastService:
         self.now = now or utc_now
 
     @coordinated_operation
-    def current_snapshot(self, *, tenant_id='northstar', cutoff=None, as_of=None):
+    def current_snapshot(self, *, tenant_id='northstar', cutoff=None, as_of=None, include_learning=True):
+        """Assemble current inputs; directory readers may omit learning archives.
+
+        Forecast issuance keeps the complete history by default. Excluding it at
+        the SQL boundary avoids decoding large archived targets for membership.
+        """
         now = iso(cutoff or self.now())
         factory_args = {'now': now, 'tenant_id': tenant_id}
         if getattr(self.snapshot_factory, 'supports_as_of', False):
@@ -81,7 +86,9 @@ class ForecastService:
         snapshot['information_cutoff'] = now
         snapshot['generated_at'] = iso(self.now())
         snapshot['procedure_dependencies'] = procedure_dependency_manifest()
-        rows = self.store.input_records(now, tenant_id, latest=True)
+        learning_kinds = ('issued_targets', 'truth_revisions', 'forecast_errors')
+        rows = self.store.input_records(now, tenant_id, latest=True,
+                                        exclude_kinds=() if include_learning else learning_kinds)
         base_revisions = snapshot.get('source_revisions', [])
         revisions = ([{'kind': 'fixture_source', 'source_id': str(k), 'revision': str(v)} for k, v in base_revisions.items()] if isinstance(base_revisions, dict) else deepcopy(base_revisions))
         collections = {}
@@ -99,12 +106,15 @@ class ForecastService:
         for kind, records in collections.items():
             snapshot[kind] = records
         # Calibration uses all issued records and truth revisions, never latest-only corrections.
-        all_rows = self.store.input_records(now, tenant_id,
-                                            kinds=('issued_targets', 'truth_revisions', 'forecast_errors'))
-        for kind in ('issued_targets', 'truth_revisions', 'forecast_errors'):
-            records = [r['payload'] for r in all_rows if r['kind'] == kind]
-            if records:
-                snapshot[kind] = records
+        if include_learning:
+            all_rows = self.store.input_records(now, tenant_id, kinds=learning_kinds)
+            for kind in learning_kinds:
+                records = [r['payload'] for r in all_rows if r['kind'] == kind]
+                if records:
+                    snapshot[kind] = records
+        else:
+            for kind in learning_kinds:
+                snapshot.pop(kind, None)
         # Input payload provenance cannot make post-cutoff observations usable.
         for kind in ('observations', 'coverage', 'pricing'):
             snapshot[kind] = [r for r in snapshot.get(kind, []) if not r.get('available_at', r.get('known_at')) or iso(r.get('available_at', r.get('known_at'))) <= now]
@@ -160,7 +170,8 @@ class ForecastService:
 
     @coordinated_operation
     def current_actuals(self, tenant_id='northstar'):
-        snapshot = self.current_snapshot(tenant_id=tenant_id)
+        # Learning archives do not contribute to actuals or their content identity.
+        snapshot = self.current_snapshot(tenant_id=tenant_id, include_learning=False)
         actuals = {'history_complete_through': snapshot.get('history_complete_through'),
                    'observations': snapshot.get('observations', []), 'coverage': snapshot.get('coverage', []),
                    'required_sources': snapshot.get('required_sources', [])}
@@ -192,7 +203,10 @@ class ForecastService:
     def views(self, scope_type=None, scope_id=None, run_id=None, *, tenant_id='northstar', include_current_actuals=True):
         publication = self.store.publication(tenant_id)
         chosen = run_id or (publication or {}).get('run_id')
-        result = self._filter(self.store.get_run(chosen)['bundle'], scope_type, scope_id) if chosen else {'views': []}
+        # get_run decodes a new caller-owned object. An unfiltered read need not
+        # deepcopy the entire immutable publication before attaching live actuals.
+        bundle = self.store.get_run(chosen)['bundle'] if chosen else {'views': []}
+        result = self._filter(bundle, scope_type, scope_id) if scope_type is not None or scope_id is not None else bundle
         if include_current_actuals:
             try:
                 result['current_actuals'] = self.current_actuals(tenant_id)

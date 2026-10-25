@@ -10,6 +10,8 @@ export interface MediaSlotProps {
   /** Quiet JSX mock shown until (or instead of) the video. Falls back to the alt text. */
   placeholder?: ReactNode;
   className?: string;
+  /** Original 1440×810 recordings include a 56px header with the previous wordmark. */
+  cropRecordedHeader?: boolean;
 }
 
 /**
@@ -17,13 +19,14 @@ export interface MediaSlotProps {
  * The placeholder always renders underneath; when a video is given it sits on top and simply
  * disappears if the browser cannot load it, so dropping a file into public/media is all that is needed.
  */
-export function MediaSlot({ src, poster, alt, placeholder, className }: MediaSlotProps) {
+export function MediaSlot({ src, poster, alt, placeholder, className, cropRecordedHeader = false }: MediaSlotProps) {
   const [failed, setFailed] = useState(false);
   const showVideo = Boolean(src) && !failed;
 
   return (
     <div
       className={cn("relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-card", className)}
+      style={cropRecordedHeader ? { aspectRatio: "1440 / 754" } : undefined}
       role={showVideo ? undefined : "img"}
       aria-label={showVideo ? undefined : alt}
     >
@@ -33,6 +36,7 @@ export function MediaSlot({ src, poster, alt, placeholder, className }: MediaSlo
       {showVideo && (
         <video
           className="absolute inset-0 size-full object-cover"
+          style={cropRecordedHeader ? { top: `${-56 / 754 * 100}%`, height: `${810 / 754 * 100}%` } : undefined}
           src={src}
           poster={poster}
           autoPlay

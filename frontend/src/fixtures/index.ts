@@ -19,9 +19,10 @@ import type {
   AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, Forecast, ForecastDailyPoint,
   Person, SpendingRecord, Team,
 } from "@/lib/contracts";
+import { interpretActionIntent } from "@/lib/action-intent";
 import {
-  addDays, asOf, attachAdjustments, companyEvidence, completeSpent, dailyProjection, dailySeries, evidenceLines, macroModelContext,
-  modelSwitchEvidence, money, monthDay, NEW_MODEL, onboardingWaveEvidence, parseAmount, period, personContext, renovationEvidence,
+  addDays, asOf, nextDemoTimestamp, attachAdjustments, companyEvidence, completeSpent, dailyProjection, dailySeries, evidenceLines, macroModelContext,
+  modelSwitchEvidence, money, monthDay, NEW_MODEL, onboardingWaveEvidence, makeGenericReply, withBudgetRequestConsideration, period, personContext, renovationEvidence,
   signedMoney, splitExact, type Dataset, type PersonProfile, type ScriptedReplyFn,
 } from "./generate";
 
@@ -89,7 +90,7 @@ export const people: Person[] = profiles.map((x) => x.person);
 const teamProfiles = (teamId: string) => profiles.filter((x) => x.person.teamId === teamId);
 
 /** Per-person daily series whose parts sum EXACTLY to the team's fixed total. */
-const teamSeries = (teamId: string, total: number, mix: Record<SpendingRecord["component"], number>, provider: string, seed: number) => {
+const teamSeries = (teamId: string, total: number, mix: Partial<Record<SpendingRecord["component"], number>>, provider: string, seed: number) => {
   const ps = teamProfiles(teamId);
   const targets = splitExact(total, ps.map((x) => x.share), 10);
   return ps.flatMap((x, j) => dailySeries(teamId, targets[j], mix, provider, seed + j * 3, x.growth, x.person.id));
@@ -370,7 +371,6 @@ export const threads: Record<string, AssistantMessage[]> = {
 };
 
 const allSources = () => context.filter((c) => !c.supersededBy).flatMap((c) => c.sources);
-const name = (id: string) => teams.find((t) => t.id === id)!.name;
 const personItems = (teamId: string) => context.filter((c) => c.scope === "person" && c.teamIds.includes(teamId));
 const personSources = (teamId: string) => personItems(teamId).flatMap((c) => c.sources);
 /** "By person" lines for a why-reply: who is moving the team number, in which direction, and through which connector. */
@@ -390,75 +390,25 @@ function byPerson(teamId: string): string {
 /**
  * Scripted assistant replies for the mock, pattern-matched on the finance message.
  */
-export const scriptedReply: ScriptedReplyFn = (content, state) => {
+const genericReply = makeGenericReply(teams, forecasts, context, people);
+export const scriptedReply: ScriptedReplyFn = withBudgetRequestConsideration((content, state, conversationContext) => {
+  const intent = interpretActionIntent(content, teams, { context: conversationContext, proposals: state.proposals, planningPeriod: period });
+  if (intent.action === "clarify" || intent.ask) return { message: { content: intent.ask!, conversationContext: intent.context } };
+  if ((intent.action === "addition" && (intent.amount !== "50000" || intent.targetTeamId || intent.reviseProposalId)) || (intent.action === "transfer" && (intent.amount || intent.sourceTeamId || intent.targetTeamId || intent.reviseProposalId))) return genericReply(content, state, conversationContext);
   const text = content.toLowerCase();
   const b = (id: string) => state.budgets.find((x) => x.teamId === id)!.allocated;
   const total = state.budgets.reduce((s, x) => s + x.allocated, 0);
-  const now = new Date().toISOString();
+  const now = nextDemoTimestamp();
   const base = {
     unit: "usd" as const, period, createdAt: now, status: "proposed" as const,
     basedOnBudgetVersion: state.budgetVersion,
     forecastsReviewed: structuredClone(forecasts),
   };
 
-  // Revise the most recent open proposal: "make it 40k for research instead".
-  const open = state.proposals.find((p) => p.status === "proposed");
-  const reviseMatch = text.match(/(\$?\s?(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(?:million|thousand|mm|m|k)?)\s*(?:for|to)\s+(research|product|engineering)/);
-  if (open && /revis|instead|change|make it|rather/.test(text) && reviseMatch && open.kind === "add_budget") {
-    const amount = parseAmount(reviseMatch[1]) ?? 0;
-    const target = reviseMatch[2];
-    const added = open.addedAmount ?? 0;
-    if (amount > added) {
-      return { message: { content: `That exceeds the **${money(added)}** finance authorized. I can only split the authorized amount between teams; ask for a larger authorization if you want more.` } };
-    }
-    const others = open.lines.filter((l) => l.teamId !== target && l.after > l.before);
-    const remainder = added - amount;
-    const lines = open.lines.map((l) => ({ teamId: l.teamId, before: l.before, after: l.before }));
-    const tLine = lines.find((l) => l.teamId === target)!;
-    tLine.after = tLine.before + amount;
-    if (others.length) {
-      const otherTotal = others.reduce((s, l) => s + (l.after - l.before), 0);
-      let given = 0;
-      others.forEach((o, i) => {
-        const share = i === others.length - 1 ? remainder - given : Math.round(((o.after - o.before) / otherTotal) * remainder / 1_000) * 1_000;
-        given += share;
-        const ln = lines.find((l) => l.teamId === o.teamId)!;
-        ln.after = ln.before + share;
-      });
-    } else if (remainder > 0) {
-      const eng = lines.find((l) => l.teamId !== target)!;
-      eng.after = eng.before + remainder;
-    }
-    const proposal: AllocationProposal = {
-      ...base,
-      id: `prop_${Date.now()}`,
-      kind: "add_budget",
-      totalBefore: total,
-      totalAfter: total + added,
-      addedAmount: added,
-      lines,
-      revisesProposalId: open.id,
-      rationale: `Revised at finance's request: ${name(target)} receives ${money(amount)} of the ${money(added)} authorized; the remainder keeps the earlier split between the other funded teams. Projections and evidence are unchanged from the original proposal.`,
-      citations: open.citations,
-    };
-    const bullets = lines.filter((l) => l.after !== l.before).map((l) => `- **${name(l.teamId)} +${money(l.after - l.before)}** → ${money(l.after)}`).join("\n");
-    return {
-      proposal,
-      message: {
-        content: `Revised. The earlier proposal is marked as revised and replaced by this one:\n\n${bullets}\n\nEnvelope still goes from **${money(total)} to ${money(total + added)}**.`,
-        proposalId: proposal.id,
-        citations: proposal.citations,
-        toolCalls: [
-          { name: "get_budgets", summary: "Re-read current allocations to rebase the revision" },
-          { name: "validate_proposal", summary: `Checked team totals sum to ${money(total + added)}` },
-        ],
-      },
-    };
-  }
-
   if (/compare/.test(text)) {
     return {
       message: {
+        conversationContext: intent.context,
         content: `**Research** is projected at **$85k against $60k** (likely over): nightly evaluation runs under the approved Q4 plan have run every day this week. **Product** is projected at **$50k against $80k** (under) after the v4 launch moved to next quarter and three people paused for the office renovation. **Engineering** is projected at **$65k against $60k** with steady migration work.\n\nNet: the company is projected at $200k against a $200k envelope, but the team split no longer matches where the work is. Each projection is its trend baseline plus ${evidenceCount} evidence items: ${teams.map((t) => `${t.name} ${signedMoney((teamForecast(t.id)?.projected ?? 0) - (teamForecast(t.id)?.baseline ?? 0))}`).join(", ")}.`,
         citations: allSources(),
         toolCalls: [
@@ -473,16 +423,17 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
   if (/what if|scenario|grows|grew|another \d+%/.test(text)) {
     return {
       message: {
+        conversationContext: intent.context,
         content: "I can't run that scenario yet. The forecasting service has not supplied a conditional projection for that assumption, and I won't invent a number. I can show the current projection and its range, or prepare an allocation proposal against it.",
         toolCalls: [{ name: "run_forecast", summary: "Requested scenario; forecasting returned unsupported" }],
       },
     };
   }
 
-  if (/50[, ]?000|50k|\badd|additional|more (credits|budget|funding)/.test(text)) {
+  if (intent.action === "addition") {
     const proposal: AllocationProposal = {
       ...base,
-      id: `prop_${Date.now()}`,
+      id: `prop_${crypto.randomUUID()}`, version: 1,
       kind: "add_budget",
       totalBefore: total,
       totalAfter: total + 50_000,
@@ -501,6 +452,7 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
       message: {
         content: "Here's how I'd allocate the additional **$50,000**, prioritizing Research:\n\n- **Research +$35,000** → $95,000, covering the nightly eval runs through Sunday\n- **Engineering +$15,000** → $75,000, headroom for the migration\n- **Product +$0** → $80,000, projected under allocation after the launch moved\n\nWeekly envelope goes from **$200,000 to $250,000**. Review the before/after and apply when ready.",
         proposalId: proposal.id,
+        conversationContext: { ...intent.context, selected_proposal_id: proposal.id, selected_proposal_version: proposal.version },
         citations: proposal.citations,
         toolCalls: [
           { name: "get_spending", summary: `Pulled ${monthDay(period.start)}–${monthDay(asOf)} spending for 3 teams ($95,000 recorded)` },
@@ -512,10 +464,10 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
     };
   }
 
-  if (/redistribut|rebalanc|\bmove\b|shift|reallocat|without (adding|new)/.test(text)) {
+  if (intent.action === "transfer") {
     const proposal: AllocationProposal = {
       ...base,
-      id: `prop_${Date.now()}`,
+      id: `prop_${crypto.randomUUID()}`, version: 1,
       kind: "redistribute",
       totalBefore: total,
       totalAfter: total,
@@ -533,6 +485,7 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
       message: {
         content: "Without adding funding, I'd move **$30,000 out of Product**: **$25,000 to Research** and **$5,000 to Engineering**. Each team lands at its current projection ($85k / $50k / $65k) and the weekly envelope stays at **$200,000**.",
         proposalId: proposal.id,
+        conversationContext: { ...intent.context, selected_proposal_id: proposal.id, selected_proposal_version: proposal.version },
         citations: proposal.citations,
         toolCalls: [
           { name: "get_budgets", summary: "Read current allocations ($200,000 weekly envelope)" },
@@ -546,6 +499,7 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
   if (/why|explain|under|below|headroom/.test(text) && text.includes("product")) {
     return {
       message: {
+        conversationContext: intent.context,
         content: `Product is running under because the **product roadmap update** moved the v4 launch into next quarter. Feature work paused except P0, so daily coding-tool and API usage has run at roughly 0.6× the earlier pace, and Marcus, Chloe and Alice are paused for the office renovation until ${monthDay(renovationTo)}. The projection of **$50k against $80k** assumes stabilization work stays light through the weekend.${byPerson("product")}${evidenceLines(teamForecast("product"))}`,
         citations: [...context[1].sources, ...personSources("product"), ...companyWide.items.flatMap((c) => c.sources)],
         toolCalls: [
@@ -560,6 +514,7 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
   if (/why|explain|over|exceed/.test(text) && text.includes("research")) {
     return {
       message: {
+        conversationContext: intent.context,
         content: `Research is running over because the **approved Q4 Research Plan** started nightly evaluation runs on three new benchmark suites on **${monthDay(planStart)}**. Daily API spend has been roughly 1.6× the earlier baseline every day since, and the runs continue over the weekend. Priya and Yuki moving the two slowest suites to a smaller model and the hiring freeze pull the other way, but not enough. An older thread proposed a smaller, later start, but the approved plan explicitly supersedes it.${byPerson("research")}${evidenceLines(teamForecast("research"))}`,
         citations: [...context[0].sources, ...personSources("research"), ...companyWide.items.flatMap((c) => c.sources)],
         toolCalls: [
@@ -573,10 +528,11 @@ export const scriptedReply: ScriptedReplyFn = (content, state) => {
 
   return {
     message: {
+      conversationContext: intent.context,
       content: "I can help with two kinds of changes: **redistribute** the existing $200,000 weekly envelope between teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under. What would you like?",
     },
   };
-};
+}, teams);
 
 /** The plan's canonical 3-team example as a Dataset (`?teams=northstar`). */
 export const northstar: Dataset = {

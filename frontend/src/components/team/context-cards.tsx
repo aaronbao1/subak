@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ContextItem, Person, Team } from "@/lib/contracts";
@@ -57,18 +58,18 @@ export function ContextCards({ team, items, allItems, people = [], enterAt = 0, 
         <div className="min-w-0">
           <h2 id="context-heading" className="text-base font-medium">Context and evidence</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Plans, documents, messages and tasks that bear on {team.name}&apos;s spend, quoted from where they were said. Each claim opens its source.
+            Plans, documents, messages and tasks that bear on {displaySourceText(team.name, "this team")}&apos;s spend, quoted from where they were said. Each claim opens its source.
           </p>
         </div>
         <Link href={href} className={cn("shrink-0 text-foreground/80 hover:text-foreground", EVIDENCE_LINK)}>
-          All evidence for {team.name} →
+          All evidence for {displaySourceText(team.name, "this team")} →
         </Link>
       </div>
 
       {sorted.length === 0 ? (
         <div className={cn("flex flex-col items-center gap-2 rounded-xl border border-border py-16 text-center", rise)} style={riseAt(enterAt)}>
-          <div className="eyebrow">No context for this team</div>
-          <p className="max-w-sm text-sm text-muted-foreground">No plans, documents or correspondence have been linked to {team.name} for this period.</p>
+          <div className="eyebrow">No assessed plans yet</div>
+          <p className="max-w-sm text-sm text-muted-foreground">Browse received sources for {displaySourceText(team.name, "this team")} in Evidence.</p>
         </div>
       ) : (
         <>

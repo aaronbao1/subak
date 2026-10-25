@@ -9,10 +9,12 @@ import type { Period, Team, Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatAmount, unitNoun } from "@/lib/format";
+import { sumMoney } from "@/lib/finance-summary";
 import { WEEKEND_PATTERN_ID, isWeekend } from "@/components/shared/components";
 import { EASE_CSS, ENTER_STAGGER_MS, usePrefersReducedMotion } from "@/components/shared/motion";
 import { dateLabel, dayLabel, hasProjectedAmount, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
 import { TeamPicker } from "./team-picker";
+import { foldDailySeries, isIsolatedDailyAmount } from "./daily-spend-data";
 
 const HALF_DAY = 43_200_000;
 /** Up to two weeks of days get one tick per day with a weekday label; longer ranges fall back to weekly ticks. */
@@ -64,6 +66,12 @@ export interface SpendByTeamChartProps {
   placeholder?: boolean;
   /** The planning period; the chart opens on it and earlier history sits to the left. */
   period?: Period;
+  /** A shorter static overview; keep the full chart interactions for existing callers. */
+  compact?: boolean;
+  /** Show all supplied rows without panning, with the selected period in the header. */
+  periodOnly?: boolean;
+  note?: React.ReactNode;
+  details?: React.ReactNode;
 }
 
 /**
@@ -74,7 +82,7 @@ export interface SpendByTeamChartProps {
  * are summed into a neutral dashed "Other" line; hiding a team in the picker lets another take its place.
  * Colors follow the team (`team.color`), so hiding one team never recolors another.
  */
-export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, unit, period, selectedId, onSelect }: SpendByTeamChartProps) {
+export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, unit, period, selectedId, onSelect, compact = false, periodOnly = false, note, details }: SpendByTeamChartProps) {
   const [zoom, setZoom] = useState<ZoomDays>(7);
   /** Teams the reader has unchecked in the picker. Empty means every team is drawn. */
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
@@ -111,10 +119,10 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   const [phase, setPhase] = useState<Phase>(PHASE.lines);
   if (dataset !== allTeams) { setDataset(allTeams); setPhase(PHASE.lines); }
   // Under reduced motion nothing is gated: lines, dots and areas render in their end state at once.
-  const animating = phase < PHASE.done && !reduce;
+  const animating = phase < PHASE.done && !reduce && !compact;
   const lastBegin = Math.max(0, series.length - 1) * ENTER_STAGGER_MS;
   useEffect(() => {
-    if (phase === PHASE.done || reduce) return;
+    if (phase === PHASE.done || reduce || compact) return;
     const areasAt = lastBegin + LINE_MS + PROJ_MS;
     const timers = [
       setTimeout(() => setPhase(PHASE.dots), LINE_MS),
@@ -125,21 +133,18 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
     return () => timers.forEach(clearTimeout);
     // Restart only when the dataset changes; the stagger is fixed at first paint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataset, reduce]);
+  }, [dataset, reduce, compact]);
   /** Any interaction settles the chart so pans, zooms and picks render instantly, even mid-sequence. */
   const settle = useCallback(() => setPhase(PHASE.done), []);
   /** Rows with the folded teams summed under the Other keys; untouched when nothing is folded. */
   const plotAll = useMemo(() => {
     if (folded.length === 0) return all;
     return all.map((r) => {
-      let rec: number | null = null, proj: number | null = null;
-      for (const t of folded) {
-        const v = r[teamKey(t.id)]; if (typeof v === "number") rec = (rec ?? 0) + v;
-        const pv = r[projectedKey(t.id)]; if (typeof pv === "number") proj = (proj ?? 0) + pv;
-      }
-      return { ...r, [teamKey(OTHER_ID)]: rec, [projectedKey(OTHER_ID)]: proj };
+      const ids = folded.map(team => team.id);
+      const rec = foldDailySeries(r, ids, "t_", unit), proj = foldDailySeries(r, ids, "p_", unit);
+      return { ...r, [teamKey(OTHER_ID)]: rec.amount, [projectedKey(OTHER_ID)]: proj.amount, otherRecordedMissing: rec.missingTeams, otherProjectedMissing: proj.missingTeams };
     });
-  }, [all, folded]);
+  }, [all, folded, unit]);
 
   const onHiddenChange = useCallback((next: Set<string>) => {
     settle();
@@ -158,11 +163,12 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   // The period can run weeks past the latest data (a quarter viewed in October). Open on the latest day that has
   // recorded or projected values, not on empty days at the end of the period.
   const plotSeries = useMemo(() => {
+    if (periodOnly) return plotAll;
     let last = plotAll.length - 1;
     while (last > 0 && plotAll[last].kind === "empty") last--;
     return plotAll.slice(0, last + 1);
-  }, [plotAll]);
-  const windowDays = zoom === 0 ? plotSeries.length : Math.min(zoom, plotSeries.length);
+  }, [plotAll, periodOnly]);
+  const windowDays = periodOnly || zoom === 0 ? plotSeries.length : Math.min(zoom, plotSeries.length);
   const maxOffset = Math.max(0, plotSeries.length - windowDays);
   const off = Math.min(offset, maxOffset);
   const endIdx = plotSeries.length - 1 - off;
@@ -191,7 +197,9 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   };
   const onPointerUp = () => { dragMoved.current = drag.current?.moved ?? false; drag.current = null; };
   const inPeriod = period && rows.length > 0 && rows[0].date >= period.start && rows[rows.length - 1].date <= period.end;
-  const rangeLabel = rows.length ? `${dateLabel(rows[0].ts)} – ${dateLabel(rows[rows.length - 1].ts)}` : "";
+  const rangeLabel = periodOnly && period
+    ? `${dateLabel(period.start)} – ${dateLabel(period.end)}`
+    : rows.length ? `${dateLabel(rows[0].ts)} – ${dateLabel(rows[rows.length - 1].ts)}` : "";
 
   const domain = useMemo<[number, number] | undefined>(() => {
     if (rows.length === 0) return undefined;
@@ -222,6 +230,9 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
 
   const dimming = selectedId !== null;
   const noun = unitNoun(unit);
+  const plotHeight = compact ? "h-48" : "h-64 md:h-72";
+  const hasAmounts = all.some(row => allTeams.some(team => typeof row[teamKey(team.id)] === "number" || hasProjectedAmount(row, team.id)));
+  const tooltipAmount = (value: number) => unit === "usd" ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value) : formatAmount(value, unit, { compact: true });
   const select = (s: Series) => { if (!s.folded && !dragMoved.current) onSelect(s.id); };
 
   return (
@@ -230,18 +241,18 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
       <style>{`@keyframes ${DOT_POP}{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
 .sbt-plot .recharts-reference-area,.sbt-plot .recharts-reference-line{transition:opacity ${AREAS_MS}ms ${EASE_CSS}}
 .sbt-plot.sbt-areas-pending .recharts-reference-area,.sbt-plot.sbt-areas-pending .recharts-reference-line{opacity:0}`}</style>
-      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-5">
+      <header className={cn("flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5", compact ? "pt-4" : "pt-5")}>
         <div className="min-w-0">
           <h2 className="text-base font-medium">Daily {noun} by team</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span className="num">{rangeLabel}</span>
-            {inPeriod && period?.label && <span> · {period.label}</span>}
+            {(periodOnly || inPeriod) && period?.label && <span> · {period.label}</span>}
             {maxOffset > 0 && <span className="hidden sm:inline"> · swipe or drag sideways for earlier weeks</span>}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
           {allTeams.length > 1 && <TeamPicker teams={allTeams} hiddenIds={hiddenIds} onChange={onHiddenChange} foldedIds={foldedIds} />}
-          <div className="flex items-center rounded-md bg-popover p-0.5" role="group" aria-label="Range">
+          {!periodOnly && <div className="flex items-center rounded-md bg-popover p-0.5" role="group" aria-label="Range">
             {ZOOMS.map((z) => (
               <button
                 key={z.label} type="button" onClick={() => changeZoom(z.days)} aria-pressed={zoom === z.days}
@@ -253,8 +264,8 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                 {z.label}
               </button>
             ))}
-          </div>
-          {zoom !== 0 && (
+          </div>}
+          {!periodOnly && zoom !== 0 && (
             <div className="flex items-center">
               <button type="button" onClick={() => pan(windowDays)} disabled={!canBack} aria-label="Earlier" className="rounded-md p-1.5 text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground disabled:opacity-50 disabled:hover:bg-transparent">
                 <ChevronLeft className="size-4" strokeWidth={1.5} />
@@ -272,11 +283,11 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
         </div>
       </header>
 
-      <div className="px-3 pt-4">
-        {plotAll.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">No spending recorded yet.</div>
+      <div className={cn("px-3", compact ? "pt-2" : "pt-4")}>
+        {!hasAmounts ? (
+          <div className={cn("flex items-center justify-center text-sm text-muted-foreground", plotHeight)}>No spending recorded {periodOnly ? "for this period." : "yet."}</div>
         ) : series.length === 0 ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-muted-foreground md:h-72">
+          <div className={cn("flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground", plotHeight)}>
             <span>No teams selected.</span>
             <button type="button" onClick={() => onHiddenChange(new Set())} className="h-8 rounded-md border border-border bg-popover px-3 text-xs text-foreground transition-colors duration-300 hover:border-border-strong">
               Show all teams
@@ -284,8 +295,8 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           </div>
         ) : (
           <div
-            ref={plotRef} className={cn("sbt-plot h-64 w-full touch-pan-y select-none rounded-md focus-visible:ring-2 focus-visible:ring-ring md:h-72", maxOffset > 0 && "cursor-grab active:cursor-grabbing", animating && phase < PHASE.areas && "sbt-areas-pending")}
-            onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
+            ref={plotRef} className={cn("sbt-plot w-full touch-pan-y select-none rounded-md focus-visible:ring-2 focus-visible:ring-ring", plotHeight, maxOffset > 0 && "cursor-grab active:cursor-grabbing", animating && phase < PHASE.areas && "sbt-areas-pending")}
+            onWheel={periodOnly ? undefined : onWheel} onPointerDown={periodOnly ? undefined : onPointerDown} onPointerMove={periodOnly ? undefined : onPointerMove} onPointerUp={periodOnly ? undefined : onPointerUp} onPointerLeave={periodOnly ? undefined : onPointerUp}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rows} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
@@ -352,8 +363,10 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                       .sort((a, b) => b.value - a.value);
                     if (items.length === 0) return null;
                     const mixed = items.some(i => i.projected) && items.some(i => !i.projected);
-                    const total = items.reduce((s, i) => s + i.value, 0);
-                    const fullDayTotal = row.partial && items.every((i) => i.fullDay !== undefined) ? items.reduce((s, i) => s + (i.fullDay ?? 0), 0) : undefined;
+                    const add = (values: number[]) => unit === "usd" ? sumMoney(values) : values.reduce((sum, value) => sum + value, 0);
+                    const total = add(items.map(item => item.value));
+                    const fullDayTotal = row.partial && items.every((i) => i.fullDay !== undefined) ? add(items.map(i => i.fullDay ?? 0)) : undefined;
+                    const incomplete = items.length < series.length || items.some(item => item.s.folded && Number(row[item.projected ? "otherProjectedMissing" : "otherRecordedMissing"]) > 0);
                     return (
                       <div className="min-w-48 rounded-md border border-border bg-popover px-3 py-2 font-mono text-xs text-popover-foreground">
                         <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -362,7 +375,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                             {mixed ? "recorded + projected" : isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
                           </span>
                         </div>
-                        {row.partial && !isProjected && (
+                        {row.partial && !isProjected && items.some(item => item.fullDay !== undefined) && (
                           <div className="mb-1 flex justify-between gap-4 text-[11px] text-muted-foreground">
                             <span>so far</span><span>full day, projected</span>
                           </div>
@@ -376,11 +389,11 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                                   {s.name}
                                 </span>
                                 <span className="num flex items-center gap-2 text-right text-foreground">
-                                  {formatAmount(value, unit, { compact: true })}
+                                  {tooltipAmount(value)}
                                   {fullDay !== undefined && (
                                     <span className="flex items-center gap-1 text-muted-foreground">
                                       <LineKey color={s.color} dashed />
-                                      {formatAmount(fullDay, unit, { compact: true })}
+                                      {tooltipAmount(fullDay)}
                                     </span>
                                   )}
                                 </span>
@@ -393,13 +406,14 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         </ul>
                         {items.length > 1 && (
                           <div className="mt-1.5 flex justify-between gap-4 border-t border-border pt-1.5">
-                            <span className="text-muted-foreground">{isProjected ? "Projected total" : "Total"}</span>
+                            <span className="text-muted-foreground">{isProjected ? "Projected total" : incomplete ? "Recorded subtotal" : "Total"}</span>
                             <span className="num flex gap-2 text-right text-foreground">
-                              {formatAmount(total, unit, { compact: true })}
-                              {fullDayTotal !== undefined && <span>{formatAmount(fullDayTotal, unit, { compact: true })}</span>}
+                              {tooltipAmount(total)}
+                              {fullDayTotal !== undefined && <span>{tooltipAmount(fullDayTotal)}</span>}
                             </span>
                           </div>
                         )}
+                        {incomplete && <p className="mt-1.5 max-w-64 text-[11px] text-muted-foreground">Some teams have no {isProjected ? "projected" : "recorded"} amount for this day.</p>}
                       </div>
                     );
                   }}
@@ -425,17 +439,18 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                       stroke={s.color} strokeWidth={selected ? 2.5 : 2} strokeOpacity={dim ? 0.2 : 0.95}
                       strokeDasharray={s.folded ? "6 4" : undefined}
                       strokeLinecap="round" strokeLinejoin="round"
-                      dot={showDots ? (props) => {
+                      dot={(props) => {
                         const { key, cx, cy, index } = props as { key?: React.Key | null; cx?: number; cy?: number; index?: number };
                         const k = key ?? undefined;
                         if (cx === undefined || cy === undefined) return <g key={k} />;
+                        if (!showDots && (animating && phase < PHASE.dots || !isIsolatedDailyAmount(rows, index ?? -1, teamKey(s.id)))) return <g key={k} />;
                         return (
                           <circle
                             key={k} cx={cx} cy={cy} r={4} fill={s.color} fillOpacity={dim ? 0.2 : 1} stroke="var(--card)" strokeWidth={2}
                             style={animating ? popStyle(begin + (index ?? 0) * DOT_STEP_MS) : undefined}
                           />
                         );
-                      } : false}
+                      }}
                       connectNulls={false}
                       isAnimationActive={animating ? "auto" : false} animationBegin={begin} animationDuration={LINE_MS} animationEasing="ease-out"
                       style={{ cursor: clickable ? "pointer" : "default" }}
@@ -490,12 +505,17 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
         )}
       </div>
 
-      <footer className="space-y-2.5 px-5 pb-5 pt-3">
+      <footer className={cn("space-y-2 px-5 pt-3", compact ? "pb-4" : "pb-5")}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <EncodingLegend hasProjection={hasProjection} />
+          {!compact && <EncodingLegend hasProjection={hasProjection} />}
           <ChartLegend series={series} selectedId={selectedId} onSelect={onSelect} />
         </div>
-        {(folded.length > 0 || partialDates.length > 0 || hasProjection || weekendTs.length > 0) && (
+        {compact ? (
+          <p className="text-xs text-muted-foreground">
+            Gaps mean no recorded amount. {partialDates.length > 0 && <>Shaded days contain partial records. </>}
+            {folded.length > 0 && <>Other combines {folded.length} teams. </>}{note}
+          </p>
+        ) : (folded.length > 0 || partialDates.length > 0 || hasProjection || weekendTs.length > 0) && (
           <p className="text-xs text-muted-foreground">
             {folded.length > 0 && (
               <>Showing the {MAX_LINES} largest teams by spend this period; {folded.length} more {folded.length === 1 ? "is" : "are"} summed into Other. Hide a team in the picker to swap another in. </>
@@ -509,6 +529,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
             )}
           </p>
         )}
+        {details}
       </footer>
     </section>
   );
@@ -576,7 +597,7 @@ function ChartLegend({ series, selectedId, onSelect }: { series: Series[]; selec
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner side="top" align="end" sideOffset={6} className="isolate z-50">
-                    <Popover.Popup className="w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_32px_rgba(0,0,0,0.5)] duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0">
+                    <Popover.Popup className="w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-floating) duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0">
                       <p className="eyebrow px-2 pb-1 pt-1.5">Summed into Other</p>
                       <ul className="max-h-56 overflow-y-auto">
                         {s.folded.map((t) => (

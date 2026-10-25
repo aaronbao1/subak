@@ -286,7 +286,7 @@
       "name": "request_forecast_refresh"
     },
     {
-      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency. Read these before a proposal: when a current signal covers the team, cite it by id instead of re-reading documents. A team filter also returns company-scope signals (they have no team but apply to every team) unless include_company is false.",
+      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency. Read these before a proposal and check list_budget_requests source_updates for newer source versions; a current signal alone does not prove incoming updates were reviewed. A team filter also returns company-scope signals (they have no team but apply to every team) unless include_company is false.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -332,6 +332,37 @@
       },
       "kind": "read",
       "name": "list_signals"
+    },
+    {
+      "description": "Read current-period team funding requests and their current read-only assessments, including exact requested amount, source, status, recorded spend, forecast and supported donor headroom. Also returns newest current project/source updates with version and current-signal coverage, even when no requests exist. Always check this before allocation advice; existing signals may predate an update. Requested money is not approved funding or a numerical forecast effect. This tool never refreshes a forecast, creates an assessment record, drafts a proposal or changes a budget. Optional team filters requests and sources; include_closed includes already funded/rejected current-period requests.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_closed": {
+            "default": false,
+            "title": "Include Closed",
+            "type": "boolean"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Team"
+          }
+        },
+        "title": "ListBudgetRequestsIn",
+        "type": "object"
+      },
+      "kind": "read",
+      "name": "list_budget_requests"
     },
     {
       "description": "People directory: active team members with id, team, name, role, primary_tool and integrations. Use it to turn a name in a document into a person id for a person-scope signal. Optional team narrows the list.",
@@ -413,7 +444,7 @@
       "name": "build_chart_spec"
     },
     {
-      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. scope: `person` (person_ids from list_people, all on one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` (team null and no person_ids; every team is affected). signal_kind is one of project_deferred, project_accelerated, model_change, tool_change, out_of_office, onboarding, steady. title is a short label of at most 120 characters. Never name a person the cited text does not name (the backend refuses a person the cited documents do not name: person_not_in_citations). Does not change any budget.",
+      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). change_type must be exactly expansion, reduction, continuation, timing_shift or other; increase/decrease are invalid. Each citation accepts only {document_id, quote, char_start?, char_end?}; give both offsets or omit both and let the backend locate the quote. Citation version, doc_key, title and id are response-only metadata: never send them. Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. scope: `person` (person_ids from list_people, all on one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` (team null and no person_ids; every team is affected). signal_kind is one of project_deferred, project_accelerated, model_change, tool_change, out_of_office, onboarding, steady. title is a short label of at most 120 characters. Never name a person the cited text does not name (the backend refuses a person the cited documents do not name: person_not_in_citations). Does not change any budget.",
       "input_schema": {
         "$defs": {
           "CitationIn": {
@@ -696,7 +727,8 @@
                       "signal",
                       "document",
                       "forecast_snapshot",
-                      "spend_summary"
+                      "spend_summary",
+                      "budget_request"
                     ],
                     "title": "Kind",
                     "type": "string"
@@ -836,7 +868,8 @@
                       "signal",
                       "document",
                       "forecast_snapshot",
-                      "spend_summary"
+                      "spend_summary",
+                      "budget_request"
                     ],
                     "title": "Kind",
                     "type": "string"

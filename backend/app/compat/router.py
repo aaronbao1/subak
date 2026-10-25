@@ -18,8 +18,6 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
 
 from __future__ import annotations
 
-import os
-
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -28,24 +26,26 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
-from app.compat import errors, intent, mappers, threads
+from app.compat import cache, errors, intent, mappers, spending_index, threads
 from app.compat import schemas as S
 # Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
 from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
 from app.core.actors import Actor, get_actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import CorpusDocument, ImportBatch, PlanningPeriod, Proposal, Team, UsageRecord
+from app.db.models import (AssistantMessage, AssistantRequest, BudgetRequest, CorpusDocument, ImportBatch,
+                           PlanningPeriod, Proposal, Team, UsageRecord)
 from app.db.session import get_session
 from app.schemas.agent import AgentRunCreate
 from app.schemas.decisions import DecisionCreate
 from app.services import agent_runs as run_svc
 from app.services import budget as budget_svc
+from app.services import company as company_svc
 from app.services import corpus as corpus_svc
 from app.services import people as people_svc
 from app.services import coverage as coverage_svc
@@ -56,9 +56,6 @@ from app.services import signals as signal_svc
 from app.services import spending as spending_svc
 
 PREFIX = "/compat/api"
-# The backend stores no company row; the loaded dataset names it (datagen/demo.sh sets these for the Uber data).
-COMPANY_ID = os.environ.get("BACKEND_COMPANY_ID", "northstar")
-COMPANY_NAME = os.environ.get("BACKEND_COMPANY_NAME", "Northstar Software")
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
 MAX_MESSAGE = 4000
@@ -115,7 +112,7 @@ def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
 
 def _people_by_team(session: Session, request: Request) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
-    for p in get_people(request, session):
+    for p in _people_rows(request, session):
         out.setdefault(p["teamId"], []).append(p["id"])
     return out
 
@@ -174,9 +171,10 @@ def _evidence_citations(session: Session, refs: list[dict]) -> list[dict]:
 
 def _proposal(session: Session, p: Proposal) -> dict:
     out = proposal_svc.proposal_out(session, p)
-    return mappers.proposal(out, period_row=_period_row(session, p.period_id),
+    return {**mappers.proposal(out, period_row=_period_row(session, p.period_id),
                             citations=_evidence_citations(session, out["evidence_refs"]),
-                            forecasts_reviewed=_snapshot_forecasts(session, out["evidence_refs"]))
+                            forecasts_reviewed=_snapshot_forecasts(session, out["evidence_refs"])),
+            "version": p.base_version}
 
 
 def _decision(session: Session, d: Any) -> dict:
@@ -194,7 +192,7 @@ def get_company(request: Request, session: Session = Depends(get_session), clock
     meta = routes_meta.meta(request, session, clock, provider)
     if meta["period"] is None:
         raise DomainError("not_seeded", 503, "the database is not seeded yet")
-    return mappers.company(meta, company_id=COMPANY_ID, name=COMPANY_NAME)
+    return mappers.company(meta, company_id=meta["company"]["id"], name=meta["company"]["name"])
 
 
 @router.get("/teams", response_model=list[S.Team], **JSON_OPTS)
@@ -207,6 +205,14 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
 def get_people(request: Request, session: Session = Depends(get_session)):
+    # The forecast fixture directory has its own publication/source identities and is already cheap.
+    if request.app.state.settings.forecast_demo:
+        return _people_rows(request, session)
+    return cache.cached_json(request, ("people", cache.data_stamp(session)), list[S.Person],
+                             lambda: _people_rows(request, session))
+
+
+def _people_rows(request: Request, session: Session) -> list[dict]:
     active = {t.id for t in _active_teams(session)}
     return [mappers.person(p) for p in people_svc.list_people(session)
             if request.app.state.settings.forecast_demo or p.team_id in active]
@@ -233,25 +239,9 @@ def get_spending(
         return [r for r in rows if (not team_id or r['teamId'] == team_id)
                 and (not date_from or r['date'] >= date_from.isoformat())
                 and (not date_to or r['date'] <= date_to.isoformat())]
-    records: list[dict] = []
-    offset = 0
-    while True:
-        page = spending_svc.list_records(session, period, offset=offset, limit=spending_svc.MAX_RECORD_PAGE)
-        records += page["items"]
-        offset += len(page["items"])
-        if not page["items"] or offset >= page["total"]:
-            break
-    batch_ids = {r["import_batch_id"] for r in records}
-    labels = {b.id: (b.source_label or b.filename or b.source_kind)
-              for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))} if batch_ids else {}
-    rows = mappers.spending(records, batch_labels=labels)
-    if team_id:
-        rows = [r for r in rows if r["teamId"] == team_id]
-    if date_from:
-        rows = [r for r in rows if r["date"] >= date_from.isoformat()]
-    if date_to:
-        rows = [r for r in rows if r["date"] <= date_to.isoformat()]
-    return rows
+    return spending_index.index_for(request.app.state).response(
+        request, session, period.id, team_id or None,
+        date_from.isoformat() if date_from else None, date_to.isoformat() if date_to else None)
 
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
@@ -264,7 +254,10 @@ def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(
         if exc.code == "no_budget":
             return []
         raise
-    return mappers.budgets(budget_svc.budget_state(session, period, env))
+    allocations = budget_svc.allocation_map(env)
+    return mappers.budgets({"period": period, "unit": env.unit, "state_version": env.state_version,
+                           "allocations": [{"team": team, "amount": amount}
+                                           for team, amount in sorted(allocations.items())]})
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
@@ -302,7 +295,27 @@ def get_documents(session: Session = Depends(get_session)):
 @router.get("/documents/{document_id}", response_model=S.CompanyDocument | None, **JSON_OPTS)
 def get_document(document_id: str, session: Session = Depends(get_session)):
     doc = session.get(CorpusDocument, document_id)
-    return mappers.document(doc) if doc is not None else None
+    if doc is not None:
+        return mappers.document(doc)
+    request = session.get(BudgetRequest, document_id)
+    if request is None:
+        return None
+    period = session.get(PlanningPeriod, request.period_id)
+    amount_text = (f"Additional allocation requested: {request.unit} {request.requested_amount:.2f}."
+                   if request.requested_amount is not None else
+                   "Context update: no additional allocation amount specified.")
+    details = [amount_text]
+    if period is not None:
+        details.append(f"Planning period: {period.starts_on.isoformat()} through "
+                       f"{period.ends_on.isoformat()} (inclusive).")
+    if request.source_ref:
+        details.append(f"Source: {request.source_ref}")
+    details.append("This submission is planning evidence; it is not included in the forecast "
+                   "and does not approve or change any allocation.")
+    return {"id": request.id, "title": request.title, "kind": "correspondence",
+            "date": request.created_at.date().isoformat(), "teamIds": [request.team_id],
+            "origin": "Submitted budget request", "integration": "document",
+            "body": "\n\n".join(["\n".join(details), request.narrative])}
 
 
 @router.get("/proposals", response_model=list[S.AllocationProposal], **JSON_OPTS)
@@ -322,8 +335,20 @@ def get_decisions(session: Session = Depends(get_session)):
 
 
 @router.get("/threads/{thread_id}", response_model=list[S.AssistantMessage], **JSON_OPTS)
-def get_thread(thread_id: str, session: Session = Depends(get_session)):
-    return [threads.message_out(m) for m in threads.list_messages(session, thread_id[:MAX_THREAD_ID])]
+def get_thread(thread_id: str, session: Session = Depends(get_session), actor: Actor = Depends(_actor(ANALYST))):
+    return threads.thread_out(session, thread_id[:MAX_THREAD_ID], company_id=company_svc.resolve(session)["id"], actor_id=actor.id)
+
+
+@router.get("/threads/{thread_id}/messages/{client_message_id}", **JSON_OPTS)
+def reconcile_message(thread_id: str, client_message_id: str, request: Request, session: Session = Depends(get_session),
+                      clock: Clock = Depends(get_clock), ids: IdFactory = Depends(get_ids),
+                      actor: Actor = Depends(_actor(ANALYST))):
+    receipt = threads.accepted_request(session, company_id=company_svc.resolve(session)["id"], actor_id=actor.id,
+        thread_id=thread_id[:MAX_THREAD_ID], client_message_id=client_message_id)
+    if receipt is None:
+        raise DomainError("message_not_found", 404, "This message has not been accepted.")
+    messages = _reconcile_request(session, receipt, actor=actor, clock=clock, ids=ids, app_state=request.app.state)
+    return {"status": "completed", "messages": messages} if messages else {"status": "pending"}
 
 
 # ---- writes ------------------------------------------------------------------------------------
@@ -360,7 +385,10 @@ def _open_proposal(p: Proposal, version: int, names: dict[str, str]) -> dict:
     what = "add" if p.action_type == "addition" else "move"
     label = (f"{'stale' if stale else 'awaiting review'}, {what} ${amount:,.2f}"
              + (f" toward {names.get(favoured, favoured)}" if favoured else ""))
-    return {"id": p.id, "stale": stale, "mode": p.action_type, "prioritize": favoured, "label": label}
+    losses = {t: d for t, d in proposal_svc.deltas(p.before, p.after).items() if d < 0}
+    source = next(iter(losses)) if len(losses) == 1 else None
+    return {"id": p.id, "stale": stale, "mode": p.action_type, "prioritize": favoured, "label": label,
+            "amount": str(amount), "source_team": source, "base_version": p.base_version}
 
 
 @router.post("/threads/{thread_id}/messages", response_model=list[S.AssistantMessage], **JSON_OPTS)
@@ -381,48 +409,115 @@ def post_message(
         raise DomainError("validation_failed", 422, "message too long",
                           {"reasons": [{"message": f"messages are limited to {MAX_MESSAGE} characters"}]})
     thread_id = thread_id[:MAX_THREAD_ID]
-    user = threads.add_message(session, thread_id, "user", content, clock=clock, ids=ids)
+    payload = body.model_dump(exclude_none=True, exclude={"client_message_id"})
+    payload["content"] = content
+    client_id = body.client_message_id or ids.new_id("client_")
+    existing = threads.accepted_request(session, company_id=company_svc.resolve(session)["id"], actor_id=actor.id,
+        thread_id=thread_id, client_message_id=client_id)
+    interpretation, next_context = {}, {}
+    if existing is None:
+        # Prepare entirely read-only before accepting. A parser/provider failure leaves the identity
+        # unclaimed, so reconnect can safely resend rather than getting stuck in a pending receipt.
+        context = (body.conversation_context.model_dump(exclude_none=True) if body.conversation_context is not None
+                   else threads.latest_context(session, company_id=company_svc.resolve(session)["id"], actor_id=actor.id, thread_id=thread_id))
+        parsed = intent.parse(content, **_intent_context(session, request, clock), conversation_context=context)
+        # A pin constrains factual answers; it must not swallow a later allocation instruction.
+        if body.forecast_context and parsed.run and parsed.run["task_type"] == "answer_question":
+            parsed.run.setdefault("params", {})["forecast_context"] = body.forecast_context.model_dump(exclude_none=True)
+        interpretation = {"read_as": parsed.read_as, "ask": parsed.ask, "revises": parsed.revises, "run": parsed.run}
+        next_context = {
+            **{key: context[key] for key in ("scope_type", "scope_id", "period", "forecast_run_id") if key in context},
+            **parsed.conversation_context,
+        }
+    receipt, _ = threads.accept_request(session, company_id=company_svc.resolve(session)["id"], actor_id=actor.id,
+        thread_id=thread_id, client_message_id=client_id, payload=payload, clock=clock, ids=ids,
+        interpretation=interpretation, conversation_context=next_context)
+    messages = _reconcile_request(session, receipt, actor=actor, clock=clock, ids=ids, app_state=request.app.state)
+    if messages is not None:
+        return messages
+    raise DomainError("message_pending", 409,
+                      "This message was accepted and is still being processed. Check its receipt before retrying.")
+
+
+def _start_request(session: Session, receipt: AssistantRequest, *, app_state: Any, actor: Actor,
+                   clock: Clock, ids: IdFactory) -> list[dict] | None:
+    receipt_id = receipt.id
+    parsed = receipt.interpretation
     session.commit()
 
-    parsed = (intent.Intent(read_as="Explain the exact published forecast", run={
-        "task_type": "answer_question", "instruction": content,
-        "params": {"forecast_context": body.forecast_context.model_dump(exclude_none=True)},
-    }) if body.forecast_context else intent.parse(content, **_intent_context(session, request, clock)))
-    if parsed.ask is not None:
-        reply = threads.add_message(session, thread_id, "assistant",
-                                    f"**Read as:** {parsed.read_as}.\n\n{parsed.ask}", clock=clock, ids=ids)
-        session.commit()
-        return [threads.message_out(user), threads.message_out(reply)]
+    def attach_run(run_session: Session, run_id: str) -> None:
+        # The run insert already holds SQLite's writer lock. Persist its association atomically;
+        # competing resumes roll back their candidate run before any tools execute.
+        accepted = run_session.get(AssistantRequest, receipt_id)
+        if accepted.status == "completed" or accepted.agent_run_id:
+            raise DomainError("message_pending", 409, "This accepted message already has an execution.")
+        accepted.agent_run_id = run_id
+        run_session.flush()
 
-    session.commit()  # end this session's read transaction: the run writes through its own sessions
-    run_id: str | None = None
     try:
-        run_id, _ = run_svc.start_run(request.app.state, AgentRunCreate(**parsed.run, wait=True), actor=actor)
+        run_svc.start_run(app_state, AgentRunCreate(**parsed["run"], wait=True), actor=actor,
+                          on_created_in_session=attach_run)
     except DomainError as exc:
-        run_id = (exc.details or {}).get("run_id")
-        text = (f"**Read as:** {parsed.read_as}.\n\n{errors.plain_message(exc.code, exc.message, exc.details)}"
-                + ("" if exc.code == "runner_unavailable" else " Nothing was changed."))
-        if exc.code == "runner_unavailable":
-            text += f"\n\n_Detail: {exc.message}_"
-        reply = threads.add_message(session, thread_id, "assistant", text, clock=clock, ids=ids,
-                                    agent_run_id=run_id)
-        session.commit()
-        return [threads.message_out(user), threads.message_out(reply)]
+        session.expire_all()
+        session.refresh(receipt)
+        if exc.code != "message_pending":
+            text = (f"**Read as:** {parsed['read_as']}.\n\n{errors.plain_message(exc.code, exc.message, exc.details)}"
+                    + ("" if exc.code == "runner_unavailable" else " Nothing was changed."))
+            if exc.code == "runner_unavailable":
+                text += f"\n\n_Detail: {exc.message}_"
+            return _complete_request(session, receipt, actor=actor, clock=clock, ids=ids, text=text)
+    return _reconcile_request(session, receipt, actor=actor, clock=clock, ids=ids, app_state=app_state)
 
+
+def _reconcile_request(session: Session, receipt: AssistantRequest, *, actor: Actor, clock: Clock,
+                       ids: IdFactory, app_state: Any) -> list[dict] | None:
+    session.refresh(receipt)
+    if receipt.status == "completed":
+        return receipt.response
+    if receipt.interpretation.get("ask") is not None:
+        return _complete_request(session, receipt, actor=actor, clock=clock, ids=ids,
+            text=f"**Read as:** {receipt.interpretation['read_as']}.\n\n{receipt.interpretation['ask']}")
+    if not receipt.agent_run_id:
+        return _start_request(session, receipt, app_state=app_state, actor=actor, clock=clock, ids=ids)
+    run = run_svc.get_run(session, receipt.agent_run_id)
+    session.refresh(run)
+    if run.status == "running":
+        return None
+    return _complete_request(session, receipt, actor=actor, clock=clock, ids=ids)
+
+
+def _complete_request(session: Session, receipt: AssistantRequest, *, actor: Actor, clock: Clock,
+                      ids: IdFactory, text: str | None = None) -> list[dict]:
+    # Serialize completion across retries/processes. The lock also protects the thread sequence and
+    # revision linkage. A failed response can be reconstructed from the already persisted run.
+    session.execute(update(AssistantRequest).where(AssistantRequest.id == receipt.id)
+                    .values(status=AssistantRequest.status))
+    session.refresh(receipt)
+    if receipt.status == "completed":
+        session.commit()
+        return receipt.response
+    proposal_id, citations, calls = None, [], []
+    if text is None:
+        run = run_svc.run_out(session, run_svc.get_run(session, receipt.agent_run_id))
+        proposal_id = run["proposals"][0]["id"] if run["proposals"] else None
+        revised_note = _link_revision(session, receipt.interpretation.get("revises"), proposal_id,
+                                      actor=actor, clock=clock)
+        proposal = (proposal_svc.proposal_out(session, proposal_svc.get_proposal(session, proposal_id))
+                    if proposal_id else None)
+        text = threads.reply_text(receipt.interpretation["read_as"], run) + revised_note
+        citations, calls = threads.citations(session, run, proposal), threads.tool_calls(run)
+        if proposal_id and receipt.conversation_context.get("selected_proposal_id"):
+            proposal_row = proposal_svc.get_proposal(session, proposal_id)
+            receipt.conversation_context = {**receipt.conversation_context,
+                "selected_proposal_id": proposal_id, "selected_proposal_version": proposal_row.base_version}
+    user = session.get(AssistantMessage, receipt.user_message_id)
+    reply = threads.add_message(session, receipt.thread_id, "assistant", text, clock=clock, ids=ids,
+        agent_run_id=receipt.agent_run_id, proposal_id=proposal_id, citations=citations, tool_calls=calls)
+    receipt.reply_message_id = reply.id
+    receipt.status = "completed"
+    receipt.response = [threads.message_out(user, receipt), threads.message_out(reply, receipt)]
     session.commit()
-    session.expire_all()  # the run wrote through its own sessions
-    run = run_svc.run_out(session, run_svc.get_run(session, run_id))
-    proposal_id = run["proposals"][0]["id"] if run["proposals"] else None
-    revised_note = _link_revision(session, parsed.revises, proposal_id, actor=actor, clock=clock)
-    proposal = (proposal_svc.proposal_out(session, proposal_svc.get_proposal(session, proposal_id))
-                if proposal_id else None)
-    reply = threads.add_message(
-        session, thread_id, "assistant", threads.reply_text(parsed.read_as, run) + revised_note, clock=clock, ids=ids,
-        agent_run_id=run_id, proposal_id=proposal_id, citations=threads.citations(session, run, proposal),
-        tool_calls=threads.tool_calls(run),
-    )
-    session.commit()
-    return [threads.message_out(user), threads.message_out(reply)]
+    return receipt.response
 
 
 def _link_revision(session: Session, original_id: str | None, new_id: str | None, *, actor: Actor,
@@ -432,16 +527,15 @@ def _link_revision(session: Session, original_id: str | None, new_id: str | None
     if not original_id or not new_id:
         return ""
     if new_id == original_id:
-        return f"\n\n_The revised draft came out the same as {original_id}, so {original_id} stays open._"
+        return "\n\n_The requested changes match the existing draft, which stays open for review._"
     try:
-        linked = proposal_svc.link_revision(session, original_id, new_id, actor=actor, clock=clock)
-    except DomainError as exc:
-        session.rollback()
-        return f"\n\n_{new_id} was drafted, but {original_id} could not be marked revised: {exc.message}._"
-    session.commit()
+        with session.begin_nested():
+            linked = proposal_svc.link_revision(session, original_id, new_id, actor=actor, clock=clock)
+    except DomainError:
+        return "\n\n_The new draft is ready, but the earlier draft could not be replaced. Review both before applying a change._"
     if not linked:
-        return f"\n\n_{new_id} was drafted, but {original_id} had already moved on, so it was not marked revised._"
-    return f"\n\n_{new_id} replaces {original_id}, which is now marked revised._"
+        return "\n\n_The new draft is ready, but the earlier draft had already changed and was not replaced._"
+    return "\n\n_This draft replaces the earlier version._"
 
 
 def _guard_settled(p: Proposal) -> None:

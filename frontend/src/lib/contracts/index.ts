@@ -7,10 +7,10 @@
 export type Unit = "credits" | "usd" | "tokens";
 
 /** Fixed seat fees, usage bundled with seats, billable overage on coding tools, and direct API charges. */
-export type CostComponent = "subscription" | "included_usage" | "extra_usage" | "api";
+export type CostComponent = "subscription" | "included_usage" | "extra_usage" | "api" | "unpriced_usage";
 
 /** Where a number came from. Never present an estimate as a bill. */
-export type Provenance = "reported_charge" | "estimate" | "usage_only";
+export type Provenance = "reported_charge" | "estimate" | "usage_only" | "measured" | "simulated";
 
 export interface Team {
   id: string;
@@ -96,6 +96,11 @@ export interface Period {
 
 /** Handoff 1: Spending history (backend → everyone). One row per team/day/component/provider. */
 export interface SpendingRecord {
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+  includedUsageNotional?: number;
   id: string;
   teamId: string;
   /** The individual this usage is attributed to, when attribution is known. Absent for team-level rows. */
@@ -242,6 +247,7 @@ export interface AllocationLine {
 /** Handoff 5: Budgets and proposed changes (backend ↔ agent/frontend). */
 export interface AllocationProposal {
   id: string;
+  version?: number;
   kind: ProposalKind;
   unit: Unit;
   period: Period;
@@ -290,7 +296,45 @@ export interface ToolCallSummary {
   summary: string; // one line, human readable
 }
 
+export type ConversationContext = {
+  intent?: "explain" | "scenario" | "allocation";
+  selected_proposal_id?: string;
+  selected_proposal_version?: number;
+  effective_date_text?: string;
+  pending_slot?: "amount" | "team" | "change" | "proposal" | "effective_date";
+  draft?: { mode: "addition" | "transfer"; amount?: string; prioritize?: string; source_team?: string };
+  scope_type?: "company" | "team" | "person";
+  scope_id?: string;
+  period?: string;
+  forecast_run_id?: string;
+}
+
+export type MessageOptions = {
+  clientMessageId?: string;
+  conversationContext?: ConversationContext;
+}
+
+export type MessageReconciliation = {
+  status: "pending" | "completed" | "not_found";
+  messages?: AssistantMessage[];
+}
+
+export type ProposalActionState = {
+  operationId: string;
+  action: "apply" | "reject";
+  mutation: "pending" | "confirmed" | "unknown" | "failed";
+  sync: "idle" | "pending" | "synced" | "failed";
+  receipt?: Decision;
+  error?: string;
+  syncError?: string;
+}
+
 export interface AssistantMessage {
+  clientMessageId?: string;
+  conversationContext?: ConversationContext;
+  actionDraft?: import("../planning-drafts").ActionDraft;
+  /** Local delivery state; only a backend echo confirms acceptance. */
+  delivery?: "sending" | "sent" | "unknown" | "failed";
   id: string;
   threadId: string;
   role: "user" | "assistant";
@@ -329,3 +373,6 @@ export interface Company {
 }
 
 export type { ForecastView, ForecastBundle, ForecastScope, ForecastPoint, ForecastBand, ForecastDriver, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, ForecastScenarioReceipt, ForecastScenarioResponse } from "./forecast-view";
+
+export type { WeeklyHistoryQuery, WeeklyHistoryResponse, WeeklyHistoryWeek, WeeklyActual, WeeklyIssuedForecast, WeeklyOutlook } from "./weekly-history";
+export type { BudgetRequest, BudgetRequestInput, BudgetRequestKind, BudgetRequestStatus, BudgetRequestAssessment, BudgetRequestDraftInput, BudgetRequestEvidenceRef, AllocationTargetsInput, AllocationDraftReceipt, AllocationState } from "./budget-requests";

@@ -14,12 +14,15 @@ from __future__ import annotations
 
 import concurrent.futures
 import functools
+import sqlite3
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.clock import Clock, IdFactory
@@ -182,8 +185,49 @@ def active_team_ids(session: Session) -> list[str]:
     return list(session.scalars(select(Team.id).where(Team.active.is_(True)).order_by(Team.id)))
 
 
+_ATTRIBUTION_SQL = text("""
+    SELECT team_id, person_id,
+           SUM(CAST(REPLACE(amount, '.', '') AS INTEGER)) AS cents,
+           MAX(occurred_at) AS last_at
+    FROM usage_records
+    WHERE period_id = :period AND counts_toward_spend = 1 AND amount IS NOT NULL
+    GROUP BY team_id, person_id
+""")
+
+
+def _attribution_rows(
+    session: Session, period_id: str,
+) -> Iterator[tuple[str | None, str | None, Decimal, datetime | str]]:
+    """Aggregate exact cents, falling back to streamed Decimal rows if SQLite's SUM overflows."""
+    try:
+        with session.execute(_ATTRIBUTION_SQL, {"period": period_id}) as rows:
+            # SQLite can report overflow while fetching a later group. Buffer all groups
+            # before yielding any, so a retry cannot double-count earlier groups.
+            grouped = rows.all()
+    except OperationalError as exc:
+        if not isinstance(exc.orig, sqlite3.OperationalError) or str(exc.orig) != "integer overflow":
+            raise
+        statement = select(
+            UsageRecord.team_id, UsageRecord.person_id, UsageRecord.amount, UsageRecord.occurred_at,
+        ).where(
+            UsageRecord.period_id == period_id, UsageRecord.counts_toward_spend.is_(True),
+            UsageRecord.amount.is_not(None),
+        ).execution_options(yield_per=1000)
+        with session.execute(statement) as rows:
+            yield from rows
+    else:
+        # MoneyType stores exactly two places and bounds each row well inside int64.
+        # Removing the point and scaling the integer sum never introduces a float.
+        for team, person, cents, last_at in grouped:
+            yield team, person, Decimal(cents).scaleb(-2), last_at
+
+
 def attribution_for_period(session: Session, period: PlanningPeriod, team_ids: Sequence[str]) -> Attribution:
-    """Counted spend to date per active team and active member; anything else on the team is team-level."""
+    """Counted spend per active member; other team spend stays team-level.
+
+    The covering index normally reduces all period usage to one exact-cent row per
+    team/person pair. Exceptionally large groups use a streaming Decimal fallback.
+    """
     members: dict[str, dict[str, Decimal]] = {t: {} for t in team_ids}
     for pid, team in session.execute(
         select(Person.id, Person.team_id).where(Person.active.is_(True), Person.team_id.in_(list(team_ids)))
@@ -191,13 +235,8 @@ def attribution_for_period(session: Session, period: PlanningPeriod, team_ids: S
         members[team][pid] = Decimal("0")
     team_level = {t: Decimal("0") for t in team_ids}
     as_of = None
-    rows = session.execute(
-        select(UsageRecord.team_id, UsageRecord.person_id, UsageRecord.amount, UsageRecord.occurred_at)
-        .where(UsageRecord.period_id == period.id, UsageRecord.counts_toward_spend.is_(True),
-               UsageRecord.amount.is_not(None))
-    )
-    for team, person, amount, occurred in rows:
-        day = occurred.date()
+    for team, person, amount, occurred in _attribution_rows(session, period.id):
+        day = occurred.date() if isinstance(occurred, datetime) else date.fromisoformat(occurred[:10])
         as_of = day if as_of is None or day > as_of else as_of
         if team is None or team not in members:  # unmapped spend only moves as_of
             continue

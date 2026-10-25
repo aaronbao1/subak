@@ -70,6 +70,20 @@ class ForecastStore:
             conn.close()
 
     @contextmanager
+    def read_transaction(self):
+        """Read one committed snapshot without reserving SQLite's writer lock."""
+        conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA query_only=ON')
+        conn.execute('PRAGMA busy_timeout=10000')
+        try:
+            conn.execute('BEGIN')
+            yield conn
+        finally:
+            conn.rollback()
+            conn.close()
+
+    @contextmanager
     def operation(self, *, exclusive=False):
         # Shared across threads and processes. A reset waits for whole forecast
         # operations, including builders that temporarily hold no SQL transaction.
@@ -164,11 +178,11 @@ class ForecastStore:
         return result
 
     def find_input(self, kind, source_id, revision, *, tenant_id='northstar'):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT * FROM forecast_inputs WHERE tenant_id=? AND kind=? AND source_id=? AND revision=?', (tenant_id, kind, source_id, str(revision))).fetchone()
         return self._input(row) if row else None
 
-    def input_records(self, cutoff, tenant_id='northstar', *, latest=False, kinds=None, source_id=None):
+    def input_records(self, cutoff, tenant_id='northstar', *, latest=False, kinds=None, source_id=None, exclude_kinds=()):
         """Select usable source revisions before loading their JSON payloads.
 
         Latest selection retains the historical API's first-source encounter
@@ -183,6 +197,10 @@ class ForecastStore:
                 return []
             conditions.append('kind IN (' + ','.join('?' for _ in kinds) + ')')
             params.extend(kinds)
+        if exclude_kinds:
+            excluded = (exclude_kinds,) if isinstance(exclude_kinds, str) else tuple(exclude_kinds)
+            conditions.append('kind NOT IN (' + ','.join('?' for _ in excluded) + ')')
+            params.extend(excluded)
         if source_id is not None:
             conditions.append('source_id=?')
             params.append(source_id)
@@ -207,7 +225,7 @@ class ForecastStore:
         else:
             query = f'''SELECT * FROM forecast_inputs WHERE {where}
                 ORDER BY available_at,received_at,rowid'''
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             rows = c.execute(query, params).fetchall()
         return [self._input(r) for r in rows]
 
@@ -221,7 +239,7 @@ class ForecastStore:
         return json.loads(value)
 
     def get_snapshot(self, snapshot_id):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT payload FROM forecast_input_snapshots WHERE id=?', (snapshot_id,)).fetchone()
         if not row:
             raise KeyError(snapshot_id)
@@ -246,14 +264,14 @@ class ForecastStore:
             return self._job(c.execute('SELECT * FROM forecast_jobs WHERE id=?', (job_id,)).fetchone())
 
     def get_job(self, job_id):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT * FROM forecast_jobs WHERE id=?', (job_id,)).fetchone()
         if not row:
             raise KeyError(job_id)
         return self._job(row)
 
     def find_job(self, tenant_id, key):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             return self._job(c.execute('SELECT * FROM forecast_jobs WHERE tenant_id=? AND idempotency_key=?', (tenant_id, key)).fetchone())
 
     def claim(self, owner, now, *, lease_seconds=300, job_id=None):
@@ -267,11 +285,11 @@ class ForecastStore:
             return self._job(c.execute('SELECT * FROM forecast_jobs WHERE id=?', (row['id'],)).fetchone())
 
     def find_run_job(self, run_id):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             return self._job(c.execute('SELECT * FROM forecast_jobs WHERE run_id=?', (run_id,)).fetchone())
 
     def list_jobs(self, *, job_type=None, tenant_id='northstar'):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             rows = c.execute('SELECT * FROM forecast_jobs WHERE tenant_id=? AND (? IS NULL OR job_type=?) ORDER BY sequence', (tenant_id, job_type, job_type)).fetchall()
         return [self._job(row) for row in rows]
 
@@ -323,13 +341,72 @@ class ForecastStore:
                 WHERE excluded.information_cutoff>forecast_publications.information_cutoff OR (excluded.information_cutoff=forecast_publications.information_cutoff AND excluded.sequence>forecast_publications.sequence)''', (row['tenant_id'], row['run_id'], row['sequence'], iso(now), cutoff))
             return True
 
+    def weekly_history_inputs(self, cutoff, tenant_id='northstar', *, scope_type, scope_id):
+        """Decode scoped targets and all truth receipts; retain the legacy global revision inputs."""
+        cutoff = iso(cutoff)
+        with self.read_transaction() as c:
+            rows = c.execute("""SELECT * FROM forecast_inputs
+                WHERE tenant_id=? AND available_at<=? AND received_at<=?
+                  AND (kind='truth_revisions' OR (kind='issued_targets'
+                    AND json_extract(payload,'$.scope_type')=?
+                    AND json_extract(payload,'$.scope_id')=?))
+                ORDER BY available_at,received_at,rowid""",
+                (tenant_id, cutoff, cutoff, scope_type, scope_id)).fetchall()
+            # Python bool semantics, including historical non-boolean JSON values.
+            synthetic = c.execute("""SELECT EXISTS(SELECT 1 FROM forecast_inputs
+                WHERE tenant_id=? AND kind='issued_targets' AND available_at<=? AND received_at<=?
+                AND CASE json_type(payload,'$.is_synthetic')
+                    WHEN 'true' THEN 1 WHEN 'false' THEN 0 WHEN 'null' THEN 0
+                    WHEN 'integer' THEN json_extract(payload,'$.is_synthetic')<>0
+                    WHEN 'real' THEN json_extract(payload,'$.is_synthetic')<>0
+                    WHEN 'text' THEN json_extract(payload,'$.is_synthetic')<>''
+                    WHEN 'array' THEN json_array_length(payload,'$.is_synthetic')>0
+                    WHEN 'object' THEN EXISTS(SELECT 1 FROM json_each(payload,'$.is_synthetic'))
+                    ELSE 0 END)""", (tenant_id, cutoff, cutoff)).fetchone()[0]
+        return {'records': [self._input(row) for row in rows], 'synthetic': bool(synthetic)}
+
+    def weekly_publication_metadata(self, run_ids, scope_type, scope_id):
+        """Read only matching immutable serving-run publication receipts and job tie-breakers."""
+        result = {}
+        with self.read_transaction() as c:
+            for run_id in dict.fromkeys(run_ids):
+                row = c.execute("""SELECT json_extract(view.value,'$.publication') AS publication,
+                        jobs.sequence AS sequence
+                    FROM forecast_runs AS runs JOIN forecast_jobs AS jobs ON jobs.id=runs.job_id,
+                        json_each(runs.bundle,'$.views') AS view
+                    WHERE runs.id=? AND json_extract(view.value,'$.scope.type')=?
+                      AND json_extract(view.value,'$.scope.id')=? LIMIT 1""",
+                    (run_id, scope_type, scope_id)).fetchone()
+                if row is not None:
+                    publication = json.loads(row['publication']) if row['publication'] is not None else {}
+                    result[run_id] = {'published_at': publication.get('published_at'), 'sequence': row['sequence']}
+        return result
+
+    def weekly_current_view(self, scope_type, scope_id, tenant_id='northstar'):
+        """Read only the currently served scoped weekly outlook, preserving raw JSON numbers."""
+        with self.read_transaction() as c:
+            row = c.execute("""SELECT json_extract(view.value,'$.scope') AS scope,
+                    json_extract(view.value,'$.target') AS target,
+                    json_extract(view.value,'$.weekly') AS weekly,
+                    json_extract(view.value,'$.publication') AS publication,
+                    json_extract(view.value,'$.run_id') AS run_id
+                FROM forecast_publications AS current JOIN forecast_runs AS runs ON runs.id=current.run_id,
+                    json_each(runs.bundle,'$.views') AS view
+                WHERE current.tenant_id=? AND json_extract(view.value,'$.scope.type')=?
+                  AND json_extract(view.value,'$.scope.id')=? LIMIT 1""",
+                (tenant_id, scope_type, scope_id)).fetchone()
+        if row is None:
+            return None
+        return {key: (json.loads(row[key]) if key != 'run_id' and row[key] is not None else row[key])
+                for key in ('scope', 'target', 'weekly', 'publication', 'run_id') if row[key] is not None}
+
     def publication(self, tenant_id='northstar'):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT * FROM forecast_publications WHERE tenant_id=?', (tenant_id,)).fetchone()
         return dict(row) if row else None
 
     def get_run(self, run_id):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT * FROM forecast_runs WHERE id=?', (run_id,)).fetchone()
         if not row:
             raise KeyError(run_id)
@@ -344,7 +421,7 @@ class ForecastStore:
         return self.get_scenario(scenario_id)
 
     def get_scenario(self, scenario_id):
-        with self.transaction() as c:
+        with self.read_transaction() as c:
             row = c.execute('SELECT * FROM forecast_scenarios WHERE id=?', (scenario_id,)).fetchone()
         if not row:
             raise KeyError(scenario_id)
@@ -352,3 +429,58 @@ class ForecastStore:
         for key in ('drivers', 'bundle'):
             result[key] = json.loads(result[key])
         return result
+
+    def get_issued_quarter_inputs(self, run_id):
+        """Read only the immutable fields needed by the native quarter adapter.
+
+        SQLite scans the archived JSON, but Python never decodes learning history,
+        calculations or daily paths. Quarter objects remain opaque JSON fragments:
+        rebuilding their numeric scalars with SQLite JSON can change cent rounding.
+        Missing keys stay missing, particularly membership dates and revision IDs.
+        """
+        def value(part):
+            if part['type'] in ('array', 'object'):
+                return json.loads(part['value'])
+            if part['type'] in ('true', 'false'):
+                return part['type'] == 'true'
+            return part['value']
+
+        with self.read_transaction() as c:
+            metadata = c.execute('''SELECT id,job_id,snapshot_id,generated_at
+                FROM forecast_runs WHERE id=?''', (run_id,)).fetchone()
+            if metadata is None:
+                raise KeyError(run_id)
+            bundle = {part['key']: value(part) for part in c.execute('''
+                SELECT part.key,part.type,part.value FROM forecast_runs AS run,
+                    json_each(run.bundle) AS part
+                WHERE run.id=? AND part.key IN ('run_id','procedure_version')''', (run_id,))}
+            views = {}
+            for part in c.execute('''
+                SELECT view.key AS view_index,part.key,part.type,part.value
+                FROM forecast_runs AS run,json_each(run.bundle,'$.views') AS view,
+                    json_each(view.value) AS part
+                WHERE run.id=? AND part.key IN ('scope','quarter_outlook','included_drivers',
+                    'target','publication','run_id','snapshot_id')
+                ORDER BY CAST(view.key AS INTEGER)''', (run_id,)):
+                views.setdefault(part['view_index'], {})[part['key']] = value(part)
+            bundle['views'] = list(views.values())
+            snapshot_id = metadata['snapshot_id']
+            if c.execute('SELECT 1 FROM forecast_input_snapshots WHERE id=?', (snapshot_id,)).fetchone() is None:
+                raise KeyError(snapshot_id)
+            snapshot = {}
+            for part in c.execute('''
+                SELECT part.key,part.type,
+                    CASE WHEN part.type='array' AND part.key IN ('observations','source_revisions')
+                    THEN (SELECT json_group_array(json((
+                        SELECT json_group_object(field.key,field.value)
+                        FROM json_each(entry.value) AS field
+                        WHERE (part.key='observations' AND field.key IN ('person_id','team_id','date'))
+                           OR (part.key='source_revisions' AND field.key IN ('kind','id'))
+                    ))) FROM json_each(part.value) AS entry)
+                    ELSE part.value END AS value
+                FROM forecast_input_snapshots AS snapshot,json_each(snapshot.payload) AS part
+                WHERE snapshot.id=? AND part.key IN (
+                    'observations','memberships','source_revisions','is_synthetic',
+                    'repository_revision','tenant_id','information_cutoff')''', (snapshot_id,)):
+                snapshot[part['key']] = value(part)
+        return {**dict(metadata), 'bundle': bundle}, snapshot

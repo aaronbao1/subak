@@ -1,4 +1,5 @@
 "use client";
+import { displayCopy } from "@/lib/display-copy";
 import { ArrowUpRight } from "lucide-react";
 import type { AllocationProposal, Team } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export function ProposalCard({ proposal, teams, onReview, className }: { proposa
       <AllocationLines lines={proposal.lines} unit={proposal.unit} teams={teams} kind={proposal.kind} className="border-t border-border px-4" />
 
       <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-        <span className={cn("min-w-0 text-xs leading-snug text-muted-foreground", proposal.status === "failed" && "text-destructive")}>{footnote}</span>
+        <span className={cn("min-w-0 text-xs leading-snug text-muted-foreground", proposal.status === "failed" && "text-destructive")}>{displayCopy(footnote, proposal.status === "failed" ? "This change could not be applied." : "Details unavailable.")}</span>
         <Button size="sm" variant={open ? "default" : "ghost"} onClick={() => onReview(proposal.id)} className="shrink-0">
           {open ? "Review" : "Details"} <ArrowUpRight data-icon="inline-end" className={cn(!open && "text-muted-foreground")} strokeWidth={1.5} />
         </Button>

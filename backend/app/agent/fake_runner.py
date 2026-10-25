@@ -11,6 +11,9 @@ the same scoped toolbox the SDK runner gets, so every claim it makes is verified
   from `list_people`, kept only when the person is on the team and named in the text) and one
   company-scope model change. Every quote is located verbatim in the stored content first; an expected
   passage that is missing is reported, never invented.
+  A scoped run (`params.document_ids`) reads only those documents and skips the "expected document
+  missing" checks; documents outside the playbook (any non-Northstar corpus) yield no signal, only a
+  `document_not_interpreted` warning each.
 - propose_allocation: reads budgets, spend, forecast (snapshot) and current signals (interpreting the
   corpus first if no current signal exists) and drafts outcome B (addition, prioritize research) or
   outcome A (transfer). The proposal stays `pending_review`; the runner never reports it as saved.
@@ -32,6 +35,66 @@ from app.agent.runner import AgentRunOutput, AgentTask, AgentToolbox, ToolError
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
+
+
+def _proposal_review_summary(proposal: dict, *, refreshed: bool = False) -> str:
+    """A finance-facing summary; IDs, state codes and versions stay in the saved event record."""
+    unit = proposal["unit"]
+    def amount(value: str | Decimal) -> str:
+        number = f"{Decimal(value):,.2f}"
+        return f"${number}" if unit.upper() == "USD" else f"{number} {unit}"
+
+    total = amount(proposal["after"]["total"])
+    review = "fresh finance review" if refreshed else "finance review"
+    if proposal["action_type"] == "addition":
+        change = f"{amount(proposal['envelope_increase'])} in new funding"
+        budget = f"If approved, the company budget would be {total}."
+    else:
+        moved = sum((max(Decimal(value) - Decimal(proposal["before"]["allocations"].get(team, "0")), ZERO)
+                     for team, value in proposal["after"]["allocations"].items()), ZERO)
+        change = f"a {amount(moved)} redistribution between teams"
+        budget = f"The company budget would stay at {total}."
+    return f"Drafted {change} for {review}. {budget} Nothing has been applied."
+
+
+def _request_findings(context: dict) -> list[dict]:
+    """Keep requests and current source versions separate from numeric forecast facts."""
+    requests = [{"type": "budget_request_considered", **row, "funding_linked": False}
+                for row in context.get("items", [])]
+    updates = [{"type": "source_update", "document_id": row["id"], **{key: value for key, value in row.items() if key != "id"}}
+               for row in context.get("source_updates", {}).get("items", []) if not row.get("has_current_signal")]
+    if context.get("source_updates", {}).get("truncated"):
+        updates.append({"type": "source_review_limit", "total": context["source_updates"]["total"],
+                        "reviewed": context["source_updates"]["count"]})
+    return requests + updates
+
+
+def _request_summary(findings: list[dict]) -> str:
+    requests = [row for row in findings if row.get("type") == "budget_request_considered"]
+    parts = []
+    for row in requests[:3]:
+        amount = row.get("remaining_requested_amount")
+        label = " ".join(row["title"].split())[:100]
+        ask = f"${Decimal(amount):,.2f} requested" if amount is not None else "amount needs clarification"
+        assessment = row.get("assessment") or {}
+        headroom = assessment.get("projected_headroom")
+        outlook = ("forecast headroom unavailable" if headroom is None else
+                   f"forecast {'headroom' if Decimal(headroom) >= 0 else 'gap'} ${abs(Decimal(headroom)):,.2f}")
+        period = row.get("period", {}).get("label", "period unspecified")
+        status = row.get("status", "status unspecified").replace("_", " ")
+        source = " ".join(str(row.get("source", {}).get("reference") or "not provided").split())[:160]
+        parts.append(f"{label}: {ask}; {outlook}. {period}; {status}; source: {source}.")
+    if requests:
+        if len(requests) > 3:
+            parts.append(f"Also considered {len(requests) - 3} other current requests.")
+        parts.append("Review these requests alongside the available allocations; they are not approved and do not change the published forecast.")
+    updates = [row for row in findings if row.get("type") == "source_update" and not row.get("has_current_signal")]
+    if updates:
+        parts.append(f"{len(updates)} current source update{'s' if len(updates) != 1 else ''} need{'s' if len(updates) == 1 else ''} review; "
+                     "the scripted assistant has not inferred a numerical effect from them.")
+    if any(row.get("type") == "source_review_limit" for row in findings):
+        parts.append("The source review is limited to the 50 newest versions; older sources remain available in Evidence.")
+    return " ".join(parts)
 
 # Playbook: which passages matter in each known document. Quotes are verified against stored content.
 PLAYBOOK: dict[str, dict[str, Any]] = {
@@ -209,6 +272,7 @@ class FakeDroidRunner:
 
     def _interpret(self, tools: AgentToolbox) -> dict[str, Any]:
         tools.emit("assistant_text", {"text": "Reading the company corpus to find what is planned or changing."})
+        scoped = getattr(tools, "doc_scope", None) is not None
         listing = tools.search_corpus(query="")
         docs = [tools.read_document(item["id"]) for item in listing["items"]]
         by_id = {d["id"]: d for d in docs}
@@ -253,6 +317,8 @@ class FakeDroidRunner:
         people = tools.list_people()["items"]
         for key in TEAM_KEYS + PERSON_KEYS + COMPANY_KEYS:
             doc = current_by_key.get(key)
+            if doc is None and scoped:
+                continue  # a scoped batch (python -m app.interpret) only covers the documents it was given
             if doc is None:
                 warnings.append({"code": "expected_document_missing", "message": f"no current document {key!r}"})
                 tools.emit("warning", warnings[-1])
@@ -353,7 +419,8 @@ class FakeDroidRunner:
         mode = params.get("mode", "addition")
         prioritize = params.get("prioritize", "research")
         warnings: list[dict[str, Any]] = []
-        findings: list[dict[str, Any]] = []
+        planning = tools.list_budget_requests(include_closed=False)
+        findings: list[dict[str, Any]] = _request_findings(planning)
 
         signals = tools.list_signals(status="current")["items"]
         if not any(s["team"] == prioritize for s in signals):
@@ -363,6 +430,12 @@ class FakeDroidRunner:
             findings.extend(interp["findings"])
             warnings.extend(interp["warnings"])
             signals = tools.list_signals(status="current")["items"]
+
+        current_citations = {citation["document_id"] for signal in signals for citation in signal.get("citations", [])
+                             if citation.get("citation_currency") == "current"}
+        for finding in findings:
+            if finding.get("type") == "source_update" and finding["document_id"] in current_citations:
+                finding["has_current_signal"] = True
 
         budget = tools.get_budgets()
         spend = tools.get_spend_summary()
@@ -405,9 +478,23 @@ class FakeDroidRunner:
                     tools, "a transfer needs projections to show headroom; recorded spend alone is not evidence that "
                            "a team will underspend", warnings, findings)
             cap = _d(params["amount"]) if params.get("amount") is not None else None
-            moves, reasoning = _transfer_lines(prioritize, alloc, recorded, projected, cap)
+            donor = params.get("source_team")
+            moves, reasoning = _transfer_lines(prioritize, alloc, recorded, projected, cap, source_team=donor)
             if not moves:
-                return self._no_proposal(tools, "no team has projected headroom to transfer from", warnings, findings)
+                donor_room = (min(alloc.get(donor, ZERO) - projected.get(donor, alloc.get(donor, ZERO)),
+                                  alloc.get(donor, ZERO) - recorded.get(donor, ZERO)) if donor else ZERO)
+                if donor and donor_room <= ZERO:
+                    reason = (f"the requested source {donor} has no supported projected headroom; "
+                              "no other source was substituted")
+                elif donor:
+                    reason = (f"{prioritize} has no projected overrun to fill automatically; specify an amount "
+                              f"to draft an explicit transfer from {donor}")
+                elif not any(projected.get(t, alloc[t]) > alloc[t] for t in alloc):
+                    reason = ("no team has a projected overrun to receive an automatic redistribution; "
+                              "specify a source, destination and amount for an explicit transfer")
+                else:
+                    reason = "no team has projected headroom to transfer from"
+                return self._no_proposal(tools, reason, warnings, findings)
             body = {"action_type": "transfer",
                     "lines": [{"from_team": f, "to_team": t, "amount": _m(a)} for f, t, a in moves]}
 
@@ -415,12 +502,19 @@ class FakeDroidRunner:
         giving = {ln.get("from_team") for ln in body["lines"]} - {None}
         evidence = [{"kind": "signal", "id": s["id"], "note": s["summary"][:200]} for s in signals
                     if s["team"] in receiving | giving]
+        evidence.extend({"kind": "document", "id": row["document_id"],
+                         "note": "Current source update considered; no numerical forecast effect inferred"}
+                        for row in findings if row.get("type") == "source_update" and not row["has_current_signal"]
+                        and (not row["team_tags"] or set(row["team_tags"]) & (receiving | giving)))
         evidence.append({"kind": "forecast_snapshot", "id": forecast["id"],
                          "note": f"{fc['availability']}: {fc['method_label']}"})
         evidence.append({"kind": "spend_summary", "id": spend["period"]["id"],
                          "note": f"recorded spend {spend['company_total']} {spend['unit']}"})
         superseded = tools.list_signals(status="superseded")["items"]
         rationale = _rationale(mode, prioritize, reasoning, signals, superseded, fc)
+        consideration = _request_summary(findings)
+        if consideration:
+            rationale += "\n\n" + consideration
         body.update({"base_version": budget["state_version"], "rationale": rationale, "evidence_refs": evidence})
 
         try:
@@ -446,12 +540,7 @@ class FakeDroidRunner:
             "after": proposal["after"], "deltas": proposal["deltas"], "warnings": proposal["warnings"],
             "already_drafted": proposal.get("already_drafted", False),
         })
-        after = proposal["after"]
-        kind = "addition to the envelope" if proposal["action_type"] == "addition" else "transfer between teams"
-        summary = (f"Drafted proposal {proposal['id']} ({kind}) for finance review: "
-                   + ", ".join(f"{t} {a}" for t, a in sorted(after["allocations"].items()))
-                   + f"; envelope {after['total']} {proposal['unit']}. It is pending_review and has NOT been applied; "
-                   f"saved allocations remain at version {proposal['base_version']} until a finance approver decides.")
+        summary = _proposal_review_summary(proposal) + ("\n\n" + consideration if consideration else "")
         tools.emit("assistant_text", {"text": summary})
         warnings.extend(proposal["warnings"])
         return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
@@ -460,17 +549,18 @@ class FakeDroidRunner:
                      details: dict | None = None) -> AgentRunOutput:
         warnings.append({"code": "no_proposal_drafted", "message": reason, **({"details": details} if details else {})})
         tools.emit("warning", warnings[-1])
-        summary = f"No proposal drafted: {reason}. Nothing was changed."
+        consideration = _request_summary(findings)
+        summary = f"No proposal drafted: {reason}. Nothing was changed." + ("\n\n" + consideration if consideration else "")
         tools.emit("assistant_text", {"text": summary})
         return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
 
     # ---- stale-proposal recovery ---------------------------------------------------------------
 
     def _recover_stale(self, proposal_id: str, tools: AgentToolbox) -> AgentRunOutput:
-        tools.emit("assistant_text", {"text": f"Finance's approval of {proposal_id} was refused as stale; checking "
-                                              "what changed and re-drafting it on the current budget."})
+        lead = ("The budget changed since this draft was prepared. "
+                "Reviewing the same changes against current allocations.")
         warnings: list[dict[str, Any]] = []
-        findings: list[dict[str, Any]] = []
+        findings: list[dict[str, Any]] = _request_findings(tools.list_budget_requests(include_closed=False))
         rationale = (f"Rebased by Droid after finance's approval of {proposal_id} was refused as stale (the budget "
                      "moved after it was drafted). Same lines; the backend recomputed before/after on the current "
                      "budget version. Needs a fresh finance review.")
@@ -484,13 +574,22 @@ class FakeDroidRunner:
             if exc.code == "proposal_not_stale":
                 reason = (f"{proposal_id} is not stale ({exc.details.get('status')}, base version "
                           f"{exc.details.get('base_version', ctx['base_version'] if ctx else '?')}); nothing to rebase")
+                visible_reason = "the selected draft does not need refreshing"
             elif exc.code == "validation_failed":
                 codes = ", ".join(sorted({r["code"] for r in exc.details.get("reasons", [])})) or exc.code
                 reason = (f"the same lines no longer fit the current budget ({codes}). {what}A fresh proposal "
                           "against the current state is needed; finance can start a new propose_allocation run")
+                visible_reason = ("the requested changes no longer fit the current allocations. "
+                                  "Create a new proposal for finance review")
             else:
                 reason = f"rebase refused ({exc.code}): {exc.message}"
-            return self._no_proposal(tools, reason.rstrip(". "), warnings, findings, details=_err_details(exc))
+                visible_reason = "the draft could not be refreshed. Review its details or start a new proposal"
+            # Diagnostic warnings retain the full refusal; the visible reply stays focused on the next action.
+            warnings.append({"code": "no_proposal_drafted", "message": reason.rstrip(". "), "details": _err_details(exc)})
+            tools.emit("warning", warnings[-1])
+            summary = f"No proposal drafted: {visible_reason}. Nothing was changed."
+            tools.emit("assistant_text", {"text": summary})
+            return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
 
         ctx = result["stale_context"]
         new = result["proposal"]
@@ -502,16 +601,8 @@ class FakeDroidRunner:
             "envelope_increase": new["envelope_increase"], "before": new["before"], "after": new["after"],
             "deltas": new["deltas"], "warnings": new["warnings"], "already_drafted": False,
         })
-        kind = "addition to the envelope" if new["action_type"] == "addition" else "transfer between teams"
-        after = new["after"]
-        summary = (f"{proposal_id} was drafted against budget version {ctx['base_version']} and was not applied: "
-                   f"the budget is now at version {ctx['current_version']}. {_changes_text(ctx)}"
-                   f"Rebased draft {new['id']} ({kind}, same lines) on version {new['base_version']}: "
-                   + ", ".join(f"{t} {a}" for t, a in sorted(after["allocations"].items()))
-                   + f"; envelope {after['total']} {new['unit']}. It is pending_review and needs a fresh finance "
-                   f"review; nothing has been applied and saved allocations remain at version {new['base_version']}.")
-        if new["warnings"]:
-            summary += " Warnings: " + "; ".join(w.get("message", w.get("code", "")) for w in new["warnings"]) + "."
+        consideration = _request_summary(findings)
+        summary = lead + " " + _proposal_review_summary(new, refreshed=True) + ("\n\n" + consideration if consideration else "")
         tools.emit("assistant_text", {"text": summary})
         warnings.extend(new["warnings"])
         return AgentRunOutput(summary=summary, findings=findings, warnings=warnings)
@@ -522,8 +613,12 @@ class FakeDroidRunner:
         """Allocation vs recorded vs projected per team, keeping units, dates and uncertainty visible:
         the period and as-of date, that totals are to date, spend coverage (partial / missing data and
         unattributed spend are called out, never hidden), and how projections are labeled."""
+        request_findings = _request_findings(tools.list_budget_requests(include_closed=False))
         if task.params.get("forecast_context"):
-            return self._answer_forecast(task, tools)
+            output = self._answer_forecast(task, tools)
+            # Current requests do not change the answer about an immutable pinned forecast.
+            output.findings.extend(request_findings)
+            return output
         budget = tools.get_budgets()
         spend = tools.get_spend_summary()
         forecast = tools.get_forecast()["forecast"]
@@ -554,8 +649,14 @@ class FakeDroidRunner:
         latest = max((str(t.get("last_record_at"))[:10] for t in spend["teams"] if t.get("last_record_at")),
                      default=None)
         through = f" (latest record dated {latest})" if latest else ""
-        parts = [f"Period {period['id']} ({period['starts_on']} to {period['ends_on']}), {unit}; recorded spend "
-                 f"is to date as of {spend['as_of']}{through}.", "; ".join(team_text(r) for r in rows) + "."]
+        lead = (f"Company recorded spend is {spend['company_total']} {unit} for {period['starts_on']} to "
+                f"{period['ends_on']}, to date as of {spend['as_of']}. Spend coverage is {cov['status']}"
+                + ("." if cov['status'] == 'complete' else "; recorded figures may be incomplete."))
+        if unattributed["record_count"]:
+            lead += f" Includes {unattributed['recorded_spend']} {unit} not assigned to a team."
+        parts = [lead,
+                 f"Period {period['id']}{through}.",
+                 "**Team comparison**\n" + "\n".join(f"- {team_text(row)}." for row in rows)]
         if cov["status"] != "complete":
             msg = f"Spend coverage is {cov['status']}: the recorded figures may be incomplete"
             if unattributed["record_count"]:
@@ -594,17 +695,20 @@ class FakeDroidRunner:
         if task.instruction.strip():
             # The fake runner is a fixed playbook: it never pretends to have understood a free-text
             # question or to have run an analysis it does not support (token multipliers, new scenarios).
-            msg = ("Limitation: the deterministic fake runner does not interpret free-text questions; this is "
-                   "the standard per-team comparison. Analyses beyond it (for example token multipliers or "
+            msg = ("Limitation: this is the standard per-team comparison; it does not interpret the free-text "
+                   "question. Analyses beyond it (for example token multipliers or "
                    "scenarios the forecast provider does not supply) are not computed.")
             parts.append(msg)
             warnings.append({"code": "question_not_interpreted", "message": msg,
                              "details": {"instruction": task.instruction[:500]}})
-        summary = " ".join(parts)
+        consideration = _request_summary(request_findings)
+        if consideration:
+            parts.append(consideration)
+        summary = "\n\n".join(parts)
         tools.emit("assistant_text", {"text": summary})
         for w in warnings:
             tools.emit("warning", w)
-        return AgentRunOutput(summary=summary, findings=rows + [coverage_row] + chart_findings, warnings=warnings)
+        return AgentRunOutput(summary=summary, findings=rows + [coverage_row] + chart_findings + request_findings, warnings=warnings)
 
     def _answer_forecast(self, task: AgentTask, tools: AgentToolbox) -> AgentRunOutput:
         """The deterministic runner handles exact forecast context through stored receipts."""
@@ -766,12 +870,20 @@ def _addition_lines(amount: Decimal, prioritize: str, gaps: dict[str, Decimal]) 
     return lines, reasoning
 
 
-def _transfer_lines(prioritize: str, alloc: dict, recorded: dict, projected: dict, cap: Decimal | None):
+def _transfer_lines(prioritize: str, alloc: dict, recorded: dict, projected: dict, cap: Decimal | None,
+                    *, source_team: str | None = None):
     """Move headroom (allocation above projection, never below recorded spend) to projected overruns."""
     need = {t: projected[t] - alloc[t] for t in alloc if t in projected and projected[t] > alloc[t]}
     room = {t: min(alloc[t] - projected[t], alloc[t] - recorded.get(t, ZERO))
             for t in alloc if t in projected and projected[t] < alloc[t]}
     room = {t: r for t, r in room.items() if r > 0}
+    if source_team is not None:
+        room = {t: r for t, r in room.items() if t == source_team and t != prioritize}
+        # An explicit amount is the requested allocation, not a request to fill an overrun.
+        # Keep the donor floor, but do not silently shrink or reject the named destination
+        # merely because it is currently forecast below its own allocation.
+        need = ({prioritize: cap} if cap is not None and cap > ZERO and prioritize in alloc
+                else {t: amount for t, amount in need.items() if t == prioritize})
     order = ([prioritize] if prioritize in need else []) + sorted((t for t in need if t != prioritize),
                                                                   key=lambda t: (-need[t], t))
     budget_left = cap if cap is not None else sum(need.values(), ZERO)
@@ -789,6 +901,9 @@ def _transfer_lines(prioritize: str, alloc: dict, recorded: dict, projected: dic
     lines = [(f, t, a) for (f, t), a in moves.items()]
     reasoning = ("existing funds move from teams projected below their allocation (never below their recorded spend) "
                  f"to projected overruns, {prioritize} first; the envelope is unchanged")
+    if source_team is not None:
+        reasoning = (f"existing funds move only from the requested source {source_team} to {prioritize}, "
+                     "limited by projected headroom, recorded spend, and the requested cap; the envelope is unchanged")
     return lines, reasoning
 
 

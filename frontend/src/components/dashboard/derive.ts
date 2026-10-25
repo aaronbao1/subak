@@ -1,6 +1,7 @@
 import type { Budget, CostComponent, Forecast, ForecastDailyPoint, Period, Provenance, SpendingRecord, Team } from "@/lib/contracts";
 import { COMPONENT_ORDER } from "@/components/team/labels";
 import { projectedTotals } from "./status";
+import { billableAmount, sumMoney } from "@/lib/finance-summary";
 
 export interface ComponentTotal {
   component: CostComponent;
@@ -101,7 +102,7 @@ export function componentTotals(records: SpendingRecord[]): ComponentTotal[] {
   return COMPONENT_ORDER.map((component) => {
     const rows = records.filter((r) => r.component === component);
     const provenances = [...new Set(rows.map((r) => r.provenance))];
-    return { component, amount: rows.reduce((s, r) => s + r.amount, 0), provenances };
+    return { component, amount: sumMoney(rows.map(billableAmount)), provenances };
   });
 }
 
@@ -112,14 +113,16 @@ export function summarizeTeams(
   forecasts: Forecast[],
 ): TeamSummary[] {
   return teams.map((team) => {
-    const records = spending.filter((r) => r.teamId === team.id);
-    const spent = records.reduce((s, r) => s + r.amount, 0);
     const budget = budgets.find((b) => b.teamId === team.id);
-    const forecast = forecasts.find((f) => f.teamId === team.id);
+    const forecast = forecasts.find((f) => f.teamId === team.id && !f.personId && (!budget || f.unit === budget.unit && f.period.start === budget.period.start && f.period.end === budget.period.end));
+    const target = budget?.period ?? forecast?.period;
+    const unit = budget?.unit ?? forecast?.unit;
+    const records = spending.filter((r) => r.teamId === team.id && (!target || r.date >= target.start && r.date <= target.end) && (!unit || r.unit === unit));
+    const spent = sumMoney(records.map(billableAmount));
     const byDay = new Map<string, DailyPoint>();
     for (const r of records) {
       const p = byDay.get(r.date) ?? { date: r.date, amount: 0, partial: false };
-      p.amount += r.amount;
+      p.amount = sumMoney([p.amount,billableAmount(r)]);
       p.partial = p.partial || !r.complete;
       byDay.set(r.date, p);
     }
@@ -145,7 +148,7 @@ export function buildDailyRows(teams: Team[], spending: SpendingRecord[], foreca
   for (const r of spending) {
     const e = byDate.get(r.date) ?? { partial: false, totals: new Map(), complete: new Map() };
     e.partial = e.partial || !r.complete;
-    e.totals.set(r.teamId, (e.totals.get(r.teamId) ?? 0) + r.amount);
+    e.totals.set(r.teamId, sumMoney([e.totals.get(r.teamId) ?? 0,billableAmount(r)]));
     e.complete.set(r.teamId, (e.complete.get(r.teamId) ?? true) && r.complete);
     byDate.set(r.date, e);
   }
@@ -203,9 +206,10 @@ export function modelTotals(records: SpendingRecord[]): ModelTotal[] {
   const byModel = new Map<string, ModelTotal>();
   for (const r of records) {
     if (r.component !== "api") continue;
-    const key = r.model ?? `${r.provider} (unspecified model)`;
-    const m = byModel.get(key) ?? { model: key, provider: r.provider, amount: 0 };
-    m.amount += r.amount;
+    const model = r.model ?? `${r.provider} (unspecified model)`;
+    const key = `${r.provider}\0${model}`;
+    const m = byModel.get(key) ?? { model, provider: r.provider, amount: 0 };
+    m.amount = sumMoney([m.amount,billableAmount(r)]);
     if (typeof r.tokens === "number") m.tokens = (m.tokens ?? 0) + r.tokens;
     byModel.set(key, m);
   }
@@ -217,7 +221,7 @@ export function providerTotals(records: SpendingRecord[]): ModelTotal[] {
   const byProvider = new Map<string, ModelTotal>();
   for (const m of modelTotals(records)) {
     const p = byProvider.get(m.provider) ?? { model: m.provider, provider: m.provider, amount: 0 };
-    p.amount += m.amount;
+    p.amount = sumMoney([p.amount,m.amount]);
     if (typeof m.tokens === "number") p.tokens = (p.tokens ?? 0) + m.tokens;
     byProvider.set(m.provider, p);
   }

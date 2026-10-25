@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -59,78 +57,64 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * Dark-only palette. :root and .dark carry the same values so there is never a light flash.
- * Surfaces layer upward with a faint cool tint (hue 260): page < sidebar/card < popover < muted.
- * Status colors are low-saturation; chart-1..5 are validated for adjacency on the card surface.
- */
-:root,
-.dark {
-  color-scheme: dark;
+/* White surfaces and a restrained blue accent across the app and landing page. */
+:root {
+  color-scheme: light;
 
-  /* Surfaces */
-  --background: oklch(0.16 0.006 260);
-  --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.195 0.006 260);
-  --card-foreground: oklch(0.95 0.005 260);
-  --popover: oklch(0.225 0.007 260);
-  --popover-foreground: oklch(0.95 0.005 260);
+  --background: #ffffff;
+  --foreground: #20242c;
+  --card: #ffffff;
+  --card-foreground: #20242c;
+  --popover: #ffffff;
+  --popover-foreground: #20242c;
 
-  /* Interactive neutrals */
-  --primary: oklch(0.93 0.005 260);
-  --primary-foreground: oklch(0.18 0.006 260);
-  --secondary: oklch(0.25 0.007 260);
-  --secondary-foreground: oklch(0.93 0.005 260);
-  --muted: oklch(0.235 0.007 260);
-  --muted-foreground: oklch(0.66 0.012 260);
-  --accent: oklch(0.25 0.007 260);
-  --accent-foreground: oklch(0.95 0.005 260);
+  --primary: #20242c;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f4f8;
+  --secondary-foreground: #263246;
+  --muted: #f4f6f9;
+  --muted-foreground: #626d7b;
+  --accent: #eef3fa;
+  --accent-foreground: #20242c;
 
-  /* Status, restrained */
-  --destructive: oklch(0.66 0.15 22);
-  --success: oklch(0.70 0.11 160);
-  --warning: oklch(0.76 0.12 75);
+  /* Status remains separate from the Subak action color. */
+  --destructive: #b42332;
+  --success: #21734f;
+  --warning: #946114;
 
-  /* Brand accent: one yellow-green, budgeted. Allowed on the single primary CTA per screen, mono eyebrow labels,
-     the active sidebar rule, the focus ring and selected-row washes. Never in body text, badges, icons at rest,
-     borders at rest, chart series or status colors. 13.7:1 on the card surface; 14.7:1 with brand-foreground on it. */
-  --brand: oklch(0.892 0.176 114.7);
-  --brand-hover: oklch(0.920 0.201 114.0);
-  --brand-foreground: oklch(0.146 0.006 69.2);
-  --brand-soft: oklch(0.892 0.176 114.7 / 12%);
+  --brand: #7f399e;
+  --brand-hover: #6b2f88;
+  --brand-foreground: #ffffff;
+  --brand-soft: #f5eef9;
 
-  /* Lines and focus: 1px low-alpha borders everywhere, no resting shadows */
-  --border: oklch(1 0 0 / 8%);
-  --border-strong: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.892 0.176 114.7 / 55%);
+  --border: #e3e8ef;
+  --border-strong: #cbd3df;
+  --input: #cbd3df;
+  --ring: #7f399e;
+  --overlay: rgb(20 31 48 / 24%);
+  --shadow-floating: 0 12px 36px rgb(25 40 65 / 12%), 0 2px 8px rgb(25 40 65 / 6%);
 
-  /* Charts (categorical, fixed order) */
-  /* Categorical palette, 8 fixed slots in this order. Validated on the card surface (#131518): lightness band,
-     chroma floor, CVD separation (worst adjacent ΔE 8.8), normal-vision ΔE ≥ 22, contrast ≥ 3:1. Never cycle past 8:
-     a 9th series folds into "Other". */
-  --chart-1: oklch(0.60 0.13 250);
-  --chart-2: oklch(0.665 0.13 72);
-  --chart-3: oklch(0.58 0.12 300);
-  --chart-4: oklch(0.66 0.11 165);
-  --chart-5: oklch(0.56 0.15 18);
-  --chart-6: oklch(0.665 0.10 200);
-  --chart-7: oklch(0.57 0.14 345);
-  --chart-8: oklch(0.66 0.12 120);
-  /* Neutral for the folded "Other" series. */
-  --chart-other: oklch(0.55 0.01 260);
+  /* Fixed categorical order, with darker strokes for white chart surfaces. */
+  --chart-1: #3369bb;
+  --chart-2: #9d6b15;
+  --chart-3: #8754b5;
+  --chart-4: #28765b;
+  --chart-5: #b44b54;
+  --chart-6: #257d8d;
+  --chart-7: #a7477c;
+  --chart-8: #64772e;
+  --chart-other: #707987;
 
   --radius: 0.5rem;
 
-  /* Sidebar sits a half step below the page */
-  --sidebar: oklch(0.15 0.006 260);
-  --sidebar-foreground: oklch(0.95 0.005 260);
-  --sidebar-primary: oklch(0.892 0.176 114.7);
-  --sidebar-primary-foreground: oklch(0.146 0.006 69.2);
-  --sidebar-accent: oklch(0.21 0.007 260);
-  --sidebar-accent-foreground: oklch(0.95 0.005 260);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.892 0.176 114.7 / 55%);
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #263246;
+  --sidebar-primary: #7f399e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2eaf7;
+  --sidebar-accent-foreground: #20242c;
+  --sidebar-border: #e3e8ef;
+  --sidebar-ring: #7f399e;
 }
 
 @layer base {
@@ -140,8 +124,8 @@
   html {
     @apply font-sans;
     font-feature-settings: "ss01" on, "cv11" on;
-    color-scheme: dark;
-    scrollbar-color: oklch(1 0 0 / 14%) transparent;
+    color-scheme: light;
+    scrollbar-color: var(--border-strong) transparent;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -180,13 +164,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 12%);
+    background: var(--border-strong);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(1 0 0 / 20%);
+    background: var(--muted-foreground);
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-corner {

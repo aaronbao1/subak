@@ -1,267 +1,159 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
+import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import type { Provenance, Unit } from "@/lib/contracts";
+import { usePathname, useSearchParams } from "next/navigation";
+import { ChevronRight, Search, X } from "lucide-react";
+import type { Unit } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { formatAmount } from "@/lib/format";
+import { selectScopeSummary } from "@/lib/finance-summary";
+import { scopeView } from "@/components/dashboard/forecast-derive";
 import { PageTitle, StatTile } from "@/components/shared/stat-tile";
-import { riseDelay, useMounted } from "@/components/shared/motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ProvenanceBadge, spentToDate, StatusChip, teamRecords, teamStatus, teamUnit } from "./labels";
-import { CountUpAmount, riseAt, rowStep } from "./count-up";
+import { fmtDate, StatusChip } from "./labels";
+import { filterTeamRows, parseTeamFilters, teamFilterQuery, type TeamFilters, type TeamSort } from "./team-list-filters";
 
-const CELL = "px-4 text-sm";
-/* Entrance (ms): tiles 0/60/120 · table card 180 · rows 180 + i*step (≤300 of stagger) · last rise ends ≤1180. */
-const TABLE_AT = 180;
-
-/** All teams with allocation, spend to date, projection, variance and a status badge. */
 export function TeamList() {
-  const { loaded, teams, spending, budgets, forecasts, company } = useAppStore();
-  // Entrance classes apply once, on the client after load; re-renders keep the end state.
-  const mounted = useMounted();
-  const rise = mounted ? "animate-rise" : "opacity-0";
+  return <Suspense fallback={<TeamListSkeleton />}><TeamListContent /></Suspense>;
+}
+
+function TeamListContent() {
+  const { loaded, teams, spending, budgets, company, forecastBundle } = useAppStore();
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const filters = parseTeamFilters(params);
+  const setFilters = (next: TeamFilters) => {
+    const query = teamFilterQuery(params, next);
+    window.history.replaceState(null, "", `${pathname}${query ? `?${query}` : ""}`);
+  };
 
   if (!loaded) return <TeamListSkeleton />;
 
-  const rows = teams.map((team) => {
-    const records = teamRecords(spending, team.id);
-    const budget = budgets.find((b) => b.teamId === team.id);
-    const forecast = forecasts.find((f) => f.teamId === team.id);
-    const spent = spentToDate(records);
-    const unit = teamUnit(budget, records);
-    const projected =
-      forecast?.status === "available" && forecast.projected != null
-        ? forecast.basis === "remaining" ? spent + forecast.projected : forecast.projected
-        : undefined;
-    // Variance = projected full-period total − allocation. Positive means the team is heading over.
-    const variance = projected != null && budget ? projected - budget.allocated : undefined;
-    return { team, budget, forecast, spent, unit, projected, variance, status: teamStatus(budget, forecast, spent) };
+  const period = company?.currentPeriod ?? budgets[0]?.period;
+  const unit = company?.budgetUnit ?? budgets[0]?.unit ?? "usd";
+  const input = { period: period!, unit, datasetId: company?.id ?? "current", spending, budgets };
+  const companySummary = period ? selectScopeSummary({ ...input, scope: scopeView(forecastBundle, "company")?.scope ?? { type: "company", id: company?.id }, forecastView: scopeView(forecastBundle, "company") }) : undefined;
+  const allRows = teams.map(team => {
+    const summary = period ? selectScopeSummary({ ...input, scope: { type: "team", id: team.id }, forecastView: scopeView(forecastBundle, "team", team.id) }) : undefined;
+    return { team, spent: summary?.observed.amount ?? null, allocation: summary?.allocation ?? null, projected: summary?.issued.amount ?? null, variance: summary?.variance ?? null };
   });
-
-  // Company totals for the top row. Projected is summed only over teams that have one; the rest are counted.
-  const totalUnit = company?.budgetUnit ?? budgets[0]?.unit ?? "usd";
-  const totalAllocation = budgets.length ? budgets.reduce((n, b) => n + b.allocated, 0) : undefined;
-  const totalSpent = rows.reduce((n, r) => n + r.spent, 0);
-  const withProjection = rows.filter((r) => r.projected != null);
-  // Same rule as the overview hero: teams without a projection count at their spend to date (a floor, not a forecast).
-  const totalProjected = withProjection.length ? rows.reduce((n, r) => n + (r.projected != null ? (r.projected as number) : r.spent), 0) : undefined;
-  const missing = rows.length - withProjection.length;
-  const periodLabel = company?.currentPeriod.label ?? "the current period";
-  // Provenance of the spend total: one badge when every record agrees, "Mixed" plus the set when they differ.
-  const provenances = [...new Set<Provenance>(spending.map((r) => r.provenance))];
-  const step = rowStep(rows.length);
+  const rows = filterTeamRows(allRows, filters);
+  const periodLabel = period?.label ?? (period ? `${fmtDate(period.start)} – ${fmtDate(period.end)}` : "Current period");
 
   return (
-    <div className="space-y-6">
-      <PageTitle
-        className={rise}
-        title="Teams"
-        description={<>Internal allocations, spend to date and projected totals for {periodLabel}. Projections are full-period totals and already include spend to date.</>}
-      />
+    <div className="min-w-0 space-y-6">
+      <PageTitle title="Teams" description={<>Compare recorded spend and expected spend against each team’s allocation. <span className="text-foreground/80">{displaySourceText(periodLabel, "Current period")}</span></>} />
 
-      {rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-border py-16 text-center">
-          <div className="eyebrow">No teams yet</div>
-          <p className="max-w-sm text-sm text-muted-foreground">Teams and their allocations appear here once the backend supplies them.</p>
+      {teams.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card px-6 py-16 text-center">
+          <h2 className="text-base font-medium">No teams yet</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Teams will appear here when company data is available.</p>
         </div>
       ) : (
         <>
-          {/* Company totals */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Company totals">
-            <div className={rise} style={riseDelay(0)}>
-              <StatTile
-                className="h-full"
-                size="secondary"
-                card
-                label="Total allocation"
-                value={totalAllocation != null ? <CountUpAmount value={totalAllocation} unit={totalUnit} /> : "—"}
-                muted={totalAllocation == null}
-              />
-            </div>
-            <div className={rise} style={riseDelay(1)}>
-              <StatTile
-                className="h-full"
-                size="secondary"
-                card
-                label="Spent to date"
-                value={<CountUpAmount value={totalSpent} unit={totalUnit} delay={60} />}
-                caption={
-                  provenances.length > 0 ? (
-                    <span className="inline-flex flex-wrap items-center gap-1.5">
-                      {provenances.length > 1 && <span>Mixed</span>}
-                      {provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
-                    </span>
-                  ) : undefined
-                }
-              />
-            </div>
-            <div className={rise} style={riseDelay(2)}>
-              <StatTile
-                className="h-full"
-                size="secondary"
-                card
-                label="Projection"
-                caption={missing > 0 ? `${missing} ${missing === 1 ? "team" : "teams"} with no projection, counted at spend to date` : undefined}
-                value={totalProjected != null ? <CountUpAmount value={totalProjected} unit={totalUnit} delay={120} /> : "None"}
-                muted={totalProjected == null}
-              />
-            </div>
+          <section className="grid divide-y divide-border rounded-xl border border-border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Company totals">
+            <StatTile className="p-5" label="Recorded spend" value={amount(companySummary?.observed.amount, unit)} caption={companySummary?.observed.byProvenance.estimate ? "Includes estimates · all teams and shared costs" : "All teams and shared costs"} />
+            <StatTile className="p-5" label="Total allocation" value={amount(companySummary?.allocation, unit)} caption={displaySourceText(periodLabel, "Current period")} />
+            <StatTile className="p-5" label="Expected spend" value={amount(companySummary?.issued.amount, unit)} muted={companySummary?.issued.amount == null} caption={companySummary?.issued.amount == null ? "No outlook for this period" : displaySourceText(periodLabel, "Current period")} />
           </section>
 
-          {/* Table on md and up */}
-          <div className={cn("hidden overflow-hidden rounded-xl border border-border bg-card md:block", rise)} style={riseAt(TABLE_AT)}>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Lead</TableHead>
-                  <TableHead className="text-right">Allocation</TableHead>
-                  <TableHead className="text-right">Spent to date</TableHead>
-                  <TableHead className="text-right">Projection</TableHead>
-                  <TableHead className="text-right">Variance</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-12"><span className="sr-only">Open</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map(({ team, budget, spent, unit, projected, variance, status }, i) => (
-                  <TableRow key={team.id} className={cn("group relative", rise)} style={riseAt(TABLE_AT + i * step)}>
-                    <TableCell className={cn(CELL, "font-medium")}>
-                      <Link
-                        href={`/teams/${team.id}`}
-                        className="flex items-center gap-2.5 outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
-                      >
-                        <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: team.color }} />
-                        {team.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className={cn(CELL, "text-muted-foreground")}>{team.lead ?? "—"}</TableCell>
-                    <TableCell className={cn(CELL, "num text-right")}>{budget ? formatAmount(budget.allocated, budget.unit) : <Dash />}</TableCell>
-                    <TableCell className={cn(CELL, "num text-right")}>{formatAmount(spent, unit)}</TableCell>
-                    <TableCell className={cn(CELL, "num text-right")}>
-                      {projected != null ? formatAmount(projected, unit) : <span className="font-sans text-muted-foreground">No projection</span>}
-                    </TableCell>
-                    <TableCell className={cn(CELL, "text-right")}>
-                      {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} grow={mounted} delay={TABLE_AT + i * step} /> : <Dash />}
-                    </TableCell>
-                    <TableCell className={CELL}><StatusChip status={status} /></TableCell>
-                    <TableCell className={cn(CELL, "pr-4")}>
-                      <ChevronRight className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <section aria-label="Team comparison" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <Search aria-hidden className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
+                <label htmlFor="team-search" className="sr-only">Search teams or leads</label>
+                <input id="team-search" type="search" value={filters.query} onChange={event => setFilters({ ...filters, query: event.target.value })} placeholder="Search teams or leads" className="h-10 w-full rounded-lg border border-border bg-card pr-10 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring" />
+                {filters.query && <button type="button" onClick={() => setFilters({ ...filters, query: "" })} className="absolute top-1 right-1 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" aria-label="Clear team search"><X className="size-4" aria-hidden /></button>}
+              </div>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <p className="text-xs text-muted-foreground" aria-live="polite">{rows.length} of {teams.length} teams</p>
+                <label htmlFor="team-sort" className="sr-only">Sort teams</label>
+                <select id="team-sort" value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value as TeamSort })} className="h-10 min-w-44 rounded-lg border border-border bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <option value="spend">Highest spend</option>
+                  <option value="projection">Highest expected spend</option>
+                  <option value="variance">Largest overrun</option>
+                  <option value="name">Name A–Z</option>
+                </select>
+              </div>
+            </div>
 
-          {/* Cards below md so nothing scrolls horizontally on a phone */}
-          <ul className="grid gap-3 md:hidden">
-            {rows.map(({ team, budget, spent, unit, projected, variance, status }, i) => (
-              <li key={team.id} className={rise} style={riseAt(TABLE_AT + i * step)}>
-                <Link
-                  href={`/teams/${team.id}`}
-                  className="block rounded-xl border border-border bg-card p-4 outline-none transition-colors duration-300 hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: team.color }} />
-                        <span className="truncate">{team.name}</span>
+            {rows.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
+                <h2 className="text-base font-medium">No teams match your search</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Try a team name, lead or description.</p>
+                <Button variant="outline" className="mt-4" onClick={() => setFilters({ ...filters, query: "" })}>Clear search</Button>
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
+                  <Table>
+                    <caption className="sr-only">Team spend and allocation for {displaySourceText(periodLabel, "Current period")}</caption>
+                    <TableHeader><TableRow>
+                      <TableHead className="px-5">Team</TableHead>
+                      <TableHead className="text-right">Recorded spend</TableHead>
+                      <TableHead className="text-right">Allocation</TableHead>
+                      <TableHead className="text-right">Expected spend</TableHead>
+                      <TableHead className="text-right">Over / under</TableHead>
+                      <TableHead className="pr-5">Status</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>{rows.map(row => (
+                      <TableRow key={row.team.id} className="group relative h-[76px]">
+                        <TableCell className="px-5">
+                          <Link href={`/teams/${row.team.id}`} className="flex items-center gap-3 outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring">
+                            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: row.team.color }} />
+                            <span><span className="font-medium">{displaySourceText(row.team.name, "Team")}</span><span className="mt-1 block text-xs text-muted-foreground">{displaySourceText(row.team.lead, "No lead listed")}</span></span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="num text-right">{amount(row.spent, unit)}</TableCell>
+                        <TableCell className="num text-right">{amount(row.allocation, unit)}</TableCell>
+                        <TableCell className="num text-right">{amount(row.projected, unit)}</TableCell>
+                        <TableCell className="text-right"><Variance value={row.variance} unit={unit} /></TableCell>
+                        <TableCell className="pr-5"><OutlookStatus projected={row.projected} allocation={row.allocation} variance={row.variance} /></TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                </div>
+
+                <ul className="grid gap-3 md:grid-cols-2 lg:hidden">{rows.map(row => (
+                  <li key={row.team.id}>
+                    <Link href={`/teams/${row.team.id}`} className="block h-full rounded-xl border border-border bg-card p-4 outline-none transition-colors hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring">
+                      <div className="flex items-start justify-between gap-3">
+                        <div><div className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: row.team.color }} />{displaySourceText(row.team.name, "Team")}</div><p className="mt-1 text-xs text-muted-foreground">{displaySourceText(row.team.lead, "No lead listed")}</p></div>
+                        <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
                       </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{team.lead ?? "No lead listed"}</div>
-                    </div>
-                    <StatusChip status={status} />
-                  </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-                    <Stat label="Allocation" value={budget ? formatAmount(budget.allocated, budget.unit) : "—"} />
-                    <Stat label="Spent" value={formatAmount(spent, unit)} />
-                    <Stat label="Projection" value={projected != null ? formatAmount(projected, unit) : "None"} muted={projected == null} />
-                    <div className="min-w-0">
-                      <dt className="eyebrow">Variance</dt>
-                      <dd className="mt-1 text-sm">
-                        {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} grow={mounted} delay={TABLE_AT + i * step} /> : <Dash />}
-                      </dd>
-                    </div>
-                  </dl>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
+                        <Stat label="Recorded spend" value={amount(row.spent, unit)} /><Stat label="Allocation" value={amount(row.allocation, unit)} />
+                        <Stat label="Expected spend" value={amount(row.projected, unit)} /><div><dt className="text-xs text-muted-foreground">Over / under</dt><dd className="mt-1 text-sm"><Variance value={row.variance} unit={unit} /></dd></div>
+                      </dl>
+                      <div className="mt-4 border-t border-border pt-3"><OutlookStatus projected={row.projected} allocation={row.allocation} variance={row.variance} /></div>
+                    </Link>
+                  </li>
+                ))}</ul>
+              </>
+            )}
+            {allRows.some(row => row.projected == null) && <p className="text-xs text-muted-foreground">Expected spend and comparisons appear only when an outlook covers the allocation period.</p>}
+          </section>
         </>
       )}
     </div>
   );
 }
 
-function Dash() {
-  return <span className="text-muted-foreground">—</span>;
+function amount(value: number | null | undefined, unit: Unit) { return value == null ? "—" : formatAmount(value, unit); }
+function Variance({ value, unit }: { value: number | null; unit: Unit }) {
+  return <span className={cn("num", value != null && value > 0 && "text-destructive", value == null && "text-muted-foreground")}>{value == null ? "—" : `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatAmount(Math.abs(value), unit)}`}</span>;
 }
-
-/**
- * Signed variance with a 48px bar scaled to the allocation. Over runs read in --destructive; headroom in --success.
- * The bar grows from the left once on load, after the row's own delay.
- */
-function Variance({ variance, allocation, unit, grow, delay = 0 }: { variance: number; allocation: number; unit: Unit; grow?: boolean; delay?: number }) {
-  const over = variance > 0;
-  const share = allocation > 0 ? Math.min(1, Math.abs(variance) / allocation) : 0;
-  const label = variance === 0 ? formatAmount(0, unit) : `${over ? "+" : "−"}${formatAmount(Math.abs(variance), unit)}`;
-  return (
-    <span className="inline-flex items-center justify-end gap-2">
-      <span className={cn("num", over ? "text-destructive" : "text-foreground")}>{label}</span>
-      <span aria-hidden className="h-1.5 w-12 shrink-0 overflow-hidden rounded-sm bg-border">
-        <span
-          className={cn("block h-full rounded-sm", over ? "bg-destructive" : "bg-success", grow ? "animate-grow-x" : "scale-x-0")}
-          style={{ width: `${Math.round(share * 100)}%`, ...riseAt(delay) }}
-        />
-      </span>
-    </span>
-  );
+function OutlookStatus({ projected, allocation, variance }: { projected: number | null; allocation: number | null; variance: number | null }) {
+  if (variance == null || projected == null || allocation == null) return <span className="text-xs text-muted-foreground">No matching outlook</span>;
+  return <StatusChip status={variance > 0 ? "likely_over" : projected >= allocation * 0.9 ? "watch" : "on_track"} />;
 }
-
-function Stat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="eyebrow">{label}</dt>
-      <dd className={cn("num mt-1 truncate text-sm", muted && "text-muted-foreground")}>{value}</dd>
-    </div>
-  );
+function Stat({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="num mt-1 text-sm">{value}</dd></div>;
 }
-
 function TeamListSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-24" />
-        <Skeleton className="h-4 w-80 max-w-full" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="space-y-2 rounded-xl border border-border bg-card p-4">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-        ))}
-      </div>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex h-10 items-center gap-4 border-b border-border-strong px-4">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="ml-auto h-3 w-16" />
-          <Skeleton className="hidden h-3 w-16 md:block" />
-        </div>
-        <div className="divide-y divide-border">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex h-12 items-center gap-4 px-4">
-              <Skeleton className="size-2 rounded-full" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="ml-auto h-4 w-20" />
-              <Skeleton className="hidden h-4 w-20 md:block" />
-              <Skeleton className="hidden h-6 w-20 rounded-md md:block" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="space-y-6"><Skeleton className="h-8 w-32" /><Skeleton className="h-4 w-80 max-w-full" /><div className="grid grid-cols-1 gap-4 sm:grid-cols-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div><Skeleton className="h-10 w-full" /><Skeleton className="h-96 w-full rounded-xl" /></div>;
 }

@@ -1,8 +1,38 @@
 # Forecast browser acceptance journey
 
-This is a reproducible **manual browser procedure**, with executable fixture and API checks. It has **not been run in a browser in the implementation sandbox**: binding a localhost server there returned `EPERM`. Unit, transport, type and lint checks listed below are executed evidence; the browser checkpoints here remain to be executed. No Playwright dependency or browser package stub was added.
+The FP&A redesign was exercised in a local browser on October 25, 2026, using both the synthetic mock and an isolated FastAPI/SQLite backend with the deterministic fake Droid runner. The current validation record below supersedes the original sandbox limitation. The older publication-transition procedure remains below for reproducing those specific checks.
 
 Use a normal local environment with the repository's Python and frontend dependencies installed. Use the real pinned frontend dependencies for visual acceptance. The cached compatibility webpack build described in the implementation verification notes does not establish Tailwind or font styling parity.
+
+
+## October 25 FP&A redesign validation
+
+The new Overview leads with matching-period spending, budget, expected spend and remaining budget. It shows one primary chart and a compact priority list. Sources, numerical assumptions, exact chart values and full proposal explanations are disclosed on request. Ramp’s official reporting and budgets layouts informed the outlined workspace structure; the implementation uses independent dark neutrals and a blue accent.
+
+Local previews:
+- `http://127.0.0.1:3000/overview`: deterministic Northstar mock. Recorded billable spend $95,000, weekly budget $200,000, issued weekly forecast $200,000. Included usage is not counted again. Mock scenarios deliberately have no fabricated modeled drivers or confidence intervals.
+- `http://127.0.0.1:3001/overview`: production build connected to `http://127.0.0.1:8789/compat`, an isolated synthetic ledger with an engine-issued forecast and five supported drivers. `NEXT_PUBLIC_DEMO_MODE=true` labels the fixture and scripted assistant. No live Factory call, production data migration or deployment was made.
+
+Executed browser journey (Codex in-app browser):
+1. Read company summary, search Teams, open Research and Maya; inspect the same issued scope/period and current ledger totals.
+2. Open Planning, select a project schedule, resolve “two weeks later” to November 16, and preview a separate scenario. The issued total and budget remain unchanged; moving the same work within the quarter correctly has zero quarter-total change while daily timing changes.
+3. Open Usage, switch Spend/Tokens, select October 24 (350 tokens = 300 input + 50 output), then use ArrowDown and Enter for October 25 (recorded zero). Cached input 230 and reasoning 25 remain subsets. Unknown telemetry is shown as unavailable. Company observed spend is $558.29 in this small engine fixture.
+4. Ask for $50 new funding, answer the team clarification, review exact amounts, use Revise to change the selected draft to $40, and apply only inside the isolated synthetic database. The receipt shows Research $60,000 → $60,040 and company envelope $200,000 → $200,040. Find the receipt in Decisions and filter by Applied/Research.
+5. Search Evidence, expand Sources, open the approved research source, and return to the preserved search context.
+6. Draft an explicit $50 Product → Research transfer: both lines retain the requested amount and the company envelope stays unchanged. After a reviewed draft is applied, a complete new request starts a fresh draft; amount-only revisions still require an open selection.
+7. Inspect 1440px desktop, 1024px laptop and 390px phone layouts. The phone summary uses two columns, all money values fit, and the page has no horizontal overflow. Mobile navigation reaches all six destinations; daily usage selection is keyboard operable.
+
+Final verification: the full backend run passed **999 tests**, with one opt-in upstream contract check skipped; the later closed-selection regressions passed in a focused **143-test** backend run. All **154 frontend tests** passed. The real backend integration passed, and ESLint, TypeScript, contract-export determinism, whitespace checks and the pinned production build passed. Logs are `backend-tests-final.log`, `intent-closed-selection-tests.log`, `frontend-tests-final.log`, `integration-root-final.log` and `production-build-final.log` in the evidence directory. The final preview uses a fresh fixture database, separate from the database used for approval tests.
+
+Automated coverage includes exact target compatibility, all native provenance kinds, excluded informational/unpriced usage, UTC boundaries, missing/zero/partial/corrected usage, scope conservation, selected-draft semantics, negation and exact small amounts, immutable scenario parents, receipt-first save behavior, refresh failure, request deduplication, lost responses and interrupted acceptance. The real TypeScript client/store → FastAPI → SQLite → forecast worker → deterministic Droid integration is executable with:
+
+```bash
+FORECAST_TEST_PYTHON=.venv/bin/python node --test frontend/tests/forecast-backend.integration.mjs
+```
+
+Detailed test logs, screenshots and the isolated demo launcher are in `.coordination/fpna-redesign-20261025/evidence/`. Independent review findings and fix verification are in `.coordination/fpna-redesign-20261025/agents/independent-review.md`.
+
+Limits: live Factory/SDK validation and sessions with nontechnical finance participants were not performed. Demo identity headers are not production authentication. Native agent work interrupted after execution starts retains the existing server recovery semantics; an unknown outcome is shown for reconciliation, not automatically resent. The new usage API does not invent source completeness receipts. These checks establish functional demo behavior, not forecasting accuracy or production readiness.
 
 ## Start an isolated, deterministic fixture
 
@@ -180,7 +210,7 @@ For a controlled pending-state exercise, use DevTools network interception on a 
 
 Write a pass/fail/not-run row for every checkpoint in `browser-result.md`, with artifact names, exact issued/parent/scenario IDs and material errors. Keep synthetic labels visible in screenshots. Stop the frontend and backend with Ctrl-C when finished. The fresh database and captures remain in the printed artifact directory for inspection.
 
-The latest executed source checks (run from repository root unless noted) are:
+The original sandbox checkpoint used the following source checks (superseded by the October 25 validation above):
 
 ```bash
 node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs frontend/src/lib/store.test.mjs
@@ -190,4 +220,4 @@ cd frontend
 ./node_modules/.bin/eslint
 ```
 
-Observed result during implementation: **21 Node checks passed; route type generation, TypeScript and full ESLint passed** using the documented authentic cached compatibility runtime. Exact pinned production installation and the browser procedure above were not verified in the sandbox. See the integration verification notes for the separate copied webpack/font-fixture build and its styling limits.
+Historical result: **21 Node checks passed; route type generation, TypeScript and full ESLint passed** using the documented cached compatibility runtime. At that earlier checkpoint the pinned production build and browser procedure were unverified. The October 25 record above documents the subsequently executed pinned build and browser checks.

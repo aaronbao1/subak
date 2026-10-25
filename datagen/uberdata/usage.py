@@ -72,7 +72,7 @@ def build_calendar(start: date, end: date) -> dict:
                 season = f
         out[d] = CalendarDay(day=d, weekday=wd, is_weekend=wd >= 5, holiday=hol[0] if hol else None,
                              holiday_factor=hol[1] if hol else 1.0, seasonal_factor=season, period_id=period_for(d),
-                             partial=(d == C.AS_OF))
+                             partial=(d == C.AS_OF and not C.COMPLETE_AS_OF_DAY))
         d += timedelta(days=1)
     return out
 

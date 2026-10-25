@@ -11,9 +11,9 @@ export interface ProviderMeta {
 }
 
 export const PROVIDER_META: Record<string, ProviderMeta> = {
-  anthropic: { label: "Anthropic", accent: "oklch(0.72 0.12 45)" },
-  openai: { label: "OpenAI", accent: "oklch(0.82 0.01 250)" },
-  google: { label: "Google", accent: "oklch(0.70 0.14 258)" },
+  anthropic: { label: "Anthropic", accent: "#A84D31" },
+  openai: { label: "OpenAI", accent: "var(--foreground)" },
+  google: { label: "Google", accent: "#285FB0" },
 };
 
 export function providerMeta(provider: string): ProviderMeta {
@@ -34,7 +34,7 @@ function AnthropicMark(p: SvgProps) {
 
 function OpenAIMark(p: SvgProps) {
   return (
-    <svg {...base(p)} fill="none" stroke="#FFFFFF" strokeWidth="1.6" strokeLinejoin="round">
+    <svg {...base(p)} fill="none" stroke="var(--foreground)" strokeWidth="1.6" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9.5" />
       <path d="M12 6.5l4.8 2.75v5.5L12 17.5l-4.8-2.75v-5.5L12 6.5z" />
       <path d="M12 6.5v5.5M7.2 14.75L12 12l4.8 2.75" />

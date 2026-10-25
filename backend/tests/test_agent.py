@@ -112,6 +112,23 @@ def test_rerunning_interpretation_does_not_duplicate_signals(seeded, client):
 # ---- proposals and bounded authority ------------------------------------------------------------
 
 
+@pytest.mark.parametrize("params, amount, total, kind", [
+    ({"mode": "addition", "amount": "50.00", "prioritize": "research"}, "$50.00", "$200,050.00", "new funding"),
+    ({"mode": "transfer", "amount": "40.00", "prioritize": "research", "source_team": "product"},
+     "$40.00", "$200,000.00", "redistribution"),
+])
+def test_proposal_summary_is_plain_finance_language_with_audit_details_retained(seeded, client, params, amount, total, kind):
+    out = run(client, params=params).json()
+    summary = out["summary"]
+    assert amount in summary and total in summary and kind in summary
+    assert "finance review" in summary and "Nothing has been applied" in summary
+    assert "prop_" not in summary and "pending_review" not in summary and "version" not in summary
+    drafted = next(event["data"] for event in out["events"] if event["type"] == "proposal_drafted")
+    assert drafted["proposal_id"] == out["proposals"][0]["id"]
+    assert drafted["status"] == "pending_review" and drafted["base_version"] == 1
+    assert drafted["after"]["total"] == total.removeprefix("$").replace(",", "")
+
+
 def test_propose_run_leaves_pending_proposal_and_budget_unchanged(seeded, client):
     out = run(client, params={"mode": "addition", "amount": "50000.00", "prioritize": "research"}).json()
     assert out["status"] == "succeeded" and out["applied_changes"] is False
@@ -129,7 +146,7 @@ def test_propose_run_leaves_pending_proposal_and_budget_unchanged(seeded, client
     assert client.get("/api/budget").json()["state_version"] == 1
     drafted = next(e for e in out["events"] if e["type"] == "proposal_drafted")["data"]
     assert drafted["applied"] is False and drafted["requires_finance_approval"] is True
-    assert "NOT been applied" in out["summary"]
+    assert "Nothing has been applied" in out["summary"]
     finished = out["events"][-1]
     assert finished["type"] == "run_finished" and finished["data"]["applied_changes"] is False
 
@@ -152,7 +169,7 @@ def test_droid_cannot_apply_its_draft_only_finance_can(seeded, client):
 def test_toolbox_has_no_decide_capability(seeded, client):
     names = set(tool_defs.TOOL_NAMES)
     assert names == {"search_corpus", "read_document", "get_spend_summary", "get_budgets", "get_forecast",
-                     "list_signals", "list_people", "build_chart_spec", "record_signal", "draft_proposal", "rebase_proposal",
+                     "list_signals", "list_people", "list_budget_requests", "build_chart_spec", "record_signal", "draft_proposal", "rebase_proposal",
                      "explain_forecast", "compare_forecasts", "preview_forecast_scenario", "request_forecast_refresh"}
     assert {t.name for t in tool_defs.TOOLS if t.kind == "draft"} == {"record_signal", "draft_proposal",
                                                                       "rebase_proposal", "preview_forecast_scenario", "request_forecast_refresh"}
@@ -480,6 +497,11 @@ def test_answer_question_reports_period_units_and_complete_coverage(seeded, clie
     assert "simulated" in summary and "not measured spend" in summary
     cov = next(f for f in out["output"]["findings"] if f["type"] == "spend_coverage")
     assert cov["status"] == "complete" and cov["unattributed_spend"] == "0.00"
+    lead = summary.split("\n\n", 1)[0]
+    assert len(lead) <= 320 and f"{cov['company_total']} USD" in lead
+    assert "2026-10-01" in lead and "2026-12-31" in lead and "Spend coverage is complete" in lead
+    assert "\n- research: allocation 60000.00" in summary
+    assert "research:" not in lead
 
 
 def test_answer_question_says_when_spend_is_partial_and_unattributed(seeded, client):
@@ -497,6 +519,9 @@ def test_answer_question_says_when_spend_is_partial_and_unattributed(seeded, cli
     assert "spend_coverage_incomplete" in {w["code"] for w in out["output"]["warnings"]}
     rows = [f for f in out["output"]["findings"] if f["type"] == "team_comparison"]
     assert {r["coverage_status"] for r in rows} == {"partial"}
+    lead = summary.split("\n\n", 1)[0]
+    assert len(lead) <= 320 and "96800.00 USD" in lead and "Spend coverage is partial" in lead
+    assert "1800.00 USD" in lead and "not assigned to a team" in lead
 
 
 def test_answer_question_with_forecast_unavailable_is_not_labeled_simulated(tmp_path, clock, id_factory):

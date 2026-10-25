@@ -15,7 +15,8 @@ EMAIL_DOMAIN = "uber.example"
 CURRENCY = "USD"
 
 YEAR_START = date(2026, 1, 1)
-AS_OF = date(2026, 10, 24)          # last recorded day (partial)
+AS_OF = date(2026, 10, 24)          # last recorded day (partial by default)
+COMPLETE_AS_OF_DAY = False        # opt in to a full final day without changing prior history
 HORIZON_END = date(2026, 12, 31)    # planning horizon for future-dated evidence
 
 # Planning periods used by the backend: calendar quarters. Q4 is the "current" period on AS_OF.

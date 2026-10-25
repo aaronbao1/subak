@@ -17,7 +17,7 @@ from app.schemas.common import InModel, MoneyStr, OutModel
 
 RawAmount = Union[StrictStr, StrictInt, StrictFloat, Decimal]
 
-EvidenceKind = Literal["signal", "document", "forecast_snapshot", "spend_summary"]
+EvidenceKind = Literal["signal", "document", "forecast_snapshot", "spend_summary", "budget_request"]
 
 
 class EvidenceRef(InModel):

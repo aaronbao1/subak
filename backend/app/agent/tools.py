@@ -55,6 +55,11 @@ class ListPeopleIn(_In):
     team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
 
 
+class ListBudgetRequestsIn(_In):
+    team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
+    include_closed: bool = False
+
+
 class BuildChartSpecIn(_In):
     kind: ChartKind
     team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
@@ -173,10 +178,19 @@ TOOLS: tuple[ToolDef, ...] = (
             RequestForecastRefreshIn),
     ToolDef("list_signals", "read",
             "Context signals already recorded (by finance or earlier Droid runs), with citation currency. "
-            "Read these before a proposal: when a current signal covers the team, cite it by id instead of "
-            "re-reading documents. A team filter also returns company-scope signals (they have no team but "
+            "Read these before a proposal and check list_budget_requests source_updates for newer source versions; "
+            "a current signal alone does not prove incoming updates were reviewed. A team filter also returns company-scope signals (they have no team but "
             "apply to every team) unless include_company is false.",
             ListSignalsIn),
+    ToolDef("list_budget_requests", "read",
+            "Read current-period team funding requests and their current read-only assessments, including exact "
+            "requested amount, source, status, recorded spend, forecast and supported donor headroom. Also returns "
+            "newest current project/source updates with version and current-signal coverage, even when no requests exist. "
+            "Always check this before allocation advice; existing signals may predate an update. Requested money is "
+            "not approved funding or a numerical forecast effect. This tool never refreshes a forecast, creates an "
+            "assessment record, drafts a proposal or changes a budget. Optional team filters requests and sources; "
+            "include_closed includes already funded/rejected current-period requests.",
+            ListBudgetRequestsIn),
     ToolDef("list_people", "read",
             "People directory: active team members with id, team, name, role, primary_tool and "
             "integrations. Use it to turn a name in a document into a person id for a person-scope signal. "
@@ -192,7 +206,11 @@ TOOLS: tuple[ToolDef, ...] = (
             BuildChartSpecIn),
     ToolDef("record_signal", "draft",
             "Record a cited context signal (what is planned/changing, team, timing, status current|"
-            "superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored "
+            "superseded|conflicting|informal|cancelled, uncertainty). change_type must be exactly expansion, "
+            "reduction, continuation, timing_shift or other; increase/decrease are invalid. "
+            "Each citation accepts only {document_id, quote, char_start?, char_end?}; give both offsets or "
+            "omit both and let the backend locate the quote. Citation version, doc_key, title and id are "
+            "response-only metadata: never send them. Every citation must quote a stored "
             "document version exactly; the backend verifies it. A current signal may not rest only on "
             "superseded or only on cancelled documents. scope: `person` (person_ids from list_people, all on "
             "one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` "

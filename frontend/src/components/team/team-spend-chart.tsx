@@ -1,4 +1,5 @@
 "use client";
+import { displayCopy, displaySourceText } from "@/lib/display-copy";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Rectangle, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -7,6 +8,7 @@ import {
 import { X } from "lucide-react";
 import type { CostComponent, Forecast, Provenance, SpendingRecord, Team, Unit } from "@/lib/contracts";
 import { formatAmount } from "@/lib/format";
+import { billableAmount, sumMoney } from "@/lib/finance-summary";
 import { projectedDays } from "@/components/dashboard/derive";
 import { isWeekend, WEEKEND_PATTERN_ID } from "@/components/shared/components";
 import { useMounted, usePrefersReducedMotion } from "@/components/shared/motion";
@@ -45,6 +47,7 @@ type DayRow = {
 
 const COMPONENT_NOTE: Partial<Record<CostComponent, string>> = {
   included_usage: "Usage covered by the subscription; shown for information",
+  unpriced_usage: "Usage has no supplied price; excluded from cost totals",
 };
 
 const AXIS_TICK = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
@@ -90,11 +93,12 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
     for (const r of records) {
       let row = byDate.get(r.date);
       if (!row) {
-        row = { date: r.date, complete: true, projected: false, weekend: isWeekend(r.date), total: 0, projectedBar: 0, subscription: 0, included_usage: 0, extra_usage: 0, api: 0 };
+        row = { date: r.date, complete: true, projected: false, weekend: isWeekend(r.date), total: 0, projectedBar: 0, subscription: 0, included_usage: 0, extra_usage: 0, api: 0, unpriced_usage: 0 };
         byDate.set(r.date, row);
       }
-      row[r.component] += r.amount;
-      row.total += r.amount;
+      const charge = billableAmount(r);
+      row[r.component] = sumMoney([row[r.component], charge]);
+      row.total = sumMoney([row.total, charge]);
       if (!r.complete) row.complete = false;
     }
     const completeDates = new Set([...byDate.values()].filter((r) => r.complete).map((r) => r.date));
@@ -104,7 +108,7 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
         existing.projectedFullDay = d.projected;
         existing.projectedBar = Math.max(0, d.projected - existing.total);
       } else {
-        byDate.set(d.date, { date: d.date, complete: true, projected: true, weekend: isWeekend(d.date), total: d.projected, projectedBar: d.projected, subscription: 0, included_usage: 0, extra_usage: 0, api: 0 });
+        byDate.set(d.date, { date: d.date, complete: true, projected: true, weekend: isWeekend(d.date), total: d.projected, projectedBar: d.projected, subscription: 0, included_usage: 0, extra_usage: 0, api: 0, unpriced_usage: 0 });
       }
     }
     const rows = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
@@ -143,7 +147,7 @@ export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: P
     return (
       <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-base font-medium">Daily spend</h2>
-        <p className="mt-1 text-sm text-muted-foreground">No spending has been recorded for {team.name} yet.</p>
+        <p className="mt-1 text-sm text-muted-foreground">No spending has been recorded for {displaySourceText(team.name, "this team")} yet.</p>
       </section>
     );
   }
@@ -350,7 +354,7 @@ function niceTicks(max: number): number[] {
   return ticks;
 }
 
-const TOOLTIP = "min-w-48 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-[0_8px_32px_rgba(0,0,0,0.5)]";
+const TOOLTIP = "min-w-48 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-(--shadow-floating)";
 
 function SpendTooltip({ active, payload, label, unit }: TooltipContentProps & { unit: Unit }) {
   if (!active || !payload?.length) return null;
@@ -433,11 +437,11 @@ function DayBreakdown({ day, records, unit, onClose }: { day: DayRow; records: S
                   {rs.some((r) => !r.complete) && <span className="text-xs text-muted-foreground">Partial</span>}
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground break-words">
-                  {[...new Set(rs.map((r) => `${r.source}${r.provider ? ` · ${r.provider}` : ""}`))].join("; ")}
+                  {[...new Set(rs.map((r) => `${displayCopy(r.source, "Spending record")}${r.provider ? ` · ${displaySourceText(r.provider)}` : ""}`))].join("; ")}
                 </div>
               </div>
               <div className={cn("num sm:text-right", notBilled && "text-muted-foreground")} title={notBilled ? "Not a reported charge" : undefined}>
-                {formatAmount(rs.reduce((s, r) => s + r.amount, 0), unit)}
+                {formatAmount(sumMoney(rs.map(billableAmount)), unit)}
               </div>
             </li>
           );

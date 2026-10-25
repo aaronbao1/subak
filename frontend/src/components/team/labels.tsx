@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Budget, ClaimType, ContextKind, CostComponent, Forecast, Provenance, SpendingRecord } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { billableAmount, sumMoney } from "@/lib/finance-summary";
 
 /** One color per cost component, shared with the overview tiles. */
 export { COMPONENT_COLOR } from "@/components/shared/components";
@@ -12,13 +13,14 @@ export { COMPONENT_COLOR } from "@/components/shared/components";
 /* ------------------------------------------------------------------ */
 
 /** Fixed stacking order: fixed fees at the bottom, variable charges on top. */
-export const COMPONENT_ORDER: CostComponent[] = ["subscription", "included_usage", "extra_usage", "api"];
+export const COMPONENT_ORDER: CostComponent[] = ["subscription", "included_usage", "extra_usage", "api", "unpriced_usage"];
 
 export const COMPONENT_LABEL: Record<CostComponent, string> = {
   subscription: "Subscription",
   included_usage: "Included usage",
   extra_usage: "Extra usage",
   api: "API",
+  unpriced_usage: "Unpriced usage",
 };
 
 /* ------------------------------------------------------------------ */
@@ -29,12 +31,16 @@ export const PROVENANCE_LABEL: Record<Provenance, string> = {
   reported_charge: "Reported charge",
   estimate: "Estimate",
   usage_only: "Usage only",
+  measured: "Measured usage",
+  simulated: "Usage value",
 };
 
 const PROVENANCE_TITLE: Record<Provenance, string> = {
   reported_charge: "Amount billed by the provider",
   estimate: "Estimated; not a bill",
   usage_only: "Usage recorded without a charge amount",
+  measured: "Observed usage valued using the supplied pricing",
+  simulated: "Usage value from the loaded dataset",
 };
 
 /** Small inline chip next to an amount. Border style carries the provenance so it survives without color. */
@@ -45,7 +51,8 @@ export function ProvenanceBadge({ provenance, className }: { provenance: Provena
       className={cn(
         "inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 text-[11px] leading-none whitespace-nowrap",
         provenance === "reported_charge" && "border-border-strong text-foreground/80",
-        provenance === "estimate" && "border-dashed border-border-strong text-muted-foreground",
+        (provenance === "estimate" || provenance === "simulated") && "border-dashed border-border-strong text-muted-foreground",
+        provenance === "measured" && "border-border-strong text-muted-foreground",
         provenance === "usage_only" && "border-dotted border-border-strong text-muted-foreground",
         className,
       )}
@@ -148,7 +155,7 @@ export function StatusChip({ status, className }: { status: TeamStatus; classNam
 /* ------------------------------------------------------------------ */
 
 export function spentToDate(records: SpendingRecord[]) {
-  return records.reduce((s, r) => s + r.amount, 0);
+  return sumMoney(records.map(billableAmount));
 }
 
 export function teamRecords(spending: SpendingRecord[], teamId: string) {

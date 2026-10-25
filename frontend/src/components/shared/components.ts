@@ -7,6 +7,7 @@ export const COMPONENT_COLOR: Record<CostComponent, string> = {
   api: "var(--chart-5)",
   /** Informational, not billed: neutral and drawn dashed wherever it appears. */
   included_usage: "var(--chart-other)",
+  unpriced_usage: "var(--chart-other)",
 };
 
 /** Saturday or Sunday, read from the ISO date so the local timezone cannot shift it. */

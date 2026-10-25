@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.agent.runner import ToolError
 from app.db.models import AgentRunStep
 from budget_helpers import APPROVER, DROID, addition_body, decide, draft, transfer_body
+from evals.scenarios import RunCtx, score_stale
 from test_agent import _toolbox
 
 ANALYST = {"X-Actor-Id": "fin-ana", "X-Actor-Role": "finance_analyst"}
@@ -44,7 +45,7 @@ def test_recovery_explains_changes_and_offers_rebased_pending_draft(seeded, clie
     out = r.json()
     assert out["status"] == "succeeded" and out["applied_changes"] is False
     assert out["params"] == {"stale_proposal_id": b}
-    assert [s["tool"] for s in out["steps"]] == ["rebase_proposal"]
+    assert [s["tool"] for s in out["steps"]] == ["list_budget_requests", "rebase_proposal"]
 
     # a NEW pending draft on the current version, same lines; the original stays stale and unapplied
     assert len(out["proposals"]) == 1
@@ -60,16 +61,22 @@ def test_recovery_explains_changes_and_offers_rebased_pending_draft(seeded, clie
     assert client.get(f"/api/proposals/{b}").json()["status"] == "stale"
     assert allocations(client) == AFTER_A  # nothing applied by the run
 
-    # the explanation: versions, per-team changes, the decision that moved the budget, not applied
+    # First-layer text names the financial result; implementation details remain available in findings.
     summary = out["summary"]
-    assert "version 1" in summary and "version 2" in summary and "was not applied" in summary
-    assert "research 60000.00 -> 85000.00" in summary and "product 80000.00 -> 50000.00" in summary
-    assert "transfer: product -> research 25000.00" in summary and "applied by fin-alice" in summary
-    assert "pending_review" in summary and "fresh finance review" in summary
-    assert "nothing has been applied" in summary
+    assert "$50,000.00" in summary and "$250,000.00" in summary and "fresh finance review" in summary
+    assert "nothing has been applied" in summary.lower()
+    assistant_texts = [e["data"]["text"] for e in out["events"] if e["type"] == "assistant_text"]
+    assert assistant_texts == [summary]
+    for text in [summary] + assistant_texts:
+        assert "prop_" not in text and "version" not in text and "pending_review" not in text
     ctx = next(f for f in out["output"]["findings"] if f["type"] == "stale_context")
     assert ctx["base_version"] == 1 and ctx["current_version"] == 2 and ctx["total_change"] == "0.00"
     assert len(ctx["decisions_since_base"]) == 1
+    assert {change["team"]: (change["at_base"], change["now"]) for change in ctx["changes"]}["product"] == ("80000.00", "50000.00")
+    score = score_stale({"stale_recovery": RunCtx(fixture="stale_recovery", runner="fake", ran=True, run=out,
+                                                setup={"stale_proposal_id": b}, budget_before={"state_version": 2},
+                                                proposals=[new])})
+    assert next(check for check in score if check.name == "explains_version_and_review").passed
     drafted = next(e for e in out["events"] if e["type"] == "proposal_drafted")["data"]
     assert drafted["applied"] is False and drafted["rebased_from_proposal_id"] == b
 
@@ -83,8 +90,9 @@ def test_recovery_of_a_proposal_that_is_not_stale_drafts_nothing(seeded, client)
     p = draft(client, addition_body()).json()
     out = run(client, {"stale_proposal_id": p["id"]}).json()
     assert out["status"] == "succeeded" and out["proposals"] == []
-    assert "No proposal drafted" in out["summary"] and "is not stale" in out["summary"]
+    assert "No proposal drafted" in out["summary"] and "does not need refreshing" in out["summary"]
     assert "Nothing was changed" in out["summary"]
+    assert p["id"] not in out["summary"] and "version" not in out["summary"] and "pending_review" not in out["summary"]
     w = next(w for w in out["output"]["warnings"] if w["code"] == "no_proposal_drafted")
     assert w["details"]["code"] == "proposal_not_stale"
     assert client.get(f"/api/proposals/{p['id']}").json()["status"] == "pending_review"
@@ -100,8 +108,12 @@ def test_recovery_when_intent_no_longer_fits_explains_and_creates_nothing(seeded
     before = client.get("/api/proposals").json()
     out = run(client, {"stale_proposal_id": a["id"]}).json()
     assert out["status"] == "succeeded" and out["proposals"] == []
-    assert "no longer fit" in out["summary"] and "negative_allocation_result" in out["summary"]
-    assert "product 80000.00 -> 20000.00" in out["summary"]  # still explains what changed
+    assert "no longer fit" in out["summary"] and "finance review" in out["summary"]
+    assert "negative_allocation_result" not in out["summary"] and "prop_" not in out["summary"]
+    ctx = next(f for f in out["output"]["findings"] if f["type"] == "stale_context")
+    assert {change["team"]: (change["at_base"], change["now"]) for change in ctx["changes"]}["product"] == ("80000.00", "20000.00")
+    warning = next(w for w in out["output"]["warnings"] if w["code"] == "no_proposal_drafted")
+    assert "negative_allocation_result" in warning["message"]
     assert len(client.get("/api/proposals").json()) == len(before)
     assert client.get(f"/api/proposals/{a['id']}").json()["status"] == "stale"
 

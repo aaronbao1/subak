@@ -1,4 +1,5 @@
 "use client";
+import { displaySourceText } from "@/lib/display-copy";
 import Link from "next/link";
 import { ChevronRight, Users } from "lucide-react";
 import type { Team, Unit } from "@/lib/contracts";
@@ -35,7 +36,7 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
       <div className={rise} style={riseAt(enterAt)}>
         <h2 id="people-heading" className="text-base font-medium">People</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {rows.length} {rows.length === 1 ? "person" : "people"} currently on {team.name}. Shared spend and historical team changes can make these person totals differ from the team total.
+          {rows.length} {rows.length === 1 ? "person" : "people"} currently on {displaySourceText(team.name, "this team")}. Shared spend and historical team changes can make these person totals differ from the team total.
         </p>
       </div>
 
@@ -68,8 +69,8 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
                         href={`/teams/${team.id}/people/${r.person.id}`}
                         className="block min-w-0 outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
                       >
-                        <div className="truncate font-medium">{r.person.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">{r.person.role ?? "—"}{r.person.primaryTool ? ` · ${r.person.primaryTool}` : ""}</div>
+                        <div className="truncate font-medium">{displaySourceText(r.person.name, "Person")}</div>
+                        <div className="truncate text-xs text-muted-foreground">{displaySourceText(r.person.role, "—")}{r.person.primaryTool ? ` · ${displaySourceText(r.person.primaryTool)}` : ""}</div>
                       </Link>
                     </TableCell>
                     <TableCell className="num text-right">{formatAmount(r.spent, unit)}</TableCell>
@@ -116,8 +117,8 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{r.person.name}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{r.person.role ?? "—"}</div>
+                      <div className="truncate text-sm font-medium">{displaySourceText(r.person.name, "Person")}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{displaySourceText(r.person.role, "—")}</div>
                     </div>
                     <WeekChange value={r.weekChange} className="text-sm" />
                   </div>
@@ -137,12 +138,12 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
   );
 }
 
-/** Week-over-week change in average daily spend. A rise past 15% reads in --warning; a fall is muted; the rest is plain ink. */
+/** Week-over-week change in average daily spend. A rise past 15% reads in --warning; a fall past 15% reads in --success; the rest is plain ink. */
 export function WeekChange({ value, className }: { value?: number; className?: string }) {
   if (value === undefined) return <span className={cn("text-muted-foreground", className)}>—</span>;
   const pctText = `${value > 0 ? "+" : ""}${Math.round(value * 100)}%`;
   return (
-    <span className={cn("num", value > 0.15 ? "text-warning" : value < -0.15 ? "text-muted-foreground" : "text-foreground/80", className)} title="Average daily spend on complete days this week vs last week">
+    <span className={cn("num", value > 0.15 ? "text-warning" : value < -0.15 ? "text-success" : "text-foreground/80", className)} title="Average daily spend on complete days this week vs last week">
       {pctText}
     </span>
   );

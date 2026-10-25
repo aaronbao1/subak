@@ -17,7 +17,7 @@ The parse can be wrong, so every reply states how the text was read (`Intent.rea
   "another" / "allocate" count as an addition only next to a dollar amount and outside a question
   ("We have another $25,000 to allocate this week", not "why did you allocate $25,000 to Research?").
 - A negative amount ("add -5k", "minus $5,000") is never read as a positive one: compat asks.
-- what changed / read the documents / interpret / context -> interpret_corpus
+- what changed in the documents / read the documents / interpret / context -> interpret_corpus
 - anything else -> answer_question with the text as the instruction
 The team named as the destination ("to / toward / into / for / prioritizing <team>") becomes
 `prioritize`; a team named only as a source ("from <team>") never does. Without a destination, the
@@ -42,7 +42,18 @@ _ADDITION = re.compile(r"\b(add|adding|additional|more|extra|increase\w*|top[- ]
 # Addition words that are only a budget request when an amount comes with them ("another $25,000 to allocate").
 _ADDITION_WITH_AMOUNT = re.compile(r"\b(another|allocate)\b")
 # A question about an allocation ("why did you allocate $25,000 ...?") is not a request to add one.
-_QUESTION_LEAD = re.compile(r"^(why|what|which|who|when|where|did|does|do|is|are|was|were|has|have|explain)\b")
+_QUESTION_LEAD = re.compile(r"^(why|what|which|who|when|where|how|did|does|do|is|are|was|were|has|have|explain)\b")
+_NEGATED_ACTION = re.compile(
+    r"\b(?:do not|don['’]t|never|not)\s+(?:add\w*|increas\w*|allocat\w*|redistribut\w*|rebalanc\w*|"
+    r"move|transfer\w*|shift\w*|reallocat\w*|top[- ]?up)\b.*?(?=;|[.!?](?:\s|$)|,\s|\bbut\b|\binstead\b|\band\b|$)")
+_FOLLOWUP = re.compile(r"^(?:make (?:it|that)|change (?:it|that)|use|instead\b)|\binstead[.!?]*$")
+_DATE_CHANGE = re.compile(r"\b(?:effective|start|end|due)\s+date\b|\beffective\s+(?:on|from)\b|"
+                          r"\b(?:start|begin|end)\s+(?:on|in|next|to|back|forward|earlier|later)\b")
+_DATE_VALUE = re.compile(r"\b(?:\d{4}-\d{2}-\d{2}|(?:january|february|march|april|may|june|july|august|"
+                         r"september|october|november|december)\s+\d{1,2}|next\s+(?:week|month|monday|"
+                         r"tuesday|wednesday|thursday|friday|saturday|sunday))\b")
+_RELATIVE_DATE = re.compile(r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|a)\s+"
+                            r"(?:days?|weeks?|months?)\s+(?:later|earlier)\b")
 _REVISE = re.compile(r"\b(revis\w*|amend\w*)\b")
 # The command part of a revise/refresh message; what follows is the requested change.
 _REVISE_LEAD = re.compile(
@@ -52,8 +63,9 @@ _FILLER = re.compile(r"^(?:please|thanks|thank you|it|now)?[\s.!?]*$")
 # A minus sign (or the word) directly before an amount: "-5k", "$-5,000", "minus $5,000".
 _NEGATIVE = re.compile(r"(?<![\w.])[-\u2212]\s*\$?\s*\d|\$\s*[-\u2212]\s*\d|\b(?:minus|negative)\s+\$?\s*\d")
 _BUDGET_WORDS = re.compile(r"\b(budget|funding|funds|money|envelope|allocation|spend)\b")
-_INTERPRET = re.compile(r"(what('s| has)? changed|what is new|what's new|read (the )?(docs|documents|corpus)|"
-                        r"\binterpret\w*|\bcontext\b|\bsignals?\b)")
+_INTERPRET = re.compile(r"(read (the )?(docs|documents|corpus)|\binterpret\w*|\bcontext\b|\bsignals?\b)")
+_WHAT_CHANGED = re.compile(r"\bwhat(?:'s| has| is)? (?:changed|new)\b")
+_DOCUMENT_TARGET = re.compile(r"\b(?:docs?|documents?|corpus)\b")
 _REFRESH = re.compile(r"\b(refresh\w*|rebase\w*|redo|update the proposal|refreshed)\b")
 _PROPOSAL_ID = re.compile(r"\b(prop_[a-z0-9]+)\b")
 _NUM = r"\d[\d,]*(?:\.\d+)?"
@@ -88,6 +100,8 @@ class Intent:
     notes: list[str] = field(default_factory=list)
     # A proposal the run's draft replaces (chat revise): compat marks it `revised` by the new draft.
     revises: str | None = None
+    # Typed by the transport schema; no chat transcript or runner/tool state is persisted here.
+    conversation_context: dict[str, Any] = field(default_factory=dict)
 
 
 def parse_amount(text: str) -> str | None:
@@ -168,7 +182,8 @@ def _amount_or_error(text: str) -> tuple[str | None, Intent | None]:
 
 
 def _budget(text: str, instruction: str, *, teams: Sequence[tuple[str, str]], gaps: Mapping[str, Decimal],
-            default_mode: str | None = None, default_team: str | None = None) -> Intent | None:
+            default_mode: str | None = None, default_team: str | None = None,
+            default_source: str | None = None, default_amount: str | None = None) -> Intent | None:
     """An addition / transfer request in `text` as an Intent (a run or a question), or None when the text is
     not a budget request. `default_mode` / `default_team` come from a proposal being revised: an amount with
     no mode word keeps the proposal's mode, and no team named keeps the team it favoured."""
@@ -199,6 +214,7 @@ def _budget(text: str, instruction: str, *, teams: Sequence[tuple[str, str]], ga
             is_transfer, is_addition = default_mode == "transfer", default_mode == "addition"
         elif default_mode and (find_team(text, teams) or _BUDGET_WORDS.search(text)):
             is_transfer, is_addition = default_mode == "transfer", default_mode == "addition"
+            amount = amount or default_amount
         else:
             return None
     if amount is not None and _NEGATIVE.search(text):
@@ -210,6 +226,14 @@ def _budget(text: str, instruction: str, *, teams: Sequence[tuple[str, str]], ga
     if is_addition and amount is None and not default_mode and not _BUDGET_WORDS.search(text):
         return None  # "more" in a plain question: answer it instead
     team = find_team(text, teams) or (default_team if default_team in names else None)
+    donor = source_team(text, teams) or (default_source if default_source in names else None)
+    draft = {"mode": "transfer" if is_transfer else "addition"}
+    if team:
+        draft["prioritize"] = team
+    if donor and is_transfer:
+        draft["source_team"] = donor
+    if amount:
+        draft["amount"] = amount
     if is_addition and amount is None:
         label = names.get(team, team) if team else None
         example = label or (teams[0][1] if teams else "Research")
@@ -217,64 +241,65 @@ def _budget(text: str, instruction: str, *, teams: Sequence[tuple[str, str]], ga
                       ask="How much should be added to the envelope"
                           + (f" for {label}" if label else ", and for which team")
                           + f"? For example \"add $50,000 prioritizing {example}\". I will not guess an "
-                          "amount.")
+                          "amount.", conversation_context={"intent": "allocation", "pending_slot": "amount", "draft": draft})
     team_note = ""
     if team is None:
-        donor = source_team(text, teams)
         team = most_over({t: g for t, g in gaps.items() if t != donor})
         if team is None:
             return Intent(read_as="a budget request without a team",
                           ask="Which team should this prioritize? Name one of: "
-                              + ", ".join(n for _, n in teams) + ".")
+                              + ", ".join(n for _, n in teams) + ".",
+                          conversation_context={"intent": "allocation", "pending_slot": "team", "draft": draft})
         team_note = " (no team named; picked the team furthest over its allocation)"
     label = names.get(team, team)
     if is_transfer:
         params: dict[str, Any] = {"mode": "transfer", "prioritize": team}
         read = f"redistribute the existing budget toward {label}{team_note}"
-        donor = source_team(text, teams)
-        if donor is not None and donor != team:
-            read += f" (you named {names.get(donor, donor)} as the source; the draft picks which teams fund it)"
+        if donor == team:
+            return Intent(read_as="a transfer with the same source and destination",
+                          ask="Choose a different destination team for this transfer.",
+                          conversation_context={"intent": "allocation", "pending_slot": "team", "draft": draft})
+        if donor is not None:
+            params["source_team"] = donor
+            read += f" ({names.get(donor, donor)} as the source only)"
         if amount is not None:
             params["amount"] = amount
             read += f", moving at most {_dollars(amount)}"
         return Intent(read_as=read, run={"task_type": "propose_allocation", "instruction": instruction,
-                                         "params": params})
+                                         "params": params}, conversation_context={"intent": "allocation", "draft": params.copy()})
     return Intent(read_as=f"add {_dollars(amount)} to the envelope, prioritize {label}{team_note}",
                   run={"task_type": "propose_allocation", "instruction": instruction,
-                       "params": {"mode": "addition", "amount": amount, "prioritize": team}})
+                       "params": {"mode": "addition", "amount": amount, "prioritize": team}},
+                  conversation_context={"intent": "allocation", "draft": {"mode": "addition", "amount": amount, "prioritize": team}})
 
 
 def _refresh(pid: str, instruction: str) -> Intent:
-    return Intent(read_as=f"refresh stale proposal {pid} against the current budget",
+    return Intent(read_as="refresh the outdated draft against the current budget",
                   run={"task_type": "propose_allocation", "instruction": instruction,
                        "params": {"stale_proposal_id": pid}})
 
 
 def _which(pool: Sequence[Mapping[str, Any]], verb: str) -> Intent:
-    listed = "; ".join(f"{p['id']} ({p.get('label') or ('stale' if p.get('stale') else 'awaiting review')})"
+    listed = "; ".join(p.get("label") or ("outdated draft" if p.get("stale") else "awaiting review")
                        for p in pool)
-    first = pool[0]["id"]
-    stale = next((p["id"] for p in pool if p.get("stale")), None)
-    example = (f"\"Revise {first}: add $40,000 prioritizing Research\"" if verb == "revise" else f"\"refresh {first}\"")
-    if verb == "revise" and stale:
-        example += f" or \"refresh {stale}\""
     return Intent(read_as=f"{verb} a proposal, but more than one is open",
-                  ask=f"Which proposal should I {verb}? Open proposals: {listed}. Name it by id, for example "
-                      f"{example}.")
+                  ask=f"Which proposal should I {verb}? Select a draft from the review list. Open drafts: {listed}.")
 
 
 def _revise_or_refresh(text: str, instruction: str, *, teams: Sequence[tuple[str, str]],
                        gaps: Mapping[str, Decimal], open_: Sequence[Mapping[str, Any]],
-                       wants_revise: bool) -> Intent | None:
+                       wants_revise: bool, context: Mapping[str, Any] | None = None) -> Intent | None:
+    context = context or {}
     by_id = {p["id"]: p for p in open_}
     m = _PROPOSAL_ID.search(text)
-    if m:
-        pid = m.group(1)
+    selected = context.get("selected_proposal_id")
+    if m or selected:
+        pid = m.group(1) if m else selected
         target = by_id.get(pid)
         if target is None and wants_revise:
-            return Intent(read_as=f"revise {pid}",
-                          ask=f"{pid} is not open for revision: only proposals awaiting review or stale ones can "
-                              "be revised. " + (f"Open proposals: {', '.join(by_id)}." if by_id else
+            return Intent(read_as="revise the selected draft",
+                          ask="The selected draft is not open for revision: only drafts awaiting review or outdated ones can "
+                              "be revised. " + ("Select an open draft from the review list." if by_id else
                                                 "There is no open proposal right now."))
         if target is None:
             return _refresh(pid, instruction)  # the backend says plainly if it cannot be refreshed
@@ -290,53 +315,125 @@ def _revise_or_refresh(text: str, instruction: str, *, teams: Sequence[tuple[str
             return _which(pool, "revise" if wants_revise else "refresh")
         target = pool[0]
     pid = target["id"]
+    version = target.get("base_version")
+    if selected == pid and context.get("selected_proposal_version") is not None and version != context["selected_proposal_version"]:
+        return Intent(read_as="revise an outdated selection",
+                      ask="The selected proposal version has changed. Select the current proposal before revising it.",
+                      conversation_context={"intent": "allocation", "pending_slot": "proposal"})
+    selected_context = {"intent": "allocation", "selected_proposal_id": pid}
+    if version is not None:
+        selected_context["selected_proposal_version"] = version
     lead = _REVISE_LEAD.match(text)
     change = text[lead.end():] if lead else text
     if _FILLER.match(change):
         change = ""
     if change:
         sub = _budget(change, instruction, teams=teams, gaps=gaps, default_mode=target.get("mode"),
-                      default_team=target.get("prioritize"))
+                      default_team=target.get("prioritize"), default_source=target.get("source_team"),
+                      default_amount=target.get("amount"))
         if sub is not None:
-            sub.read_as = f"revise {pid}: {sub.read_as}"
+            sub.read_as = f"revise the selected draft: {sub.read_as}"
             if sub.run is not None:
                 sub.revises = pid
+            sub.conversation_context = selected_context | sub.conversation_context
             return sub
     if target.get("stale") and (not change or not wants_revise):
         return _refresh(pid, instruction)
     example_team = next((n for t, n in teams if t == target.get("prioritize")), teams[0][1] if teams else "Research")
-    return Intent(read_as=f"revise {pid}",
-                  ask=f"What should change in {pid}? Say it with an amount and a team, for example \"Revise {pid}: "
-                      f"add $40,000 prioritizing {example_team}\" or \"Revise {pid}: move at most $10,000 toward "
-                      f"{example_team}\". I will not guess the change.")
+    return Intent(read_as="revise the selected draft",
+                  ask="What should change in this draft? Say it with an amount and a team, for example "
+                      f"\"add $40,000 prioritizing {example_team}\" or \"move at most $10,000 toward "
+                      f"{example_team}\". I will not guess the change.",
+                  conversation_context=selected_context | {"pending_slot": "change", "draft": {
+                      key: target[key] for key in ("mode", "amount", "prioritize", "source_team") if target.get(key) is not None}})
 
 
 def parse(content: str, *, teams: Sequence[tuple[str, str]], gaps: Mapping[str, Decimal],
-          stale_proposal_ids: Sequence[str] = (), open_proposals: Sequence[Mapping[str, Any]] = ()) -> Intent:
+          stale_proposal_ids: Sequence[str] = (), open_proposals: Sequence[Mapping[str, Any]] = (),
+          conversation_context: Mapping[str, Any] | None = None) -> Intent:
     """`open_proposals`: proposals awaiting review or stale, newest first, each
-    {id, stale, mode, prioritize, label}. `stale_proposal_ids` (older callers) adds stale ones by id."""
+    {id, base_version, stale, mode, amount, prioritize, source_team, label}.
+    Conversation context carries only selected draft identity and unfilled semantic slots."""
     text = " ".join(content.lower().split())
     instruction = content.strip()[:4000]
+    context = dict(conversation_context or {})
+    draft = dict(context.get("draft") or {})
+    positive = _NEGATED_ACTION.sub("", text).strip(" ;,.")
+    # Negation removes only the prohibited action. An affirmative transfer in another clause survives.
+    if not positive:
+        return _answer(instruction, context)
+    if _QUESTION_LEAD.search(text) and not _NEGATED_ACTION.search(text):
+        asks_for_context_refresh = bool(_WHAT_CHANGED.search(text) and _DOCUMENT_TARGET.search(text))
+        if not asks_for_context_refresh or _ADDITION.search(text) or _TRANSFER.search(text) or _REVISE.search(text):
+            return _answer(instruction, context)
+    text = positive
     open_ = list(open_proposals)
     known = {p["id"] for p in open_}
     open_ += [{"id": pid, "stale": True} for pid in stale_proposal_ids if pid not in known]
 
-    wants_revise = bool(_REVISE.search(text))
+    # A period label accompanying a monetary instruction is not a request to reschedule it.
+    monetary_action = bool(_ADDITION.search(text) or _TRANSFER.search(text))
+    amount, amount_error = _amount_or_error(text)
+    date_followup = bool(_DATE_VALUE.search(text) and amount is None and amount_error is None and not monetary_action and (
+        context.get("pending_slot") == "effective_date" or context.get("selected_proposal_id") or
+        _REVISE.search(text) or (_FOLLOWUP.search(text) and open_)))
+    if _RELATIVE_DATE.search(text) and (context.get("intent") == "scenario" or
+                                      context.get("pending_slot") == "effective_date" or context.get("selected_proposal_id")):
+        date_followup = True
+    if _DATE_CHANGE.search(text) or date_followup:
+        date_context = context | {"intent": "scenario", "pending_slot": "effective_date", "effective_date_text": instruction}
+        return Intent(read_as="an effective-date change", ask="Effective-date changes are not supported for budget proposals. "
+                      "The requested date is retained, but no allocation was changed. Use a dated forecast scenario to explore it.",
+                      conversation_context=date_context)
+
+    amount_reply = bool(_AMOUNT.fullmatch(re.sub(r"^(?:[-−]|minus|negative)\s*", "", text).strip(" .!?")))
+    explicit_action = _budget(text, instruction, teams=teams, gaps=gaps)
+    closed_selection = context.get("selected_proposal_id") and context["selected_proposal_id"] not in {
+        proposal["id"] for proposal in open_
+    }
+    if (closed_selection and explicit_action is not None and explicit_action.run is not None
+            and not (_REVISE.search(text) or _FOLLOWUP.search(text) or _REFRESH.search(text))
+            and context.get("pending_slot") not in ("amount", "team", "change")):
+        # Selection is editing context, not a permanent action target. Once that draft is settled,
+        # a complete new instruction starts afresh; ambiguous revision follow-ups still fail below.
+        context = {key: value for key, value in context.items()
+                   if key not in ("selected_proposal_id", "selected_proposal_version", "draft", "pending_slot")}
+        draft = {}
+    followup = bool(open_ and context.get("pending_slot") not in ("amount", "team") and (
+        _FOLLOWUP.search(text) or amount_reply))
+    selected_action = bool(context.get("intent") == "allocation" and context.get("selected_proposal_id") and
+                           explicit_action is not None)
+    wants_revise = bool(_REVISE.search(text)) or followup or selected_action or bool(context.get("selected_proposal_id") and (
+        _FOLLOWUP.search(text) or amount_reply or context.get("pending_slot") in ("amount", "team", "change")))
     if wants_revise or _REFRESH.search(text):
         out = _revise_or_refresh(text, instruction, teams=teams, gaps=gaps, open_=open_,
-                                 wants_revise=wants_revise)
+                                 wants_revise=wants_revise, context=context)
         if out is not None:
             return out
 
-    out = _budget(text, instruction, teams=teams, gaps=gaps)
+    if context.get("pending_slot") in ("amount", "team") and draft.get("mode") in ("addition", "transfer"):
+        out = _budget(text, instruction, teams=teams, gaps=gaps, default_mode=draft["mode"],
+                      default_team=draft.get("prioritize"), default_source=draft.get("source_team"),
+                      default_amount=draft.get("amount"))
+        if out is not None:
+            return out
+
+    out = explicit_action
     if out is not None:
         return out
 
-    if _INTERPRET.search(text):
+    if _INTERPRET.search(text) or (_WHAT_CHANGED.search(text) and _DOCUMENT_TARGET.search(text)):
         return Intent(read_as="read the company documents and record what changed",
                       run={"task_type": "interpret_corpus", "instruction": instruction})
+    return _answer(instruction, context)
+
+
+def _answer(instruction: str, context: Mapping[str, Any]) -> Intent:
+    # A read-only turn must not accidentally reuse an unfinished action on a later ambiguous reply.
+    preserved = {key: value for key, value in context.items() if key not in ("draft", "pending_slot")}
     return Intent(read_as="a question about spend, budgets and projections (read-only)",
-                  run={"task_type": "answer_question", "instruction": instruction})
+                  run={"task_type": "answer_question", "instruction": instruction},
+                  conversation_context=preserved | {"intent": "explain"})
 
 
 def _dollars(amount: str) -> str:

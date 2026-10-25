@@ -18,6 +18,8 @@ class ProposeParams(InModel):
     # addition: new money entering the envelope (default 50000.00); transfer: optional cap on funds moved.
     amount: MoneyStr | None = None
     prioritize: str = "research"
+    # An explicit transfer source is binding; the runner cannot substitute another donor.
+    source_team: str | None = Field(default=None, min_length=1, max_length=200)
     # Stale-proposal recovery: finance's approval of this proposal was refused (409 stale_proposal).
     # Droid explains what changed since its base version and offers a rebased draft. Not combinable
     # with mode/amount/prioritize.

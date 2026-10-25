@@ -74,3 +74,16 @@ export function companyQuarterProjection(bundle: ForecastBundle | undefined, fal
   const company = scopeView(bundle, "company");
   return company ? finite(company.quarter_outlook?.base) : fallback;
 }
+
+/** Match compatibility cards to the selected financial period; unsupported targets stay unavailable. */
+export function targetForecasts(bundle: ForecastBundle, period: import('../../lib/contracts').Period): import('../../lib/contracts').Forecast[] {
+  const end = new Date(Date.parse(`${period.end}T00:00:00Z`) + 86400000).toISOString().slice(0,10);
+  const matches = (p: Record<string,unknown> | undefined) => p?.start === period.start && p.end === end;
+  return bundle.views.filter(v=>v.scope.type === 'team' || v.scope.type === 'person').map(view=>{
+    const planning = view.planning_period_outlook as Record<string,unknown> | undefined;
+    const point = matches(planning) ? planning : matches(view.quarter_outlook) ? view.quarter_outlook : view.weekly?.find(p=>matches(p) && !p.partial) ?? view.cumulative?.find(p=>matches(p));
+    const projected = finite(point?.base);
+    const daily = (view.daily ?? []).flatMap(p=>p.date && p.date >= period.start && p.date <= period.end && finite(p.base) !== undefined ? [{date:p.date,projected:finite(p.base)!}] : []);
+    return {id:view.id ?? `${view.run_id}:${view.scope.type}:${view.scope.id}`,teamId:view.scope.type === 'team' ? view.scope.id ?? '' : typeof view.team_id === 'string' ? view.team_id : '',...(view.scope.type === 'person' ? {personId:view.scope.id ?? ''} : {}),period,status:projected === undefined ? 'unavailable' : 'available',basis:'full_period',kind:'forecast',origin:view.is_synthetic ? 'placeholder' : 'forecasting_service',projected,daily,dailyCoverage:'published_detail',unit:view.target.unit.toLowerCase() as 'usd'|'credits'|'tokens',assumptions:['Issued forecast for this exact planning period.'],limitations:view.limitations,generatedAt:String(view.publication?.generated_at ?? view.generated_at ?? ''),unavailableReason:projected === undefined ? 'No issued forecast is available for this exact planning period.' : undefined};
+  });
+}

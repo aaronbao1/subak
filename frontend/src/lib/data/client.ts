@@ -1,5 +1,8 @@
 import type {
+  AllocationState, AllocationTargetsInput, AllocationDraftReceipt, BudgetRequest, BudgetRequestInput, BudgetRequestDraftInput,
+  WeeklyHistoryQuery, WeeklyHistoryResponse,
   AllocationProposal,
+  MessageOptions, MessageReconciliation,
   AssistantMessage,
   Budget,
   Company,
@@ -23,6 +26,14 @@ export interface SpendingFilter {
  * Keep it async everywhere so swapping implementations is a no-op for the UI.
  */
 export interface DataClient {
+  getAllocationState(): Promise<AllocationState>;
+  getBudgetRequests(): Promise<BudgetRequest[]>;
+  getBudgetRequest(id: string): Promise<BudgetRequest | undefined>;
+  ingestTeamUpdate(input: BudgetRequestInput): Promise<BudgetRequest>;
+  prepareBudgetRequestDraft(id: string, input: BudgetRequestDraftInput, operationId: string): Promise<AllocationDraftReceipt>;
+  prepareAllocationProposal(input: AllocationTargetsInput, operationId: string): Promise<AllocationDraftReceipt>;
+  reconcileAllocationProposal(operationId: string): Promise<AllocationDraftReceipt | undefined>;
+  getWeeklyForecastHistory(query: WeeklyHistoryQuery): Promise<WeeklyHistoryResponse>;
   getForecastViews(filter?: { scope_type?: string; scope_id?: string; run_id?: string }): Promise<ForecastBundle>;
   refreshForecast(idempotencyKey: string): Promise<ForecastRefresh>;
   getForecastRefresh(id: string): Promise<ForecastRefresh>;
@@ -46,7 +57,8 @@ export interface DataClient {
   getDecisions(): Promise<Decision[]>;
   getThread(threadId: string): Promise<AssistantMessage[]>;
   /** Sends a finance message; resolves with the new messages (user echo + assistant reply). */
-  sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext): Promise<AssistantMessage[]>;
-  applyProposal(proposalId: string, note?: string): Promise<Decision>;
+  sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext, options?: MessageOptions): Promise<AssistantMessage[]>;
+  reconcileMessage(threadId: string, clientMessageId: string): Promise<MessageReconciliation>;
+  applyProposal(proposalId: string, note?: string, operationId?: string): Promise<Decision>;
   rejectProposal(proposalId: string): Promise<AllocationProposal>;
 }

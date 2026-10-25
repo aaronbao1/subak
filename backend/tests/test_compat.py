@@ -118,7 +118,7 @@ def test_seed_totals_through_compat(c):
 def test_included_usage_counts_zero_and_is_labeled(c):
     rows = [r for r in get(c, "spending") if r["component"] == "included_usage"]
     assert {r["teamId"] for r in rows} == {"research", "engineering"}
-    assert all(r["amount"] == 0 and r["provenance"] == "usage_only" for r in rows)
+    assert all(r["amount"] == 0 and r["provenance"] == "simulated" for r in rows)
     research = next(r for r in rows if r["teamId"] == "research" and r["date"] == "2026-10-01")
     assert "notional value $" in research["source"] and "is not counted as spend" in research["source"]
     assert "(simulated)" in research["source"].lower() or "simulated" in research["source"].lower()
@@ -146,7 +146,8 @@ def test_unattributed_spend_gets_a_pseudo_team_and_marks_partial(c):
     assert len(un) == 1 and un[0]["amount"] == 700 and un[0]["complete"] is False
     # Company total is not understated; unpriced token rows never become dollars.
     assert sum(r["amount"] for r in rows) == sum(SPENT.values()) + 700
-    assert all(r["component"] != "unpriced_usage" for r in rows)
+    unpriced = [r for r in rows if r["component"] == "unpriced_usage"]
+    assert len(unpriced) == 1 and unpriced[0]["amount"] == 0 and unpriced[0]["provenance"] == "measured"
     # `complete` is per day: the unattributed row is partial, the teams' own days stay complete (the
     # period-wide coverage flag would have marked every day of every team partial).
     assert all(r["complete"] for r in rows if r["teamId"] != "unattributed")
@@ -261,7 +262,7 @@ def test_stale_proposal_refused_then_refreshed_via_chat(c):
     assert by_team(get(c, "budgets"), "allocated") == OUTCOME_B
 
     refreshed = say(c, "Please refresh the proposal")
-    assert refreshed["content"].startswith(f"**Read as:** refresh stale proposal {tid}")
+    assert refreshed["content"].startswith("**Read as:** refresh the outdated draft")
     new = get(c, f"proposals/{refreshed['proposalId']}", S.AllocationProposal)
     assert new["revisesProposalId"] == tid and new["basedOnBudgetVersion"] == "2" and new["status"] == "proposed"
 
@@ -334,6 +335,22 @@ def test_question_is_read_only_answer(c):
     # The answer names the data's own as-of day (the fixed Oct 20 export), not only the clock time.
     assert "(latest record dated 2026-10-20)" in reply["content"]
     assert by_team(get(c, "budgets"), "allocated") == ALLOCATED
+
+
+def test_analyze_spend_starter_answers_finance_without_interpreting_the_corpus(c):
+    before = get(c, "budgets")
+    response = c.post(f"{API}/threads/main/messages", json={
+        "content": "What changed our spending outlook?",
+        "conversation_context": {"intent": "explain"},
+    })
+    assert response.status_code == 200, response.text
+    reply = response.json()[1]
+    assert "Company recorded spend is 95000.00 USD" in reply["content"]
+    assert "projected 85000.00" in reply["content"]
+    tools = {tool["name"] for tool in reply["toolCalls"]}
+    assert {"get_budgets", "get_spend_summary", "get_forecast"} <= tools
+    assert not {"search_corpus", "record_signal"} & tools
+    assert get(c, "context") == [] and get(c, "budgets") == before
 
 
 def test_threads_persist_in_order_and_are_isolated(c):
@@ -536,7 +553,7 @@ def test_mapper_scalars():
     assert mappers.derived_title("Short. Second.") == "Short"
     long = "word " * 40
     assert len(mappers.derived_title(long)) <= mappers.TITLE_MAX and mappers.derived_title(long).endswith("…")
-    assert mappers.team_color(5) == "var(--chart-1)"
+    assert mappers.team_color(5) == "var(--chart-6)"
 
 
 def test_engine_forecast_mapping_preserves_full_quarter_and_unavailable_people(clock):
@@ -563,3 +580,11 @@ def test_engine_forecast_mapping_preserves_full_quarter_and_unavailable_people(c
     assert all(mappers.PERSON_SPLIT_LIMITATION not in p["limitations"] for p in persons)
     for row in rows:
         S.Forecast.model_validate(row)
+
+
+def test_full_company_palette_has_sixteen_distinct_stable_colors():
+    colors = [mappers.team_color(index) for index in range(16)]
+    assert len(set(colors)) == 16
+    assert colors[:8] == [f"var(--chart-{i})" for i in range(1, 9)]
+    assert colors == [mappers.team_color(index) for index in range(16)]
+    assert len({mappers.team_color(index) for index in range(32)}) == 32

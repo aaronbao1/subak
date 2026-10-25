@@ -1,19 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronRight, FileText } from "lucide-react";
-import type { AssistantMessage, SourceRef } from "@/lib/contracts";
+import { ArrowUp, ArrowUpRight, ChevronDown, CircleHelp, SlidersHorizontal, TrendingUp } from "lucide-react";
+import type { AssistantMessage, ConversationContext } from "@/lib/contracts";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
-import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { fmtDate } from "@/components/team/labels";
-import { ProposalCard } from "@/components/allocation/proposal-card";
 import { ProposalReview } from "@/components/allocation/proposal-review";
 import { SourceSheet } from "@/components/team/source-sheet";
 import { Markdown } from "./markdown";
+import { AssistantResponse } from "./assistant-response";
+import { cleanAssistantPresentation, formatAssistantAmount } from "./assistant-answer-model";
 
 const THREAD = "main";
 
@@ -22,7 +21,7 @@ const THREAD = "main";
  * and an inline proposal card when the assistant prepared one. Review/apply happens in ProposalReview.
  */
 export function AssistantDrawer() {
-  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded, forecastQuestionContext, askAssistant } = useAppStore();
+  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, people, company, composer: text, setComposer: setText, loaded, loadState, forecastQuestionContext, conversationContext, composerFocus, clearAssistantContext, setAssistantIntent, reconcileMessage, optionalErrors, retryOptional, requests, requestState, proposalActions } = useAppStore();
   const messages = threads[THREAD] ?? [];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -36,7 +35,7 @@ export function AssistantDrawer() {
     if (!assistantOpen) return;
     const t = setTimeout(() => inputRef.current?.focus(), 80);
     return () => clearTimeout(t);
-  }, [assistantOpen]);
+  }, [assistantOpen, composerFocus]);
 
   // Keep the newest message in view.
   useEffect(() => {
@@ -44,17 +43,17 @@ export function AssistantDrawer() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, sending, assistantOpen]);
 
-  async function send(content: string) {
+  async function send(content: string, intent?: ConversationContext["intent"]) {
     const trimmed = content.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || !loaded) return;
     setSending(true);
     setError(undefined);
-    setText("");
+    if (intent) setAssistantIntent(intent);
     try {
       await sendMessage(THREAD, trimmed);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "The assistant did not respond.");
-      setText(trimmed);
+      setError(e instanceof Error ? e.message : "Droid Assistant did not respond.");
+      // The sent message stays in the thread; a newer composer draft remains untouched.
     } finally {
       setSending(false);
       // The textarea stays enabled while the reply is pending; put the cursor back once it lands.
@@ -63,213 +62,78 @@ export function AssistantDrawer() {
   }
 
   const proposalFor = (id?: string) => (id ? proposals.find((p) => p.id === id) : undefined);
-  const canSend = !sending && text.trim().length > 0;
+  const canSend = loaded && !sending && text.trim().length > 0;
 
-  // Quick prompts come from the data, never from a hard-coded team or amount.
-  const unit = company?.budgetUnit ?? "usd";
-  const firstTeam = teams[0]?.name;
-  // Roughly a tenth of the total allocation, rounded to one significant figure so it reads as a round number.
-  const totalAllocated = budgets.reduce((n, b) => n + b.allocated, 0);
-  const extra = roundClean(totalAllocated * 0.1);
-  const quickPrompts = [
-    firstTeam ? `Why is ${firstTeam} tracking over its allocation?` : "Which team is tracking over its allocation?",
-    "Redistribute the existing allocation without adding funding",
-    extra > 0
-      ? `We have another ${formatAmount(extra, unit)} to allocate this week; how should we split it?`
-      : "We have additional budget to allocate this week; how should we split it?",
+  const quickPrompts: { label: string; content: string; intent: ConversationContext["intent"] }[] = [
+    { label: "Analyze spend", content: "What changed our spending outlook?", intent: "explain" },
+    { label: "Try a scenario", content: "Help me choose a planned change to preview as a scenario.", intent: "scenario" },
+    { label: "Redistribute", content: "Redistribute the existing allocation without adding funding", intent: "allocation" },
   ];
-  const showPrompts = messages.length <= 1 && !sending && !forecastQuestionContext;
+  const showPrompts = !sending && !text.trim();
+  const selectedProposal = proposals.find(p => p.id === conversationContext?.selected_proposal_id);
+  const scopeName = forecastQuestionContext?.scope_type === "team"
+    ? teams.find(t => t.id === forecastQuestionContext.scope_id)?.name ?? "Selected team"
+    : forecastQuestionContext?.scope_type === "person"
+      ? people.find(p => p.id === forecastQuestionContext.scope_id)?.name ?? "Selected person"
+      : conversationContext?.scope_type === "team"
+        ? teams.find(t => t.id === conversationContext.scope_id)?.name ?? "Selected team" : company?.name ?? "Company";
+  const period = selectedProposal?.period ?? company?.currentPeriod;
+  const periodLabel = period?.label ?? (period ? `${fmtDate(period.start)}–${fmtDate(period.end)}` : undefined);
 
+  const openRequests = requests.filter(request => ["submitted", "pending_review", "needs_revision", "partially_funded"].includes(request.status)
+    && request.periodStart === period?.start
+    && new Date(Date.parse(`${request.periodEndExclusive}T00:00:00Z`)-86_400_000).toISOString().slice(0,10) === period?.end);
+  async function checkStatus(message: AssistantMessage) {
+    if (!message.clientMessageId) return;
+    try {
+      await reconcileMessage(THREAD,message.clientMessageId);
+      if (!useAppStore.getState().threads[THREAD]?.some(item=>item.delivery === "unknown")) setError(undefined);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Status could not be checked. Try again."); }
+  }
   return (
-    /* Non-modal: the dashboard stays visible and usable, so the hero updates in plain sight when a proposal is applied. */
     <Sheet open={assistantOpen} onOpenChange={setAssistantOpen} modal={false} disablePointerDismissal>
-      <SheetContent side="right" overlay={false} className="w-full gap-0 sm:max-w-md">
-        <SheetHeader className="h-14 justify-center gap-0 border-b border-border px-4 py-0 pr-12">
-          <SheetTitle className="text-base leading-tight font-medium">Assistant</SheetTitle>
-          <SheetDescription className="text-xs leading-tight">Asks questions, prepares proposals. Nothing changes until you apply it.</SheetDescription>
+      <SheetContent side="right" overlay={false} className="w-full gap-0 sm:max-w-[480px]">
+        <SheetHeader className="flex-row items-center gap-3 border-b border-border px-5 py-4 pr-12">
+          <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-sm font-semibold text-background">D</span>
+          <div className="min-w-0"><SheetTitle className="text-base leading-tight font-medium tracking-tight">Droid Assistant</SheetTitle><SheetDescription className="mt-1 text-xs">Your finance workspace</SheetDescription></div>
         </SheetHeader>
-
-        {forecastQuestionContext && <div className="space-y-2 border-b border-border bg-muted/20 px-4 py-3 text-xs"><p className="break-all text-muted-foreground">Issued run {forecastQuestionContext.run_id} · {forecastQuestionContext.scope_type} {forecastQuestionContext.scope_id}{forecastQuestionContext.driver_id && ` · driver ${forecastQuestionContext.driver_id}`}</p><button className="text-xs underline underline-offset-2" onClick={() => askAssistant(text)}>Clear forecast context</button></div>}
-        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          {!loaded ? (
-            <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : (
-            <ol className="space-y-5">
-              {messages.map((m) => (
-                <li key={m.id}>
-                  <Message m={m} teams={teams} proposal={proposalFor(m.proposalId)} onReview={setReviewId} onSource={setDocId} />
-                </li>
-              ))}
-              {sending && (
-                <li className="grid grid-cols-[auto_1fr] gap-x-2.5" aria-live="polite">
-                  <AvatarDot />
-                  <span className="flex h-5 items-center gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-[3px]" aria-hidden>
-                      <span className="size-1 animate-pulse rounded-full bg-current [animation-delay:-0.4s]" />
-                      <span className="size-1 animate-pulse rounded-full bg-current [animation-delay:-0.2s]" />
-                      <span className="size-1 animate-pulse rounded-full bg-current" />
-                    </span>
-                    Working…
-                  </span>
-                </li>
-              )}
-              {error && (
-                <li className="grid grid-cols-[auto_1fr] gap-x-2.5">
-                  <span aria-hidden className="mt-[7px] size-1.5 rounded-full bg-destructive" />
-                  <p className="text-xs leading-5 text-destructive">{error}</p>
-                </li>
-              )}
+        <div className="border-b border-border px-5 py-3">
+          <div className="flex items-center gap-2 text-xs"><span className="font-medium">{scopeName}</span><span className="text-muted-foreground">{periodLabel}</span>{((conversationContext && Object.keys(conversationContext).length>0)||forecastQuestionContext) && <button type="button" className="ml-auto text-[11px] text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={clearAssistantContext}>Clear context</button>}</div>
+          {(selectedProposal||forecastQuestionContext) && <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">{selectedProposal && <span className="rounded-full bg-muted px-2 py-1">Selected budget draft{selectedProposal.version ? ` · v${selectedProposal.version}` : ""}</span>}{forecastQuestionContext && <span className="rounded-full bg-muted px-2 py-1">Pinned forecast</span>}</div>}
+          {requestState === "error" && <p role="status" className="mt-2 text-[11px] text-warning">Team request context is unavailable. <a href="/requests" className="underline underline-offset-4">Open requests</a></p>}
+          {openRequests.length>0 && <details className="group/context mt-2.5"><summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"><span className="size-1.5 rounded-full bg-foreground/50" aria-hidden/>{openRequests.length} open team {openRequests.length===1 ? "request" : "requests"}<ChevronDown className="ml-auto size-3 transition-transform group-open/context:rotate-180" aria-hidden/></summary><ul className="mt-2 space-y-1.5">{openRequests.map(request=><li key={request.id}><a href={`/requests?request=${encodeURIComponent(request.id)}`} className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-xs hover:bg-muted"><span className="min-w-0"><span className="block truncate font-medium">{request.title}</span><span className="text-[10px] text-muted-foreground">{teams.find(team=>team.id===request.teamId)?.name ?? "Team"}</span></span><span className="shrink-0 text-[11px] tabular-nums">{request.remainingRequestedAmount===null ? "Amount needed" : `${formatAssistantAmount(request.remainingRequestedAmount,"usd")} requested`}</span><ArrowUpRight aria-hidden className="size-3 shrink-0 text-muted-foreground"/></a></li>)}</ul>{requestState==="stale" && <p className="mt-2 text-[11px] text-warning">Request updates are temporarily unavailable.</p>}</details>}
+        </div>
+        {optionalErrors.assistant && <div className="border-b border-border px-5 py-2 text-xs text-muted-foreground" role="status">Earlier messages are unavailable. <button type="button" className="underline" onClick={()=>void retryOptional()}>Try again</button></div>}
+        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto bg-muted/20 px-4 py-4">
+          {!loaded ? <p role="status" className="px-1 text-xs text-muted-foreground">{loadState==="error" ? "Spending data could not be loaded. Retry from the dashboard." : "Loading your workspace…"}</p> : <>
+            {messages.length===0 && <div className="px-2 pt-8 pb-6"><p className="text-xl font-medium tracking-tight">What needs a closer look?</p><p className="mt-2 text-sm text-muted-foreground">Explore spending, preview a change, or prepare an allocation.</p></div>}
+            <ol className="space-y-4" aria-label="Droid Assistant conversation">
+              {messages.map(message=><li key={message.id}>{message.role==="user" ? <UserMessage message={message} onCheckStatus={()=>void checkStatus(message)}/> : <><AssistantResponse message={message} proposal={proposalFor(message.proposalId)} proposalAction={message.proposalId ? proposalActions[message.proposalId] : undefined} teams={teams} onReview={setReviewId} onSource={setDocId} onDraftChange={draft=>useAppStore.getState().updateActionDraft(message.threadId,message.id,draft)}/><Stamp iso={message.createdAt} className="mt-1.5 px-1"/></>}</li>)}
+              {sending && <li className="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground" role="status"><span className="size-1.5 animate-pulse rounded-full bg-current" aria-hidden/>Droid is working…</li>}
+              {error && <li role="alert" className="rounded-xl border border-destructive/20 bg-card p-3 text-xs leading-relaxed text-destructive">{cleanAssistantPresentation(error)}</li>}
             </ol>
-          )}
+          </>}
         </div>
-
-        <div className="border-t border-border px-4 pt-3 pb-3">
-          {/* The chip row keeps its height when empty so the composer never jumps. */}
-          <div className="mb-3 min-h-7">
-            {showPrompts && (
-              <ul className="flex flex-wrap gap-1.5" aria-label="Suggested prompts">
-                {quickPrompts.map((q) => (
-                  <li key={q} className="shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => send(q)}
-                      className="h-7 rounded-md border border-border bg-popover px-2.5 text-xs whitespace-nowrap text-muted-foreground transition-colors duration-300 outline-none hover:border-border-strong hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {q}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <form
-            className="flex items-end gap-1 rounded-xl border border-border-strong bg-popover p-1 transition-colors duration-300 focus-within:border-muted-foreground focus-within:ring-4 focus-within:ring-ring"
-            onSubmit={(e) => { e.preventDefault(); void send(text); }}
-          >
-            <Textarea
-              ref={inputRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(text); }
-              }}
-              placeholder="Ask about spend, or request a proposal"
-              aria-label="Message the assistant"
-              className="min-h-8 max-h-40 flex-1 resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm focus:border-transparent focus-visible:border-transparent focus-visible:ring-0"
-            />
-            <Button type="submit" size="icon-sm" disabled={!canSend} aria-label="Send">
-              <ArrowUp className="size-4" strokeWidth={1.5} />
-            </Button>
+        <div className="border-t border-border bg-card px-4 pt-3 pb-4">
+          {showPrompts && <ul className="mb-3 grid grid-cols-3 gap-2" aria-label="Suggested prompts">{quickPrompts.map((prompt,index)=>{const Icon=[TrendingUp,CircleHelp,SlidersHorizontal][index];return <li key={prompt.label}><button type="button" disabled={!loaded} onClick={()=>void send(prompt.content,prompt.intent)} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border px-2 py-2 text-[11px] font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"><Icon className="size-3.5 text-muted-foreground" aria-hidden/>{prompt.label}</button></li>})}</ul>}
+          <form className="flex items-end gap-2 rounded-2xl border border-border-strong bg-background p-2 transition-shadow focus-within:ring-2 focus-within:ring-ring" onSubmit={event=>{event.preventDefault();void send(text)}}>
+            <Textarea ref={inputRef} value={text} onChange={event=>setText(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void send(text)}}} placeholder="Ask Droid Assistant…" aria-label="Message Droid Assistant" className="min-h-10 max-h-40 flex-1 resize-none rounded-none border-0 bg-transparent px-2 py-2 text-sm focus:border-transparent focus-visible:border-transparent focus-visible:ring-0"/>
+            <Button type="submit" size="icon-sm" disabled={!canSend} aria-label="Send message" className="mb-0.5 rounded-xl"><ArrowUp className="size-4" strokeWidth={1.5}/></Button>
           </form>
-          <p className="mt-1.5 text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line</p>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground">Budget changes require your review and approval.</p>
         </div>
-
-        {/* Nested inside the drawer so Esc closes only the topmost dialog. */}
-        <ProposalReview proposalId={reviewId} onClose={() => setReviewId(undefined)} />
-        <SourceSheet documentId={docId} onClose={() => setDocId(undefined)} />
+        <ProposalReview proposalId={reviewId} onClose={()=>setReviewId(undefined)}/>
+        <SourceSheet documentId={docId} onClose={()=>setDocId(undefined)}/>
       </SheetContent>
     </Sheet>
   );
 }
-
-/** Round to one significant figure: 23,400 becomes 20,000. */
-function roundClean(n: number) {
-  if (n <= 0) return 0;
-  const pow = 10 ** Math.floor(Math.log10(n));
-  return Math.round(n / pow) * pow;
-}
-
-function AvatarDot() {
-  return <span aria-hidden className="mt-[7px] flex size-1.5 rounded-full bg-muted-foreground" />;
-}
-
-function Stamp({ iso, className }: { iso: string; className?: string }) {
-  return (
-    <time className={cn("num block text-xs text-muted-foreground", className)} dateTime={iso}>
-      {new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-    </time>
-  );
-}
-
-function Message({ m, teams, proposal, onReview, onSource }: {
-  m: AssistantMessage;
-  teams: ReturnType<typeof useAppStore.getState>["teams"];
-  proposal?: ReturnType<typeof useAppStore.getState>["proposals"][number];
-  onReview: (id: string) => void;
-  onSource: (documentId: string) => void;
-}) {
-  if (m.role === "user") {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <div className="max-w-[85%] rounded-xl bg-popover px-3 py-2 text-sm leading-relaxed text-foreground">
-          <Markdown>{m.content}</Markdown>
-        </div>
-        <Stamp iso={m.createdAt} className="pr-1" />
-      </div>
-    );
-  }
-
-  const hasMeta = Boolean(m.toolCalls?.length || m.citations?.length);
-  return (
-    <div className="grid grid-cols-[auto_1fr] gap-x-2.5">
-      <AvatarDot />
-      <div className="min-w-0 space-y-2.5">
-        <Markdown>{m.content}</Markdown>
-        {hasMeta && (
-          <div className="space-y-2">
-            {m.toolCalls && m.toolCalls.length > 0 && <WorkRecord calls={m.toolCalls} />}
-            {m.citations && m.citations.length > 0 && <Sources citations={m.citations} onSource={onSource} />}
-          </div>
-        )}
-        {proposal && <ProposalCard proposal={proposal} teams={teams} onReview={onReview} className="w-full" />}
-        <Stamp iso={m.createdAt} />
-      </div>
-    </div>
-  );
-}
-
-const humanize = (name: string) => name.replace(/_/g, " ");
-
-/** Compact timeline of what the assistant did. Human sentences, not a console. */
-function WorkRecord({ calls }: { calls: NonNullable<AssistantMessage["toolCalls"]> }) {
-  return (
-    <details className="group text-xs">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors duration-300 select-none hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
-        <span className="num">{calls.length}</span> {calls.length === 1 ? "step" : "steps"}
-      </summary>
-      <ol className="mt-2 space-y-2.5 border-l border-border pl-3">
-        {calls.map((c, i) => (
-          <li key={i}>
-            <div className="eyebrow">{humanize(c.name)}</div>
-            <div className="mt-0.5 text-xs leading-snug text-foreground/80">{c.summary}</div>
-          </li>
-        ))}
-      </ol>
-    </details>
-  );
-}
-
-function Sources({ citations, onSource }: { citations: SourceRef[]; onSource: (documentId: string) => void }) {
-  // De-duplicate by document so the same plan is not listed three times.
-  const seen = new Set<string>();
-  const unique = citations.filter((c) => (seen.has(c.documentId) ? false : (seen.add(c.documentId), true)));
-  return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Sources">
-      {unique.map((c) => (
-        <li key={c.documentId} className="min-w-0 max-w-full">
-          <Badge
-            variant="outline"
-            render={<button type="button" onClick={() => onSource(c.documentId)} />}
-            title={c.excerpt ? `“${c.excerpt}”` : c.title}
-            className="max-w-[240px] cursor-pointer gap-1.5 text-muted-foreground transition-colors duration-300 hover:border-border-strong hover:text-foreground"
-          >
-            <FileText aria-hidden strokeWidth={1.5} />
-            <span className="truncate">{c.title}</span>
-            {c.date && <span className="num shrink-0">{fmtDate(c.date)}</span>}
-          </Badge>
-        </li>
-      ))}
-    </ul>
-  );
+function Stamp({iso,className}:{iso:string;className?:string}) {return <time className={cn("block text-[10px] text-muted-foreground tabular-nums",className)} dateTime={iso}>{new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</time>}
+function UserMessage({message,onCheckStatus}:{message:AssistantMessage;onCheckStatus:()=>void}) {
+  return <div className="flex flex-col items-end gap-1.5"><div className="max-w-[90%] rounded-2xl rounded-br-md bg-muted px-3.5 py-2.5"><Markdown>{message.content}</Markdown></div>
+    {message.delivery==="sending" && <p role="status" className="text-[11px] text-muted-foreground">Sending…</p>}
+    {message.delivery==="unknown" && <p role="status" className="max-w-[90%] text-[11px] leading-relaxed text-warning">Reply not confirmed. <button type="button" onClick={onCheckStatus} className="underline underline-offset-4">Check status</button></p>}
+    {message.delivery==="failed" && <p role="status" className="text-[11px] text-destructive">Request was not accepted.</p>}
+    <Stamp iso={message.createdAt} className="pr-1"/>
+  </div>;
 }

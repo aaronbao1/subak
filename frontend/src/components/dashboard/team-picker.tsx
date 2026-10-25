@@ -49,7 +49,7 @@ export function TeamPicker({ teams, hiddenIds, onChange, foldedIds }: TeamPicker
         <Popover.Positioner side="bottom" align="end" sideOffset={6} className="isolate z-50">
           <Popover.Popup
             className={cn(
-              "w-60 max-h-(--available-height) origin-(--transform-origin) overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
+              "w-60 max-h-(--available-height) origin-(--transform-origin) overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-(--shadow-floating)",
               "duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             )}
           >

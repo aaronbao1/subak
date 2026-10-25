@@ -60,3 +60,10 @@ test('redesigned company hero preserves canonical unknown quarter and shared amo
  assert.equal(companyQuarterProjection({views:[{...company,quarter_outlook:{base:1200}},{scope:{type:'team',id:'t'},quarter_outlook:{base:900}}]},900),1200);
  assert.equal(companyQuarterProjection(undefined,900),900);
 });
+test('target adapter withholds quarter-to-week comparison and retains exact supported week',async()=>{
+ const {targetForecasts}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+ const view={run_id:'r',scope:{type:'team',id:'t'},target:{unit:'USD'},publication:{},daily:[],limitations:[],quarter_outlook:{start:'2026-10-01',end:'2027-01-01',base:1000}};
+ const period={start:'2026-10-19',end:'2026-10-25'};
+ assert.equal(targetForecasts({views:[view]},period)[0].status,'unavailable');
+ assert.equal(targetForecasts({views:[{...view,planning_period_outlook:{start:'2026-10-19',end:'2026-10-26',base:90}}]},period)[0].projected,90);
+});

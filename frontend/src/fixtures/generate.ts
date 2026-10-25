@@ -10,8 +10,10 @@
 import type {
   AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, EffectMagnitude,
   EvidenceCategory, Forecast, ForecastAdjustment, ForecastDailyPoint, Integration, Period, Person, SignalKind,
-  SpendingRecord, Team,
+  SpendingRecord, Team, ToolCallSummary,
 } from "@/lib/contracts";
+import { interpretActionIntent, type ActionIntentContext } from "@/lib/action-intent";
+import type { BudgetRequest } from "@/lib/contracts/budget-requests";
 
 export interface Dataset {
   company: Company;
@@ -31,7 +33,8 @@ export interface Dataset {
 
 export type ScriptedReplyFn = (
   content: string,
-  state: { proposals: AllocationProposal[]; budgets: Budget[]; budgetVersion: string },
+  state: { proposals: AllocationProposal[]; budgets: Budget[]; budgetVersion: string; budgetRequests?: BudgetRequest[] },
+  conversationContext?: ActionIntentContext,
 ) => { message: Omit<AssistantMessage, "id" | "threadId" | "role" | "createdAt">; proposal?: AllocationProposal };
 
 export const MAX_TEAMS = 16;
@@ -43,8 +46,6 @@ export const DEFAULT_TEAM_COUNT = 8;
 
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
-const pad = (n: number) => String(n).padStart(2, "0");
-const localIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const toTs = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d); };
 const fromTs = (ts: number) => new Date(ts).toISOString().slice(0, 10);
 export const addDays = (iso: string, n: number) => fromTs(toTs(iso) + n * DAY_MS);
@@ -53,20 +54,28 @@ const weekday = (iso: string) => new Date(toTs(iso)).getUTCDay();
 const isWeekend = (iso: string) => weekday(iso) === 0 || weekday(iso) === 6;
 export const monthDay = (iso: string) => new Date(toTs(iso)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-const now = new Date();
-/** Today in local time: the partial day. */
-export const asOf = localIso(now);
-const mondayOffset = (weekday(asOf) + 6) % 7;
-const periodStart = addDays(asOf, -mondayOffset);
-/** The current Monday-to-Sunday week. */
-export const period: Period = { start: periodStart, end: addDays(periodStart, 6), label: `Week of ${monthDay(periodStart)}` };
+/** One deterministic UTC clock for all synthetic observations and initial publications. */
+export const DEMO_NOW = "2026-10-25T12:00:00Z";
+export function demoCalendar(instant = DEMO_NOW) {
+  const clock = new Date(instant);
+  if (!Number.isFinite(clock.getTime())) throw new Error("Invalid demo clock");
+  const asOf = clock.toISOString().slice(0, 10);
+  const start = addDays(asOf, -((weekday(asOf) + 6) % 7));
+  const period: Period = { start, end:addDays(start,6), label:`Week of ${monthDay(start)}` };
+  const leaveStart = addDays(asOf,1);
+  const leaveEnd = leaveStart > period.end ? addDays(period.end,7) : period.end;
+  return {asOf,period,leaveStart,leaveEnd,partialFraction:Math.min(0.95,Math.max(0.15,(clock.getUTCHours()+clock.getUTCMinutes()/60)/24))};
+}
+const calendar = demoCalendar();
+export const asOf = calendar.asOf;
+export const period = calendar.period;
 export const HISTORY_WEEKS = 8;
-/** Every recorded day: eight weeks of history plus this week through today. */
-export const RECORDED_DATES = range(addDays(period.start, -7 * HISTORY_WEEKS), asOf);
-/** Days the projection covers day by day: today (full-day total) through Sunday. */
-export const PROJECTED_DATES = range(asOf, period.end);
-/** Share of today already elapsed, so the partial day visibly is partial. */
-const PARTIAL_FRACTION = Math.min(0.95, Math.max(0.15, (now.getHours() + now.getMinutes() / 60) / 24));
+export const RECORDED_DATES = range(addDays(period.start,-7*HISTORY_WEEKS),asOf);
+export const PROJECTED_DATES = range(asOf,period.end);
+const PARTIAL_FRACTION = calendar.partialFraction;
+let demoSequence = 0;
+/** Monotonic interaction time, after every initial fixture message. */
+export const nextDemoTimestamp = () => new Date(Date.parse(DEMO_NOW) + ++demoSequence * 1000).toISOString();
 /** Weekend activity relative to a weekday. */
 const WEEKEND = 0.35;
 const dayWeight = (iso: string) => (isWeekend(iso) ? WEEKEND : 1);
@@ -113,7 +122,7 @@ const exportName = (p: ProviderId) => (p === "google" ? `Google Cloud billing ex
 /* Teams                                                               */
 /* ------------------------------------------------------------------ */
 
-const TEAM_POOL: Array<Pick<Team, "name" | "description" | "lead"> & { provider: string; mix: Record<SpendingRecord["component"], number>; pace: number }> = [
+const TEAM_POOL: Array<Pick<Team, "name" | "description" | "lead"> & { provider: string; mix: Partial<Record<SpendingRecord["component"], number>>; pace: number }> = [
   { name: "Research", description: "Model evaluation and applied research", lead: "Priya N.", provider: "anthropic", mix: { subscription: 1, included_usage: 1.2, extra_usage: 1.5, api: 5 }, pace: 1.45 },
   { name: "Product", description: "Customer-facing product features", lead: "Marcus L.", provider: "anthropic", mix: { subscription: 2.5, included_usage: 2, extra_usage: 0.4, api: 1.2 }, pace: 0.62 },
   { name: "Engineering", description: "Platform, infrastructure, internal tooling", lead: "Dana K.", provider: "openai", mix: { subscription: 1.5, included_usage: 1.2, extra_usage: 0.8, api: 2.2 }, pace: 1.08 },
@@ -163,7 +172,7 @@ export function teamColor(index: number, total: number): string {
 export function dailySeries(
   teamId: string,
   periodTarget: number,
-  mix: Record<SpendingRecord["component"], number>,
+  mix: Partial<Record<SpendingRecord["component"], number>>,
   provider: string,
   seed = 1,
   growth = 1.06,
@@ -189,7 +198,7 @@ export function dailySeries(
       const activity = component === "subscription" ? level : level * dayWeight(date) * (0.8 + rnd() * 0.4);
       const common = {
         teamId, ...(personId ? { personId } : {}), date, component, unit: "usd" as const, complete: !partial,
-        provenance: (component === "api" || component === "subscription" ? "reported_charge" : component === "included_usage" ? "usage_only" : "estimate") as SpendingRecord["provenance"],
+        provenance: (component === "included_usage" ? "usage_only" : "simulated") as SpendingRecord["provenance"],
       };
       if (component === "api") {
         for (const slice of apiSlices) {
@@ -199,7 +208,7 @@ export function dailySeries(
             ...common,
             id: `${personId ?? teamId}-${date}-api-${slug(slice.model)}`,
             provider: slice.provider, model: slice.model,
-            source: exportName(slice.provider),
+            source: `Synthetic demo: ${exportName(slice.provider)}`,
           });
         }
         continue;
@@ -210,15 +219,16 @@ export function dailySeries(
         ...common,
         id: `${personId ?? teamId}-${date}-${component}`,
         provider: primary,
-        source: component === "subscription" ? exportName(primary) : `Cursor Admin API export ${asOf}`,
+        source: `Synthetic demo: ${component === "subscription" ? exportName(primary) : `Cursor Admin API export ${asOf}`}`,
       });
     }
   }
   if (periodTarget <= 0 || raw.length === 0) return raw.map((r) => ({ ...r, amount: 0 }));
-  const inPeriod = raw.map((r) => r.date >= period.start);
+  const inPeriod = raw.map((r) => r.date >= period.start && r.component !== "included_usage" && r.component !== "unpriced_usage");
   const periodWeight = weights.reduce((s, w, i) => s + (inPeriod[i] ? w : 0), 0);
+  if (periodWeight <= 0) return raw.map(r => ({...r,amount:0}));
   const out = raw.map((r, i) => ({ ...r, amount: Math.round((weights[i] / periodWeight) * periodTarget) }));
-  const lastInPeriod = out.length - 1;
+  const lastInPeriod = inPeriod.lastIndexOf(true);
   out[lastInPeriod].amount += periodTarget - out.reduce((s, r, i) => s + (inPeriod[i] ? r.amount : 0), 0);
   // Tokens follow from dollars at the model's blended list price.
   return out.map((r, i) => (prices[i] ? { ...r, tokens: Math.round((r.amount / prices[i]!) * 1_000_000) } : r));
@@ -227,7 +237,7 @@ export function dailySeries(
 /** Spend recorded on complete days inside the period; the partial day is excluded because its projection replaces it. */
 export function completeSpent(spending: SpendingRecord[], teamId: string, personId?: string) {
   return spending
-    .filter((r) => r.teamId === teamId && (personId === undefined || r.personId === personId) && r.complete && r.date >= period.start && r.date <= period.end)
+    .filter((r) => r.teamId === teamId && (personId === undefined || r.personId === personId) && r.component !== "included_usage" && r.component !== "unpriced_usage" && r.provenance !== "usage_only" && r.complete && r.date >= period.start && r.date <= period.end)
     .reduce((s, r) => s + r.amount, 0);
 }
 
@@ -303,7 +313,7 @@ const SIGNAL_CATEGORY: Record<SignalKind, EvidenceCategory> = {
 const SIGNAL_MAGNITUDE: Partial<Record<SignalKind, EffectMagnitude>> = {
   project_deferred: { pct: -45, basis: "one person at last week's rate while the build is on hold" },
   model_change: { pct: 40, basis: "comparison runs at full context on the new model until prompts are tuned" },
-  out_of_office: { pct: -90, basis: "near-zero usage while out, from tomorrow through the period end" },
+  out_of_office: { pct: -90, basis: "near-zero usage during the scheduled leave dates" },
   project_accelerated: { pct: 25, basis: "extra generation and review passes before the pulled-in due date" },
   onboarding: { pct: 15, basis: "a new seat ramping toward the team's median rate" },
 };
@@ -406,13 +416,13 @@ export function personContext(team: Team, profile: PersonProfile, managerName: s
           ...base, id: `ctx-${person.id}-ooo`, kind: "correspondence", claimType: "observed_event", confidence: "high",
           attribution: "monday.com availability board",
           title: `${first} is out of office from ${monthDay(addDays(asOf, 1))}`,
-          summary: `The team's Monday board marks ${first} out of office for the rest of the week, so ${first}'s usage stops after today.`,
-          effectiveFrom: addDays(asOf, 1), effectiveTo: period.end,
+          summary: `The team's Monday board marks ${first} out of office from ${monthDay(calendar.leaveStart)} through ${monthDay(calendar.leaveEnd)}, so usage falls during those dates.`,
+          effectiveFrom: calendar.leaveStart, effectiveTo: calendar.leaveEnd,
           sources: [{ documentId: docId, title: "monday.com: Team availability board", integration: "monday", author: person.name, date: addDays(asOf, -2), kind: "correspondence", locator: "row · Out of office",
-            excerpt: `${person.name} — Out of office ${monthDay(addDays(asOf, 1))} to ${monthDay(period.end)}` }],
+            excerpt: `${person.name} — Out of office ${monthDay(calendar.leaveStart)} to ${monthDay(calendar.leaveEnd)}` }],
         },
         doc: { id: docId, title: "monday.com: Team availability board", kind: "correspondence", date: addDays(asOf, -2), teamIds: [team.id], personIds: [person.id], integration: "monday", origin: "monday.com (board item, via connector)",
-          body: `# Team availability\n\n| Person | Status | Dates |\n|---|---|---|\n| ${person.name} | Out of office | ${monthDay(addDays(asOf, 1))} – ${monthDay(period.end)} |` },
+          body: `# Team availability\n\n| Person | Status | Dates |\n|---|---|---|\n| ${person.name} | Out of office | ${monthDay(calendar.leaveStart)} – ${monthDay(calendar.leaveEnd)} |` },
       };
     case "project_accelerated":
       return {
@@ -1031,7 +1041,7 @@ export function generateCompany(teamCount: number): Dataset {
     isDemo: true, budgetUnit: "usd", currentPeriod: period,
   };
 
-  const over = teams.filter((t, i) => (forecasts[i].projected ?? 0) > budgets[i].allocated).map((t) => t.name);
+  const over = teams.filter(t => (forecasts.find(f => f.teamId === t.id && !f.personId)?.projected ?? 0) > (budgets.find(b => b.teamId === t.id)?.allocated ?? Infinity)).map(t => t.name);
   const threads: Record<string, AssistantMessage[]> = {
     main: [{
       id: "msg-welcome", threadId: "main", role: "assistant", createdAt: `${asOf}T09:05:00Z`,
@@ -1053,19 +1063,52 @@ export function generateCompany(teamCount: number): Dataset {
 /* Assistant                                                           */
 /* ------------------------------------------------------------------ */
 
-/**
- * Dollar amounts as finance types them: "$50k", "50,000", "1.2m", or a bare number
- * (bare numbers under 1,000 are read as thousands). Undefined when the message names no amount.
- */
+/** Compatibility helper: bare numbers are dollars; invalid amounts remain absent. */
 export function parseAmount(text: string): number | undefined {
-  const m = text.match(/\$?\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(million|thousand|mm|m|k)?\b/i);
-  if (!m) return undefined;
-  const num = Number(m[1].replace(/,/g, ""));
-  if (!Number.isFinite(num)) return undefined;
-  const suffix = m[2]?.toLowerCase();
-  if (!suffix) return num < 1_000 ? num * 1_000 : num;
-  if (/^(m|mm|million)$/.test(suffix)) return Math.round(num * 1_000_000);
-  return Math.round(num * 1_000);
+  const parsed = interpretActionIntent(`Add ${text}`, []);
+  return parsed.action === "addition" && parsed.amount ? Number(parsed.amount) : undefined;
+}
+
+/** Current requests are planning evidence, never additional forecast spend or implicit funding links. */
+export function budgetRequestConsideration(requests: BudgetRequest[] | undefined, planningPeriod: Period, teams: Team[]): { content: string; toolCalls: ToolCallSummary[] } {
+  if (!requests) return { content: "", toolCalls: [] };
+  const endExclusive = addDays(planningPeriod.end, 1);
+  const activeStatuses = new Set(["submitted", "pending_review", "needs_revision", "partially_funded"]);
+  const unique = new Map(requests.map(request => [request.id, request]));
+  const current = [...unique.values()].filter(request => activeStatuses.has(request.status) && request.unit === "USD"
+    && request.periodStart === planningPeriod.start && request.periodEndExclusive === endExclusive
+    && request.period.startDate === planningPeriod.start && request.period.endDateExclusive === endExclusive
+    && teams.some(team => team.id === request.teamId));
+  const toolCalls = [{ name: "list_budget_requests", summary: `Read ${current.length} current USD request${current.length === 1 ? "" : "s"} for ${planningPeriod.start} through ${planningPeriod.end}; request amounts remain separate from the published forecast.` }];
+  if (!current.length) return { content: "", toolCalls };
+  const inline = (value: string) => value.replace(/\s+/g, " ").replace(/[\\[\]*_`]/g, "\\$&");
+  const dollars = (amount: string) => `$${amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  const lines = current.slice(0, 3).map(request => {
+    const amount = request.remainingRequestedAmount === null ? "amount needs clarification"
+      : request.status === "partially_funded" ? `${dollars(request.remainingRequestedAmount)} remaining of ${dollars(request.requestedAmount!)} requested`
+      : `${dollars(request.remainingRequestedAmount)} requested`;
+    const source = request.source.reference ?? request.sourceRef ?? `Update submitted by ${request.source.submittedBy}`;
+    return `- [${inline(request.title)}](/requests?request=${encodeURIComponent(request.id)}) — ${inline(teams.find(team => team.id === request.teamId)!.name)}: ${amount}; ${request.status.replaceAll("_", " ")}. Source: ${inline(source)}.`;
+  });
+  if (current.length > 3) lines.push(`Also considered ${current.length - 3} other current requests. [View requests](/requests?status=open&period=current).`);
+  return { content: `**Current team requests · ${planningPeriod.start} to ${endExclusive} (end exclusive)**\n${lines.join("\n")}\n\nRemaining requests need review and are not added to the published forecast. Considering them does not approve or link funding.`, toolCalls };
+}
+
+/** Apply the same live request consideration to canonical and generated mock responses. */
+export function withBudgetRequestConsideration(reply: ScriptedReplyFn, teams: Team[]): ScriptedReplyFn {
+  return (content, state, conversationContext) => {
+    const response = reply(content, state, conversationContext);
+    // Northstar delegates explicit changes to the generic reply; include its consideration only once.
+    if (response.message.toolCalls?.some(call => call.name === "list_budget_requests")) return response;
+    const consideration = budgetRequestConsideration(state.budgetRequests, response.proposal?.period ?? period, teams);
+    return { ...response,
+      message: { ...response.message,
+        content: response.message.content + (consideration.content ? `\n\n${consideration.content}` : ""),
+        toolCalls: [...(response.message.toolCalls ?? []), ...consideration.toolCalls],
+      },
+      ...(response.proposal ? { proposal: { ...response.proposal, rationale: response.proposal.rationale + (consideration.content ? `\n\n${consideration.content}` : "") } } : {}),
+    };
+  };
 }
 
 /** Generic assistant for N teams: add funding proportional to projected gaps; redistribute from under- to over-allocated teams. */
@@ -1074,14 +1117,26 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
   const forecasts = allForecasts.filter((f) => !f.personId);
   const personForecasts = allForecasts.filter((f) => !!f.personId);
   const fc = (id: string) => forecasts.find((f) => f.teamId === id);
-  const round = (x: number) => Math.round(x / 500) * 500;
+  const exactMoney = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(amount);
+  // Largest remainders preserve exact cents without producing a negative residual share.
+  const sharesInCents = (total: number, weights: number[]) => {
+    const weight = weights.reduce((sum, value) => sum + value, 0);
+    const raw = weights.map((value) => weight > 0 ? value / weight * total : 0);
+    const shares = raw.map(Math.floor);
+    const order = raw.map((value, index) => ({ index, remainder: value - shares[index] })).sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+    const remaining = total - shares.reduce((sum, value) => sum + value, 0);
+    for (let index = 0; index < remaining; index++) shares[order[index].index]++;
+    return shares;
+  };
 
-  return (content, state) => {
+  return withBudgetRequestConsideration((content, state, conversationContext) => {
     const text = content.toLowerCase();
+    const intent = interpretActionIntent(content, teams, { context: conversationContext, proposals: state.proposals, planningPeriod: period });
+    if (intent.action === "clarify" || intent.ask) return { message: { content: intent.ask!, conversationContext: intent.context } };
     const total = state.budgets.reduce((s, b) => s + b.allocated, 0);
     const alloc = (id: string) => state.budgets.find((b) => b.teamId === id)!.allocated;
     const base = {
-      unit: "usd" as const, period, createdAt: new Date().toISOString(), status: "proposed" as const,
+      unit: "usd" as const, period, createdAt: nextDemoTimestamp(), status: "proposed" as const,
       basedOnBudgetVersion: state.budgetVersion, forecastsReviewed: structuredClone(forecasts), citations: sources,
     };
     const gaps = teams.map((t) => ({ t, gap: Math.max(0, (fc(t.id)?.projected ?? 0) - alloc(t.id)) }));
@@ -1089,73 +1144,51 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
 
     if (teams.length === 0) return { message: { content: "There are no teams yet, so there is nothing to allocate." } };
 
-    if (/\badd|additional|more (credits|budget|funding)|authoriz|\$\s?\d|\d+\s?k\b/.test(text)) {
-      const amount = parseAmount(text) ?? 25_000;
-      const gapTotal = gaps.reduce((s, g) => s + g.gap, 0);
+    if (intent.action === "addition" || intent.action === "transfer") {
+      const cents = (amount: number) => Math.round(amount * 100);
       const lines = teams.map((t) => ({ teamId: t.id, before: alloc(t.id), after: alloc(t.id) }));
-      if (gapTotal > 0) {
-        const shares = gaps.map((g) => round((g.gap / gapTotal) * amount));
-        const residual = amount - shares.reduce((s, x) => s + x, 0);
-        const top = gaps.reduce((bi, g, i, arr) => (g.gap > arr[bi].gap ? i : bi), 0);
-        shares[top] += residual;
-        shares.forEach((s, i) => (lines[i].after += s));
+      const gapTotal = gaps.reduce((sum, value) => sum + value.gap, 0);
+      const surplusTotal = surplus.reduce((sum, value) => sum + value.surplus, 0);
+      let amount = Number(intent.amount ?? 0);
+      if (intent.action === "addition") {
+        const weights = intent.targetTeamId ? teams.map((team) => Number(team.id === intent.targetTeamId)) : gapTotal > 0 ? gaps.map((gap) => gap.gap) : teams.map((_, index) => Number(index === 0));
+        const shares = sharesInCents(cents(amount), weights);
+        shares.forEach((share, index) => { lines[index].after = (cents(lines[index].before) + share) / 100; });
+      } else if (intent.sourceTeamId && intent.targetTeamId) {
+        const source = lines.find((line) => line.teamId === intent.sourceTeamId)!;
+        const target = lines.find((line) => line.teamId === intent.targetTeamId)!;
+        if (cents(amount) > cents(source.before)) return { message: { content: `The transfer exceeds ${teams.find((team) => team.id === source.teamId)!.name}'s ${exactMoney(source.before)} allocation. Choose a smaller amount.`, conversationContext: { ...intent.context, pending_slot: "amount" } } };
+        source.after = (cents(source.before) - cents(amount)) / 100;
+        target.after = (cents(target.before) + cents(amount)) / 100;
       } else {
-        lines[0].after += amount;
+        amount = Math.round(Math.min(gapTotal, surplusTotal * 0.75) * 100) / 100;
+        if (amount <= 0) return { message: { content: "No transfer is available: there is no projected shortfall or no unused allocation to move.", conversationContext: intent.context } };
+        const taken = sharesInCents(cents(amount), surplus.map((value) => value.surplus));
+        const given = sharesInCents(cents(amount), gaps.map((value) => value.gap));
+        lines.forEach((line, index) => { line.after = (cents(line.before) - taken[index] + given[index]) / 100; });
       }
+      const added = intent.action === "addition" ? amount : 0;
+      const previous = state.proposals.find((proposal) => proposal.id === intent.reviseProposalId);
       const proposal: AllocationProposal = {
-        ...base, id: `prop_${Date.now()}`, kind: "add_budget", totalBefore: total, totalAfter: total + amount, addedAmount: amount, lines,
-        rationale: gapTotal > 0
-          ? `Distributed ${money(amount)} in proportion to each team's projected shortfall this week (projection minus allocation). Teams projected within allocation receive nothing new.`
-          : `No team is projected over allocation, so the full ${money(amount)} is parked with ${teams[0].name} pending a finance decision.`,
+        ...base, id: `prop_${crypto.randomUUID()}`, version: 1,
+        kind: intent.action === "addition" ? "add_budget" : "redistribute",
+        totalBefore: total, totalAfter: (cents(total) + cents(added)) / 100,
+        ...(intent.action === "addition" ? { addedAmount: amount } : {}), lines,
+        revisesProposalId: previous?.id,
+        rationale: intent.action === "addition"
+          ? `Adds ${exactMoney(amount)}${intent.targetTeamId ? ` to ${teams.find((team) => team.id === intent.targetTeamId)!.name}` : " in proportion to projected shortfalls"}.`
+          : `Moves ${exactMoney(amount)} between teams. The ${exactMoney(total)} weekly envelope is unchanged.`,
       };
-      const bullets = lines.filter((l) => l.after !== l.before).map((l) => `- **${teams.find((t) => t.id === l.teamId)!.name} +${money(l.after - l.before)}** → ${money(l.after)}`).join("\n");
-      return {
-        proposal,
-        message: {
-          content: `Here's how I'd allocate the additional **${money(amount)}**:\n\n${bullets}\n\nWeekly envelope goes from **${money(total)} to ${money(total + amount)}**.`,
-          proposalId: proposal.id, citations: sources,
-          toolCalls: [
-            { name: "get_spending", summary: `Pulled ${monthDay(period.start)}–${monthDay(asOf)} spending for ${teams.length} teams` },
-            { name: "get_forecasts", summary: `Compared ${forecasts.filter((f) => f.status === "available").length} available projections to allocations` },
-            { name: "search_documents", summary: `Reviewed ${context.length} context items for planned changes` },
-          ],
-        },
-      };
+      const bullets = lines.filter((line) => line.after !== line.before).map((line) => `- **${teams.find((team) => team.id === line.teamId)!.name} ${line.after > line.before ? "+" : "−"}${exactMoney(Math.abs(line.after - line.before))}** → ${exactMoney(line.after)}`).join("\n");
+      return { proposal, message: {
+        content: `${previous ? "Revised proposal" : "Proposed budget change"}:\n\n${bullets}\n\n${intent.action === "addition" ? `Weekly envelope goes from **${exactMoney(total)} to ${exactMoney(proposal.totalAfter)}**.` : `Weekly envelope stays at **${exactMoney(total)}**.`}`,
+        proposalId: proposal.id, citations: sources,
+        conversationContext: { ...intent.context, selected_proposal_id: proposal.id, selected_proposal_version: proposal.version },
+        toolCalls: [{ name: "get_budgets", summary: "Read current allocations" }, { name: "get_forecasts", summary: "Compared projections with allocations" }],
+      } };
     }
 
-    if (/redistribut|rebalanc|\bmove\b|shift|reallocat|without (adding|new)/.test(text)) {
-      const gapTotal = gaps.reduce((s, g) => s + g.gap, 0);
-      const surplusTotal = surplus.reduce((s, x) => s + x.surplus, 0);
-      const movable = Math.min(gapTotal, surplusTotal * 0.75);
-      if (movable <= 0) {
-        return { message: { content: "I can't find a sensible redistribution: either no team is projected over allocation, or no team has headroom to give. Adding funding is the alternative." } };
-      }
-      const lines = teams.map((t) => ({ teamId: t.id, before: alloc(t.id), after: alloc(t.id) }));
-      let taken = 0;
-      surplus.forEach((s, i) => { if (s.surplus > 0) { const take = round((s.surplus / surplusTotal) * movable); lines[i].after -= take; taken += take; } });
-      gaps.forEach((g, i) => { if (g.gap > 0) lines[i].after += round((g.gap / gapTotal) * taken); });
-      const drift = lines.reduce((s, l) => s + l.after, 0) - total;
-      const topGap = gaps.reduce((bi, g, i, arr) => (g.gap > arr[bi].gap ? i : bi), 0);
-      lines[topGap].after -= drift;
-      const proposal: AllocationProposal = {
-        ...base, id: `prop_${Date.now()}`, kind: "redistribute", totalBefore: total, totalAfter: total, lines,
-        rationale: `Moved ${money(taken)} from teams projected under allocation to teams projected over it, in proportion to headroom and shortfall. The ${money(total)} weekly envelope is unchanged.`,
-      };
-      const bullets = lines.filter((l) => l.after !== l.before).map((l) => `- **${teams.find((t) => t.id === l.teamId)!.name} ${l.after > l.before ? "+" : "−"}${money(Math.abs(l.after - l.before))}** → ${money(l.after)}`).join("\n");
-      return {
-        proposal,
-        message: {
-          content: `Without adding funding, I'd move **${money(taken)}** between teams:\n\n${bullets}\n\nEnvelope stays at **${money(total)}**.`,
-          proposalId: proposal.id, citations: sources,
-          toolCalls: [
-            { name: "get_budgets", summary: `Read current allocations (${money(total)} weekly envelope)` },
-            { name: "get_forecasts", summary: "Compared projections to allocations" },
-          ],
-        },
-      };
-    }
-
-    if (/why|explain|over|under|exceed/.test(text)) {
+    if (intent.action === "explain" || /why|explain|over|under|exceed/.test(text)) {
       const named = teams.find((t) => text.includes(t.name.toLowerCase()));
       if (named) {
         const f = fc(named.id);
@@ -1182,6 +1215,7 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
         ].filter(Boolean).join("\n");
         return {
           message: {
+            conversationContext: intent.context,
             content,
             citations: [...(c?.sources ?? []), ...signals.flatMap((s) => s.x.sources), ...(macro?.sources ?? []), ...cited.flatMap((x) => x.sources)],
             toolCalls: [
@@ -1197,8 +1231,9 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
 
     return {
       message: {
+        conversationContext: intent.context,
         content: `I can help with two kinds of changes: **redistribute** the existing ${money(total)} weekly envelope between ${teams.length} teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under.`,
       },
     };
-  };
+  }, teams);
 }

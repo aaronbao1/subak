@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
 from app.core.clock import Clock, IdFactory, SystemClock, UuidIdFactory
@@ -78,7 +79,8 @@ def create_app(
     session_info['forecast_service'] = app.state.forecast_service
     if settings.forecast_demo:
         from app.forecasting.directory import snapshot_people
-        session_info['people_directory'] = lambda: snapshot_people(app.state.forecast_service.current_snapshot())
+        session_info['people_directory'] = lambda: snapshot_people(
+            app.state.forecast_service.current_snapshot(include_learning=False))
     app.state.session_factory.configure(info=session_info)
     # The seed CLI predates the bound input store. Capture existing native
     # documents at startup receipt time, never by backdating their authored time.
@@ -98,6 +100,7 @@ def create_app(
     # visible 503 on the run, not a startup crash. Tests may inject a runner.
     app.state.droid_runner = droid_runner
 
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=settings.cors_origin_regex,
@@ -119,8 +122,10 @@ def create_app(
 
     from app.api import (
         routes_admin,
+        routes_allocation_drafts,
         routes_agent,
         routes_budget,
+        routes_budget_requests,
         routes_charts,
         routes_decisions,
         routes_documents,
@@ -135,12 +140,14 @@ def create_app(
     )
 
     for module in (
+        routes_allocation_drafts,
         routes_meta,
         routes_teams,
         routes_people,
         routes_imports,
         routes_spending,
         routes_budget,
+        routes_budget_requests,
         routes_forecasts,
         routes_charts,
         routes_documents,
@@ -153,8 +160,14 @@ def create_app(
         app.include_router(module.router)
     from app.forecasting.routes import router as forecasting_router
     app.include_router(forecasting_router)
+    from app.api.routes_usage import router as usage_router
+    app.include_router(usage_router, prefix="/api")
     if settings.compat:
+        app.include_router(routes_budget_requests.compat_router, include_in_schema=False)
+        app.include_router(routes_allocation_drafts.compat_router, include_in_schema=False)
         app.include_router(forecasting_router, prefix="/compat", include_in_schema=False)
+        app.include_router(usage_router, prefix="/compat", include_in_schema=False)
+        app.include_router(usage_router, prefix="/compat/api", include_in_schema=False)
         from app.compat.router import router as compat_router
 
         # Kept out of openapi.json: the main contract and its --check stay unchanged.

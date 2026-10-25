@@ -40,9 +40,12 @@
       {
         "at": "2026-10-24T12:07:00Z",
         "data": {
-          "args": {},
+          "args": {
+            "include_closed": false,
+            "team": null
+          },
           "step": 1,
-          "tool": "get_budgets"
+          "tool": "list_budget_requests"
         },
         "seq": 2,
         "source": "fake_runner",
@@ -53,8 +56,8 @@
         "data": {
           "is_error": false,
           "step": 1,
-          "summary": "envelope 200000.00 USD, version 1",
-          "tool": "get_budgets"
+          "summary": "0 current-period request(s); 11 current source version(s) checked",
+          "tool": "list_budget_requests"
         },
         "seq": 3,
         "source": "fake_runner",
@@ -65,7 +68,7 @@
         "data": {
           "args": {},
           "step": 2,
-          "tool": "get_spend_summary"
+          "tool": "get_budgets"
         },
         "seq": 4,
         "source": "fake_runner",
@@ -76,8 +79,8 @@
         "data": {
           "is_error": false,
           "step": 2,
-          "summary": "company total 95000.00 USD, coverage complete",
-          "tool": "get_spend_summary"
+          "summary": "envelope 200000.00 USD, version 1",
+          "tool": "get_budgets"
         },
         "seq": 5,
         "source": "fake_runner",
@@ -88,7 +91,7 @@
         "data": {
           "args": {},
           "step": 3,
-          "tool": "get_forecast"
+          "tool": "get_spend_summary"
         },
         "seq": 6,
         "source": "fake_runner",
@@ -99,10 +102,33 @@
         "data": {
           "is_error": false,
           "step": 3,
+          "summary": "company total 95000.00 USD, coverage complete",
+          "tool": "get_spend_summary"
+        },
+        "seq": 7,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "args": {},
+          "step": 4,
+          "tool": "get_forecast"
+        },
+        "seq": 8,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:07:00Z",
+        "data": {
+          "is_error": false,
+          "step": 4,
           "summary": "available (placeholder), snapshot fcs_000004",
           "tool": "get_forecast"
         },
-        "seq": 7,
+        "seq": 9,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -114,10 +140,10 @@
             "metric": null,
             "team": null
           },
-          "step": 4,
+          "step": 5,
           "tool": "build_chart_spec"
         },
-        "seq": 8,
+        "seq": 10,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -125,20 +151,20 @@
         "at": "2026-10-24T12:07:00Z",
         "data": {
           "is_error": false,
-          "step": 4,
+          "step": 5,
           "summary": "spend_vs_allocation chart (recorded_spend), 6 row(s), value kinds planned, simulated",
           "tool": "build_chart_spec"
         },
-        "seq": 9,
+        "seq": 11,
         "source": "fake_runner",
         "type": "tool_result"
       },
       {
         "at": "2026-10-24T12:07:00Z",
         "data": {
-          "text": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts)."
+          "text": "Company recorded spend is 95000.00 USD for 2026-10-01 to 2026-12-31, to date as of 2026-10-24T12:07:00Z. Spend coverage is complete.\n\nPeriod 2026-P1 (latest record dated 2026-10-20).\n\n**Team comparison**\n- engineering: allocation 60000.00, recorded 30000.00, projected 65000.00.\n- product: allocation 80000.00, recorded 20000.00, projected 50000.00.\n- research: allocation 60000.00, recorded 45000.00, projected 85000.00.\n\nSpend coverage is complete; company total 95000.00 USD.\n\nProjections are simulated (shared placeholder (not a forecast model)), not measured spend.\n\nChart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
         },
-        "seq": 10,
+        "seq": 12,
         "source": "fake_runner",
         "type": "assistant_text"
       },
@@ -149,9 +175,9 @@
           "proposal_ids": [],
           "signal_ids": [],
           "status": "succeeded",
-          "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts)."
+          "summary": "Company recorded spend is 95000.00 USD for 2026-10-01 to 2026-12-31, to date as of 2026-10-24T12:07:00Z. Spend coverage is complete.\n\nPeriod 2026-P1 (latest record dated 2026-10-20).\n\n**Team comparison**\n- engineering: allocation 60000.00, recorded 30000.00, projected 65000.00.\n- product: allocation 80000.00, recorded 20000.00, projected 50000.00.\n- research: allocation 60000.00, recorded 45000.00, projected 85000.00.\n\nSpend coverage is complete; company total 95000.00 USD.\n\nProjections are simulated (shared placeholder (not a forecast model)), not measured spend.\n\nChart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them."
         },
-        "seq": 11,
+        "seq": 13,
         "source": "backend",
         "type": "run_finished"
       }
@@ -414,12 +440,32 @@
             "planned",
             "simulated"
           ]
+        },
+        {
+          "authored_at": "2026-10-16T00:00:00Z",
+          "doc_key": "marketing-ideas-slack",
+          "doc_type": "correspondence",
+          "document_id": "doc_000006",
+          "effective_from": null,
+          "effective_to": null,
+          "excerpt": "[2026-10-16 10:02] m.chen: what if we generated personalized demo videos for every enterprise lead?\n[2026-10-16 10:05] j.ortiz: fun idea, no budget or approval for it yet though\n[2026-10-16 10:06] m.chen: just brainstorming, not a plan\n",
+          "has_current_signal": false,
+          "plan_status": "informal",
+          "project_tags": [
+            "campaigns"
+          ],
+          "team_tags": [
+            "marketing"
+          ],
+          "title": "#marketing-ideas: AI campaign brainstorm",
+          "type": "source_update",
+          "version": 1
         }
       ],
       "proposal_ids": [],
       "session_id": null,
       "signal_ids": [],
-      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).",
+      "summary": "Company recorded spend is 95000.00 USD for 2026-10-01 to 2026-12-31, to date as of 2026-10-24T12:07:00Z. Spend coverage is complete.\n\nPeriod 2026-P1 (latest record dated 2026-10-20).\n\n**Team comparison**\n- engineering: allocation 60000.00, recorded 30000.00, projected 65000.00.\n- product: allocation 80000.00, recorded 20000.00, projected 50000.00.\n- research: allocation 60000.00, recorded 45000.00, projected 85000.00.\n\nSpend coverage is complete; company total 95000.00 USD.\n\nProjections are simulated (shared placeholder (not a forecast model)), not measured spend.\n\nChart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them.",
       "usage": null,
       "warnings": []
     },
@@ -436,24 +482,34 @@
     "status": "succeeded",
     "steps": [
       {
+        "args": {
+          "include_closed": false,
+          "team": null
+        },
+        "at": "2026-10-24T12:07:00Z",
+        "result_summary": "0 current-period request(s); 11 current source version(s) checked",
+        "seq": 1,
+        "tool": "list_budget_requests"
+      },
+      {
         "args": {},
         "at": "2026-10-24T12:07:00Z",
         "result_summary": "envelope 200000.00 USD, version 1",
-        "seq": 1,
+        "seq": 2,
         "tool": "get_budgets"
       },
       {
         "args": {},
         "at": "2026-10-24T12:07:00Z",
         "result_summary": "company total 95000.00 USD, coverage complete",
-        "seq": 2,
+        "seq": 3,
         "tool": "get_spend_summary"
       },
       {
         "args": {},
         "at": "2026-10-24T12:07:00Z",
         "result_summary": "available (placeholder), snapshot fcs_000004",
-        "seq": 3,
+        "seq": 4,
         "tool": "get_forecast"
       },
       {
@@ -464,11 +520,11 @@
         },
         "at": "2026-10-24T12:07:00Z",
         "result_summary": "spend_vs_allocation chart (recorded_spend), 6 row(s), value kinds planned, simulated",
-        "seq": 4,
+        "seq": 5,
         "tool": "build_chart_spec"
       }
     ],
-    "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:07:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Chart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).",
+    "summary": "Company recorded spend is 95000.00 USD for 2026-10-01 to 2026-12-31, to date as of 2026-10-24T12:07:00Z. Spend coverage is complete.\n\nPeriod 2026-P1 (latest record dated 2026-10-20).\n\n**Team comparison**\n- engineering: allocation 60000.00, recorded 30000.00, projected 65000.00.\n- product: allocation 80000.00, recorded 20000.00, projected 50000.00.\n- research: allocation 60000.00, recorded 45000.00, projected 85000.00.\n\nSpend coverage is complete; company total 95000.00 USD.\n\nProjections are simulated (shared placeholder (not a forecast model)), not measured spend.\n\nChart built from backend data only: \"Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)\" (6 row(s); Vega-Lite v5 spec in output.charts).\n\n1 current source update needs review; the scripted assistant has not inferred a numerical effect from them.",
     "task_type": "answer_question"
   },
   "scenario": "agent",

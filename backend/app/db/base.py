@@ -47,7 +47,15 @@ def make_session_factory(engine: Engine) -> sessionmaker:
 def create_all(engine: Engine) -> None:
     from app.db import models  # noqa: F401  (register tables)
 
+    from app.compat import cache  # noqa: F401 - install transactional cache revision triggers
     Base.metadata.create_all(engine)
+    # create_all does not add newly declared indexes to existing tables.
+    inspector = inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        present = {column["name"] for column in inspector.get_columns(table.name)}
+        for index in table.indexes:
+            if {column.name for column in index.columns} <= present:
+                index.create(engine, checkfirst=True)
 
 
 class SchemaOutdated(RuntimeError):

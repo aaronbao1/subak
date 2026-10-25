@@ -1,0 +1,261 @@
+{
+  "description": "bounded UTC observed daily ledger; exact simulated costs, separate included notional, unknown token telemetry and missing days never become known zero",
+  "name": "usage_daily",
+  "request": {
+    "method": "GET",
+    "path": "/api/usage/daily",
+    "query": {
+      "end_date_exclusive": "2026-10-22",
+      "scope_id": "research",
+      "scope_type": "team",
+      "start_date": "2026-10-19"
+    }
+  },
+  "response": {
+    "as_of": "2026-10-24T13:00:00Z",
+    "available_end_date_exclusive": "2026-10-21",
+    "available_start_date": "2026-10-01",
+    "buckets": [
+      {
+        "breakdowns": [
+          {
+            "costs_by_value_kind": {
+              "estimated": null,
+              "measured": null,
+              "reported": null,
+              "simulated": "246.00"
+            },
+            "included_usage_notional": null,
+            "model": null,
+            "provider": "anthropic",
+            "record_count": 6,
+            "recorded_spend": "246.00",
+            "token_observed_record_counts": {
+              "cached_input_tokens": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "reasoning_tokens": 0,
+              "total_tokens": 0
+            },
+            "tokens": {
+              "cached_input_tokens": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "reasoning_tokens": null,
+              "total_tokens": null
+            }
+          },
+          {
+            "costs_by_value_kind": {
+              "estimated": null,
+              "measured": null,
+              "reported": null,
+              "simulated": "2001.00"
+            },
+            "included_usage_notional": "187.00",
+            "model": "claude",
+            "provider": "anthropic",
+            "record_count": 7,
+            "recorded_spend": "2001.00",
+            "token_observed_record_counts": {
+              "cached_input_tokens": 0,
+              "input_tokens": 7,
+              "output_tokens": 7,
+              "reasoning_tokens": 0,
+              "total_tokens": 7
+            },
+            "tokens": {
+              "cached_input_tokens": null,
+              "input_tokens": 81283,
+              "output_tokens": 16255,
+              "reasoning_tokens": null,
+              "total_tokens": 97538
+            }
+          }
+        ],
+        "costs_by_value_kind": {
+          "estimated": null,
+          "measured": null,
+          "reported": null,
+          "simulated": "2247.00"
+        },
+        "coverage": "partial",
+        "date": "2026-10-19",
+        "included_usage_notional": "187.00",
+        "record_count": 13,
+        "recorded_spend": "2247.00",
+        "revision": "c8be2d0fa96de2c75d4c05f16c1b9268f3e9aaaaaa2074db615d8a871e545408",
+        "source_refs": [
+          "imp_000001"
+        ],
+        "token_observed_record_counts": {
+          "cached_input_tokens": 0,
+          "input_tokens": 7,
+          "output_tokens": 7,
+          "reasoning_tokens": 0,
+          "total_tokens": 7
+        },
+        "tokens": {
+          "cached_input_tokens": null,
+          "input_tokens": 81283,
+          "output_tokens": 16255,
+          "reasoning_tokens": null,
+          "total_tokens": 97538
+        }
+      },
+      {
+        "breakdowns": [
+          {
+            "costs_by_value_kind": {
+              "estimated": null,
+              "measured": null,
+              "reported": null,
+              "simulated": "246.00"
+            },
+            "included_usage_notional": null,
+            "model": null,
+            "provider": "anthropic",
+            "record_count": 6,
+            "recorded_spend": "246.00",
+            "token_observed_record_counts": {
+              "cached_input_tokens": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "reasoning_tokens": 0,
+              "total_tokens": 0
+            },
+            "tokens": {
+              "cached_input_tokens": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "reasoning_tokens": null,
+              "total_tokens": null
+            }
+          },
+          {
+            "costs_by_value_kind": {
+              "estimated": null,
+              "measured": null,
+              "reported": null,
+              "simulated": "2001.00"
+            },
+            "included_usage_notional": "187.00",
+            "model": "claude",
+            "provider": "anthropic",
+            "record_count": 7,
+            "recorded_spend": "2001.00",
+            "token_observed_record_counts": {
+              "cached_input_tokens": 0,
+              "input_tokens": 7,
+              "output_tokens": 7,
+              "reasoning_tokens": 0,
+              "total_tokens": 7
+            },
+            "tokens": {
+              "cached_input_tokens": null,
+              "input_tokens": 81282,
+              "output_tokens": 16255,
+              "reasoning_tokens": null,
+              "total_tokens": 97537
+            }
+          }
+        ],
+        "costs_by_value_kind": {
+          "estimated": null,
+          "measured": null,
+          "reported": null,
+          "simulated": "2247.00"
+        },
+        "coverage": "partial",
+        "date": "2026-10-20",
+        "included_usage_notional": "187.00",
+        "record_count": 13,
+        "recorded_spend": "2247.00",
+        "revision": "3055ef95a9f821738b0e9a22347434e7b4f85dfc3a971ebe6717092a4e0f7469",
+        "source_refs": [
+          "imp_000001"
+        ],
+        "token_observed_record_counts": {
+          "cached_input_tokens": 0,
+          "input_tokens": 7,
+          "output_tokens": 7,
+          "reasoning_tokens": 0,
+          "total_tokens": 7
+        },
+        "tokens": {
+          "cached_input_tokens": null,
+          "input_tokens": 81282,
+          "output_tokens": 16255,
+          "reasoning_tokens": null,
+          "total_tokens": 97537
+        }
+      },
+      {
+        "breakdowns": [],
+        "costs_by_value_kind": {
+          "estimated": null,
+          "measured": null,
+          "reported": null,
+          "simulated": null
+        },
+        "coverage": "missing",
+        "date": "2026-10-21",
+        "included_usage_notional": null,
+        "record_count": 0,
+        "recorded_spend": null,
+        "revision": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_refs": [],
+        "token_observed_record_counts": {
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 0
+        },
+        "tokens": {
+          "cached_input_tokens": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "total_tokens": null
+        }
+      }
+    ],
+    "dataset_id": "repository-ledger",
+    "dataset_revision": "8c6f872b0aceb038f6720574a8a8167cb52a3e6d8fdcac233a632e905626308f",
+    "end_date_exclusive": "2026-10-22",
+    "filters": {
+      "model": null,
+      "provider": null
+    },
+    "notes": [
+      "Amounts are sums of recorded USD charge components, not an assertion that every charge was received.",
+      "The repository ledger has no daily source-completion receipts: observed days are partial; missing days are unknown usage, not zero.",
+      "Input plus output forms total tokens. Cached input and reasoning are subsets, never additional tokens.",
+      "Token fields sum supplied observations only; record counts identify partial telemetry. Total tokens is null when a row supplies only input or only output.",
+      "Included usage is informational notional value, excluded from recorded spend. Unpriced usage contributes no dollars.",
+      "Shared without an ID is company usage without a team. Shared with a team ID is that team's usage without a person.",
+      "Historical scopes use stored record attribution, including inactive people and teams. Dataset revision identifies this requested slice."
+    ],
+    "scope": {
+      "id": "research",
+      "type": "team"
+    },
+    "source_coverage": [
+      {
+        "coverage": "partial",
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "record_count": 26,
+        "source_account": "ws-research",
+        "source_kind": "northstar_billing"
+      }
+    ],
+    "start_date": "2026-10-19",
+    "synthetic": true,
+    "timezone": "UTC",
+    "unit": "USD"
+  },
+  "scenario": "main",
+  "schema": "DailyUsageResponse",
+  "status": 200
+}

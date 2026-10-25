@@ -1,3 +1,4 @@
+import { displaySourceText } from "@/lib/display-copy";
 import { ArrowDownRight, ArrowUpRight, Building2, Minus } from "lucide-react";
 import type { ContextItem, Integration, SignalKind } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
@@ -17,16 +18,16 @@ export const INTEGRATION_LABEL: Record<Integration, string> = {
 
 /** Calm, distinguishable dots per connector. Not brand colors. */
 const INTEGRATION_DOT: Record<Integration, string> = {
-  slack: "bg-[oklch(0.70_0.12_330)]",
-  asana: "bg-[oklch(0.70_0.13_20)]",
-  monday: "bg-[oklch(0.70_0.12_255)]",
-  email: "bg-foreground/50",
-  document: "bg-foreground/35",
-  gmail: "bg-[oklch(0.70_0.17_25)]",
+  slack: "bg-[oklch(0.55_0.12_330)]",
+  asana: "bg-[oklch(0.55_0.13_20)]",
+  monday: "bg-[oklch(0.55_0.12_255)]",
+  email: "bg-foreground/65",
+  document: "bg-foreground/55",
+  gmail: "bg-[oklch(0.55_0.17_25)]",
   notion: "bg-foreground/70",
-  google_docs: "bg-[oklch(0.70_0.14_255)]",
-  linear: "bg-[oklch(0.70_0.13_282)]",
-  pdf: "bg-[oklch(0.68_0.16_22)]",
+  google_docs: "bg-[oklch(0.55_0.14_255)]",
+  linear: "bg-[oklch(0.55_0.13_282)]",
+  pdf: "bg-[oklch(0.55_0.16_22)]",
 };
 
 export const SIGNAL_LABEL: Record<SignalKind, string> = {
@@ -60,17 +61,17 @@ export function IntegrationChip({ integration, className }: { integration: Integ
 export function SignalChip({ item, className }: { item: ContextItem; className?: string }) {
   const Icon = EFFECT_ICON[item.expectedEffect];
   const via = item.sources[0]?.integration;
-  const label = item.signal ? SIGNAL_LABEL[item.signal] : item.title;
+  const label = item.signal ? SIGNAL_LABEL[item.signal] : displaySourceText(item.title, "Activity update");
   return (
     <span
-      title={item.summary}
+      title={displaySourceText(item.summary)}
       className={cn(
         "inline-flex h-6 max-w-full items-center gap-1.5 rounded-md border border-border bg-popover px-2 text-xs font-medium whitespace-nowrap text-foreground/80",
         item.supersededBy && "border-dashed text-muted-foreground line-through decoration-muted-foreground",
         className,
       )}
     >
-      <Icon aria-hidden strokeWidth={1.5} className={cn("size-3 shrink-0", item.expectedEffect === "increase" && "text-warning", item.expectedEffect === "decrease" && "text-muted-foreground")} />
+      <Icon aria-hidden strokeWidth={1.5} className={cn("size-3 shrink-0", item.expectedEffect === "increase" && "text-warning", item.expectedEffect === "decrease" && "text-success")} />
       <span className="truncate">{label}</span>
       {via && <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", INTEGRATION_DOT[via])} title={INTEGRATION_LABEL[via]} />}
     </span>
