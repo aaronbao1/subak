@@ -67,7 +67,7 @@ export function LandingPage() {
         {/* Hero, on a dot grid that leans toward the pointer and fades out before the first feature. */}
         <section className="relative">
           <KineticDots className="absolute inset-0 size-full" />
-          <div className={`${container} relative pt-32 pb-12 text-center md:pt-40 md:pb-20`}>
+          <div className={`${container} relative pt-20 pb-12 text-center md:pt-28 md:pb-20`}>
           <p className="eyebrow">AI spend planning for finance</p>
           <h1 className="mx-auto mt-4 max-w-[1050px] text-[40px] leading-none md:text-5xl lg:text-[64px]">{HEADLINE}</h1>
           <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-[1.35] text-muted-foreground md:text-lg">
