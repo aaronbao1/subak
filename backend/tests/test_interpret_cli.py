@@ -402,3 +402,29 @@ def test_outdated_schema_exits_2_without_the_seed_hint(app, seeded, clock, id_fa
     code, out = _main(seeded, "--dry-run", clock=clock, id_factory=id_factory)
     assert code == 2 and "outdated schema" in out[-1] and "agent_runs.finished_at" in out[-1]
     assert "app.seed" not in out[-1]
+
+
+def test_engine_forecast_provider_is_wired_to_the_published_forecast_store(app, seeded, clock, id_factory):
+    """Under the default FORECAST_PROVIDER=engine the CLI's toolbox reads the engine's stored publication
+    (like the server), not an unconfigured provider that reports 'forecast persistence is not configured'."""
+    seen = {}
+
+    class Probe:
+        kind = "fake"
+
+        def run(self, task, tools):
+            provider = tools._provider
+            seen["service"] = tools._forecast_service
+            seen["provider"] = provider.name
+            s = app.state.session_factory()
+            try:
+                period_id = resolve_period(s, None, clock.now()).id
+            finally:
+                s.close()
+            seen["reason"] = provider.get_forecast(period_id, ["product"]).reason
+            return AgentRunOutput(summary="probe")
+
+    code, _ = _main(seeded, "--batch", "20", runner=Probe(), clock=clock, id_factory=id_factory)
+    assert code == 0
+    assert seen["provider"] == "engine" and seen["service"] is not None
+    assert seen["reason"] == "no published forecast; request a refresh"

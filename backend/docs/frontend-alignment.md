@@ -517,7 +517,7 @@ the README; `datagen/README.md` is owned by the datagen author.
 |---|---|---|
 | `/company` | `{id: "uber-sim", name: "Uber (simulated)", currentPeriod: Q4 2026}` | From the loader's `company_profile` row; `BACKEND_COMPANY_ID` / `BACKEND_COMPANY_NAME` (set by `datagen/demo.sh`) override it, Northstar is the fallback |
 | `/teams`, `/people` | 16 teams, 130 people | Every billing row carries `user_email`, so all spend is attributed to a person; no unattributed pseudo-team |
-| `/spending` | ~10k daily rows (`reported_charge` and `usage_only`) | All `complete: true` (coverage is complete per team). Response-cached; see timings in the README |
+| `/spending` | ~10k daily rows (`reported_charge` and `usage_only`) | All `complete: true` (coverage is complete per team). Served from an incremental index; see timings in the README |
 | `/budgets` | 16 Q4 allocations, version `"1"` | From the loader's envelopes |
 | `/forecasts` | from the engine's published run only | Nothing is published until the worker's weekly job or a `POST /api/forecast-refreshes` completes. A team is returned only when the run's `quarter_outlook` matches the period and is complete; repository usage has no exposure or complete pricing pool, so teams can stay unavailable with the engine's reason. That is the honest result |
 | `/documents` | 249 | Slack, Asana, email, monday.com; person-tagged; no supersession links in this corpus |
@@ -531,8 +531,9 @@ the README; `datagen/README.md` is owned by the datagen author.
    run skips what is done). Not verified live in this pass (no sdk runs were made).
 2. **1 s refresh.** The backend answers a 1 s poll of spending and people from cache (spending 4 ms warm),
    but `frontend/src/components/shell/app-shell.tsx` clamps `NEXT_PUBLIC_LIVE_REFRESH_MS` to at least
-   2000 ms. Going to 1 s is a frontend change (owner decision). After each live import the spending list is
-   rebuilt once (~0.4-0.8 s on this dataset) before it is cached again. Forecast reads come from the
+   2000 ms. Going to 1 s is a frontend change (owner decision). A live import (a pure append) updates the
+   spending list incrementally from the new rows only; a full rebuild (~0.4-0.8 s on this dataset) happens
+   only after an in-place change to usage records, a schema change or a period change. Forecast reads come from the
    engine's stored publication and are not response-cached by the compat layer.
 3. **Forecast coverage on Uber.** See the `/forecasts` row: availability depends on what the engine can
    publish from repository inputs, documented in `../../docs/implementation/forecast-integration-limits.md`.

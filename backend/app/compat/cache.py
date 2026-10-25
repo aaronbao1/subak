@@ -1,11 +1,12 @@
 """Rendered-response cache for the compat reads the dashboard polls every second.
 
 The frontend refreshes `/spending`, `/people` and `/forecasts` every 1 s, while the data under them
-changes only when something is written (the live feed imports every few seconds). `/people` and
-`/forecasts` keep their final JSON bytes keyed by a *data stamp* (or the provider's result identity)
-plus the request's own parameters; `/spending`, whose full rebuild costs ~0.7-1 s on the Uber dataset
-and would miss after every live import, uses the incremental index in `spending_index.py`, which relies
-on `table_generation` below. Builds are single-flight per key (`ResponseCache.get_or_build`).
+changes only when something is written (the live feed imports every few seconds). `/people` keeps its
+final JSON bytes keyed by a *data stamp* plus the request's own parameters; `/spending`, whose full
+rebuild costs ~0.7-1 s on the Uber dataset and would miss after every live import, uses the incremental
+index in `spending_index.py`, which relies on `table_generation` below. `/forecasts` is not cached here:
+it is read from the forecast engine's stored publication on every request. Builds are single-flight per
+key (`ResponseCache.get_or_build`).
 
 Data stamp = (process write generation, MAX(rowid) of usage_records):
 
@@ -210,10 +211,10 @@ class Body:
     """A rendered JSON body plus its gzip form, compressed once on first gzip request (the GZip
     middleware passes a response that already carries Content-Encoding through untouched)."""
 
-    __slots__ = ("raw", "_gz", "keep", "_gz_lock")
+    __slots__ = ("raw", "_gz", "_gz_lock")
 
-    def __init__(self, raw: bytes, keep: Any = None) -> None:
-        self.raw, self._gz, self.keep = raw, None, keep  # keep: objects whose ids are in the cache key
+    def __init__(self, raw: bytes) -> None:
+        self.raw, self._gz = raw, None
         self._gz_lock = threading.Lock()  # concurrent first gzip requests compress once
 
     def response(self, request: Request) -> Response:
