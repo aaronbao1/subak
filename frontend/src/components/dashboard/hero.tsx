@@ -79,6 +79,18 @@ export function Hero(p: HeroProps) {
   const calc = useProgress(firstProjection
     ? { duration: CALC_MS, delay: CALC_DELAY_MS, key: projected ?? 0, enabled: projected !== undefined }
     : { duration: COUNT_MS, key: projected ?? 0, enabled: projected !== undefined });
+  // Direction of the most recent change to the projection (live refresh or an applied proposal):
+  // the beam runs red when the projection went up and green when it went down. Neutral on first load.
+  const [lastProjected, setLastProjected] = useState(projected);
+  const [direction, setDirection] = useState<Direction>("neutral");
+  const [lastDelta, setLastDelta] = useState(0);
+  if (projected !== lastProjected) {
+    if (projected !== undefined && lastProjected !== undefined) {
+      setDirection(projected > lastProjected ? "up" : "down");
+      setLastDelta(projected - lastProjected);
+    }
+    setLastProjected(projected);
+  }
   const reduce = usePrefersReducedMotion();
   const mounted = useMounted();
   const calculating = mounted && !reduce && projected !== undefined && calc < 1;
@@ -117,8 +129,10 @@ export function Hero(p: HeroProps) {
         {/* Current → projected connector, centered on the number row. */}
         {hasProjection && (
           <>
-            <Connector progress={calc} calculating={calculating} landed={mounted && calc >= 1} className="hidden sm:col-start-2 sm:row-start-2 sm:block sm:self-center" />
-            <span className="num hidden text-center text-[11px] text-muted-foreground sm:col-start-2 sm:row-start-3 sm:block">from current spend</span>
+            <Connector progress={calc} calculating={calculating} landed={mounted && calc >= 1} direction={direction} className="hidden sm:col-start-2 sm:row-start-2 sm:block sm:self-center" />
+            <span className={cn("num hidden text-center text-[11px] sm:col-start-2 sm:row-start-3 sm:block", DIRECTION_TEXT[direction])} aria-live="polite">
+              {direction === "neutral" ? "from current spend" : `${direction === "up" ? "▲" : "▼"} ${formatAmount(Math.abs(lastDelta), p.unit)} since last update`}
+            </span>
           </>
         )}
 
@@ -131,7 +145,7 @@ export function Hero(p: HeroProps) {
             <span className="num text-[11px] text-muted-foreground" aria-live="polite">updating</span>
           </span>
         </span>
-        <span className={cn("num truncate leading-none font-medium sm:col-start-3 sm:row-start-2 sm:self-center", hasProjection ? "text-[28px] text-foreground md:text-[32px]" : "text-lg text-muted-foreground")}>
+        <span className={cn("num truncate leading-none font-medium sm:col-start-3 sm:row-start-2 sm:self-center", hasProjection ? "text-5xl text-foreground md:text-[56px]" : "text-2xl text-muted-foreground")}>
           {hasProjection ? <Reserved final={formatAmount(projected as number, p.unit)}>{formatAmount(projectedShown, p.unit)}</Reserved> : "No projection"}
         </span>
         {over !== undefined && (
@@ -183,16 +197,22 @@ export function Hero(p: HeroProps) {
  */
 const CHEVRONS = [0.25, 0.5, 0.75];
 
-function Chevron({ className, style }: { className?: string; style?: CSSProperties }) {
+type Direction = "neutral" | "up" | "down";
+/** Increase = red, decrease = green, first load = ink. */
+const DIRECTION_COLOR: Record<Direction, string> = { neutral: "var(--foreground)", up: "var(--destructive)", down: "var(--success)" };
+const DIRECTION_TEXT: Record<Direction, string> = { neutral: "text-muted-foreground", up: "text-destructive", down: "text-success" };
+
+function Chevron({ className, style, color }: { className?: string; style?: CSSProperties; color: string }) {
   return (
     <svg width="10" height="14" viewBox="0 0 10 14" className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-1/2", className)} style={style} aria-hidden>
-      <path d="M2 1.5 L8 7 L2 12.5" fill="none" stroke="var(--foreground)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 1.5 L8 7 L2 12.5" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function Connector({ progress, calculating, landed, className }: { progress: number; calculating: boolean; landed: boolean; className?: string }) {
+function Connector({ progress, calculating, landed, direction, className }: { progress: number; calculating: boolean; landed: boolean; direction: Direction; className?: string }) {
   const t = Math.max(0, Math.min(1, progress));
+  const color = DIRECTION_COLOR[direction];
   const lit = landed ? 1 : calculating ? t : 0;
   return (
     <div className={cn("relative h-6", className)} aria-hidden>
@@ -201,11 +221,11 @@ function Connector({ progress, calculating, landed, className }: { progress: num
       {/* Track, stopping where the arrowhead begins. */}
       <span className="absolute top-1/2 right-2.5 left-1 h-px -translate-y-1/2 bg-foreground/20" />
       {/* Lit portion that fills in with the calculation and stays lit once landed. */}
-      <span className="absolute top-1/2 left-1 h-px -translate-y-1/2 bg-foreground/55" style={{ width: `calc((100% - 14px) * ${lit})` }} />
+      <span className="absolute top-1/2 left-1 h-px -translate-y-1/2 transition-colors duration-300" style={{ width: `calc((100% - 14px) * ${lit})`, background: color, opacity: direction === "neutral" ? 0.55 : 0.9, boxShadow: direction === "neutral" ? undefined : `0 0 8px ${color}` }} />
       {/* Chevrons. */}
       {CHEVRONS.map((c, i) => (
         <Chevron
-          key={c}
+          key={c} color={color}
           className={cn(calculating && "animate-chevron")}
           style={{ left: `${c * 100}%`, ...(calculating ? { ["--rise-delay" as string]: `${i * 160}ms` } : { opacity: landed ? 0.6 : 0.22 }) }}
         />
@@ -213,13 +233,13 @@ function Connector({ progress, calculating, landed, className }: { progress: num
       {/* Comet with a short fading tail. */}
       {calculating && t > 0 && (
         <span className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc((100% - 14px) * ${t})` }}>
-          <span className="absolute top-1/2 right-0 h-0.5 w-16 -translate-y-1/2 bg-gradient-to-r from-transparent to-foreground/90" />
-          <span className="absolute top-1/2 left-0 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-card" />
+          <span className="absolute top-1/2 right-0 h-0.5 w-16 -translate-y-1/2" style={{ background: `linear-gradient(to right, transparent, ${color})` }} />
+          <span className="absolute top-1/2 left-0 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-card" style={{ background: color, boxShadow: direction === "neutral" ? undefined : `0 0 10px ${color}` }} />
         </span>
       )}
       {/* Arrowhead touching the projected number. */}
       <svg key={landed ? "landed" : "pending"} width="11" height="12" viewBox="0 0 11 12" className={cn("absolute top-1/2 right-0 -translate-y-1/2", landed && "animate-land")} style={{ opacity: landed ? 1 : 0.3 }} aria-hidden>
-        <path d="M0 0 L11 6 L0 12 Z" fill="var(--foreground)" />
+        <path d="M0 0 L11 6 L0 12 Z" fill={color} />
       </svg>
     </div>
   );

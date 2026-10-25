@@ -155,11 +155,18 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   /** Set on pointer-up so the click that follows a drag does not also select a team. */
   const dragMoved = useRef(false);
 
-  const windowDays = zoom === 0 ? plotAll.length : Math.min(zoom, plotAll.length);
-  const maxOffset = Math.max(0, plotAll.length - windowDays);
+  // The period can run weeks past the latest data (a quarter viewed in October). Open on the latest day that has
+  // recorded or projected values, not on empty days at the end of the period.
+  const plotSeries = useMemo(() => {
+    let last = plotAll.length - 1;
+    while (last > 0 && plotAll[last].kind === "empty") last--;
+    return plotAll.slice(0, last + 1);
+  }, [plotAll]);
+  const windowDays = zoom === 0 ? plotSeries.length : Math.min(zoom, plotSeries.length);
+  const maxOffset = Math.max(0, plotSeries.length - windowDays);
   const off = Math.min(offset, maxOffset);
-  const endIdx = plotAll.length - 1 - off;
-  const rows = useMemo(() => plotAll.slice(Math.max(0, endIdx - windowDays + 1), endIdx + 1), [plotAll, endIdx, windowDays]);
+  const endIdx = plotSeries.length - 1 - off;
+  const rows = useMemo(() => plotSeries.slice(Math.max(0, endIdx - windowDays + 1), endIdx + 1), [plotSeries, endIdx, windowDays]);
   const canBack = off < maxOffset;
   const canForward = off > 0;
   const clampOffset = useCallback((o: number) => Math.max(0, Math.min(maxOffset, o)), [maxOffset]);

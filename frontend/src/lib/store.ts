@@ -43,6 +43,8 @@ interface AppState {
   rejectProposal: (proposalId: string) => Promise<void>;
 }
 
+let inflightLoad: Promise<void> | null = null;
+
 export const useAppStore = create<AppState>((set, get) => ({
   loaded: false,
   teams: [], people: [], spending: [], spendingHistory: [], budgets: [], forecasts: [], personForecasts: [], context: [], proposals: [], decisions: [], threads: {},
@@ -50,6 +52,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   composer: "",
 
   async load() {
+    // One load at a time: the live refresh interval can fire faster than a large backend answers,
+    // and overlapping full reloads would pile up requests. A tick that lands mid-load joins the running one.
+    if (inflightLoad) return inflightLoad;
+    inflightLoad = (async () => {
     const c = getDataClient();
     const [company, teams, people, spendingHistory, budgets, allForecasts, context, proposals, decisions, main] = await Promise.all([
       c.getCompany(), c.getTeams(), c.getPeople(), c.getSpending(), c.getBudgets(), c.getForecasts(), c.getContext(),
@@ -60,6 +66,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const forecasts = allForecasts.filter((f) => !f.personId);
     const personForecasts = allForecasts.filter((f) => !!f.personId);
     set({ loaded: true, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, proposals, decisions, threads: { main } });
+    })().finally(() => { inflightLoad = null; });
+    return inflightLoad;
   },
 
   async refreshBudgets() {
