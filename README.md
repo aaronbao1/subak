@@ -4,6 +4,10 @@ A finance workspace for understanding company AI spending, forecasting future ne
 
 The dashboard connects company, team, and person spending to the evidence behind upcoming work. Forecast publications preserve the inputs and calculations used at issuance. Droid explains those results and drafts budget proposals; a finance approver controls budget decisions.
 
+## Public interactive demo
+
+The shareable demo runs entirely in the browser with the full generated company dataset and saved forecast publications. Allocation changes, requests, and assistant interactions are isolated to each visitor’s session and reset on reload. It does not call Factory or require a hosted backend. See [demo setup](docs/implementation/interactive-demo.md); the architecture below describes the full local application.
+
 ## What the workspace does
 
 | Capability | Behavior |

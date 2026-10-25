@@ -8,6 +8,15 @@ export function ScenarioPreview({ baseline, scenario }: { baseline: ForecastView
   let comparison: ReturnType<typeof scenarioComparison>;
   try { comparison = scenarioComparison(baseline, scenario); }
   catch (e) { return <p role="alert" className="text-xs text-destructive">{e instanceof Error ? e.message : "Scenario comparison unavailable."}</p>; }
+  if (scenario.recalculation_required === true) {
+    const amount = baseline.quarter_outlook?.base;
+    return <section aria-label="Scenario comparison" className="space-y-3 border-t border-border pt-4">
+      <div><p className="text-xs font-medium">Demo preview</p><p className="mt-1 text-xs text-muted-foreground">{baseline.scope.name ?? baseline.scope.type} · {String(baseline.quarter_outlook?.start ?? "")} to {String(baseline.quarter_outlook?.end ?? "")} (end exclusive)</p></div>
+      <p className="text-sm">Assumptions saved. Recalculation needs a connected forecast service.</p>
+      <dl className="text-xs"><dt className="text-muted-foreground">Saved issued outlook{baseline.quarter_outlook?.complete === false ? " · incomplete inputs" : ""}</dt><dd className="num mt-1 font-medium">{typeof amount === "number" && Number.isFinite(amount) ? number(amount, baseline.target.unit) : "Unavailable"}</dd></dl>
+      <p className="text-xs text-muted-foreground">Your edited assumptions are available in this preview. The issued forecast and budgets are unchanged.</p>
+    </section>;
+  }
   const view = comparison.view;
   const targetMatches = view?.target.unit === baseline.target.unit && view?.target.quantity === baseline.target.quantity && view?.target.basis === baseline.target.basis;
   const chart = targetMatches ? baseline.daily.flatMap(point => {

@@ -6,6 +6,8 @@ import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { DailyUsageQuery, DailyUsageResponse, UsageMetric, UsageScope } from "@/lib/contracts/usage";
 import { fetchDailyUsage } from "@/lib/data/usage-client";
+import { demoSnapshotPath, loadDemoSnapshot } from "@/lib/data/demo-snapshot";
+import { fetchDemoUsage } from "@/lib/data/demo-usage";
 import { formatExactUsd, formatUsageValue, mockDailyUsage, normalizeUsageScope, summarizeUsage, usageDateOffset, usageDates } from "@/lib/usage-derive";
 import { Button } from "@/components/ui/button";
 import { displayCopy, displayReference } from "@/lib/display-copy";
@@ -21,7 +23,9 @@ const humanDate = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateSt
 export function UsagePage() {
   const params = useSearchParams();
   const { loaded, company, teams, people, spendingHistory } = useAppStore();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const snapshotPath = demoSnapshotPath();
+  const apiUrl = snapshotPath ? undefined : process.env.NEXT_PUBLIC_API_URL;
+  const [snapshotAsOf, setSnapshotAsOf] = useState<string>();
   const [scope, setScope] = useState<UsageScope>(normalizeUsageScope({ type: validScope(params.get("scope_type")), id: params.get("scope_id") ?? undefined }));
   const [metric, setMetric] = useState<UsageMetric>(params.get("metric") === "tokens" ? "tokens" : "spend");
   const [start, setStart] = useState(validDate(params.get("start_date")) ?? "");
@@ -36,26 +40,32 @@ export function UsagePage() {
   const [automaticRange, setAutomaticRange] = useState(!params.has("start_date") && !params.has("end_date_exclusive"));
   const mockLastDay = useMemo(() => spendingHistory.reduce((latest, record) => record.date > latest ? record.date : latest, ""), [spendingHistory]);
   const today = new Date().toISOString().slice(0, 10);
-  const defaultEnd = !apiUrl && mockLastDay ? mockLastDay : today;
+  const defaultEnd = snapshotPath ? snapshotAsOf?.slice(0, 10) ?? (mockLastDay || today) : !apiUrl && mockLastDay ? mockLastDay : today;
   const startDate = start || usageDateOffset(defaultEnd, -90);
   const endDate = end || defaultEnd;
   const query = useMemo<DailyUsageQuery>(() => ({ scopeType: scope.type, scopeId: scope.id ?? undefined, startDate, endDateExclusive: usageDateOffset(endDate, 1), provider: provider || undefined, model: model || undefined }), [scope.type, scope.id, startDate, endDate, provider, model]);
-  const requestKey = JSON.stringify([query, retry, mockLastDay, company?.id]);
+  const requestKey = JSON.stringify([query, retry, mockLastDay, company?.id, snapshotPath, snapshotAsOf]);
   const loading = loadedRequestKey !== requestKey;
-  const validation = useMemo(() => { try { usageDates(query.startDate, query.endDateExclusive); if ((query.scopeType === "team" || query.scopeType === "person") && !query.scopeId) return "Choose a team or person."; return null; } catch (error) { return error instanceof Error ? error.message : "Choose a valid date range."; } }, [query]);
+  const validation = useMemo(() => { if (snapshotPath && !snapshotAsOf) return null; try { usageDates(query.startDate, query.endDateExclusive); if ((query.scopeType === "team" || query.scopeType === "person") && !query.scopeId) return "Choose a team or person."; return null; } catch (error) { return error instanceof Error ? error.message : "Choose a valid date range."; } }, [query, snapshotPath, snapshotAsOf]);
 
   useEffect(() => {
-    if ((!apiUrl && !loaded) || validation) return;
+    if ((!snapshotPath && !apiUrl && !loaded) || validation) return;
     const controller = new AbortController();
     let active = true;
-    const request = apiUrl ? fetchDailyUsage(apiUrl, query, controller.signal) : Promise.resolve(mockDailyUsage(spendingHistory, query, { asOf: `${mockLastDay || today}T12:00:00Z`, datasetId: `synthetic:${company?.id ?? "demo"}` }));
+    const request = snapshotPath ? (async () => {
+      const snapshot = await loadDemoSnapshot();
+      if (!active) return null;
+      if (!Number.isFinite(Date.parse(snapshot.asOf))) throw new Error("The saved usage date is unavailable.");
+      if (snapshotAsOf !== snapshot.asOf) { setSnapshotAsOf(snapshot.asOf); return null; }
+      return fetchDemoUsage(query, controller.signal);
+    })() : apiUrl ? fetchDailyUsage(apiUrl, query, controller.signal) : Promise.resolve(mockDailyUsage(spendingHistory, query, { asOf: `${mockLastDay || today}T12:00:00Z`, datasetId: `synthetic:${company?.id ?? "demo"}` }));
     request.then(result => {
-      if (!active) return;
+      if (!active || !result) return;
       setResponse(result); setLoadedRequestKey(requestKey); setError(null);
       if (automaticRange && result.availableStartDate && result.availableStartDate > query.startDate && result.availableStartDate < query.endDateExclusive) setStart(result.availableStartDate);
     }).catch(error => { if (active && !controller.signal.aborted) { setError(error instanceof Error ? error.message : "Usage could not be loaded."); setLoadedRequestKey(requestKey); } });
     return () => { active = false; controller.abort(); };
-  }, [apiUrl, loaded, query, spendingHistory, mockLastDay, today, company?.id, automaticRange, validation, requestKey]);
+  }, [snapshotPath, snapshotAsOf, apiUrl, loaded, query, spendingHistory, mockLastDay, today, company?.id, automaticRange, validation, requestKey]);
 
   const buckets = response?.buckets ?? [];
   const selectedBuckets = selectedDate ? buckets.filter(bucket => bucket.date === selectedDate) : buckets;
@@ -72,7 +82,7 @@ export function UsagePage() {
     if (next.scopeId) search.set("scope_id", next.scopeId); if (next.provider) search.set("provider", next.provider); if (next.model) search.set("model", next.model);
     window.history.replaceState(null, "", `/usage?${search}`);
   }
-  useEffect(() => { if (!validation && (apiUrl || loaded)) shareQuery(query, metric); }, [query, metric, validation, apiUrl, loaded]);
+  useEffect(() => { if (!validation && (snapshotPath ? snapshotAsOf : apiUrl || loaded)) shareQuery(query, metric); }, [query, metric, validation, snapshotPath, snapshotAsOf, apiUrl, loaded]);
 
   return <div className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -91,7 +101,7 @@ export function UsagePage() {
     {loading && !validation && <p role="status" className="text-sm text-muted-foreground">Loading daily usage…</p>}
     {response && !loading && !validation && !error && <>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{displayCopy(scopeName)} · {humanDate(response.startDate)}–{humanDate(usageDateOffset(response.endDateExclusive, -1))} · UTC</p><p>Usage · {missingDays ? `${missingDays} days without data` : completeDays === buckets.length ? "All displayed days complete" : "Source coverage incomplete"}</p></div>
-      <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">{selectedDate ? "Selected day" : "Selected range"} spending</p><p className="mt-2 break-all font-mono text-2xl tracking-tight">{formatExactUsd(summary.recordedSpend)}</p><p className="mt-2 text-xs text-muted-foreground">Included usage excluded</p></div><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">Tokens</p><p className="mt-2 font-mono text-2xl tracking-tight">{formatUsageValue(summary.tokens.total, "tokens", { compact: true })}</p><p className="mt-2 text-xs text-muted-foreground">{summary.tokens.input !== null && summary.tokens.output !== null ? "Input + output" : "Category details unavailable"}</p></div><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">Daily detail</p><p className="mt-2 text-xl tracking-tight">{selectedDate ? humanDate(selectedDate) : `${buckets.length} days`}</p><p className="mt-2 text-xs text-muted-foreground">{summary.recordCount.toLocaleString()} source records{selectedDate ? " in selection" : " in range"}</p></div></div>
+      <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">{selectedDate ? "Selected day" : "Selected range"} spending</p><p className="mt-2 break-all font-mono text-2xl tracking-tight">{formatExactUsd(summary.recordedSpend)}</p><p className="mt-2 text-xs text-muted-foreground">Included usage excluded</p></div><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">Tokens</p><p className="mt-2 font-mono text-2xl tracking-tight">{formatUsageValue(summary.tokens.total, "tokens", { compact: true })}</p><p className="mt-2 text-xs text-muted-foreground">{summary.tokens.input !== null && summary.tokens.output !== null ? "Input + output" : "Category details unavailable"}</p></div><div className="rounded-xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">Daily detail</p><p className="mt-2 text-xl tracking-tight">{selectedDate ? humanDate(selectedDate) : `${buckets.length} days`}</p><p className="mt-2 text-xs text-muted-foreground">{summary.recordCount.toLocaleString()} {snapshotPath ? "saved rows" : "source records"}{selectedDate ? " in selection" : " in range"}</p></div></div>
       <TokenActivityCalendar buckets={buckets} metric={metric} selectedDate={selectedDate} onSelect={setSelectedDate} />
       <UsageTrend buckets={buckets} metric={metric} selectedDate={selectedDate} onSelect={setSelectedDate} />
       <DayDetail buckets={buckets} selectedDate={selectedDate} metric={metric} synthetic={response.synthetic} />

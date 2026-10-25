@@ -4,12 +4,12 @@ import { tsModuleUrl } from '../../../tests/load-ts-module.mjs';
 const { MockBudgetRequests } = await import(tsModuleUrl(new URL('./mock-budget-requests.ts', import.meta.url)));
 const period={start:'2026-10-19',end:'2026-10-25'};
 const input={clientRequestId:'request-1',teamId:'research',title:'Atlas expansion',requestKind:'project',projectName:'Atlas',narrative:'Add evaluation capacity, possibly costing $999.',requestedAmount:'50.00',unit:'USD',periodStart:period.start,periodEndExclusive:'2026-10-26'};
-function setup() {
+function setup({initialRequests=[],forecastDatasetId,bundleDatasetId='company'}={}) {
  const budgets=[{teamId:'research',allocated:60_000,unit:'usd',version:'v1',period},{teamId:'product',allocated:80_000,unit:'usd',version:'v1',period}];
  const proposals=[],decisions=[]; let version=1;
  const fx={company:{id:'company',name:'Company',budgetUnit:'usd',currentPeriod:period},teams:[{id:'research',name:'Research'},{id:'product',name:'Product'}],people:[],budgets,spending:[{id:'spend',teamId:'research',date:'2026-10-25',unit:'usd',component:'api',provenance:'simulated',amount:45000,complete:false,source:'Synthetic'}],forecasts:[],documents:[],context:[]};
- const bundle={views:[['research',85000],['product',50000]].map(([id,base])=>({run_id:'immutable-1',dataset_id:'company',scope:{type:'team',id},target:{unit:'usd',basis:'planning',quantity:'spend',timezone:'UTC'},planning_period_outlook:{start:period.start,end:'2026-10-26',base},publication:{generated_at:'2026-10-25T12:00:00Z'},weekly:[],daily:[]}))};
- const helper=new MockBudgetRequests(fx,{getBudgets:()=>budgets,getProposals:()=>proposals,getDecisions:()=>decisions,getBudgetVersion:()=>version,getBudgetVersionToken:()=>`v${version}`,getForecastBundle:()=>bundle,createProposal:p=>proposals.push(p),actorId:'finance-demo'});
+ const bundle={views:[['research',85000],['product',50000]].map(([id,base])=>({run_id:'immutable-1',dataset_id:bundleDatasetId,scope:{type:'team',id},target:{unit:'usd',basis:'planning',quantity:'spend',timezone:'UTC'},planning_period_outlook:{start:period.start,end:'2026-10-26',base},publication:{generated_at:'2026-10-25T12:00:00Z'},weekly:[],daily:[]}))};
+ const helper=new MockBudgetRequests(fx,{getBudgets:()=>budgets,getProposals:()=>proposals,getDecisions:()=>decisions,getBudgetVersion:()=>version,getBudgetVersionToken:()=>`v${version}`,getForecastBundle:()=>bundle,createProposal:p=>proposals.push(p),actorId:'finance-demo',forecastDatasetId},{initialRequests});
  const apply=(proposal,amount)=>{const lines=structuredClone(proposal.lines);if(amount!==undefined){const row=lines.find(r=>r.teamId==='research');row.after=row.before+amount;}decisions.push({id:`decision-${decisions.length}`,proposalId:proposal.id,action:'applied',kind:proposal.kind,appliedAt:'2026-10-25T12:01:00Z',appliedBy:'Reviewer',unit:'usd',lines});proposal.status='applied';for(const line of lines)budgets.find(b=>b.teamId===line.teamId).allocated=line.after;version++;};
  return {fx,budgets,proposals,decisions,bundle,helper,apply,setVersion:v=>version=v};
 }
@@ -21,6 +21,77 @@ test('intake preserves explicit amounts, null updates and immutable forecasts wi
  assert.equal(JSON.stringify({budgets:s.budgets,bundle:s.bundle}),before);assert.equal(s.proposals.length,0);assert.equal(s.decisions.length,0);
  const update=s.helper.createRequest({...input,clientRequestId:'update',requestedAmount:null});assert.equal(update.requestedAmount,null);assert.equal(update.remainingRequestedAmount,null);assert.equal(update.assessment.requestedAllocation,null);assert.throws(()=>s.helper.draftRequest(update.id,{baseVersion:1,actionType:'addition'},'null-draft'),/explicit|amount/i);
  row.title='mutated';assert.equal(s.helper.getRequest(row.id).title,'Atlas expansion');
+});
+
+function submittedSnapshot(overrides={}) {
+ const row=setup().helper.createRequest({...input,sourceRef:'Planning note / original',...overrides});
+ return {...row,id:'brq-original',period:{...row.period,id:'period-exported',label:'Approved planning week'},source:{reference:'Planning note / original',submittedBy:'dashboard-analyst',submittedAt:'2026-10-20T09:12:33Z'},assessment:{...row.assessment,assessedAt:'2026-10-25T11:59:00Z',recordedSpend:'12345.67',qualification:'Original issued assessment; requested funding is excluded.'}};
+}
+
+test('snapshot intake preserves original identity, source, period and authoritative assessment without sharing mutable objects',()=>{
+ const seed=submittedSnapshot({requestedAmount:null}),original=structuredClone(seed);
+ const s=setup({initialRequests:[seed]});
+ assert.deepEqual(s.helper.getRequest(seed.id),original);
+ assert.deepEqual(s.helper.listRequests('research'),[original]);
+ assert.deepEqual(s.helper.listRequests('product'),[]);
+ assert.equal(s.helper.createRequest({...input,requestedAmount:null,sourceRef:'Planning note / original'}).id,original.id);
+ assert.throws(()=>s.helper.createRequest({...input,sourceRef:'Planning note / original'}),/different|reused/i);
+ const returned=s.helper.getRequest(seed.id);returned.source.reference='edited';returned.assessment.recordedSpend='0.00';
+ seed.narrative='external mutation';seed.assessment.recordedSpend='1.00';
+ assert.deepEqual(s.helper.assessRequest(seed.id),original);
+ assert.equal(s.proposals.length,0);assert.equal(s.decisions.length,0);
+ assert.deepEqual(s.budgets.map(b=>b.allocated),[60000,80000]);
+});
+
+test('seeded funding requests retain assessment until local approval advances the budget, then recompute with the canonical forecast dataset',()=>{
+ const seed=submittedSnapshot();
+ const s=setup({initialRequests:[seed],forecastDatasetId:'forecast-targets:northstar',bundleDatasetId:'forecast-targets:northstar'});
+ const before=JSON.stringify(s.bundle);
+ const draft=s.helper.draftRequest(seed.id,{baseVersion:1,actionType:'addition'},'seed-draft');
+ assert.equal(s.helper.getRequest(seed.id).status,'pending_review');
+ assert.deepEqual(s.helper.getRequest(seed.id).assessment,seed.assessment);
+ const proposal=s.proposals.find(p=>p.id===draft.proposalId);
+ assert.deepEqual(proposal.forecastsReviewed.map(f=>f.projected),[85000,50000]);
+ assert.equal(proposal.citations.find(c=>c.documentId===seed.id).date,'2026-10-20');
+ s.apply(proposal,20);
+ const revised=s.helper.getRequest(seed.id);
+ assert.equal(revised.status,'partially_funded');assert.equal(revised.approvedAmount,'20.00');assert.equal(revised.remainingRequestedAmount,'30.00');
+ assert.equal(revised.assessment.budgetVersion,2);assert.equal(revised.assessment.teamAllocation,'60020.00');assert.equal(revised.assessment.recordedSpend,'45000.00');assert.equal(revised.assessment.requestedAllocation,'60050.00');
+ assert.equal(revised.assessment.forecastAmount,'85000.00');assert.equal(revised.assessment.forecastRunId,'immutable-1');
+ assert.deepEqual(revised.source,seed.source);assert.deepEqual(revised.period,seed.period);
+ assert.equal(JSON.stringify(s.bundle),before);assert.equal(seed.approvedAmount,'0.00');
+});
+
+test('an amountless snapshot update remains inspectable source context for a new explicit funding clarification',()=>{
+ const seed=submittedSnapshot({requestedAmount:null});
+ const s=setup({initialRequests:[seed]});
+ assert.throws(()=>s.helper.draftRequest(seed.id,{baseVersion:1,actionType:'addition'},'unsized-seed'),/explicit|amount/i);
+ const request=s.helper.createRequest({...input,clientRequestId:'clarified-snapshot',evidenceRefs:[{kind:'budget_request',id:seed.id}]});
+ const receipt=s.helper.draftRequest(request.id,{baseVersion:1,actionType:'addition'},'clarified-snapshot');
+ const proposal=s.proposals.find(p=>p.id===receipt.proposalId);
+ assert.deepEqual(new Set(proposal.citations.map(c=>c.documentId)),new Set([request.id,seed.id]));
+ assert.equal(proposal.citations.find(c=>c.documentId===seed.id).date,'2026-10-20');
+ s.apply(proposal);
+ assert.equal(s.helper.getRequest(request.id).status,'approved_applied');
+ const source=s.helper.getRequest(seed.id);assert.equal(source.status,'submitted');assert.equal(source.requestedAmount,null);assert.equal(source.approvedAmount,'0.00');assert.deepEqual(source.linkedProposalIds,[]);assert.deepEqual(source.source,seed.source);
+});
+
+test('an already mismatched snapshot assessment is recomputed and unrelated forecast datasets remain unavailable',()=>{
+ const seed=submittedSnapshot();seed.assessment.budgetVersion=0;
+ const s=setup({initialRequests:[seed],bundleDatasetId:'forecast-targets:northstar'});
+ const row=s.helper.getRequest(seed.id);
+ assert.equal(row.assessment.budgetVersion,1);assert.equal(row.assessment.recordedSpend,'45000.00');assert.equal(row.assessment.forecastAmount,null);
+ const correct=setup({forecastDatasetId:'forecast-targets:northstar',bundleDatasetId:'forecast-targets:northstar'}).helper.createRequest(input);
+ assert.equal(correct.assessment.forecastAmount,'85000.00');
+});
+
+test('a forecast without dataset metadata inherits only its company identity, never an unrelated requested dataset',()=>{
+ const s=setup();for(const view of s.bundle.views)delete view.dataset_id;
+ assert.equal(s.helper.createRequest(input).assessment.forecastAmount,'85000.00');
+ const other=setup({forecastDatasetId:'forecast-targets:northstar'});for(const view of other.bundle.views)delete view.dataset_id;
+ assert.equal(other.helper.createRequest(input).assessment.forecastAmount,null);
+ const mismatch=setup({bundleDatasetId:'another-company'});
+ assert.equal(mismatch.helper.createRequest(input).assessment.forecastAmount,null);
 });
 
 test('request and draft retries retain actor-local receipts, reject key conflicts and reconcile',()=>{

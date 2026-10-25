@@ -15,8 +15,11 @@ export interface MockBudgetRequestDependencies {
   actorId?: string;
   /** Optional explicitly supplied company envelope; otherwise the fixture allocates its full envelope. */
   getEnvelopeTotal?: () => string;
+  /** Canonical forecast target dataset when it differs from the company identity. */
+  forecastDatasetId?: string;
 }
-type StoredRequest = { input: BudgetRequestInput; id: string; createdAt: string; fingerprint: string };
+type MockBudgetRequestOptions = { initialRequests?: BudgetRequest[] };
+type StoredRequest = { input: BudgetRequestInput; id: string; createdAt: string; fingerprint: string; initial?: BudgetRequest; initialBudgetVersion?: number };
 type DraftRecord = { fingerprint: string; proposalId: string; requestId?: string };
 const ZERO = BigInt(0);
 const fail = (message: string): never => { throw Object.assign(new Error(message), { definiteFailure: true }); };
@@ -62,10 +65,26 @@ export class MockBudgetRequests {
   private readonly actor: string;
   private readonly fx: Dataset;
   private readonly deps: MockBudgetRequestDependencies;
-  constructor(fx: Dataset, deps: MockBudgetRequestDependencies) {
+  constructor(fx: Dataset, deps: MockBudgetRequestDependencies, options: MockBudgetRequestOptions = {}) {
     this.fx = fx;
     this.deps = deps;
     this.actor = deps.actorId ?? 'finance-demo';
+    for (const request of options.initialRequests ?? []) {
+      const initial = clone(request);
+      const input: BudgetRequestInput = {
+        clientRequestId: initial.clientRequestId, teamId: initial.teamId, title: initial.title,
+        requestKind: initial.requestKind, narrative: initial.narrative, requestedAmount: initial.requestedAmount,
+        unit: initial.unit, periodStart: initial.periodStart, periodEndExclusive: initial.periodEndExclusive,
+        ...(initial.projectName !== undefined ? { projectName: initial.projectName } : {}),
+        ...(initial.sourceRef !== undefined ? { sourceRef: initial.sourceRef } : {}),
+        ...(initial.evidenceRefs !== undefined ? { evidenceRefs: initial.evidenceRefs } : {}),
+      };
+      const key = `${this.actor}:${input.clientRequestId}`;
+      if (this.requests.has(initial.id) || this.requestKeys.has(key)) fail('Duplicate request identity in the saved snapshot.');
+      const fingerprint = canonical({ ...input, requestedAmount: input.requestedAmount === null ? null : money(cents(input.requestedAmount)) });
+      this.requests.set(initial.id, { input, id: initial.id, createdAt: initial.source.submittedAt, fingerprint, initial, initialBudgetVersion: initial.assessment.budgetVersion ?? deps.getBudgetVersion() });
+      this.requestKeys.set(key, initial.id);
+    }
   }
 
   private period(start: string, end: string) {
@@ -86,7 +105,7 @@ export class MockBudgetRequests {
     return this.spending(teamId, start, end).reduce((sum, row) => sum + numericCents(billableAmount(row)), ZERO);
   }
   private forecast(teamId: string, start: string, end: string) {
-    const view = this.deps.getForecastBundle().views.find(v => v.scope.type === 'team' && v.scope.id === teamId && v.dataset_id === this.fx.company.id && v.target.unit.toLowerCase() === 'usd' && v.target.basis === 'planning' && (v.target.timezone ?? v.timezone) === 'UTC' && v.target.quantity === 'spend');
+    const view = this.deps.getForecastBundle().views.find(v => v.scope.type === 'team' && v.scope.id === teamId && (v.dataset_id ?? this.fx.company.id) === (this.deps.forecastDatasetId ?? this.fx.company.id) && v.target.unit.toLowerCase() === 'usd' && v.target.basis === 'planning' && (v.target.timezone ?? v.timezone) === 'UTC' && v.target.quantity === 'spend');
     if (!view) return null;
     const points = [view.planning_period_outlook, view.quarter_outlook, ...(view.weekly ?? [])] as Array<Record<string, unknown> | undefined>;
     const point = points.find(p => p?.start === start && p.end === end && p.partial !== true && p.complete !== false && typeof p.base === 'number' && Number.isFinite(p.base));
@@ -132,7 +151,8 @@ export class MockBudgetRequests {
       const known = ref.kind === 'budget_request' ? this.requests.has(ref.id) : ref.kind === 'document' ? this.fx.documents.some(d => d.id === ref.id) : ref.kind === 'signal' ? this.fx.context.some(c => c.id === ref.id) : ref.kind === 'forecast_snapshot' ? this.deps.getForecastBundle().views.some(v => v.run_id === ref.id || v.id === ref.id) : ref.kind === 'spend_summary' && this.fx.spending.some(r => r.id === ref.id);
       if (!known) return fail('A request evidence reference is not available in this fixture.');
     }
-    const id = `mock-request:${this.actor}:${++this.sequence}`;
+    let id: string;
+    do { id = `mock-request:${this.actor}:${++this.sequence}`; } while (this.requests.has(id));
     this.requests.set(id, { input, id, createdAt: nextDemoTimestamp(), fingerprint });
     this.requestKeys.set(key, id);
     return this.getRequest(id);
@@ -156,7 +176,8 @@ export class MockBudgetRequests {
     const linked = this.linkedIds(id), proposals = this.deps.getProposals().filter(p => linked.has(p.id));
     const decisions = [...new Map(this.deps.getDecisions().filter(d => linked.has(d.proposalId)).map(d => [d.id, d])).values()];
     const applied = new Set<string>();
-    let approved = ZERO;
+    const initialApproved = stored.initial ? cents(stored.initial.approvedAmount) : ZERO;
+    let approved = initialApproved;
     for (const decision of decisions) {
       if (stored.input.requestedAmount === null || decision.action !== 'applied' || applied.has(decision.proposalId) || decision.unit !== 'usd') continue;
       applied.add(decision.proposalId);
@@ -168,9 +189,17 @@ export class MockBudgetRequests {
     const replaced = new Set(proposals.map(p => p.revisesProposalId).filter(Boolean));
     const leaves = proposals.filter(p => !replaced.has(p.id));
     const requested = stored.input.requestedAmount === null ? null : cents(stored.input.requestedAmount);
-    const status = requested !== null && approved >= requested ? 'approved_applied' : approved > ZERO ? 'partially_funded' : leaves.some(p => p.status === 'proposed' && (!p.basedOnBudgetVersion || p.basedOnBudgetVersion === this.deps.getBudgetVersionToken())) ? 'pending_review' : leaves.some(p => ['stale', 'failed', 'revised', 'proposed'].includes(p.status)) ? 'needs_revision' : leaves.length && leaves.every(p => decisions.some(d => d.proposalId === p.id && d.action === 'rejected')) ? 'rejected' : 'submitted';
-    return clone({ ...stored.input, id, period: this.period(stored.input.periodStart, stored.input.periodEndExclusive), source: { reference: stored.input.sourceRef ?? null, submittedBy: this.actor, submittedAt: stored.createdAt }, status,
-      linkedProposalIds: proposals.map(p => p.id), decisionIds: decisions.map(d => d.id), approvedAmount: money(approved), remainingRequestedAmount: requested === null ? null : money(max(ZERO, requested - approved)), assessment: this.assessment({ ...stored.input, requestedAmount: requested === null ? null : money(max(ZERO, requested - approved)) }) });
+    const status = requested !== null && approved >= requested ? 'approved_applied' : approved > ZERO ? 'partially_funded' : leaves.some(p => p.status === 'proposed' && (!p.basedOnBudgetVersion || p.basedOnBudgetVersion === this.deps.getBudgetVersionToken())) ? 'pending_review' : leaves.some(p => ['stale', 'failed', 'revised', 'proposed'].includes(p.status)) ? 'needs_revision' : leaves.length && leaves.every(p => decisions.some(d => d.proposalId === p.id && d.action === 'rejected')) ? 'rejected' : stored.initial?.status ?? 'submitted';
+    const remainingRequestedAmount = requested === null ? null : money(max(ZERO, requested - approved));
+    const assessment = stored.initial && stored.initialBudgetVersion === this.deps.getBudgetVersion() && approved === initialApproved
+      ? stored.initial.assessment
+      : this.assessment({ ...stored.input, requestedAmount: remainingRequestedAmount });
+    return clone({ ...stored.input, id,
+      period: stored.initial?.period ?? this.period(stored.input.periodStart, stored.input.periodEndExclusive),
+      source: stored.initial?.source ?? { reference: stored.input.sourceRef ?? null, submittedBy: this.actor, submittedAt: stored.createdAt }, status,
+      linkedProposalIds: [...new Set([...(stored.initial?.linkedProposalIds ?? []), ...proposals.map(p => p.id)])],
+      decisionIds: [...new Set([...(stored.initial?.decisionIds ?? []), ...decisions.map(d => d.id)])],
+      approvedAmount: money(approved), remainingRequestedAmount, assessment });
   }
   listRequests(teamId?: string): BudgetRequest[] { return [...this.requests.values()].reverse().filter(r => !teamId || r.input.teamId === teamId).map(r => this.getRequest(r.id)); }
   assessRequest(id: string): BudgetRequest { return this.getRequest(id); }

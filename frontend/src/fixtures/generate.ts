@@ -9,7 +9,7 @@
  */
 import type {
   AllocationProposal, AssistantMessage, Budget, Company, CompanyDocument, ContextItem, Decision, EffectMagnitude,
-  EvidenceCategory, Forecast, ForecastAdjustment, ForecastDailyPoint, Integration, Period, Person, SignalKind,
+  EvidenceCategory, Forecast, ForecastAdjustment, ForecastDailyPoint, ForecastQuestionContext, Integration, Period, Person, SignalKind,
   SpendingRecord, Team, ToolCallSummary,
 } from "@/lib/contracts";
 import { interpretActionIntent, type ActionIntentContext } from "@/lib/action-intent";
@@ -35,6 +35,7 @@ export type ScriptedReplyFn = (
   content: string,
   state: { proposals: AllocationProposal[]; budgets: Budget[]; budgetVersion: string; budgetRequests?: BudgetRequest[] },
   conversationContext?: ActionIntentContext,
+  forecastContext?: ForecastQuestionContext,
 ) => { message: Omit<AssistantMessage, "id" | "threadId" | "role" | "createdAt">; proposal?: AllocationProposal };
 
 export const MAX_TEAMS = 16;
@@ -1095,12 +1096,12 @@ export function budgetRequestConsideration(requests: BudgetRequest[] | undefined
 }
 
 /** Apply the same live request consideration to canonical and generated mock responses. */
-export function withBudgetRequestConsideration(reply: ScriptedReplyFn, teams: Team[]): ScriptedReplyFn {
-  return (content, state, conversationContext) => {
-    const response = reply(content, state, conversationContext);
+export function withBudgetRequestConsideration(reply: ScriptedReplyFn, teams: Team[], planningPeriod: Period = period): ScriptedReplyFn {
+  return (content, state, conversationContext, forecastContext) => {
+    const response = reply(content, state, conversationContext, forecastContext);
     // Northstar delegates explicit changes to the generic reply; include its consideration only once.
     if (response.message.toolCalls?.some(call => call.name === "list_budget_requests")) return response;
-    const consideration = budgetRequestConsideration(state.budgetRequests, response.proposal?.period ?? period, teams);
+    const consideration = budgetRequestConsideration(state.budgetRequests, response.proposal?.period ?? planningPeriod, teams);
     return { ...response,
       message: { ...response.message,
         content: response.message.content + (consideration.content ? `\n\n${consideration.content}` : ""),
@@ -1112,7 +1113,7 @@ export function withBudgetRequestConsideration(reply: ScriptedReplyFn, teams: Te
 }
 
 /** Generic assistant for N teams: add funding proportional to projected gaps; redistribute from under- to over-allocated teams. */
-export function makeGenericReply(teams: Team[], allForecasts: Forecast[], context: ContextItem[], people: Person[] = []): ScriptedReplyFn {
+export function makeGenericReply(teams: Team[], allForecasts: Forecast[], context: ContextItem[], people: Person[] = [], planningPeriod: Period = period): ScriptedReplyFn {
   const sources = context.filter((c) => !c.supersededBy).flatMap((c) => c.sources);
   const forecasts = allForecasts.filter((f) => !f.personId);
   const personForecasts = allForecasts.filter((f) => !!f.personId);
@@ -1131,12 +1132,12 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
 
   return withBudgetRequestConsideration((content, state, conversationContext) => {
     const text = content.toLowerCase();
-    const intent = interpretActionIntent(content, teams, { context: conversationContext, proposals: state.proposals, planningPeriod: period });
+    const intent = interpretActionIntent(content, teams, { context: conversationContext, proposals: state.proposals, planningPeriod });
     if (intent.action === "clarify" || intent.ask) return { message: { content: intent.ask!, conversationContext: intent.context } };
     const total = state.budgets.reduce((s, b) => s + b.allocated, 0);
     const alloc = (id: string) => state.budgets.find((b) => b.teamId === id)!.allocated;
     const base = {
-      unit: "usd" as const, period, createdAt: nextDemoTimestamp(), status: "proposed" as const,
+      unit: "usd" as const, period: planningPeriod, createdAt: nextDemoTimestamp(), status: "proposed" as const,
       basedOnBudgetVersion: state.budgetVersion, forecastsReviewed: structuredClone(forecasts), citations: sources,
     };
     const gaps = teams.map((t) => ({ t, gap: Math.max(0, (fc(t.id)?.projected ?? 0) - alloc(t.id)) }));
@@ -1177,11 +1178,11 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
         revisesProposalId: previous?.id,
         rationale: intent.action === "addition"
           ? `Adds ${exactMoney(amount)}${intent.targetTeamId ? ` to ${teams.find((team) => team.id === intent.targetTeamId)!.name}` : " in proportion to projected shortfalls"}.`
-          : `Moves ${exactMoney(amount)} between teams. The ${exactMoney(total)} weekly envelope is unchanged.`,
+          : `Moves ${exactMoney(amount)} between teams. Total team allocations of ${exactMoney(total)} are unchanged.`,
       };
       const bullets = lines.filter((line) => line.after !== line.before).map((line) => `- **${teams.find((team) => team.id === line.teamId)!.name} ${line.after > line.before ? "+" : "−"}${exactMoney(Math.abs(line.after - line.before))}** → ${exactMoney(line.after)}`).join("\n");
       return { proposal, message: {
-        content: `${previous ? "Revised proposal" : "Proposed budget change"}:\n\n${bullets}\n\n${intent.action === "addition" ? `Weekly envelope goes from **${exactMoney(total)} to ${exactMoney(proposal.totalAfter)}**.` : `Weekly envelope stays at **${exactMoney(total)}**.`}`,
+        content: `${previous ? "Revised proposal" : "Proposed budget change"}:\n\n${bullets}\n\n${intent.action === "addition" ? `Total team allocations go from **${exactMoney(total)} to ${exactMoney(proposal.totalAfter)}**.` : `Total team allocations stay at **${exactMoney(total)}**.`}`,
         proposalId: proposal.id, citations: sources,
         conversationContext: { ...intent.context, selected_proposal_id: proposal.id, selected_proposal_version: proposal.version },
         toolCalls: [{ name: "get_budgets", summary: "Read current allocations" }, { name: "get_forecasts", summary: "Compared projections with allocations" }],
@@ -1193,7 +1194,7 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
       if (named) {
         const f = fc(named.id);
         const c = context.find((x) => x.teamIds.includes(named.id) && x.scope !== "person" && x.scope !== "company");
-        const status = f?.status !== "available" ? "has no available projection" : (f.projected ?? 0) > alloc(named.id) ? `is projected at ${money(f.projected!)} against ${money(alloc(named.id))} this week` : `is projected at ${money(f.projected!)} against ${money(alloc(named.id))} this week, within allocation`;
+        const status = f?.status !== "available" ? "has no available projection" : (f.projected ?? 0) > alloc(named.id) ? `is projected at ${money(f.projected!)} against ${money(alloc(named.id))} for this period` : `is projected at ${money(f.projected!)} against ${money(alloc(named.id))} for this period, within allocation`;
         // Person-level signals from the connectors: who is moving the number and why.
         const signals = context
           .filter((x) => x.scope === "person" && x.teamIds.includes(named.id) && !x.supersededBy)
@@ -1232,8 +1233,8 @@ export function makeGenericReply(teams: Team[], allForecasts: Forecast[], contex
     return {
       message: {
         conversationContext: intent.context,
-        content: `I can help with two kinds of changes: **redistribute** the existing ${money(total)} weekly envelope between ${teams.length} teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under.`,
+        content: `I can help with two kinds of changes: **redistribute** the existing ${money(total)} in team allocations between ${teams.length} teams, or **add** new funding and allocate it. I can also explain why a team is tracking over or under.`,
       },
     };
-  }, teams);
+  }, teams, planningPeriod);
 }

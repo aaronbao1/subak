@@ -1,6 +1,7 @@
 import type { DataClient } from "./client";
 import { MockDataClient } from "./mock-client";
 import { HttpDataClient } from "./http-client";
+import { createSnapshotDataClient, demoSnapshotPath } from "./demo-snapshot";
 
 let client: DataClient | undefined;
 
@@ -11,7 +12,7 @@ let client: DataClient | undefined;
 export function getDataClient(): DataClient {
   if (!client) {
     const base = process.env.NEXT_PUBLIC_API_URL;
-    client = base ? new HttpDataClient(base.replace(/\/$/, "")) : new MockDataClient();
+    client = demoSnapshotPath() ? createSnapshotDataClient() : base ? new HttpDataClient(base.replace(/\/$/, "")) : new MockDataClient();
   }
   return client;
 }
