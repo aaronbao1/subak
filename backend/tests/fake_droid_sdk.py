@@ -7,7 +7,9 @@ It mirrors the parts of droid-sdk 0.5.0 the runner uses, with the live-verified 
 - `Usage` is a frozen dataclass; `RunSuccess` has `subtype="success"`.
 
 A test sets `module.SCENARIO = [Step, ...]`; each Step is one Script: its source (what the gate sees)
-and a Python callable that performs the tool calls if the gate says `proceed_once`.
+and a Python callable that performs the tool calls if the gate says `proceed_once`. For multi-turn
+runs set `module.TURNS = [[Step, ...], ...]` instead: each `stream()` call plays the next list and, like
+the real CLI, a cancelled Script ends that turn.
 """
 
 from __future__ import annotations
@@ -213,6 +215,7 @@ class Session:
 
     def stream(self, prompt: str, *, timeout=None, include_partial_messages=False):
         STATE["prompt"] = prompt
+        STATE.setdefault("prompts", []).append(prompt)
         return _Stream(self)
 
 
@@ -235,7 +238,13 @@ class _Stream:
             results.append(out)
             return json.loads(out)
 
-        for i, step in enumerate(MODULE.SCENARIO):
+        multi_turn = MODULE.TURNS is not None
+        if multi_turn:
+            steps = MODULE.TURNS.pop(0) if MODULE.TURNS else []
+        else:  # a single SCENARIO plays once; later turns (gate retries) do nothing
+            steps = [] if STATE.get("scenario_played") else MODULE.SCENARIO
+            STATE["scenario_played"] = True
+        for i, step in enumerate(steps):
             tid = f"call_{i}"
             yield ToolCall("Script", tid, {"script": step.source})
             details = {"type": step.confirmation_type} if step.confirmation_type else {"type": "script"}
@@ -252,6 +261,8 @@ class _Stream:
                 yield ToolResult(tid, "Script", [{"type": "text", "text": "ok"}], False)
             else:
                 yield ToolResult(tid, "Script", "Error: Tool execution cancelled by user", True)
+                if multi_turn:
+                    break
         if MODULE.QUESTION:
             STATE["question_answer"] = await self.session._dispatcher.handle_question({"toolCallId": "q1", "questions": []})
         yield TokenUsageUpdate(10, 20, 0, 0, 0, 99.0)
@@ -275,6 +286,7 @@ def build() -> types.ModuleType:
     mcp.tool, mcp.create_sdk_mcp_server = tool, create_sdk_mcp_server
     mod.mcp = mcp
     mod.SCENARIO = []
+    mod.TURNS = None
     mod.LIST_TOOLS = None
     mod.QUESTION = False
     mod.RESULT = None

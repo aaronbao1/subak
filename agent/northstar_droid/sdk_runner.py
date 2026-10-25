@@ -572,6 +572,7 @@ class PermissionGate:
         self.tools = tools
         self.allowed = 0
         self.cancelled = 0
+        self.refusals: list[str] = []  # reasons, in order, for the retry prompt
 
     async def handle_permission(self, raw: Mapping[str, object]) -> dict[str, object]:
         try:
@@ -582,6 +583,7 @@ class PermissionGate:
             self.allowed += 1
         else:
             self.cancelled += 1
+            self.refusals.extend(a.get("reason", "refused") for a in assessed if not a.get("allowed"))
         try:
             self.tools.emit("permission", {"decision": choice, "tool_uses": assessed})
         except Exception:  # noqa: BLE001 - recording must not change the decision
@@ -645,6 +647,32 @@ def _content_text(content: Any) -> str:
 
 
 # ---- the runner -------------------------------------------------------------------------------
+
+
+MAX_GATE_RETRIES = 2
+
+
+def gate_retry_prompt(reasons: list[str]) -> str:
+    listed = "\n".join(f"- {r}" for r in dict.fromkeys(reasons))
+    return (
+        "Your last Script was refused by the backend's script gate before it ran, so nothing in it "
+        f"executed. Reason(s):\n{listed}\n\n"
+        "Rewrite it and continue the original task from where you stopped; do not repeat work that "
+        "already succeeded. Rules that avoid refusals: never index with a variable (`arr[i]`, "
+        "`obj[key]`, `reads[i].name`); await each northstar call into its own named const instead of "
+        "Promise.allSettled over an array; loop with `for (const x of list)` and look items up with "
+        "`.find(...)`; no regular-expression literals; put long text in an `// @input` block. Do not "
+        "ask questions."
+    )
+
+
+def _sum_usage(parts: list[dict[str, Any]]) -> dict[str, Any]:
+    total: dict[str, Any] = {}
+    for part in parts:
+        for k, v in part.items():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                total[k] = total.get(k, 0) + v
+    return total
 
 
 class SdkDroidRunner:
@@ -749,17 +777,35 @@ class SdkDroidRunner:
             result = None
             last_usage = None
             scope: dict[str, Any] = {}
+            turns: list[Any] = []
             try:
                 async with session:
                     scope = await self._check_tools(session, sdk)
-                    async with session.stream(task_prompt(task), timeout=self.timeout_s,
-                                              include_partial_messages=True) as stream:
-                        async for event in stream:
-                            name = type(event).__name__
-                            if name == "TokenUsageUpdate":
-                                last_usage = event
-                                continue
-                            result = self._on_event(event, tools) or result
+                    prompt = task_prompt(task)
+                    for attempt in range(1 + MAX_GATE_RETRIES):
+                        refused_before = len(gate.refusals)
+                        turn_result = None
+                        async with session.stream(prompt, timeout=self.timeout_s,
+                                                  include_partial_messages=True) as stream:
+                            async for event in stream:
+                                name = type(event).__name__
+                                if name == "TokenUsageUpdate":
+                                    last_usage = event
+                                    continue
+                                turn_result = self._on_event(event, tools) or turn_result
+                        if turn_result is not None:
+                            turns.append(turn_result)
+                            result = turn_result
+                        new_refusals = gate.refusals[refused_before:]
+                        # A refused Script ends Droid's turn; tell it why and let it rewrite, a bounded
+                        # number of times, instead of ending the run without the requested work.
+                        if not new_refusals or attempt == MAX_GATE_RETRIES or \
+                                getattr(turn_result, "subtype", None) != "success":
+                            break
+                        tools.emit("warning", {"code": "gate_retry", "attempt": attempt + 1,
+                                               "message": "Script refused by the backend gate; asking Droid to rewrite it",
+                                               "reasons": new_refusals})
+                        prompt = gate_retry_prompt(new_refusals)
             except RunnerUnavailable:
                 raise
             except Exception as exc:  # map SDK connection/process errors to an honest 503
@@ -771,19 +817,29 @@ class SdkDroidRunner:
         if result is None:
             raise RuntimeError("Droid stream ended without a run result")
         subtype = getattr(result, "subtype", None) or type(result).__name__
-        usage = usage_dict(getattr(result, "usage", None)) or usage_dict(last_usage)
-        report: dict[str, Any] = {"provider_reported": usage, "source": "droid_sdk RunResult.usage",
+        per_turn = [usage_dict(getattr(t, "usage", None)) for t in turns]
+        if len(turns) > 1 and all(per_turn):
+            usage = _sum_usage(per_turn)
+            source = (f"droid_sdk RunResult.usage summed over {len(turns)} turns "
+                      "(over-counts if the SDK reports cumulative usage)")
+        else:
+            usage = usage_dict(getattr(result, "usage", None)) or usage_dict(last_usage)
+            source = "droid_sdk RunResult.usage"
+        report: dict[str, Any] = {"provider_reported": usage, "source": source,
                                   "subtype": subtype, "turn_count": getattr(result, "turn_count", None),
+                                  "turns": len(turns), "gate_retries": max(0, len(turns) - 1),
                                   "permission_allowed": gate.allowed, "permission_cancelled": gate.cancelled,
                                   "scope": scope}
-        duration = getattr(result, "duration", None)
-        if isinstance(duration, timedelta):
-            report["duration_s"] = round(duration.total_seconds(), 3)
+        if len(turns) > 1:
+            report["per_turn_usage"] = per_turn
+        durations = [getattr(t, "duration", None) for t in turns] or [getattr(result, "duration", None)]
+        if durations and all(isinstance(d, timedelta) for d in durations):
+            report["duration_s"] = round(sum(d.total_seconds() for d in durations), 3)
         if subtype != "success":
             err = getattr(result, "error", None)
             raise RuntimeError(f"Droid run did not succeed: {subtype}: {getattr(err, 'message', err)}; "
                                f"usage={json.dumps(usage, default=str)}")
-        text = (getattr(result, "text", None) or "").strip()
+        text = "\n\n".join(t for t in ((getattr(r, "text", None) or "").strip() for r in turns) if t)
         return AgentRunOutput(summary=text or "Droid finished without a text summary.",
                               usage=report, session_id=getattr(result, "session_id", None))
 

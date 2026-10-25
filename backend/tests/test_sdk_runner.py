@@ -120,11 +120,14 @@ def test_sdk_run_records_real_tool_steps_and_leaves_budget_unchanged(fake_sdk, s
     assert sig["produced_by"] == "droid_sdk" and sig["agent_run_id"] == out["id"]
     # provider-reported usage is stored as such
     usage = out["output"]["usage"]
-    assert usage["provider_reported"]["factory_credits"] == 10801.0
+    # the refused Script triggered one gate-retry turn; usage is summed across both turns
+    assert usage["turns"] == 2 and usage["gate_retries"] == 1
+    assert usage["provider_reported"]["factory_credits"] == 2 * 10801.0
+    assert [u["factory_credits"] for u in usage["per_turn_usage"]] == [10801.0, 10801.0]
     assert usage["permission_allowed"] == 3 and usage["permission_cancelled"] == 1
     assert usage["scope"]["allowed_tools"] == sorted(NORTHSTAR_TOOL_IDS | sdk_runner.META_TOOL_IDS)
     finished = out["events"][-1]
-    assert finished["type"] == "run_finished" and finished["data"]["usage"]["provider_reported"]["input_tokens"] == 366
+    assert finished["type"] == "run_finished" and finished["data"]["usage"]["provider_reported"]["input_tokens"] == 2 * 366
 
 
 def test_sdk_session_is_scoped(fake_sdk, sdk_client):
@@ -554,3 +557,39 @@ def test_sdk_answer_with_chart_attaches_only_the_chart_the_toolbox_built(fake_sd
     assert spec["kind"] == "spend_vs_allocation" and spec["spec"]["$schema"].endswith("vega-lite/v5.json")
     assert "build_chart_spec" in fake_droid_sdk.STATE["prompt"]
     assert allocations(sdk_client) == INITIAL
+
+
+INDEXED_READS = ("const reads = [{name: 'budgets', call: tools.northstar.get_budgets({})}];\n"
+                 "const results = await Promise.allSettled(reads.map((r) => r.call));\n"
+                 "results.forEach((r, i) => text({source: reads[i].name}));")
+
+
+def test_sdk_gate_refusal_gets_a_retry_turn_with_the_reason(fake_sdk, sdk_client):
+    # live 2026-10-24: a `reads[i]` Script was refused and the run ended without a draft
+    fake_sdk.TURNS = [
+        [Step(LOAD), Step(INDEXED_READS)],
+        [Step("const b = JSON.parse(await tools.northstar.get_budgets({}));",
+              lambda call: call("get_budgets")),
+         Step("text(await tools.northstar.draft_proposal({}))", lambda call: call(
+             "draft_proposal", action_type="addition", base_version=1, envelope_increase="50000.00",
+             lines=[{"to_team": "research", "amount": "50000.00"}],
+             rationale="research-eval-plan v1 expands evaluation work."))],
+    ]
+    out = post_run(sdk_client, params={"mode": "addition", "amount": "50000.00", "prioritize": "research"}).json()
+    assert out["status"] == "succeeded", out["error"]
+    prompts = fake_droid_sdk.STATE["prompts"]
+    assert len(prompts) == 2 and "computed member access" in prompts[1] and "reads[i]" in prompts[1]
+    retry = [e["data"] for e in out["events"] if e["type"] == "warning" and e["data"]["code"] == "gate_retry"]
+    assert len(retry) == 1 and retry[0]["attempt"] == 1
+    assert len(out["proposals"]) == 1 and out["proposals"][0]["status"] == "pending_review"
+    assert out["output"]["usage"]["gate_retries"] == 1
+    assert allocations(sdk_client) == INITIAL
+
+
+def test_sdk_gate_retries_are_bounded(fake_sdk, sdk_client):
+    fake_sdk.TURNS = [[Step(INDEXED_READS)] for _ in range(5)]
+    out = post_run(sdk_client, params={"mode": "addition", "amount": "50000.00", "prioritize": "research"}).json()
+    assert out["status"] == "succeeded"
+    assert len(fake_droid_sdk.STATE["prompts"]) == 1 + sdk_runner.MAX_GATE_RETRIES
+    assert out["output"]["usage"]["gate_retries"] == sdk_runner.MAX_GATE_RETRIES
+    assert out["proposals"] == [] and allocations(sdk_client) == INITIAL
