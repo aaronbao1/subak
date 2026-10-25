@@ -1,0 +1,122 @@
+[
+  {
+    "id": "12-E01",
+    "family": "model-runtime-version",
+    "scenario": "t0-beta weights load in an older alpha-only runtime without an error; outputs remain numerically plausible.",
+    "mechanism": "Normalization convention ignored silently.",
+    "detection": "Validate runtime minimum and checkpoint config conventions before loading; compare pinned reference fixture.",
+    "response": "Reject unsupported combination and preserve last qualified forecast.",
+    "test_assertion": "An older runtime/config mismatch never reaches a successful forecast status even if finite values are produced.",
+    "residual_limit": "A matching version does not establish calibration or numerical parity across accelerators.",
+    "owner": "Forecasting/model registry",
+    "requirement_source": "Master plan \u00a7\u00a72\u20133; t0-beta official card"
+  },
+  {
+    "id": "12-E02",
+    "family": "model-feature-regression",
+    "scenario": "Operator upgrades Toto 1 to 2 for reported accuracy while a staffing-ramp future feature remains configured.",
+    "mechanism": "New major version currently lacks exogenous-variable support despite older version having it.",
+    "detection": "Resolve capability by checkpoint+adapter version; required-feature schema comparison.",
+    "response": "Keep eligible old version or choose qualified alternative; never silently discard feature.",
+    "test_assertion": "Upgrade with unsupported required future covariates fails validation or exposes an explicitly history-only scenario.",
+    "residual_limit": "Supported covariates can still be uninformative or misleading.",
+    "owner": "Forecasting/adapters",
+    "requirement_source": "Master plan context-to-forecast handoff; Toto current repository"
+  },
+  {
+    "id": "12-E03",
+    "family": "cross-learning-isolation",
+    "scenario": "Batch scheduler combines research, product and another tenant or changes batch size while keeping request data unchanged.",
+    "mechanism": "Cross-learning/group attention uses batch membership as model input, altering forecasts or leaking cross-tenant signal.",
+    "detection": "Persist grouping IDs/membership; reject cross-tenant groups; invariance tests for independent batching.",
+    "response": "Make semantic groups explicit and stable; separate tenant workloads; backtest grouped variants.",
+    "test_assertion": "Independent forecasts invariant to unrelated batch entries; joint forecast includes auditable group membership and never another tenant.",
+    "residual_limit": "Within-tenant groups may exhibit negative transfer after reorganization.",
+    "owner": "Forecasting/tenant isolation",
+    "requirement_source": "Master plan team scope; Chronos-2 pipeline warning"
+  },
+  {
+    "id": "12-E04",
+    "family": "license-deployment-mismatch",
+    "scenario": "Apache wrapper downloads TimesFM 3 or current Moirai weights into an enterprise production worker; Timestral customer crosses revenue threshold.",
+    "mechanism": "Code license confused with weights license, or model eligibility changes with organization/deployment conditions.",
+    "detection": "Registry stores separate license identifiers, license snapshot and deployment eligibility, with no wrapper inheritance.",
+    "response": "Block ineligible deployment; use a qualified model/service or obtain separate permitted terms.",
+    "test_assertion": "Apache code alone cannot qualify restrictive weights; eligibility checks cover the actual model artifact and use mode.",
+    "residual_limit": "Rights for historical copies or custom contracts require their own evidence.",
+    "owner": "Model registry/deployment owner",
+    "requirement_source": "Master plan enterprise product objective; official TimesFM, Moirai, Timestral license sources"
+  },
+  {
+    "id": "12-E05",
+    "family": "marginal-to-aggregate-risk",
+    "scenario": "Finance asks for month-remainder P90; model returns 9 or 21 daily quantiles and implementation sums daily P90. A daily expected-spend path is separately filled from the median or simple average of reported quantiles.",
+    "mechanism": "Marginal quantile addition discards temporal/cross-team dependence; extreme tails may be interpolated/extrapolated. A finite marginal quantile grid also does not identify the expected mean.",
+    "detection": "Output contract states marginal versus joint samples; prohibit unsupported quantile arithmetic. Declare native point statistic and mean availability/derivation assumptions.",
+    "response": "Use qualified aggregate-distribution method or label an uncalibrated scenario; preserve native quantile grid and tail method. A mean-dependent path must use a qualified mean estimator and preserve its integration, sample and tail assumptions.",
+    "test_assertion": "Cumulative risk output cannot be marked calibrated solely from a sum of per-step quantiles. A median or arbitrary quantile-grid average cannot be labeled expected spend without a qualified derivation.",
+    "residual_limit": "Correct sample aggregation still needs dependence and aggregate calibration.",
+    "owner": "Forecasting/uncertainty",
+    "requirement_source": "Master plan supported uncertainty handoff; model output contracts"
+  },
+  {
+    "id": "12-E06",
+    "family": "known-future-leakage",
+    "scenario": "A delayed launch plan is supplied as known future staffing while backtest uses the final approved document or actual future usage proxy.",
+    "mechanism": "Hindsight features make an ordinary forecast resemble GIFT-Eval-CTX oracle effects.",
+    "detection": "Feature knowledge-time <= forecast origin; feature evidence snapshot; identify oracle versus predicted covariate.",
+    "response": "Treat unconfirmed plans as scenarios; evaluate event occurrence separately and use as-of documents.",
+    "test_assertion": "Replacing a document after origin cannot alter the stored historical forecast or its backtest inputs.",
+    "residual_limit": "Even timestamp-safe plans can fail or lack measured spend effects.",
+    "owner": "Factory/context + forecasting",
+    "requirement_source": "Master plan superseded-plan example; GIFT-Eval-CTX scope"
+  },
+  {
+    "id": "12-E07",
+    "family": "service-version-billing",
+    "scenario": "BigQuery alias silently stays at default 2.5; app claims multivariate 3, ignores longer history, and projects preview pricing after Dec 1.",
+    "mechanism": "Service limits/defaults/pricing differ from local research family and change over time.",
+    "detection": "Explicit service model parameter and limits; response metadata; pricing effective dates.",
+    "response": "Pin/select supported model, expose truncation, re-estimate cost before pricing transition.",
+    "test_assertion": "Request logs identify selected model; >2048 context for 3 reports truncation; cost estimates carry effective date.",
+    "residual_limit": "Preview service and commercial terms may change before implementation.",
+    "owner": "Forecasting/service adapter + operations",
+    "requirement_source": "Master plan periods/assumptions; BigQuery AI.FORECAST reference"
+  },
+  {
+    "id": "12-E08",
+    "family": "cold-start-and-padding",
+    "scenario": "New team has two reported days and 28 absent days; zero fill or batch padding resembles a dormant team followed by a spike.",
+    "mechanism": "Absence, pre-existence padding, actual zero and reporting delay collapse into one numeric pattern.",
+    "detection": "Separate creation date, observation mask, padding mask and source completeness; effective-history check.",
+    "response": "Choose qualified short-history forecast, peer prior/scenario or unavailable; do not pretend zero-shot means history-free.",
+    "test_assertion": "Missing and pre-existence cells never become observed zeros; confidence status reflects actual usable history.",
+    "residual_limit": "No reviewed model guarantees reliable zero-history spend inference.",
+    "owner": "Ingestion + forecasting",
+    "requirement_source": "Master plan measured/estimated/completeness boundaries; t0 mask contract"
+  },
+  {
+    "id": "12-E09",
+    "family": "uncertainty-service-partitioning",
+    "scenario": "TimeGPT sample request is split across batches for scale and downstream treats concatenated paths as company-wide jointly coupled samples.",
+    "mechanism": "Partitioning breaks cross-series coupling; same sample_id alone does not establish joint dependence.",
+    "detection": "Persist service coupled flag and partition manifest; assert joint requirement before dispatch.",
+    "response": "Use permitted unpartitioned joint request or explicitly model/calibrate dependence elsewhere.",
+    "test_assertion": "Partitioned uncoupled paths cannot receive a joint-company probability label.",
+    "residual_limit": "Coupled=true does not prove correct correlations in enterprise data.",
+    "owner": "Forecasting/uncertainty service adapter",
+    "requirement_source": "Master plan company/team forecast handoff; current Nixtla simulate client"
+  },
+  {
+    "id": "12-E10",
+    "family": "adapter-signature-overclaim",
+    "scenario": "Moirai2 adapter accepts multivariate dimensions and covariate arguments, so integration marks it fully supported without a shape/capability check.",
+    "mechanism": "Public source carries univariate-only and multivariate-untested notes despite broader-looking parameters.",
+    "detection": "Document evidence tier; exercise independent target/feature perturbation and alignment fixtures before qualification.",
+    "response": "Keep univariate qualified scope or mark unsupported until verified; no silent reshape.",
+    "test_assertion": "A registry entry cannot claim tested multivariate behavior based solely on constructor arguments.",
+    "residual_limit": "Passing functional fixtures does not establish predictive value.",
+    "owner": "Forecasting/adapters",
+    "requirement_source": "Master plan supported-scenario contract; Uni2TS moirai2 forecast source"
+  }
+]

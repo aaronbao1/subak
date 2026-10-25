@@ -1,0 +1,122 @@
+[
+  {
+    "id": "03-E01",
+    "family": "conditional_dimension_support",
+    "scenario": "An OpenAI cost backfill groups user and project successfully for recent dates but returns 400 for an older range.",
+    "mechanism": "Supported grouping depends on organization and historical period; generic retry or empty fallback can manufacture zero historical spend.",
+    "detection": "Persist HTTP result and query hash; probe capability by range without converting rejected dimensions to no-data.",
+    "response": "Retry an explicitly supported coarser query under a separate extraction receipt; retain unavailable attribution and expose scope difference.",
+    "test_assertion": "Rejected detailed history does not create zero rows; coarser monetary totals appear once with attribution unavailable; detail and aggregate are never added.",
+    "residual_limit": "Supported coarser data still cannot reconstruct historical human/team attribution.",
+    "owner": "backend connector",
+    "requirement_source": "backend-plan.md:56,70; 03-S02"
+  },
+  {
+    "id": "03-E02",
+    "family": "exclusion_and_null_identity",
+    "scenario": "Anthropic default-workspace Priority Tier usage appears with null workspace and no matching cost.",
+    "mechanism": "Null denotes default workspace, while Priority Tier charges are excluded from the cost endpoint; treating either as missing/zero hides real exposure.",
+    "detection": "Interpret null by provider field contract; inspect usage service_tier and cost coverage manifest.",
+    "response": "Map an explicit provider-default workspace identity; record Priority Tier cost exclusion and retain its usage without invented charges.",
+    "test_assertion": "Default workspace usage remains in company usage totals; all-in reported spend is incomplete until another authorized financial basis covers Priority Tier.",
+    "residual_limit": "Contractual Priority pricing/commitment data is not obtained from this endpoint.",
+    "owner": "backend connector and financial semantics",
+    "requirement_source": "ai-spend-master-plan.md:88; backend-plan.md:56; 03-S04"
+  },
+  {
+    "id": "03-E03",
+    "family": "export_generation_atomicity",
+    "scenario": "A CUR refresh replaces earlier files while a reader is ingesting; a retry also sees different classic-CUR line item IDs.",
+    "mechanism": "Mixing delivery generations or treating report-local IDs as stable events duplicates or loses spend.",
+    "detection": "Capture manifest/checksums and verify every required chunk belongs to one delivery; record report/partition namespace.",
+    "response": "Stage one complete immutable generation and activate atomically; retry the complete generation on inconsistency; preserve earlier version.",
+    "test_assertion": "Displayed total equals exactly one complete generation; interrupted import cannot partially change current totals; identical re-import has no monetary effect.",
+    "residual_limit": "Later finalized-period credits still require deeper scheduled reconciliation.",
+    "owner": "backend ingestion operations",
+    "requirement_source": "backend-plan.md:70; 03-S12,03-S13,03-S15"
+  },
+  {
+    "id": "03-E04",
+    "family": "alternative_financial_views",
+    "scenario": "Azure Actual and Amortized exports for the same period are both imported, followed by an invoice-level rounding adjustment without resource ID.",
+    "mechanism": "Alternative accounting views are summed and unassigned rounding is dropped, creating a total that matches neither selected basis nor invoice.",
+    "detection": "Record dataset financial basis and billing scope; compare complete-period controls; allow no-resource adjustments.",
+    "response": "Keep view-specific totals; preserve adjustment as company-level unattributed charge and allocate only through an explicit separate policy.",
+    "test_assertion": "Actual plus Amortized never contributes a combined total; invoice reconciliation includes signed rounding adjustment exactly once.",
+    "residual_limit": "Allocated team shares of company adjustments remain policy choices, not provider facts.",
+    "owner": "financial normalization",
+    "requirement_source": "backend-plan.md:56,64,70; 03-S07,03-S09"
+  },
+  {
+    "id": "03-E05",
+    "family": "backfill_not_zero_history",
+    "scenario": "A Google regional export is enabled today and returns no prior-month rows; another multi-region export is still processing its initial backfill.",
+    "mechanism": "Region-dependent history and initial delivery lag are mistaken for genuine zero historical consumption.",
+    "detection": "Record export enablement date, dataset location, backfill state and earliest verified covered date.",
+    "response": "Mark unsupported/pending history separately; choose a shorter validated window or another authorized historical export.",
+    "test_assertion": "No pre-enablement zero-filled series is produced; forecasting eligibility changes only after coverage evidence, not after an empty successful query.",
+    "residual_limit": "Missing earlier data may be unrecoverable through that export.",
+    "owner": "backend connector and forecasting eligibility",
+    "requirement_source": "backend-plan.md:70,74; 03-S16"
+  },
+  {
+    "id": "03-E06",
+    "family": "consumption_mode_attribution_gap",
+    "scenario": "Vertex workload migrates from PayGo to Provisioned Throughput while continuing to send team labels.",
+    "mechanism": "Provisioned Throughput silently ignores request billing labels; apparent team spend falls even though company commitment spending continues.",
+    "detection": "Monitor consumption-model mix and attributed-cost fraction; compare billing scope totals with team label totals.",
+    "response": "Retain company cost; mark team allocation unresolved; apply separately authorized resource/commitment mapping rather than extrapolate vanished label totals.",
+    "test_assertion": "Migration raises an attribution-coverage change, not a team savings conclusion; no team zero is inferred from absent labels.",
+    "residual_limit": "Shared provisioned capacity allocation requires a company policy and additional evidence.",
+    "owner": "backend attribution",
+    "requirement_source": "backend-plan.md:56; frontend-plan.md:60; 03-S18"
+  },
+  {
+    "id": "03-E07",
+    "family": "included_usage_and_money_precision",
+    "scenario": "Cursor subscription-included activity has a nonzero cost valuation, and spend fields contain fractional cents.",
+    "mechanism": "Adding overall spend valuation to subscription fees double counts inclusion; integer-cent parsing silently loses precision.",
+    "detection": "Inspect isChargeable/kind and current-cycle spend bases; reconcile decimal totals with source controls.",
+    "response": "Store included valuation separately from incremental charge; retain exact original decimal cents and contract basis.",
+    "test_assertion": "Included usage never independently increases payable total; sub-cent amounts round only under explicit display/settlement rules, and import round-trip preserves original values.",
+    "residual_limit": "Current-cycle endpoint alone does not supply complete historical seat invoices.",
+    "owner": "financial normalization",
+    "requirement_source": "backend-plan.md:56; frontend-plan.md:60; 03-S19"
+  },
+  {
+    "id": "03-E08",
+    "family": "payer_and_unit_migration",
+    "scenario": "An employee with an enterprise-managed Copilot seat is queried through a personal billing endpoint as the enterprise switches from premium requests to AI credits.",
+    "mechanism": "Wrong payer scope produces absent usage, while unchanged series names concatenate incompatible request and credit quantities.",
+    "detection": "Resolve billed entity from seat/contract evidence; validate quantity unit and endpoint/version by effective date.",
+    "response": "Read authorized organization/enterprise scope; split quantity bases and retain monetary basis/period metadata across migration.",
+    "test_assertion": "Empty personal result never asserts enterprise zero; request and credit units cannot be summed; monetary comparisons require compatible currency/category coverage.",
+    "residual_limit": "Historical contract transition and pools still need tenant-specific verification.",
+    "owner": "backend connector and financial semantics",
+    "requirement_source": "backend-plan.md:56,64; 03-S20"
+  },
+  {
+    "id": "03-E09",
+    "family": "authentication_route_switch",
+    "scenario": "Claude Code users change from Console authentication to an Enterprise subscription or cloud-provider login midweek.",
+    "mechanism": "Console Analytics ceases to cover those sessions; a model interprets the drop as lower activity, while underlying spend moves to another payer/feed.",
+    "detection": "Track source product/authentication coverage and join approved account migration evidence; compare alternate billing scopes without assuming overlap.",
+    "response": "Close the old coverage interval, introduce the new source with explicit overlap resolution, and retain activity/cost basis separately.",
+    "test_assertion": "Migration yields a coverage/regime marker and does not manufacture user inactivity; overlapping analytics and provider charges are never additive.",
+    "residual_limit": "No cross-provider event identifier is guaranteed; unresolved overlap can prevent exhaustive totals.",
+    "owner": "backend coverage and telemetry",
+    "requirement_source": "backend-plan.md:56,64,70; 03-S05,03-S06"
+  },
+  {
+    "id": "03-E10",
+    "family": "scope_mismatch_is_not_empty",
+    "scenario": "A ChatGPT workspace key has only the legacy Codex analytics scope and unified daily analytics access fails.",
+    "mechanism": "Connector treats a permission/enablement failure as a valid empty daily report or repeatedly retries permanent misconfiguration.",
+    "detection": "Classify authorization/enablement outcomes separately from successful empty data; record required and granted scope evidence without secrets.",
+    "response": "Mark source unavailable and retain last valid coverage; request correct authorized credential via normal setup when implementation reaches account discovery.",
+    "test_assertion": "Failed scope cannot advance complete-through watermark or generate zero activity; forecast output reports limited/unavailable coverage.",
+    "residual_limit": "Public documentation does not establish the customer's endpoint entitlement.",
+    "owner": "backend connector setup",
+    "requirement_source": "backend-plan.md:64,70,74; 03-S21"
+  }
+]

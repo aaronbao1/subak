@@ -1,0 +1,122 @@
+[
+  {
+    "id": "04-E01",
+    "family": "streaming-counter",
+    "scenario": "A stream emits output counts 12, 30, 30, reconnects, then final 40; the final SDK object is also imported.",
+    "mechanism": "Cumulative snapshots and duplicate transport representations are mistaken for additive increments.",
+    "detection": "Same account/provider attempt and meter scope; sequence/finality lineage; repeated payload hash.",
+    "response": "Keep observations, accept one final 40 for this request and category, derive monotone deltas only within the known epoch; never add final object to its snapshots.",
+    "test_assertion": "All replay orders and duplicate imports produce output total 40; incomplete interim view is marked provisional.",
+    "residual_limit": "If attempt identity is missing, deduplication can remain ambiguous; do not merge distinct identical requests.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E02",
+    "family": "retry-ancestry",
+    "scenario": "A logical agent span contains two provider attempts after a timeout; SDK and gateway each emit usage while parent run emits their summary.",
+    "mechanism": "Logical retry span and ancestor rollup overlap real charged attempts; deduplicating by logical span can also erase the second attempt.",
+    "detection": "Attempt IDs, retry links, wrapper source lineage and rollup scope; reconciliation against biller usage.",
+    "response": "Meter unique economic attempts once; attach summaries as derived assertions; retain error attempts with known usage.",
+    "test_assertion": "Two attempts with 100 and 80 input tokens produce 180, irrespective of wrapper/parent copies; a timeout alone never forces zero.",
+    "residual_limit": "Undisclosed upstream retries require authoritative provider/billing reconciliation.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E03",
+    "family": "counter-reset-late-data",
+    "scenario": "A resumed session emits 900, resets to 20 after restart, and then a late pre-restart 950 arrives.",
+    "mechanism": "Arrival-order subtraction produces negative or inflated deltas; blindly treating every decrease as reset hides schema changes.",
+    "detection": "Counter start/epoch, source sequence, process instance and event time; unresolved negative-difference alarms.",
+    "response": "Partition by proven epochs, reorder within each, revise affected event-time aggregates; quarantine unexplained reset.",
+    "test_assertion": "Known complete epochs yield 950 plus 20; replay order leaves totals identical. Unknown starting epoch leaves coverage incomplete.",
+    "residual_limit": "Without true reset/start evidence, amount incurred during a gap is not identifiable.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E04",
+    "family": "schema-migration-subsets",
+    "scenario": "Exporter upgrade sends old cache_creation alias and new cache_write name together while a provider includes cache and reasoning inside totals.",
+    "mechanism": "Alias duplication and addition of subsets overstates usage; absent fields during migration are misread as zero cache.",
+    "detection": "Instrumentation/schema version, alias map, raw payload and inclusion constraints; compare dual-emitted values.",
+    "response": "Versioned canonicalization maps equivalent aliases once and preserves raw evidence; conflicts quarantine; absence is unsupported/unknown unless zero is explicitly defined.",
+    "test_assertion": "Input 1000/cache-read 700/cache-write 100 and output 200/reasoning 120 remain input 1000/output 200; duplicate aliases do not change them.",
+    "residual_limit": "Provider-specific billing partition still needs verified semantics and tariff rules.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E05",
+    "family": "partial-stream-fallback",
+    "scenario": "Streaming generation produces partial usage, returns an error, and fallback model succeeds under the same logical operation; original final usage never arrives.",
+    "mechanism": "Successful fallback hides first-attempt consumption, or a blanket per-field maximum merges two models.",
+    "detection": "Per-attempt model/provider/status, missing terminal event, timeout watermark and later bill reconciliation.",
+    "response": "Keep first attempt's known partial usage as incomplete; meter second attempt separately; mark residual unobserved usage and avoid a fabricated exact charge.",
+    "test_assertion": "Successful fallback does not delete partial failed-attempt usage; finality is incomplete until reconciled; model-specific totals remain separate.",
+    "residual_limit": "Unreported provider consumption may only be recoverable from coarser billing buckets.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E06",
+    "family": "identity-attribution",
+    "scenario": "Two tenants reuse session ID 17; one human changes teams mid-period while a linked run completes after the move.",
+    "mechanism": "Global ID collision merges records; present-day ownership reassigns historical usage or both parents claim a shared child.",
+    "detection": "Tenant/source-qualified identifiers, effective-dated mapping version, causal links and attribution policy.",
+    "response": "Separate source identities; apply declared effective-time ownership policy; assign shared/unresolved work once to shared/unassigned bucket.",
+    "test_assertion": "No cross-tenant joins; company total invariant to team remap; as-of historical attribution remains reproducible.",
+    "residual_limit": "Policy for team assignment of long runs is a business choice, not inferable from telemetry.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E07",
+    "family": "sampling-coverage",
+    "scenario": "Tail sampling retains expensive/error spans while unsampled usage counters continue; parser drops unknown schema partitions.",
+    "mechanism": "Retained spans look like complete activity, and connector last-poll time masks missing partitions.",
+    "detection": "Sampling policy/probability, expected/exported partitions, accepted/rejected row counts, request-to-counter reconciliation.",
+    "response": "Do not extrapolate unknown selection probabilities; show separate collection/meter/attribution coverage; use trusted counter or charge view for totals.",
+    "test_assertion": "Recent poll plus failed partitions does not set complete=true; selected trace sum is never labeled full spend.",
+    "residual_limit": "Unknown sampling mechanisms prevent unbiased population recovery.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E08",
+    "family": "clock-and-period",
+    "scenario": "A long session crosses local month end during DST while source timestamps have only seconds and delivery is next day.",
+    "mechanism": "Ingest time or guessed timezone shifts usage between planning periods; coarse snapshots falsely imply exact per-period consumption.",
+    "detection": "Source timezone/precision, event interval boundaries, ingestion time and counter scope.",
+    "response": "Use explicit finance calendar and documented incurred-time rule; preserve interval-spanning ambiguity; keep late-arrival nowcast separate.",
+    "test_assertion": "Reimport in another system timezone yields identical period membership; unknown timezone or spanning counter flags ambiguity rather than silently prorating.",
+    "residual_limit": "Exact intra-interval consumption cannot be recovered from coarse cumulative snapshots.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E09",
+    "family": "revision-asof-leakage",
+    "scenario": "Provider corrects final tokens downward after the forecast cutoff, and an updated export replaces the earlier file.",
+    "mechanism": "Overwrite makes a backtest use information not available originally; max-counter rules reject legitimate corrections.",
+    "detection": "Source revision/content hash, first-seen time, supersession lineage and accepted basis.",
+    "response": "Retain versions; use authority and revision ordering rather than maximum; query original information set for backtests and current accepted totals for dashboard.",
+    "test_assertion": "Pre-correction as-of query returns old observation, post-correction returns revised total; replayed exports cannot add both versions.",
+    "residual_limit": "Historical first-seen times cannot be reconstructed reliably from a final export alone.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  },
+  {
+    "id": "04-E10",
+    "family": "public-trace-leakage",
+    "scenario": "Copilot continuation learner sees final result and full-session token totals; repeated SWE issue attempts split across train/test; BurstGPT no-failure variant is used as all-activity data.",
+    "mechanism": "Future-label leakage, shared-task leakage and selection on success inflate apparent generalization.",
+    "detection": "Feature availability audit, session/issue-group split audit, dataset variant/version and population manifest.",
+    "response": "Generate prefix-only features; group session/issue families; preserve failure variant; scope claims to observed population and horizon.",
+    "test_assertion": "Prediction-time features exclude future calls/results/final counts; no issue/session crosses folds; enterprise/month accuracy claim rejected for seven-day non-enterprise sample.",
+    "residual_limit": "Even clean public tests cannot establish transfer to enterprise teams or prices.",
+    "owner": "Backend ingestion + forecasting data/evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 4; docs/backend-plan.md acceptance checks; mentor-discussion.txt representativeness objection"
+  }
+]

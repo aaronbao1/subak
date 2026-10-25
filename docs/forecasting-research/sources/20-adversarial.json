@@ -1,0 +1,98 @@
+[
+  {
+    "id": "20-S01",
+    "title": "Performative Prediction",
+    "url": "https://proceedings.mlr.press/v119/perdomo20a.html",
+    "authors_or_org": "Juan Perdomo, Tijana Zrnic, Celestine Mendler-Dünner, Moritz Hardt",
+    "published_or_version": "ICML 2020, Proceedings of Machine Learning Research 119:7599–7609; conference 13–18 July 2020",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper; publisher abstract and linked paper excerpt verified",
+    "supported_claim": "Predictions used in decisions can change their target distribution; performative stability and convergence require a formal setting and assumptions. Supports distinguishing saved budgets from observed behavioral interventions.",
+    "limitations": "Not an enterprise AI-spending study; does not identify causal responses to internal budgets or validate a particular intervention/evaluation design.",
+    "license_status": "Linked paper states Copyright 2020 by the authors; exact redistribution/reuse terms not verified. Citation/paraphrase only; no dataset or code reuse claimed."
+  },
+  {
+    "id": "20-S02",
+    "title": "Revisiting the Predictability of Performative, Social Events",
+    "url": "https://proceedings.mlr.press/v267/perdomo25a.html",
+    "authors_or_org": "Juan Carlos Perdomo",
+    "published_or_version": "ICML 2025, Proceedings of Machine Learning Research 267:48948–48961; conference 13–19 July 2025",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper; publisher abstract and bibliographic record verified",
+    "supported_claim": "Provides counterevidence to a blanket claim that feedback makes prediction impossible: formal accurate prediction can be achievable while still undesirable under other desiderata.",
+    "limitations": "Abstract-level use only. The formal model and notion of accuracy are not asserted to match enterprise budget forecasts; no guarantee transferred to this product.",
+    "license_status": "Reuse license unverified; citation/paraphrase only."
+  },
+  {
+    "id": "20-S03",
+    "title": "The limits of distribution-free conditional predictive inference",
+    "url": "https://www.stat.berkeley.edu/~ryantibs/papers/limits.pdf",
+    "authors_or_org": "Rina Foygel Barber, Emmanuel J. Candès, Aaditya Ramdas, Ryan J. Tibshirani",
+    "published_or_version": "Information and Inference 10 (2021), 455–482; DOI 10.1093/imaiai/iaaa017; advance access 25 August 2020",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper, author-hosted published PDF; abstract, definitions and introductory limitations read",
+    "supported_claim": "Marginal predictive coverage is not pointwise conditional coverage; without distributional assumptions nontrivial exact distribution-free conditional coverage is impossible. Motivates selected-donor/regime-specific evaluation rather than universal assurance.",
+    "limitations": "The core setup assumes i.i.d. data; does not directly prove a time-series coverage guarantee or failure rate. The constructed donor-selection example in the track is independent reasoning, not an empirical finding from this paper.",
+    "license_status": "PDF states © The Author(s) 2020, published by Oxford University Press, all rights reserved. No redistribution or implementation license inferred."
+  },
+  {
+    "id": "20-S04",
+    "title": "Adaptive Conformal Inference Under Distribution Shift",
+    "url": "https://proceedings.neurips.cc/paper_files/paper/2021/hash/0d441de75945e5acbc865406fc9a2559-Abstract.html",
+    "authors_or_org": "Isaac Gibbs, Emmanuel Candès",
+    "published_or_version": "Advances in Neural Information Processing Systems 34, NeurIPS 2021",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper; official proceedings abstract verified",
+    "supported_claim": "The adaptive approach targets desired coverage frequency over long time intervals under changing distributions; this statement is distinct from immediate finite-window, subgroup or sharpness guarantees.",
+    "limitations": "No claim about enterprise-spend performance; billing-label delays and decision-selection evaluation are product inferences. Algorithm and theorem conditions require full-paper review before implementation.",
+    "license_status": "Paper/code reuse license unverified; citation/paraphrase only."
+  },
+  {
+    "id": "20-S05",
+    "title": "Principles and algorithms for forecasting groups of time series: locality and globality",
+    "url": "https://robjhyndman.com/publications/global-forecasting/",
+    "authors_or_org": "Pablo Montero-Manso, Rob J. Hyndman",
+    "published_or_version": "Author page published 10 May 2021; International Journal of Forecasting 37(4), 1632–1653; DOI 10.1016/j.ijforecast.2021.03.004",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper described on author's publication page; abstract/results summary verified",
+    "supported_claim": "Local and global forecasting functions can express the same forecasts without requiring similarity across series; paper derives generalization bounds and reports competitive global models. Challenges an automatic separate-model-per-company requirement.",
+    "limitations": "Function-class equivalence does not imply a chosen finite estimator wins; benchmark populations do not establish enterprise AI-spend superiority or remove negative-transfer and leakage risks.",
+    "license_status": "Author webpage copyright notice observed; paper/code/data reuse terms unverified."
+  },
+  {
+    "id": "20-S06",
+    "title": "Effective forecasting and judgmental adjustments: An empirical evaluation and strategies for improvement in supply-chain planning",
+    "url": "https://researchportal.bath.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/",
+    "authors_or_org": "Robert Fildes, Paul Goodwin, Michael Lawrence, Konstantinos Nikolopoulos",
+    "published_or_version": "January 2009; International Journal of Forecasting 25(1), 3–23; DOI 10.1016/j.ijforecast.2008.11.010",
+    "accessed": "2026-10-24",
+    "kind": "Primary empirical research, author-institution record/abstract verified",
+    "supported_claim": "Study of more than 60,000 forecasts/outcomes in four supply-chain companies found average improvement from judgmental adjustments in three, with small adjustments often harmful and positive adjustments less likely to improve accuracy. Supports testing context value rather than assuming it.",
+    "limitations": "Supply-chain human judgment, not LLM extraction or enterprise token spending. Abstract-level evidence only; numeric effects and transferability are not claimed.",
+    "license_status": "Institutional page states all rights reserved except applicable open-access terms; underlying paper/data reuse license not verified. No data reuse proposed."
+  },
+  {
+    "id": "20-S07",
+    "title": "PostgreSQL 18 documentation, 13.2 Transaction Isolation",
+    "url": "https://www.postgresql.org/docs/18/transaction-iso.html",
+    "authors_or_org": "PostgreSQL Global Development Group",
+    "published_or_version": "Versioned PostgreSQL 18 documentation, §13.2; accessed current content on 2026-10-24; page publication date not verified",
+    "accessed": "2026-10-24",
+    "kind": "Primary official technical documentation",
+    "supported_claim": "Serializable isolation emulates serial execution of committed transactions and applications must handle serialization retries. Read Committed has snapshot limitations for complex multi-row conditions. Supports atomic budget validation with explicit retry/receipt semantics.",
+    "limitations": "Not a recommendation to choose PostgreSQL or a guarantee of application correctness. Isolation does not enforce semantic authority, idempotency, human review or evidence freshness by itself.",
+    "license_status": "Documentation reuse terms not inspected; no software incorporation or license claim."
+  },
+  {
+    "id": "20-S08",
+    "title": "LLM01:2025 Prompt Injection",
+    "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+    "authors_or_org": "OWASP Gen AI Security Project",
+    "published_or_version": "LLM01:2025 page; publication/update date not established; accessed 2026-10-24",
+    "accessed": "2026-10-24",
+    "kind": "Primary security-project guidance",
+    "supported_claim": "Indirect instructions can arrive through retrieved documents; RAG/fine-tuning do not fully eliminate injection; output validation and scoped authority reduce impact. Supports separating evidence text from authenticated budget application.",
+    "limitations": "Guidance, not an efficacy trial or proof of complete prevention. Product-specific trust boundaries and adversarial tests remain to be implemented and executed.",
+    "license_status": "Reuse license not verified on the inspected page; citation/paraphrase only."
+  }
+]

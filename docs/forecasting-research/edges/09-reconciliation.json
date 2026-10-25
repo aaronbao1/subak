@@ -1,0 +1,122 @@
+[
+  {
+    "id": "09-E01",
+    "family": "crossed_attribution",
+    "scenario": "One person uses two tools on a project shared by two teams; a tree parser duplicates the shared charge.",
+    "mechanism": "Crossed team/project/tool margins are mistaken for disjoint nested children.",
+    "detection": "Validate atomic expense IDs and each partition's column sums; compare each margin separately with company total.",
+    "response": "Use disjoint canonical leaves and explicit aggregation rows; separate allocations from measured charge.",
+    "test_assertion": "Proposed: company total counts each charge once; team margins and project margins each equal company total; adding both margins is prohibited.",
+    "residual_limit": "Unknown ownership cannot be inferred from arithmetic.",
+    "owner": "backend attribution + forecasting reconciliation",
+    "requirement_source": "master plan §§2–4 explicit mappings; internal Oct 23 transcript person/team/project hypotheses"
+  },
+  {
+    "id": "09-E02",
+    "family": "effective_dated_mapping",
+    "scenario": "A person moves research→product midweek; a backfilled mapping is learned after an evaluation origin.",
+    "mechanism": "Current mappings restate history silently and future horizon uses one static S.",
+    "detection": "Require effective and knowledge timestamps; hash matrix by forecast date and origin.",
+    "response": "Construct date-specific S_t; preserve as-known and separately labeled restated views; scenario-test uncertain transfer.",
+    "test_assertion": "Proposed: changing a mapping learned after origin does not alter origin snapshot; pre/post-transfer future spend reaches respective teams and company total is unchanged.",
+    "residual_limit": "Future organizational plans can change; mapping scenarios need probabilities or explicit nonprobabilistic labels.",
+    "owner": "backend temporal mappings + evaluation",
+    "requirement_source": "master plan source dates and coverage; backend history; Factory current versus superseded plans"
+  },
+  {
+    "id": "09-E03",
+    "family": "coverage_and_unknown",
+    "scenario": "Company invoice is complete, two team feeds are missing, and a shared API key has no owner.",
+    "mechanism": "Missing feeds become zero or invoice residual is arbitrarily distributed to force totals.",
+    "detection": "Compare coverage scopes, service windows, currency and charge categories; keep unknown/shared distinct from unavailable.",
+    "response": "Preserve explicit unattributed/shared amounts; publish incomplete partition or a comparable-basis residual; abstain from fabricated team totals.",
+    "test_assertion": "Proposed: absent feed never becomes observed zero; coherent complete company forecast is not mislabeled as complete team coverage.",
+    "residual_limit": "A complete company bill does not identify its team decomposition.",
+    "owner": "ingestion coverage + forecast availability",
+    "requirement_source": "master plan §2 measured/estimated/reported categories; backend incomplete data checks"
+  },
+  {
+    "id": "09-E04",
+    "family": "calendar_overlap",
+    "scenario": "A seven-day forecast spans October and November while a monthly view assigns the whole week to October.",
+    "mechanism": "Weekly and calendar-month periods are falsely treated as nested; truncated horizon silently accepted.",
+    "detection": "Compare explicit date sets and interval bounds, timezone, and path coverage.",
+    "response": "Use date-incidence rows; sum exact local-date membership; mark insufficient path coverage unavailable.",
+    "test_assertion": "Proposed: Oct 30–Nov 5 allocates two daily amounts to October and five to November; no date is omitted or duplicated.",
+    "residual_limit": "Intraday cutoffs and late service-date records require separate nowcast policy.",
+    "owner": "forecast target compiler + backend time semantics",
+    "requirement_source": "master plan shared forecast target periods; research brief cumulative 7/14/30 and month remainder"
+  },
+  {
+    "id": "09-E05",
+    "family": "covariance_instability",
+    "scenario": "Hundreds of intermittent person/tool series have few complete residual origins and one common rollout shock.",
+    "mechanism": "Sample covariance is singular/noisy; pairwise missing-data estimates may be incompatible; estimated MinT weights become extreme.",
+    "detection": "Check aligned residual support, rank/conditioning, PSD, weight magnitude, and rolling error after structural change.",
+    "response": "Compare variance WLS and shrinkage; reduce partition or exclude poor bases; fallback on numerical failure.",
+    "test_assertion": "Proposed: finite coherent outputs or explicit fallback, never NaNs/inf; fallback reason and covariance sample provenance retained.",
+    "residual_limit": "Numerical stability does not demonstrate accuracy; shrinkage cannot remove unknown bias.",
+    "owner": "forecast model selection + evaluation",
+    "requirement_source": "master plan unavailable forecasts and evidence; numerical-method research remit"
+  },
+  {
+    "id": "09-E06",
+    "family": "signed_components",
+    "scenario": "Gross charges and a legitimate refund are reconciled with a global nonnegative flag.",
+    "mechanism": "Nonnegativity erases credits or independent per-level clipping breaks additivity.",
+    "detection": "Check component semantic sign rules and coherence before/after constraints.",
+    "response": "Reconcile nonnegative gross usage/charges separately from signed credits; derive net totals; use constrained solve rather than unrelated clipping.",
+    "test_assertion": "Proposed: legitimate negative net cost survives; gross samples obey intended nonnegativity; every retained aggregation identity holds within tolerance.",
+    "residual_limit": "Refund timing/dispute outcomes may lack forecastable history.",
+    "owner": "financial target owner + reconciliation",
+    "requirement_source": "master plan distinct cost categories and units; financial-basis requirement"
+  },
+  {
+    "id": "09-E07",
+    "family": "joint_path_loss",
+    "scenario": "Daily Normality samples are cross-sectionally coherent but each horizon is independently sampled before a 30-day risk calculation.",
+    "mechanism": "Cross-time covariance is lost, producing unjustified cumulative tails despite coherent daily totals.",
+    "detection": "Inspect sampler capability and path metadata; evaluate cumulative target calibration and joint residual dependence.",
+    "response": "Use validated joint paths or direct cumulative calibration; expose uncertainty unavailable otherwise.",
+    "test_assertion": "Proposed: cumulative distributions sum complete path IDs before quantiles; sampler without temporal dependence cannot claim validated 30-day risk merely from daily coherence.",
+    "residual_limit": "Unknown common-shock dependence remains a modeling risk even with path IDs.",
+    "owner": "uncertainty + forecast library adapter",
+    "requirement_source": "master plan supported uncertainty; brief cumulative forecasts; HierarchicalForecast v1.5.3 source"
+  },
+  {
+    "id": "09-E08",
+    "family": "quantile_aggregation",
+    "scenario": "UI adds research and product P95 values to display a company P95.",
+    "mechanism": "Marginal quantiles are treated as additive statistics.",
+    "detection": "Schema distinguishes mean, quantile and joint sample; aggregation operator checks statistic type.",
+    "response": "Aggregate complete joint draws or request a directly calibrated company distribution.",
+    "test_assertion": "Proposed exact fixture: independent $100 Bernoulli(0.04) team costs have marginal P95=0 but company P95=100; quantile-summing request is rejected.",
+    "residual_limit": "Marginals alone cannot reconstruct joint distribution or dependence.",
+    "owner": "forecast API + frontend",
+    "requirement_source": "master plan forecast quantity/uncertainty handoff; probabilistic reconciliation requirement"
+  },
+  {
+    "id": "09-E09",
+    "family": "unsupported_library_combination",
+    "scenario": "Grouped person×project data requests PERMBU; nonnegative MinTrace requests bootstrap intervals; stale FoReco docs configure old arguments.",
+    "mechanism": "Method topology/probability restrictions and version drift are hidden behind a generic reconciler API.",
+    "detection": "Versioned capability registry and preflight validation against matrix topology, interval method, dependency pin.",
+    "response": "Reject unsupported combinations with an explicit alternative; verify supported adapters with small algebraic fixtures before promotion.",
+    "test_assertion": "Proposed: unsupported request cannot silently degrade to independent or negative samples; package/version/capability recorded in output provenance.",
+    "residual_limit": "Static source review is not runtime verification; fit and sample entry paths can differ.",
+    "owner": "forecast platform adapter",
+    "requirement_source": "implementation-library research remit; supported uncertainty and unavailable-state handoffs"
+  },
+  {
+    "id": "09-E10",
+    "family": "immutable_observations_and_budget",
+    "scenario": "Observed month-to-date charges plus fixed fees exceed a manager budget used as an immutable total, while future gross spend is constrained nonnegative.",
+    "mechanism": "A planning allocation is mistaken for an accounting identity or spending cap, yielding infeasibility or rewritten actuals.",
+    "detection": "Classify immutable facts versus forecasts versus internal allocations; check feasibility before solving.",
+    "response": "Keep observed amounts unchanged; remove budget as forecast equality; report forecast overrun or invalid constraints.",
+    "test_assertion": "Proposed: recorded actuals never change through reconciliation; internal budget is compared with forecast, not imposed as total; infeasible genuine constraints return an error.",
+    "residual_limit": "Historical charges may be revised by source; versioned corrections remain distinct from reconciliation.",
+    "owner": "backend financial state + forecast constraint compiler",
+    "requirement_source": "master plan §1 internal budgets do not enforce provider usage; §§2–4 category and ownership boundaries"
+  }
+]

@@ -1,0 +1,546 @@
+FFFFFFFFFFFFFF                                                           [100%]
+=================================== FAILURES ===================================
+_ test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[True-0] __
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_multi_axis_actuals_share_0')
+ready = True, lag = 0
+
+    @pytest.mark.parametrize('ready,lag', [(True, 0), (False, 0), (True, 2), (False, 2)])
+    def test_multi_axis_actuals_share_forecast_entity_even_when_unavailable(tmp_path, ready, lag):
+        service, snapshot, request = fixture(tmp_path, output='full_period', lag=lag)
+        dimensions = (SeriesAxis('team:a', 'input', 'model', 'pool', 'tokens'),
+                      SeriesAxis('team:a', 'output', 'model', 'pool', 'tokens'))
+        mapping = {'a': dimensions[0].axis_id, 'b': dimensions[1].axis_id}
+        snapshot = snapshot_with(snapshot, ready=ready,
+            daily=tuple(replace(row, entity_id=mapping[row.entity_id]) for row in snapshot.daily))
+        request = replace(request, period_start=snapshot.history_start)
+        supplement = None
+        if lag:
+            daily = tuple(DailyValue(dim.axis_id, snapshot.history_end+timedelta(days=i), Decimal(v))
+                          for dim,v in zip(dimensions,(2,3)) for i in range(lag))
+            supplement = snapshot_with(snapshot, history_start=snapshot.history_end,
+                history_end=request.as_of.date(), daily=daily,
+                company_daily=tuple(DailyValue('company', snapshot.history_end+timedelta(days=i), Decimal(5)) for i in range(lag)))
+        result = service.run_joint(request, snapshot, allowed_sources={'usage'}, axes=dimensions,
+            n_paths=2, max_history_lag_days=lag, recorded_supplement=supplement)
+>       assert set(result['entities']) == {'team:a'}
+E       AssertionError: assert {'228058cc3b9...9f', 'team:a'} == {'team:a'}
+E
+E         Extra items in the left set:
+E         '228058cc3b94d96b53da0be55ad69c470844a7d3a77e3c584dd236d5f194584c'
+E         '51805841f0557b8a6aab1c522ad7364b6f73815ea83823a3845359073fa5639f'
+E         Use -v to get more diff
+
+tests/test_final_review_regressions.py:43: AssertionError
+_ test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[False-0] _
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_multi_axis_actuals_share_1')
+ready = False, lag = 0
+
+    @pytest.mark.parametrize('ready,lag', [(True, 0), (False, 0), (True, 2), (False, 2)])
+    def test_multi_axis_actuals_share_forecast_entity_even_when_unavailable(tmp_path, ready, lag):
+        service, snapshot, request = fixture(tmp_path, output='full_period', lag=lag)
+        dimensions = (SeriesAxis('team:a', 'input', 'model', 'pool', 'tokens'),
+                      SeriesAxis('team:a', 'output', 'model', 'pool', 'tokens'))
+        mapping = {'a': dimensions[0].axis_id, 'b': dimensions[1].axis_id}
+        snapshot = snapshot_with(snapshot, ready=ready,
+            daily=tuple(replace(row, entity_id=mapping[row.entity_id]) for row in snapshot.daily))
+        request = replace(request, period_start=snapshot.history_start)
+        supplement = None
+        if lag:
+            daily = tuple(DailyValue(dim.axis_id, snapshot.history_end+timedelta(days=i), Decimal(v))
+                          for dim,v in zip(dimensions,(2,3)) for i in range(lag))
+            supplement = snapshot_with(snapshot, history_start=snapshot.history_end,
+                history_end=request.as_of.date(), daily=daily,
+                company_daily=tuple(DailyValue('company', snapshot.history_end+timedelta(days=i), Decimal(5)) for i in range(lag)))
+        result = service.run_joint(request, snapshot, allowed_sources={'usage'}, axes=dimensions,
+            n_paths=2, max_history_lag_days=lag, recorded_supplement=supplement)
+>       assert set(result['entities']) == {'team:a'}
+E       AssertionError: assert {'228058cc3b9...59073fa5639f'} == {'team:a'}
+E
+E         Extra items in the left set:
+E         '228058cc3b94d96b53da0be55ad69c470844a7d3a77e3c584dd236d5f194584c'
+E         '51805841f0557b8a6aab1c522ad7364b6f73815ea83823a3845359073fa5639f'
+E         Extra items in the right set:
+E         'team:a'
+E         Use -v to get more diff
+
+tests/test_final_review_regressions.py:43: AssertionError
+_ test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[True-2] __
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_multi_axis_actuals_share_2')
+ready = True, lag = 2
+
+    @pytest.mark.parametrize('ready,lag', [(True, 0), (False, 0), (True, 2), (False, 2)])
+    def test_multi_axis_actuals_share_forecast_entity_even_when_unavailable(tmp_path, ready, lag):
+        service, snapshot, request = fixture(tmp_path, output='full_period', lag=lag)
+        dimensions = (SeriesAxis('team:a', 'input', 'model', 'pool', 'tokens'),
+                      SeriesAxis('team:a', 'output', 'model', 'pool', 'tokens'))
+        mapping = {'a': dimensions[0].axis_id, 'b': dimensions[1].axis_id}
+        snapshot = snapshot_with(snapshot, ready=ready,
+            daily=tuple(replace(row, entity_id=mapping[row.entity_id]) for row in snapshot.daily))
+        request = replace(request, period_start=snapshot.history_start)
+        supplement = None
+        if lag:
+            daily = tuple(DailyValue(dim.axis_id, snapshot.history_end+timedelta(days=i), Decimal(v))
+                          for dim,v in zip(dimensions,(2,3)) for i in range(lag))
+            supplement = snapshot_with(snapshot, history_start=snapshot.history_end,
+                history_end=request.as_of.date(), daily=daily,
+                company_daily=tuple(DailyValue('company', snapshot.history_end+timedelta(days=i), Decimal(5)) for i in range(lag)))
+        result = service.run_joint(request, snapshot, allowed_sources={'usage'}, axes=dimensions,
+            n_paths=2, max_history_lag_days=lag, recorded_supplement=supplement)
+>       assert set(result['entities']) == {'team:a'}
+E       AssertionError: assert {'228058cc3b9...9f', 'team:a'} == {'team:a'}
+E
+E         Extra items in the left set:
+E         '228058cc3b94d96b53da0be55ad69c470844a7d3a77e3c584dd236d5f194584c'
+E         '51805841f0557b8a6aab1c522ad7364b6f73815ea83823a3845359073fa5639f'
+E         Use -v to get more diff
+
+tests/test_final_review_regressions.py:43: AssertionError
+_ test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[False-2] _
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_multi_axis_actuals_share_3')
+ready = False, lag = 2
+
+    @pytest.mark.parametrize('ready,lag', [(True, 0), (False, 0), (True, 2), (False, 2)])
+    def test_multi_axis_actuals_share_forecast_entity_even_when_unavailable(tmp_path, ready, lag):
+        service, snapshot, request = fixture(tmp_path, output='full_period', lag=lag)
+        dimensions = (SeriesAxis('team:a', 'input', 'model', 'pool', 'tokens'),
+                      SeriesAxis('team:a', 'output', 'model', 'pool', 'tokens'))
+        mapping = {'a': dimensions[0].axis_id, 'b': dimensions[1].axis_id}
+        snapshot = snapshot_with(snapshot, ready=ready,
+            daily=tuple(replace(row, entity_id=mapping[row.entity_id]) for row in snapshot.daily))
+        request = replace(request, period_start=snapshot.history_start)
+        supplement = None
+        if lag:
+            daily = tuple(DailyValue(dim.axis_id, snapshot.history_end+timedelta(days=i), Decimal(v))
+                          for dim,v in zip(dimensions,(2,3)) for i in range(lag))
+            supplement = snapshot_with(snapshot, history_start=snapshot.history_end,
+                history_end=request.as_of.date(), daily=daily,
+                company_daily=tuple(DailyValue('company', snapshot.history_end+timedelta(days=i), Decimal(5)) for i in range(lag)))
+        result = service.run_joint(request, snapshot, allowed_sources={'usage'}, axes=dimensions,
+            n_paths=2, max_history_lag_days=lag, recorded_supplement=supplement)
+>       assert set(result['entities']) == {'team:a'}
+E       AssertionError: assert {'228058cc3b9...59073fa5639f'} == {'team:a'}
+E
+E         Extra items in the left set:
+E         '228058cc3b94d96b53da0be55ad69c470844a7d3a77e3c584dd236d5f194584c'
+E         '51805841f0557b8a6aab1c522ad7364b6f73815ea83823a3845359073fa5639f'
+E         Extra items in the right set:
+E         'team:a'
+E         Use -v to get more diff
+
+tests/test_final_review_regressions.py:43: AssertionError
+_________ test_native_and_money_excess_are_context_independent[False] __________
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_native_and_money_excess_a0')
+hostile = False
+
+    @pytest.mark.parametrize('hostile', [False, True])
+    def test_native_and_money_excess_are_context_independent(tmp_path, hostile):
+        service, snapshot, request = fixture(tmp_path)
+        options = dict(axes=axes(), allowed_sources={'usage'}, n_paths=2, threshold=Decimal('19.99'),
+            commercial_options=commercial_options(request), monetary_threshold=Decimal('22.99'))
+        normal = service.run_joint(request, snapshot, **options)
+        with localcontext() as context:
+            context.prec = 3
+            context.rounding = ROUND_UP
+            if hostile:
+                context.Emax, context.Emin, context.clamp = 1, -1, 1
+                for signal in context.traps: context.traps[signal] = True
+            changed = service.run_joint(request, snapshot, **options)
+>       assert changed['usage']['expected_excess'] == '0.01'
+E       AssertionError: assert '0' == '0.01'
+E
+E         - 0.01
+E         + 0
+
+tests/test_final_review_regressions.py:64: AssertionError
+__________ test_native_and_money_excess_are_context_independent[True] __________
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_native_and_money_excess_a1')
+hostile = True
+
+    @pytest.mark.parametrize('hostile', [False, True])
+    def test_native_and_money_excess_are_context_independent(tmp_path, hostile):
+        service, snapshot, request = fixture(tmp_path)
+        options = dict(axes=axes(), allowed_sources={'usage'}, n_paths=2, threshold=Decimal('19.99'),
+            commercial_options=commercial_options(request), monetary_threshold=Decimal('22.99'))
+        normal = service.run_joint(request, snapshot, **options)
+        with localcontext() as context:
+            context.prec = 3
+            context.rounding = ROUND_UP
+            if hostile:
+                context.Emax, context.Emin, context.clamp = 1, -1, 1
+                for signal in context.traps: context.traps[signal] = True
+>           changed = service.run_joint(request, snapshot, **options)
+
+tests/test_final_review_regressions.py:63:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/forecasting/service.py:241: in run_joint
+    return run_joint(self, request, snapshot, allowed_sources=allowed_sources, **options)
+src/forecasting/joint_service.py:302: in run_joint
+    daily = {day.isoformat():str(_mean(tuple(exact_sum(_number(path[i][d]) for i in indices) for path in bundle.values),weights))
+src/forecasting/joint_service.py:302: in <dictcomp>
+    daily = {day.isoformat():str(_mean(tuple(exact_sum(_number(path[i][d]) for i in indices) for path in bundle.values),weights))
+src/forecasting/joint_service.py:55: in _mean
+    return _ratio(sum((Fraction(_number(v))*w for v,w in zip(values,weights)), Fraction(0)))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+value = Fraction(2, 1)
+
+    def _ratio(value):
+        # Pricing totals remain exact Decimal. Statistical expectations can be
+        # rational; publish their explicitly declared 50-digit decimal projection.
+        with localcontext() as context:
+            context.prec = 50
+>           result = Decimal(value.numerator) / Decimal(value.denominator)
+E           decimal.Clamped: [<class 'decimal.Clamped'>]
+
+src/forecasting/joint_service.py:40: Clamped
+_______ test_rational_projection_has_fixed_rounding_exponents_and_traps ________
+
+    def test_rational_projection_has_fixed_rounding_exponents_and_traps():
+        for rounding in (ROUND_DOWN, ROUND_UP):
+            with localcontext() as context:
+                context.prec, context.rounding, context.Emax, context.Emin, context.clamp = 3, rounding, 1, -1, 1
+                for signal in context.traps: context.traps[signal] = True
+>               summary = _summaries((0, 1, 1), (1/3,)*3, (.5,), None, .95)
+
+tests/test_final_review_regressions.py:74:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/forecasting/joint_service.py:84: in _summaries
+    return {'mean': str(_mean(values,weights)), 'quantiles': quantile_values,
+src/forecasting/joint_service.py:55: in _mean
+    return _ratio(sum((Fraction(_number(v))*w for v,w in zip(values,weights)), Fraction(0)))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+value = Fraction(2, 3)
+
+    def _ratio(value):
+        # Pricing totals remain exact Decimal. Statistical expectations can be
+        # rational; publish their explicitly declared 50-digit decimal projection.
+        with localcontext() as context:
+            context.prec = 50
+>           result = Decimal(value.numerator) / Decimal(value.denominator)
+E           decimal.Inexact: [<class 'decimal.Inexact'>, <class 'decimal.Rounded'>]
+
+src/forecasting/joint_service.py:40: Inexact
+___________ test_effective_structural_population_obeys_service_limit ___________
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_effective_structural_popu0')
+
+    def test_effective_structural_population_obeys_service_limit(tmp_path):
+        service, snapshot, request = fixture(tmp_path)
+        service.max_entities = 2
+        exposures = tuple(ExposureSpell('access-'+p, p, 'c', request.period_start, request.period_end,
+                                        request.as_of, True) for p in ('x', 'y', 'z'))
+        with pytest.raises(ValueError, match='population|entity'):
+>           service.run_joint(request, snapshot, allowed_sources={'usage'}, n_paths=1,
+                state_inputs={'exposures': exposures, 'events': (),
+                              'parameters': (HurdleParameters('c', 1, marks=(ExecutionMark(1),)),)})
+E           Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_final_review_regressions.py:86: Failed
+____ test_structural_bounds_reject_before_axis_or_rng_allocations[changes0] ____
+
+changes = {'path_count': 1000000000}
+
+    @pytest.mark.parametrize('changes', [
+        {'path_count': 10**9},
+        {'path_count': 100, 'parameters': (HurdleParameters('team', 1, (10000,), (ExecutionMark(1),)),)},
+        {'path_count': 10000, 'parameters': (HurdleParameters('team', 0, marks=tuple(ExecutionMark(1, billed_configuration=str(i)) for i in range(67))),)},
+        {'path_count': 10000, 'exposures': (spell(access=False),),
+         'events': tuple(event('start'+str(i), 'root_start', root=str(i)) for i in range(4)),
+         'continuation_marks': (ExecutionMark(1),)},
+    ])
+    def test_structural_bounds_reject_before_axis_or_rng_allocations(changes):
+        # Sentinels prevent an accidental giant allocation on the red version.
+        with patch('forecasting.joint.SeriesAxis', side_effect=AssertionError('axis allocation reached')), \
+             patch('forecasting.state.random.Random', side_effect=AssertionError('rng allocation reached')):
+            with pytest.raises(ValueError, match='bound|budget'):
+>               recurrent(**changes)
+
+tests/test_final_review_regressions.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_final_review_regressions.py:96: in recurrent
+    return generate_recurrent_scenarios(**options)
+src/forecasting/state.py:418: in generate_recurrent_scenarios
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+src/forecasting/state.py:418: in <genexpr>
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1093: in __call__
+    return self._mock_call(*args, **kwargs)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1097: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='SeriesAxis' id='4447266752'>
+args = ('a', 'tokens', 'unknown', 'unassigned', 'tokens'), kwargs = {}
+effect = AssertionError('axis allocation reached')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               AssertionError: axis allocation reached
+
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1152: AssertionError
+____ test_structural_bounds_reject_before_axis_or_rng_allocations[changes1] ____
+
+changes = {'parameters': (HurdleParameters(cohort='team', p_any=1, positive_counts=(10000,), marks=(ExecutionMark(tokens=1, requ...e, fit_id='supplied-finite-law', parameter_source='supplied', fit_as_of=None, fit_evidence_id=''),), 'path_count': 100}
+
+    @pytest.mark.parametrize('changes', [
+        {'path_count': 10**9},
+        {'path_count': 100, 'parameters': (HurdleParameters('team', 1, (10000,), (ExecutionMark(1),)),)},
+        {'path_count': 10000, 'parameters': (HurdleParameters('team', 0, marks=tuple(ExecutionMark(1, billed_configuration=str(i)) for i in range(67))),)},
+        {'path_count': 10000, 'exposures': (spell(access=False),),
+         'events': tuple(event('start'+str(i), 'root_start', root=str(i)) for i in range(4)),
+         'continuation_marks': (ExecutionMark(1),)},
+    ])
+    def test_structural_bounds_reject_before_axis_or_rng_allocations(changes):
+        # Sentinels prevent an accidental giant allocation on the red version.
+        with patch('forecasting.joint.SeriesAxis', side_effect=AssertionError('axis allocation reached')), \
+             patch('forecasting.state.random.Random', side_effect=AssertionError('rng allocation reached')):
+            with pytest.raises(ValueError, match='bound|budget'):
+>               recurrent(**changes)
+
+tests/test_final_review_regressions.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_final_review_regressions.py:96: in recurrent
+    return generate_recurrent_scenarios(**options)
+src/forecasting/state.py:418: in generate_recurrent_scenarios
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+src/forecasting/state.py:418: in <genexpr>
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1093: in __call__
+    return self._mock_call(*args, **kwargs)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1097: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='SeriesAxis' id='4448635872'>
+args = ('a', 'tokens', 'unknown', 'unassigned', 'tokens'), kwargs = {}
+effect = AssertionError('axis allocation reached')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               AssertionError: axis allocation reached
+
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1152: AssertionError
+____ test_structural_bounds_reject_before_axis_or_rng_allocations[changes2] ____
+
+changes = {'parameters': (HurdleParameters(cohort='team', p_any=0, positive_counts=(1,), marks=(ExecutionMark(tokens=1, requeste... fit_id='supplied-finite-law', parameter_source='supplied', fit_as_of=None, fit_evidence_id=''),), 'path_count': 10000}
+
+    @pytest.mark.parametrize('changes', [
+        {'path_count': 10**9},
+        {'path_count': 100, 'parameters': (HurdleParameters('team', 1, (10000,), (ExecutionMark(1),)),)},
+        {'path_count': 10000, 'parameters': (HurdleParameters('team', 0, marks=tuple(ExecutionMark(1, billed_configuration=str(i)) for i in range(67))),)},
+        {'path_count': 10000, 'exposures': (spell(access=False),),
+         'events': tuple(event('start'+str(i), 'root_start', root=str(i)) for i in range(4)),
+         'continuation_marks': (ExecutionMark(1),)},
+    ])
+    def test_structural_bounds_reject_before_axis_or_rng_allocations(changes):
+        # Sentinels prevent an accidental giant allocation on the red version.
+        with patch('forecasting.joint.SeriesAxis', side_effect=AssertionError('axis allocation reached')), \
+             patch('forecasting.state.random.Random', side_effect=AssertionError('rng allocation reached')):
+            with pytest.raises(ValueError, match='bound|budget'):
+>               recurrent(**changes)
+
+tests/test_final_review_regressions.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_final_review_regressions.py:96: in recurrent
+    return generate_recurrent_scenarios(**options)
+src/forecasting/state.py:418: in generate_recurrent_scenarios
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+src/forecasting/state.py:418: in <genexpr>
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1093: in __call__
+    return self._mock_call(*args, **kwargs)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1097: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='SeriesAxis' id='4445980848'>
+args = ('a', 'tokens', '0', 'unassigned', 'tokens'), kwargs = {}
+effect = AssertionError('axis allocation reached')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               AssertionError: axis allocation reached
+
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1152: AssertionError
+____ test_structural_bounds_reject_before_axis_or_rng_allocations[changes3] ____
+
+changes = {'continuation_marks': (ExecutionMark(tokens=1, requested_configuration='', served_configuration='', billed_configurat...(2023, 12, 1, 0, 0, tzinfo=datetime.timezone.utc), access=False, observed=True, prior_use=None),), 'path_count': 10000}
+
+    @pytest.mark.parametrize('changes', [
+        {'path_count': 10**9},
+        {'path_count': 100, 'parameters': (HurdleParameters('team', 1, (10000,), (ExecutionMark(1),)),)},
+        {'path_count': 10000, 'parameters': (HurdleParameters('team', 0, marks=tuple(ExecutionMark(1, billed_configuration=str(i)) for i in range(67))),)},
+        {'path_count': 10000, 'exposures': (spell(access=False),),
+         'events': tuple(event('start'+str(i), 'root_start', root=str(i)) for i in range(4)),
+         'continuation_marks': (ExecutionMark(1),)},
+    ])
+    def test_structural_bounds_reject_before_axis_or_rng_allocations(changes):
+        # Sentinels prevent an accidental giant allocation on the red version.
+        with patch('forecasting.joint.SeriesAxis', side_effect=AssertionError('axis allocation reached')), \
+             patch('forecasting.state.random.Random', side_effect=AssertionError('rng allocation reached')):
+            with pytest.raises(ValueError, match='bound|budget'):
+>               recurrent(**changes)
+
+tests/test_final_review_regressions.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_final_review_regressions.py:96: in recurrent
+    return generate_recurrent_scenarios(**options)
+src/forecasting/state.py:418: in generate_recurrent_scenarios
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+src/forecasting/state.py:418: in <genexpr>
+    axes = tuple(SeriesAxis(person, 'tokens', config, 'unassigned', 'tokens') for person,config in axes_keys)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1093: in __call__
+    return self._mock_call(*args, **kwargs)
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1097: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='SeriesAxis' id='4446006480'>
+args = ('a', 'tokens', 'unknown', 'unassigned', 'tokens'), kwargs = {}
+effect = AssertionError('axis allocation reached')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               AssertionError: axis allocation reached
+
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:1152: AssertionError
+______ test_finite_history_overflow_preserves_actuals_but_bad_axes_reject ______
+
+values = (1e+308, 1e+308)
+
+    def _sum(values):
+        values = tuple(values)
+        if all(isinstance(v, Decimal) for v in values):
+            result = exact_sum(values)
+            if not result.is_finite():
+                raise ContractError('nonfinite derived total')
+            return result
+        try:
+>           result = math.fsum(values)
+E           OverflowError: intermediate overflow in fsum
+
+src/forecasting/joint.py:63: OverflowError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_finite_history_overflow_p0')
+
+    def test_finite_history_overflow_preserves_actuals_but_bad_axes_reject(tmp_path):
+        service, snapshot, request = fixture(tmp_path, output='full_period')
+        snapshot = snapshot_with(snapshot,
+            daily=tuple(replace(row, value=Decimal('1e308')) for row in snapshot.daily),
+            company_daily=tuple(replace(row, value=Decimal('2e308')) for row in snapshot.company_daily))
+        request = replace(request, period_start=snapshot.history_start,
+            period_end=request.period_start+timedelta(days=1), model='last_observation')
+>       result = service.run_joint(request, snapshot, allowed_sources={'usage'}, axes=axes(), n_paths=1)
+
+tests/test_final_review_regressions.py:122:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/forecasting/service.py:241: in run_joint
+    return run_joint(self, request, snapshot, allowed_sources=allowed_sources, **options)
+src/forecasting/joint_service.py:266: in run_joint
+    generated = fit_joint_blocks(tuple(panel), target=request.target, snapshot_id=snapshot.snapshot_id,
+src/forecasting/joint.py:376: in fit_joint_blocks
+    return ScenarioBundle(target, snapshot_id, as_of, dates, axes,
+<string>:18: in __init__
+    ???
+src/forecasting/joint.py:216: in __post_init__
+    self.totals()  # Finite cells do not imply finite cumulative sums.
+src/forecasting/joint.py:229: in totals
+    return tuple(_sum(v for i in indices for v in path[i]) for path in self.values)
+src/forecasting/joint.py:229: in <genexpr>
+    return tuple(_sum(v for i in indices for v in path[i]) for path in self.values)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+values = (1e+308, 1e+308)
+
+    def _sum(values):
+        values = tuple(values)
+        if all(isinstance(v, Decimal) for v in values):
+            result = exact_sum(values)
+            if not result.is_finite():
+                raise ContractError('nonfinite derived total')
+            return result
+        try:
+            result = math.fsum(values)
+        except (ArithmeticError, ValueError) as exc:
+>           raise ContractError('nonfinite derived total') from exc
+E           forecasting.contracts.ContractError: nonfinite derived total
+
+src/forecasting/joint.py:65: ContractError
+___ test_structural_generated_overflow_degrades_but_malformed_state_rejects ____
+
+tmp_path = PosixPath('/private/var/folders/nz/0k29zcl91zl_hztxtkx2b76w0000gn/T/pytest-of-aaronbao/pytest-1134/test_structural_generated_over0')
+
+    def test_structural_generated_overflow_degrades_but_malformed_state_rejects(tmp_path):
+        service, snapshot, request = fixture(tmp_path, output='full_period')
+        request = replace(request, period_start=snapshot.history_start)
+        exposure = ExposureSpell('a', 'a', 'c', request.as_of.date(), request.period_end, request.as_of, True)
+        inputs = dict(exposures=(exposure,), events=(), parameters=(HurdleParameters('c', 1, marks=(ExecutionMark(1e308),)),))
+>       result = service.run_joint(request, snapshot, allowed_sources={'usage'}, n_paths=1, state_inputs=inputs)
+
+tests/test_final_review_regressions.py:136:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/forecasting/service.py:241: in run_joint
+    return run_joint(self, request, snapshot, allowed_sources=allowed_sources, **options)
+src/forecasting/joint_service.py:232: in run_joint
+    generated = generate_recurrent_scenarios(target=request.target, snapshot_id=snapshot.snapshot_id,
+src/forecasting/state.py:491: in generate_recurrent_scenarios
+    _finite(total, 'path total')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+value = inf, name = 'path total'
+
+    def _finite(value, name):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+>           raise ValueError(name + ' must be finite and nonnegative')
+E           ValueError: path total must be finite and nonnegative
+
+src/forecasting/state.py:20: ValueError
+=========================== short test summary info ============================
+FAILED tests/test_final_review_regressions.py::test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[True-0]
+FAILED tests/test_final_review_regressions.py::test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[False-0]
+FAILED tests/test_final_review_regressions.py::test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[True-2]
+FAILED tests/test_final_review_regressions.py::test_multi_axis_actuals_share_forecast_entity_even_when_unavailable[False-2]
+FAILED tests/test_final_review_regressions.py::test_native_and_money_excess_are_context_independent[False]
+FAILED tests/test_final_review_regressions.py::test_native_and_money_excess_are_context_independent[True]
+FAILED tests/test_final_review_regressions.py::test_rational_projection_has_fixed_rounding_exponents_and_traps
+FAILED tests/test_final_review_regressions.py::test_effective_structural_population_obeys_service_limit
+FAILED tests/test_final_review_regressions.py::test_structural_bounds_reject_before_axis_or_rng_allocations[changes0]
+FAILED tests/test_final_review_regressions.py::test_structural_bounds_reject_before_axis_or_rng_allocations[changes1]
+FAILED tests/test_final_review_regressions.py::test_structural_bounds_reject_before_axis_or_rng_allocations[changes2]
+FAILED tests/test_final_review_regressions.py::test_structural_bounds_reject_before_axis_or_rng_allocations[changes3]
+FAILED tests/test_final_review_regressions.py::test_finite_history_overflow_preserves_actuals_but_bad_axes_reject
+FAILED tests/test_final_review_regressions.py::test_structural_generated_overflow_degrades_but_malformed_state_rejects
+14 failed in 0.39s

@@ -1,0 +1,14 @@
+{
+  "paths": 100,
+  "people": 10,
+  "days": 25,
+  "max_positive_count": 2,
+  "root_budget": 50000,
+  "emitted_roots": 50000,
+  "cells": 25000,
+  "seconds_with_tracemalloc": 2.826403417,
+  "tracemalloc_current_bytes": 27601250,
+  "tracemalloc_peak_bytes": 88385239,
+  "process_peak_rss_bytes_macos": 178929664,
+  "qualification": "One finite fixture at cap, not production memory certification; serialization contributes to peak."
+}

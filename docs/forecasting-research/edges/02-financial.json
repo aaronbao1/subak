@@ -1,0 +1,110 @@
+[
+  {
+    "id": "02-E01",
+    "family": "pooled_entitlements_and_seat_lifecycle",
+    "scenario": "Two teams consume one monthly pool while a seat is removed mid-cycle and a new seat is added; a rolling horizon crosses the UTC reset.",
+    "mechanism": "Per-team allowance multiplication, immediate subtraction on removal, or a fresh allowance for forecast remainder underestimates overage.",
+    "detection": "Validate billing-entity pool id, effective-dated seat events, reset clock, start balance and consumption coverage.",
+    "response": "Evaluate joint pool state before team allocation; preserve provider-specific asymmetric seat rules and distinguish blocked continuation from unlimited demand.",
+    "test_assertion": "Proposed fixture: allowance 10, team usage 8+8, rate 1 gives overage 6, never 0; a synthetic removal with next-cycle effect does not reduce this-cycle pool; reset grants next-cycle allowance once.",
+    "residual_limit": "Unknown private entitlements or missing users leave pooled-cost coverage incomplete.",
+    "owner": "Pricing/contract evaluator with ingestion",
+    "requirement_source": "Master plan \u00a72 subscription/included/overage distinctions; 02-S07"
+  },
+  {
+    "id": "02-E02",
+    "family": "covering_charge_conservation",
+    "scenario": "Annual upfront commitment is purchased by a central account; one team becomes idle and the commitment is consumed across accounts/months.",
+    "mechanism": "Adding purchase cost and covered-use valuation double-counts; forcing each month effective=billed invents adjustments; attributing only used cost drops idle commitment.",
+    "detection": "Link covering/covered ids, full commitment period, payment schedule and underutilization category; assess scope completeness.",
+    "response": "Maintain billed and effective views with explicit unused/central cost and complete-period bridge; do not interpret lower allocation as cancelled cash obligation.",
+    "test_assertion": "Proposed $1,200 annual fixture: purchase cash is $1,200 once; policy-scheduled $100 monthly recognition sums to $1,200 over 12 months including unused cost; no requirement equates first-month billed $1,200 with effective $100.",
+    "residual_limit": "Recognition schedule is fixture/finance policy, not a general accounting rule; private terms can differ.",
+    "owner": "Financial normalization and contract evaluator",
+    "requirement_source": "Master plan \u00a72 fixed fees/commitments; 02-S02, 02-S03, 02-S08"
+  },
+  {
+    "id": "02-E03",
+    "family": "late_usage_refund_and_target_clock",
+    "scenario": "May usage arrives in June, followed by a July correction and a cash refund in August.",
+    "mechanism": "Import-date grouping labels four events as new demand; refund is deducted once from July usage and again when cash settles.",
+    "detection": "Track service period, observed time, invoice period, correction reference and settlement event independently.",
+    "response": "Produce separate incurred, billed and cash views; preserve signed corrections and forecast vintage instead of overwriting historical as-of truth.",
+    "test_assertion": "Proposed fixture: $100 May use billed June, -$20 attributable correction in July, $20 cash refund August yields latest May net cost $80; it creates no July/August negative token demand and August refund is not a second cost correction.",
+    "residual_limit": "Attribution of a general goodwill credit to a past service period may be unavailable or policy-dependent.",
+    "owner": "Billing ingestion and target builder",
+    "requirement_source": "Backend actual/estimated/period provenance and transcript actuals variance concern; 02-S09, 02-S10"
+  },
+  {
+    "id": "02-E04",
+    "family": "nonmonotonic_tier_and_uncertainty",
+    "scenario": "Usage uncertainty straddles a whole-volume pricing threshold or included-usage cliff.",
+    "mechanism": "Pricing mean demand biases expected cost; assuming a monotonic cost transform mislabels quantiles; small usage increments can reprice prior consumption.",
+    "detection": "Contract declares graduated versus volume mode and repricing scope; fixture evaluates each side of every boundary.",
+    "response": "Price full joint demand paths; summarize charges after conversion; retain contract-specific negative incremental deltas when valid.",
+    "test_assertion": "Proposed fixture F=100, allowance=10, overage rate=10 and equal-probability usage 0/20 gives mean charge 150, not g(mean usage)=100; synthetic volume rates 10 for <=100 units and 8 for >100 give costs 1000 and 808 at 100/101 units.",
+    "residual_limit": "Demand distribution and correlation remain estimated; fixture checks mathematics, not enterprise calibration.",
+    "owner": "Forecast distribution and pricing evaluator",
+    "requirement_source": "Master plan token counts are not dollar cost; 02-S11"
+  },
+  {
+    "id": "02-E05",
+    "family": "credit_eligibility_and_finalization_order",
+    "scenario": "A promotional grant expires near invoice period end while two eligible invoices finalize in different orders, alongside noneligible setup fees.",
+    "mechanism": "A global credit subtraction assumes all charges eligible and order irrelevant; using usage date instead of contractual eligibility clock spends expired credit.",
+    "detection": "Validate currency, eligible price scope, eligibility clock, expiry, remaining balance and finalization state.",
+    "response": "Use actual application when reported; otherwise simulate documented order or present conditional outcomes; separate purchased face value from acquisition cost.",
+    "test_assertion": "Proposed fixture: one $50 credit and two $40 eligible invoices cannot each consume $40; total applied <=50, residual eligible payable=30; excluded setup fee remains payable; expired grant applies zero when contractual invoice-end test fails.",
+    "residual_limit": "Finalization order may be unknown; Stripe examples are not universal provider policy.",
+    "owner": "Credit ledger and contract evaluator",
+    "requirement_source": "Master plan \u00a72 vendor credits versus internal planning credits; 02-S12"
+  },
+  {
+    "id": "02-E06",
+    "family": "currency_tax_and_invoice_grain",
+    "scenario": "Usage is priced in USD, billed in EUR with an applied source rate, settled in GBP, and invoice-only tax has recoverability unknown to the system.",
+    "mechanism": "Double conversion, addition of unlike currencies, tax counted at both usage and invoice levels, or reporting FX substituted for settlement FX produces false budget headroom.",
+    "detection": "Require unit/currency role, rate direction/date/source, invoice lineage and tax-inclusion policy.",
+    "response": "Preserve native amounts; compute separate reporting conversion; bridge invoice tax once; leave recoverability to configured finance policy.",
+    "test_assertion": "Proposed fixture USD100 at 0.9 EUR/USD yields EUR90, not EUR81; EUR9 invoice-only tax makes EUR99 gross; GBP settlement is independently linked and never summed with EUR99.",
+    "residual_limit": "Future FX and tax eligibility may require conditional scenarios; no tax determination is supplied.",
+    "owner": "Financial normalization and invoice reconciliation",
+    "requirement_source": "Backend units, scope and known totals; 02-S04, 02-S09"
+  },
+  {
+    "id": "02-E07",
+    "family": "mixed_correction_semantics",
+    "scenario": "Connector delivers a revised snapshot containing a refund while another provider appends a reversal and replacement; a retry repeats a delivery.",
+    "mechanism": "Appending snapshots doubles spend; replacing ledger history loses reversals; global sign filters discard refunds; retry deduplication can erase a legitimate identical adjustment.",
+    "detection": "Per-source delivery scope, artifact revision/id, correction style and source-record identity.",
+    "response": "Normalize snapshot replacement, delta accumulation and ledger replay separately; preserve raw artifacts and as-of versions.",
+    "test_assertion": "Proposed equivalent revisions: snapshot 100 then 80; delta 100 then -20; ledger 100 then -100 then 80 each yield 80 once. Replaying the same artifact leaves 80. A distinct second -20 adjustment yields 60 when intended.",
+    "residual_limit": "Identical content without stable artifact/record identifiers can remain ambiguous.",
+    "owner": "Ingestion revision engine",
+    "requirement_source": "Backend idempotent import and reproducible actuals; 02-S05"
+  },
+  {
+    "id": "02-E08",
+    "family": "allocation_vs_marginal_and_zero_weights",
+    "scenario": "Fixed company spend is unchanged but a team moves or another team stops usage, changing allocation weights; all usage weights later become zero.",
+    "mechanism": "Allocation changes are interpreted as demand growth or savings; division by zero removes fixed obligations; stale allocation is compared with revised budgets.",
+    "detection": "Version allocation policy and membership separately from provider totals; compare parent-cost and weight changes.",
+    "response": "Preserve original and explicitly restated views; explain allocation-only variance; use central/default owner for zero-denominator cases; compare budgets on matched policy.",
+    "test_assertion": "Proposed parent cost 100 with weights 50/50 yields 50/50; change to 80/20 yields 80/20 without company savings or new spend; zero weights assign 100 centrally under fixture policy. Each version conserves exactly 100.",
+    "residual_limit": "Fair allocation is an organizational policy choice; conservation does not prove economic causality.",
+    "owner": "Allocation service and finance policy",
+    "requirement_source": "Master plan team mapping and internal budget scope; 02-S13"
+  },
+  {
+    "id": "02-E09",
+    "family": "tolerance_masked_missing_charge",
+    "scenario": "A tiny invoice omits a $0.50 charge from imported usage while the FOCUS rounding-tolerance floor is $1.",
+    "mechanism": "Standard conformance pass is incorrectly called exact reconciliation; material relative error disappears under an absolute floor.",
+    "detection": "Compute exact residual, completeness and line match separately from standard tolerance flag.",
+    "response": "Show residual and category; require known rounding lineage or unresolved state; never create an unexplained balancing entry.",
+    "test_assertion": "Proposed invoice 2.00 and imported charge sum 1.50 produce residual 0.50 and standard-tolerance pass, but exact-match=false and missing-line investigation remains open. Internal allocation must conserve 1.50, not silently force 2.00.",
+    "residual_limit": "A smaller residual alone cannot distinguish rounding from missing data; organization chooses materiality.",
+    "owner": "Invoice reconciliation and UI status contract",
+    "requirement_source": "Backend known totals and visible incompleteness; transcript penny/actuals concern; 02-S06"
+  }
+]

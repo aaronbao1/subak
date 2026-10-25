@@ -1,0 +1,122 @@
+[
+  {
+    "id": "06-E01",
+    "family": "Calendar and observation basis",
+    "scenario": "A provider batches a weekend of incurred charges on Monday, while a source outage leaves Tuesday absent.",
+    "mechanism": "A posting-date model learns artificial Monday seasonality and missing-as-zero reinforces a false weekday effect.",
+    "detection": "Compare service-date versus posting-date distributions; inspect reporting-vintage coverage and revision lags.",
+    "response": "Use incurred/service-date targets or label posting-date target explicitly; retain missing mask and separate late-incurred nowcast.",
+    "test_assertion": "Proposed: rebatching unchanged service events changes neither the incurred weekly total nor learned day labels; an absent Tuesday never becomes a complete zero.",
+    "residual_limit": "Service dates may be unavailable; then an incurred-target forecast is not identified from posted totals alone.",
+    "owner": "Backend ingestion + forecasting",
+    "requirement_source": "Master plan sections 2/4 source meaning and incomplete data; mentor transcript lines 22–26 late billing."
+  },
+  {
+    "id": "06-E02",
+    "family": "Price and usage confounding",
+    "scenario": "A new model costs less per token on the same date an approved project doubles token use.",
+    "mechanism": "A flat dollar total conceals consumption growth; extrapolating a dollar trend plus a separate project multiplier can double-count the change.",
+    "detection": "Decompose units by model/version and effective price; align deployment and plan-event dates.",
+    "response": "Compare usage-first repricing with direct-cost continuation; avoid adding a contextual effect already incorporated in observed post-change history.",
+    "test_assertion": "Proposed: repricing fixed token paths changes only priced cost; observed project uptake is not added again as an independent event increment.",
+    "residual_limit": "Unknown model mix and negotiated prices prevent a fully identifiable decomposition.",
+    "owner": "Forecasting + pricing/normalization",
+    "requirement_source": "Master plan section 2 usage versus monetary cost; mentor transcript lines 102–115 adoption/price shifts."
+  },
+  {
+    "id": "06-E03",
+    "family": "Dynamic regression identifiability",
+    "scenario": "A team hiring wave, holiday shutdown and launch milestone occur in the same short training window.",
+    "mechanism": "Collinear covariates and trend can arbitrarily divide one observed change into causal-looking component effects.",
+    "detection": "Rank/condition checks, coefficient/prior sensitivity, leave-event-out origins and comparison against calendar-only models.",
+    "response": "Collapse or remove unidentified terms; keep the planned change as an explicit scenario; refuse causal component language.",
+    "test_assertion": "Proposed: rank-deficient fits produce a recorded unsupported/regularized state rather than arbitrary explanatory coefficients; future context does not silently sharpen intervals.",
+    "residual_limit": "Even full-rank observational regressions do not establish causal effects.",
+    "owner": "Forecasting + context feature pipeline",
+    "requirement_source": "Factory plan context signals and uncertainty; master plan prohibits invented numerical token multiplier."
+  },
+  {
+    "id": "06-E04",
+    "family": "Transform, zeros and refunds",
+    "scenario": "A mostly positive team has a real zero-usage holiday and a negative refund recorded on the same weekly path.",
+    "mechanism": "Logging with arbitrary epsilon or log1p changes units; dropping rows hides zero activity; clipping a refund contaminates gross-spend target.",
+    "detection": "Validate target sign/support and explicit gross-versus-net basis before transforms; compare unit-rescaled inputs.",
+    "response": "Separate adjustments from gross incurred spend; use a zero-capable observation family or declare log candidate ineligible.",
+    "test_assertion": "Proposed: zero/refund inputs fail log-only eligibility explicitly; changing dollars to cents does not change the modeled economic forecast under an undocumented transform.",
+    "residual_limit": "A signed net-charge target may genuinely be required, in which case positivity constraints do not apply.",
+    "owner": "Normalization + forecasting",
+    "requirement_source": "Master plan section 2 distinguish quantities and cost categories; mathematical support requirement."
+  },
+  {
+    "id": "06-E05",
+    "family": "Cumulative uncertainty",
+    "scenario": "A research evaluation surge persists for five days, but daily forecast marginal intervals are added as a month-end interval.",
+    "mechanism": "Summed quantiles are not quantiles of the sum; independent daily sampling also removes burst persistence.",
+    "detection": "Inspect joint-path generation and cumulative-variance relation; compare marginal-shuffled with intact simulated paths.",
+    "response": "Sum joint original-scale draws on exact forecast dates, then calculate cumulative quantiles; report mean separately from median.",
+    "test_assertion": "Proposed: a perfectly shared daily shock produces the known scaled cumulative distribution; a lognormal forecast returns its mean rather than inverse-log median when labeled expected cost.",
+    "residual_limit": "Correct aggregation cannot repair a misspecified temporal dependence model.",
+    "owner": "Forecasting distribution and evaluation",
+    "requirement_source": "Master plan projection assumptions/periods; initial cumulative 7/14/30 and month-remainder research objective."
+  },
+  {
+    "id": "06-E06",
+    "family": "Calendar domain shift",
+    "scenario": "Four weekday-only weeks precede an approved weekend evaluation sprint spanning a daylight-saving transition.",
+    "mechanism": "Seasonal-naive or zero weekend assumptions omit new activity; UTC day boundaries and staffing-local dates misalign exposure.",
+    "detection": "Track calendar identity/timezone, observed weekend coverage, schedule provenance and partial-day duration.",
+    "response": "Use explicit event scenarios and calendar-aware exposure; retain uncertainty for unseen weekends rather than borrow an unobserved seasonal curve.",
+    "test_assertion": "Proposed: target-date membership follows the declared financial timezone; a 23/25-hour day has documented exposure; missing weekend coverage is distinct from measured inactivity.",
+    "residual_limit": "An announced sprint without historical effect size remains a scenario, not a calibrated point increment.",
+    "owner": "Backend time basis + forecasting + context",
+    "requirement_source": "Master plan source/period semantics; Factory dated plans; mentor company-specific seasonality concern."
+  },
+  {
+    "id": "06-E07",
+    "family": "Trend and intervention persistence",
+    "scenario": "A one-off benchmark run lifts the last two days, immediately followed by a lasting headcount increase.",
+    "mechanism": "Undamped trend extrapolates the benchmark indefinitely; aggressive damping misses continuing exposure growth.",
+    "detection": "Compare recent/expanding fits, intervention exclusions and damped/undamped out-of-origin cumulative bias.",
+    "response": "Keep transient and persistent scenarios distinct; evaluate event regressors or exposure separately from adaptive level/slope.",
+    "test_assertion": "Proposed: removing a documented one-off event does not erase scheduled future exposure; 30-day errors and calibration are checked separately from 1-day residual fit.",
+    "residual_limit": "Without reliable event labels, transient and structural changes may be observationally indistinguishable initially.",
+    "owner": "Forecasting + context pipeline",
+    "requirement_source": "Northstar approved expansion and delayed product launch; mentor localized forecast/adoption cautions."
+  },
+  {
+    "id": "06-E08",
+    "family": "Temporal aggregation mismatch",
+    "scenario": "A weekly model serves a month ending Wednesday while fixed subscription charges occur Friday.",
+    "mechanism": "Dividing weekly total by seven misallocates workdays and shifts fixed charges into the wrong target; prorating already incurred totals can overlap nowcast.",
+    "detection": "Validate forecast support dates and component service/recognition dates against requested calendar remainder.",
+    "response": "Use daily paths or a separately evaluated temporal-disaggregation model; add fixed schedule once on the declared recognition basis.",
+    "test_assertion": "Proposed: Wednesday month-end forecast includes only covered dates and applicable charges, with no future Friday bill inserted by weekly prorating.",
+    "residual_limit": "Weekly-only source data cannot identify daily timing without additional assumptions.",
+    "owner": "Forecasting + accounting target contract",
+    "requirement_source": "Master plan fixed/variable distinction and supplied periods; initial calendar-month-remainder objective."
+  },
+  {
+    "id": "06-E09",
+    "family": "Multivariate pseudo-dependence",
+    "scenario": "A provider key is reassigned from research to engineering mid-month while company usage stays unchanged.",
+    "mechanism": "VAR detects apparent lead/lag substitution created by ownership accounting; summed company total may be included as a redundant endogenous variable.",
+    "detection": "Use dated ownership mappings, per-key continuity checks and matrix rank diagnostics; exclude exact aggregate linear combinations.",
+    "response": "Compare stable-ownership panels or reconstruct agreed historical basis; annotate mapping break and avoid causal work-transfer explanation.",
+    "test_assertion": "Proposed: a pure reassignment preserves company spend and is tagged as a mapping event; singular panels are rejected or reparameterized explicitly.",
+    "residual_limit": "No reconstruction can establish historical team responsibility if authoritative mapping history is missing.",
+    "owner": "Attribution + multivariate forecasting",
+    "requirement_source": "Master plan explicit team mapping and ownership/customer boundaries."
+  },
+  {
+    "id": "06-E10",
+    "family": "Model-fit and latent uncertainty failure",
+    "scenario": "A constant short series produces zero scaling variance, a nearly singular GP kernel and a zero-noise state-space estimate.",
+    "mechanism": "Automatic fits can return numeric-looking overconfidence, NaNs or latent-function intervals that omit future observation noise.",
+    "detection": "Check transform scaling, convergence, covariance PSD, predictive noise inclusion, finite outputs and support violations.",
+    "response": "Record candidate unavailable with diagnostic; use an eligible reference distribution only if separately validated; never label numerical certainty as business certainty.",
+    "test_assertion": "Proposed: constant histories do not divide by zero; GP noisy-observation intervals include fitted observation variance; failed fit cannot publish a successful forecast.",
+    "residual_limit": "A mathematically successful fit can still be poorly calibrated under unobserved regime changes.",
+    "owner": "Forecasting runtime + evaluation",
+    "requirement_source": "Master plan forecast unavailable state and honest uncertainty; frontend cannot silently convert unavailable to zero."
+  }
+]

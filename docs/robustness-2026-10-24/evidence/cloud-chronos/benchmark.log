@@ -1,0 +1,179 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+{
+  "output": "/vercel/results-chronos.json",
+  "horizons": {
+    "1": {
+      "foundation": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 292074.44375,
+        "rmse_tokens": 542546.0856361971,
+        "bias_tokens": -71471.3421875,
+        "wape": 0.8066284750405214,
+        "worst_absolute_loss_tokens": 2115711.4375,
+        "latency_seconds_total": 0.23036214599999028,
+        "latency_seconds_median": 0.010729454500008728,
+        "failure_reasons": {}
+      },
+      "joint_block_mean": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 349854.73154687503,
+        "rmse_tokens": 563462.6387798982,
+        "bias_tokens": 62261.65226562501,
+        "wape": 0.9662015785089269,
+        "worst_absolute_loss_tokens": 2091829.5771875,
+        "latency_seconds_total": 0.1547521379999779,
+        "latency_seconds_median": 0.0059985069999939356,
+        "failure_reasons": {}
+      },
+      "last_observation": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 358746.0,
+        "rmse_tokens": 632312.3739346716,
+        "bias_tokens": -39471.3,
+        "wape": 0.9907567919724468,
+        "worst_absolute_loss_tokens": 2227238.0,
+        "latency_seconds_total": 0.00011221799998395454,
+        "latency_seconds_median": 4.660999998407078e-06,
+        "failure_reasons": {}
+      },
+      "seasonal_naive": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 463495.5,
+        "rmse_tokens": 724914.4154765444,
+        "bias_tokens": 110161.6,
+        "wape": 1.2800458114478357,
+        "worst_absolute_loss_tokens": 2246774.0,
+        "latency_seconds_total": 0.00011327299999663865,
+        "latency_seconds_median": 5.014499997457733e-06,
+        "failure_reasons": {}
+      },
+      "trailing_mean_16": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 345308.5625,
+        "rmse_tokens": 555076.4526495934,
+        "bias_tokens": 27819.1375,
+        "wape": 0.9536463225321458,
+        "worst_absolute_loss_tokens": 2066495.4375,
+        "latency_seconds_total": 0.000492846999975427,
+        "latency_seconds_median": 2.2682500002702e-05,
+        "failure_reasons": {}
+      },
+      "zero_diagnostic": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 362092.9,
+        "rmse_tokens": 624023.6603201837,
+        "bias_tokens": -362092.9,
+        "wape": 1.0,
+        "worst_absolute_loss_tokens": 2316811.0,
+        "latency_seconds_total": 5.704199996614534e-05,
+        "latency_seconds_median": 2.7904999981842593e-06,
+        "failure_reasons": {}
+      }
+    },
+    "4": {
+      "foundation": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 964212.115625,
+        "rmse_tokens": 1570597.9812872475,
+        "bias_tokens": -445237.68125,
+        "wape": 0.6097812860051104,
+        "worst_absolute_loss_tokens": 5636865.546875,
+        "latency_seconds_total": 0.21278906999997105,
+        "latency_seconds_median": 0.010618334500001936,
+        "failure_reasons": {}
+      },
+      "joint_block_mean": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 1352666.97509375,
+        "rmse_tokens": 1876421.1998248722,
+        "bias_tokens": 128690.82759375003,
+        "wape": 0.8554455956764825,
+        "worst_absolute_loss_tokens": 5310037.636875,
+        "latency_seconds_total": 0.10171720399998208,
+        "latency_seconds_median": 0.0050592414999997,
+        "failure_reasons": {}
+      },
+      "last_observation": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 824088.75,
+        "rmse_tokens": 1636480.0420295538,
+        "bias_tokens": -520292.95,
+        "wape": 0.52116530130055,
+        "worst_absolute_loss_tokens": 5846013.0,
+        "latency_seconds_total": 0.0001074049999658655,
+        "latency_seconds_median": 5.299999990882043e-06,
+        "failure_reasons": {}
+      },
+      "seasonal_naive": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 1100305.0,
+        "rmse_tokens": 1667631.0964594658,
+        "bias_tokens": 229239.4,
+        "wape": 0.6958483377518522,
+        "worst_absolute_loss_tokens": 4870936.0,
+        "latency_seconds_total": 0.00011595300000522002,
+        "latency_seconds_median": 5.750999996223527e-06,
+        "failure_reasons": {}
+      },
+      "trailing_mean_16": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 1342390.0,
+        "rmse_tokens": 1848295.4412746965,
+        "bias_tokens": -52959.8,
+        "wape": 0.8489462922686972,
+        "worst_absolute_loss_tokens": 5203042.75,
+        "latency_seconds_total": 0.00046375799998088496,
+        "latency_seconds_median": 2.277449999610326e-05,
+        "failure_reasons": {}
+      },
+      "zero_diagnostic": {
+        "opportunities": 20,
+        "successes": 20,
+        "failures": 0,
+        "availability": 1.0,
+        "mae_tokens": 1581242.55,
+        "rmse_tokens": 2230175.7963503795,
+        "bias_tokens": -1581242.55,
+        "wape": 1.0,
+        "worst_absolute_loss_tokens": 6204305.0,
+        "latency_seconds_total": 6.5994999985719e-05,
+        "latency_seconds_median": 3.276000001051216e-06,
+        "failure_reasons": {}
+      }
+    }
+  }
+}

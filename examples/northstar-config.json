@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "request": {
+    "request_id": "northstar-demo-v1",
+    "target": {
+      "target_id": "northstar-covered-variable",
+      "tenant_id": "northstar",
+      "measure": "provider_reported_cost",
+      "unit": "USD",
+      "currency": "USD",
+      "sources": [
+        "billing"
+      ],
+      "categories": [
+        "variable"
+      ]
+    },
+    "as_of": "2026-09-16T00:00:00+00:00",
+    "period_start": "2026-09-01",
+    "period_end": "2026-10-01",
+    "model": "trailing_mean"
+  },
+  "export": "northstar-observations.json",
+  "source_id": "billing",
+  "history_start": "2026-08-01",
+  "coverage": [
+    {
+      "source_id": "billing",
+      "start": "2026-08-01",
+      "end": "2026-09-16",
+      "state": "complete",
+      "maturity": "finalized",
+      "known_at": "2026-09-16T00:00:00+00:00"
+    }
+  ],
+  "evidence_class": "synthetic_fixture"
+}

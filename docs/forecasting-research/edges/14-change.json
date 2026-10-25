@@ -1,0 +1,122 @@
+[
+  {
+    "id": "14-E01",
+    "family": "compensating-price-volume-break",
+    "scenario": "A cheaper default model is adopted overnight while longer reasoning and more experiments raise billable usage; aggregate spend initially stays flat.",
+    "mechanism": "Opposing price, mix, and volume effects hide material behavioral change in a single dollar-series detector.",
+    "detection": "Monitor exact model mix and token categories, active users and calls/session, effective rates, and constant-price usage counterfactuals.",
+    "response": "Retain component changes and joint continuation scenarios; do not claim no change or automatic savings from a flat total.",
+    "test_assertion": "PROPOSED: construct offsetting rate and usage changes; component evidence changes while the accounting total stays constant, and the explanation reports unresolved continuation.",
+    "residual_limit": "Early offsetting behavior cannot identify future demand elasticity or sustained use.",
+    "owner": "Forecasting with backend pricing/meter contracts",
+    "requirement_source": "mentor-discussion.txt: new-model price and adoption challenge; ai-spend-master-plan.md sections 1-2"
+  },
+  {
+    "id": "14-E02",
+    "family": "coverage-outage-plus-release",
+    "scenario": "A provider export fails during a public model release and team spending appears to collapse.",
+    "mechanism": "Missing observations align with a plausible contextual explanation, encouraging false attribution to cheaper-model adoption.",
+    "detection": "Connector health, coverage intervals, raw event counts, freshness, and unaffected comparable scopes.",
+    "response": "Mark incomplete coverage, suspend affected activity updates, and retain the model-release claim as unconfirmed context.",
+    "test_assertion": "PROPOSED: remove an export partition while adding a release document; the forecast never converts missing usage to zero or labels the decline as supported substitution.",
+    "residual_limit": "A simultaneous real decline remains unidentified until independent or recovered evidence arrives.",
+    "owner": "Backend coverage; forecasting fitness gate; Factory evidence",
+    "requirement_source": "ai-spend-master-plan.md sections 2 and 4; frontend-plan.md unavailable/delayed data"
+  },
+  {
+    "id": "14-E03",
+    "family": "late-backfill-and-reorganization",
+    "scenario": "Late research charges arrive just after a project moves to engineering; an arrival-time chart shows an engineering surge.",
+    "mechanism": "Receipt time is confused with incurred time and current mapping overwrites historical ownership.",
+    "detection": "Event/received timestamps, charge revision lineage and effective-dated team mappings.",
+    "response": "Revise the appropriate historical financial basis, replay affected model state, and retain as-of forecast evidence.",
+    "test_assertion": "PROPOSED: backfill pre-transfer activity after transfer; no new present-period activity break is learned merely from arrival, and totals reconcile under the explicitly chosen ownership basis.",
+    "residual_limit": "Provider records without service dates or ownership history require unresolved attribution.",
+    "owner": "Backend temporal ledger and mapping; forecasting replay",
+    "requirement_source": "mentor-discussion.txt delayed-bill example; ai-spend-master-plan.md section 4"
+  },
+  {
+    "id": "14-E04",
+    "family": "cache-and-tool-pulse",
+    "scenario": "A tool-schema deployment invalidates reusable prompt prefixes; cache writes and input overhead jump, then cache warms and costs recover.",
+    "mechanism": "A temporary configuration-driven pulse resembles a permanent workload regime shift.",
+    "detection": "Prompt/schema versions, cache-category meters, tool tokens and comparable task volume over warm-up and recovery.",
+    "response": "Compare pulse, step and reversible-state candidates; retain actual financial exposure even if the long-run activity model stays stable.",
+    "test_assertion": "PROPOSED: inject a cache-miss pulse followed by recovery at unchanged workload; no irreversible full-history deletion occurs, and pulse costs remain included in incurred estimates.",
+    "residual_limit": "Unlogged configuration changes may remain causally unresolved.",
+    "owner": "Backend meter/configuration evidence; forecasting intervention response",
+    "requirement_source": "ai-spend-master-plan.md distinguish usage/cost and preserve assumptions; 14-S11"
+  },
+  {
+    "id": "14-E05",
+    "family": "abrupt-rollout-and-reversal",
+    "scenario": "A company enables a new default tool for every developer in one day, then disables it after a short trial.",
+    "mechanism": "A monotonic slow diffusion model cannot represent a centralized switch, initial exploration, and abandonment.",
+    "detection": "Eligibility/default-setting effective dates, distinct activation and active-use counts, per-user intensity and rollout cancellation evidence.",
+    "response": "Offer immediate-switch and reversal candidates; preserve previous regime state and avoid treating seats as guaranteed use.",
+    "test_assertion": "PROPOSED: daily step-up then reversal is representable without an enforced minimum rollout duration; forecast scenarios retain access/use distinction.",
+    "residual_limit": "Usage after a short trial may not identify steady-state adoption.",
+    "owner": "Forecasting adoption/scenario model; backend settings; Factory context",
+    "requirement_source": "mentor-discussion.txt adoption-delay challenge; internal-team-discussion.txt new tools; 14-S10"
+  },
+  {
+    "id": "14-E06",
+    "family": "substitution-outside-coverage",
+    "scenario": "A team moves work from a monitored API to self-hosted inference while a narrative claims the model is free.",
+    "mechanism": "Observed vendor charges fall but GPU, hosting, operations or other commitments are outside the target scope.",
+    "detection": "Migration/configuration context, declining monitored task share, coverage registry and separately evidenced hosting costs where available.",
+    "response": "Forecast monitored charges on their stated basis; label all-in cost unavailable or partial and create a separate migration-cost scenario if inputs exist.",
+    "test_assertion": "PROPOSED: zero monitored API charges after migration cannot produce a supported zero all-in AI-cost claim.",
+    "residual_limit": "Complete economic cost cannot be recovered from absent billing categories.",
+    "owner": "Backend target coverage; forecasting scope; Factory explanation",
+    "requirement_source": "mentor-discussion.txt cheaper/open-source substitution challenge; ai-spend-master-plan.md sections 1-2"
+  },
+  {
+    "id": "14-E07",
+    "family": "delayed-outcome-expert-selection",
+    "scenario": "An adaptive ensemble promotes a model using incomplete 30-day outcomes while late charges favor a different contender.",
+    "mechanism": "Premature labels, mixed forecast origins, and double-counted revisions corrupt online losses and weight updates.",
+    "detection": "Outcome maturity status, forecast-origin keys, available-at timestamps and revision-aware score lineage.",
+    "response": "Keep pending losses, use a declared provisional/final target policy and revise each outcome contribution exactly once.",
+    "test_assertion": "PROPOSED: withheld charges cannot influence earlier weights; the same finalized outcome and revision affect the appropriate score without duplicate training contribution.",
+    "residual_limit": "Rapid changes can outpace final feedback even with correct accounting.",
+    "owner": "Forecasting evaluation and online updates; backend revisions",
+    "requirement_source": "mentor-discussion.txt delayed billing; ai-spend-master-plan.md evidence boundaries; 14-S08"
+  },
+  {
+    "id": "14-E08",
+    "family": "rare-job-versus-robustness",
+    "scenario": "A legitimate very expensive evaluation job is statistically isolated, and a robust detector discounts it as an outlier.",
+    "mechanism": "Robust distribution estimation is confused with permission to ignore incurred exposure or budget risk.",
+    "detection": "Separate absolute cost/exposure checks, job evidence and recurring-project context from regime detector output.",
+    "response": "Include the incurred job, explain continuation uncertainty and compare one-off versus recurring scenarios regardless of the change alarm.",
+    "test_assertion": "PROPOSED: suppressing a regime alert never removes a valid charge or its budget-threshold impact; recurring follow-up jobs can support a later adaptation.",
+    "residual_limit": "A single large event cannot establish its recurrence probability.",
+    "owner": "Forecasting risk channel; backend ledger; frontend explanation",
+    "requirement_source": "ai-spend-master-plan.md variable usage and accounting distinction; 14-S12"
+  },
+  {
+    "id": "14-E09",
+    "family": "recurrent-project-and-budget-feedback",
+    "scenario": "Research pauses evaluation after a finance warning, resumes next period, and repeats this pattern; the internal allocation itself does not enforce provider usage.",
+    "mechanism": "Human behavioral feedback and project cycles produce recurring regimes that a permanent reset or budget-as-hard-cap assumption misreads.",
+    "detection": "Project/calendar and communication evidence, actual observed resumption, and separation of internal budgets from provider limits.",
+    "response": "Preserve recurrent experts and conditional resume scenarios; do not truncate spend at an internal allocation.",
+    "test_assertion": "PROPOSED: observed spend can exceed allocation; a temporary pause does not force zero future spend, and prior recurring-state evidence remains retrievable.",
+    "residual_limit": "Finance action is endogenous to forecasts; causal policy effects need more than correlation.",
+    "owner": "Forecasting regimes and scenario semantics; Factory context",
+    "requirement_source": "ai-spend-master-plan.md sections 1 and 3 internal-only allocations; 14-S04"
+  },
+  {
+    "id": "14-E10",
+    "family": "fleet-false-alarms-and-hidden-team-shifts",
+    "scenario": "A stable company has many correlated small-team streams while two teams undergo opposite real shifts that cancel in company totals.",
+    "mechanism": "Per-stream thresholds accumulate false alerts; company-only monitoring masks localized changes and allocation risk.",
+    "detection": "Stable-cohort residuals, team and company component views, shared-source incident grouping and empirical fleet alarm counts.",
+    "response": "Calibrate an organization-level operational alarm budget, group common incidents, and retain team-level evidence without summing detector probabilities.",
+    "test_assertion": "PROPOSED: stable correlated replay reports observed fleet false alarms separately from nominal delta; opposite team shifts remain visible despite unchanged company spend.",
+    "residual_limit": "Sparse teams may have low power; dependence weakens naive multiple-test calculations.",
+    "owner": "Forecasting detector/evaluation design; backend shared-source metadata",
+    "requirement_source": "ai-spend-master-plan.md company/team planning; mentor-discussion.txt team-specific change; 14-S02 and 14-S03"
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "08-E01",
+    "family": "roster-time-leakage",
+    "scenario": "An employee moves from research to product after the forecast origin, and a current-roster join rewrites historical research spending before evaluation.",
+    "mechanism": "Future membership leaks into training and changes the target while appearing to improve the forecast.",
+    "detection": "Compare effective-date and knowledge-date joins; audit target hashes under as-incurred versus current-organization restatement.",
+    "response": "Freeze as-of mapping per forecast; explicitly select target accounting basis and use time-varying future allocation only when known.",
+    "test_assertion": "Proposed test: a roster update learned after the origin cannot alter stored inputs or as-incurred labels for that origin; a restatement has a separate target version.",
+    "residual_limit": "Unannounced reorganization remains uncertain; frozen mapping does not predict it.",
+    "owner": "ingestion attribution and forecasting evaluation",
+    "requirement_source": "Master plan sections 2 and 4 explicit team mapping; mentor transcript lines 54–64 headcount and regions"
+  },
+  {
+    "id": "08-E02",
+    "family": "identity-fragmentation-reuse",
+    "scenario": "One person changes email and appears twice while a departed employee's email is later reused by a new hire.",
+    "mechanism": "Duplicate population entries inflate bottom-up totals; recycled identity transfers an inappropriate high-use personal effect.",
+    "detection": "Stable subject identifiers, versioned alias evidence, duplicate ledger event checks, and identity merge/split sensitivity reports.",
+    "response": "Deduplicate observations independently of identity resolution; preserve separate uncertain identities until evidence supports linking; reset entrant effects when identities differ.",
+    "test_assertion": "Proposed test: consistent opaque-ID renaming preserves forecasts; resolving duplicate aliases preserves ledger totals; email recycling does not inherit the departed person's fitted state automatically.",
+    "residual_limit": "Shared accounts may remain unresolvable to a person and require a shared/unassigned component.",
+    "owner": "identity ingestion and pooled model state",
+    "requirement_source": "Master plan sections 2 and 4 explicit ownership mapping and no duplicate spending"
+  },
+  {
+    "id": "08-E03",
+    "family": "crossed-attribution-double-count",
+    "scenario": "A researcher works on two projects used by two teams, with charges tagged simultaneously by person, project and provider model.",
+    "mechanism": "Treating each dimension as a nested additive branch counts one charge several times; an interaction effect is mistaken for a financial allocation.",
+    "detection": "Trace all aggregates to unique ledger IDs and check allocation-weight sums; compare grouped views against the same company total.",
+    "response": "Use mutually exclusive ledger observations with explicit allocation weights; model crossed effects separately from accounting aggregation.",
+    "test_assertion": "Proposed test: all supported team/project/model views reconcile to the ledger on the same cost basis; adding a model feature cannot create another charge.",
+    "residual_limit": "Ambiguous ownership may need an unassigned bucket rather than an invented split.",
+    "owner": "ledger aggregation and statistical design",
+    "requirement_source": "Master plan sections 2 and 4 distinguish provider project from team ownership"
+  },
+  {
+    "id": "08-E04",
+    "family": "negative-transfer-minority-workload",
+    "scenario": "Many low-use engineering users are added to a pooled model while a small research team runs long, irregular model evaluations.",
+    "mechanism": "Dominant population or loss weighting pulls research forecasts toward irrelevant activity patterns despite a better company-average score.",
+    "detection": "Out-of-time subgroup loss before/after source-population addition; compare complete pooling, local and partial-pooling baselines.",
+    "response": "Use validated partial pooling, cohort specialization or local fallback; predeclare decision weights and avoid selecting solely on aggregate average.",
+    "test_assertion": "Proposed test: model selection reports research-team degradation and does not silently replace a materially better subgroup baseline based only on overall mean gain.",
+    "residual_limit": "Short subgroup histories can make degradation estimates noisy; clusters can themselves overfit.",
+    "owner": "forecast training and model selection",
+    "requirement_source": "Mentor transcript lines 34–43 heterogeneous company data; master plan research-priority finance journey"
+  },
+  {
+    "id": "08-E05",
+    "family": "shared-shock-tail-understatement",
+    "scenario": "A launch causes simultaneous usage bursts across many otherwise well-calibrated individual forecasts.",
+    "mechanism": "Independent person draws omit positive cross-person dependence and understate company exceedance probability; summing marginal quantiles causes a different incoherence.",
+    "detection": "Inspect aggregate calibration and residual dependence around launches; compare joint and independent sampling with identical marginals.",
+    "response": "Represent common shocks or dependence-aware residual scenarios; aggregate joint paths before extracting cumulative quantiles.",
+    "test_assertion": "Proposed test: a fixture with a common burst factor retains the factor in team/company draws; quantile output comes from aggregate samples rather than a sum of marginal quantiles.",
+    "residual_limit": "Unobserved future common shocks remain difficult to estimate, especially with few historical events.",
+    "owner": "probabilistic forecasting and calibration",
+    "requirement_source": "Master plan forecast assumptions and company plans; mentor forecast robustness challenge"
+  },
+  {
+    "id": "08-E06",
+    "family": "cold-start-zero-confusion",
+    "scenario": "A hiring wave coincides with delayed telemetry for existing staff, creating many empty person-day records.",
+    "mechanism": "The learner treats absent observations as true inactivity and assigns new users certain zero spend; predicted team totals fall as headcount increases.",
+    "detection": "Separate employment exposure, source coverage, observed zeros and not-yet-observed periods; report forecasts by entrant and missingness state.",
+    "response": "Use population predictive distributions for entrants, mask missing outcomes, and maintain explicit unknown-coverage states.",
+    "test_assertion": "Proposed test: replacing missing values with an unavailable mask leaves coverage visible; adding a new user invokes the cold-start policy rather than an implicit zero effect with zero variance.",
+    "residual_limit": "Population priors can be inaccurate for a genuinely new role or operating model.",
+    "owner": "ingestion coverage and cold-start forecast policy",
+    "requirement_source": "Master plan section 4 missing data must remain incomplete; mentor headcount discussion"
+  },
+  {
+    "id": "08-E07",
+    "family": "person-project-confounding",
+    "scenario": "The largest user leaves, but a replacement and shared agents continue the same expensive research project.",
+    "mechanism": "A model attributes all historical project intensity to the person and incorrectly removes the workload at departure.",
+    "detection": "Track project continuity, reassignment evidence and design-matrix confounding; compare person-only and project-aware scenarios.",
+    "response": "Represent continuation and cancellation separately; use supported project context and avoid claiming causal person effects from fixed assignments.",
+    "test_assertion": "Proposed test: a replacement-on-same-project fixture generates a distinct continuation scenario rather than always deleting all departed-user spend.",
+    "residual_limit": "When person and project never vary independently, their separate effects are not identified by historical data.",
+    "owner": "context features and granularity selection",
+    "requirement_source": "Master plan company-context ingestion; mentor lines 43 and 54 project work and headcount"
+  },
+  {
+    "id": "08-E08",
+    "family": "population-open-world-omission",
+    "scenario": "All named users forecast correctly while a new shared API integration and unknown future hires create material spend.",
+    "mechanism": "Summing only today's people assumes a closed population and excludes nonpersonal or future activity.",
+    "detection": "Compare covered person ledger totals with aggregate charges; monitor residual/unassigned share and planned entrants.",
+    "response": "Maintain explicit shared/unassigned and entrant components; retain direct aggregate forecasts as an independent diagnostic.",
+    "test_assertion": "Proposed test: total forecast accounting includes shared-service and entrant components once each, or reports uncovered scope; it cannot label a roster-only total as all-company spend.",
+    "residual_limit": "Unknown, unannounced integrations are forecast uncertainty, not recoverable by attribution alone.",
+    "owner": "forecast target coverage and aggregation",
+    "requirement_source": "Master plan coding tools plus direct API usage, provider ownership boundaries, completeness"
+  },
+  {
+    "id": "08-E09",
+    "family": "holdout-contamination",
+    "scenario": "A heldout team contains people transferred from training teams, while clustering and normalizers were fitted using the full dataset.",
+    "mechanism": "The evaluation labeled new-team generalization actually reuses person history and test distribution information.",
+    "detection": "Entity lineage audit across folds; record fit populations for transforms, hyperpriors, feature selectors and reconciliation covariance.",
+    "response": "Separate strict new-team/new-person tests from known-person transfer tests; fit all learned transforms within origin/fold boundaries.",
+    "test_assertion": "Proposed test: strict entity holdouts have no disallowed identity ancestry in training; changing post-origin heldout outcomes cannot alter fitted transforms or model selection.",
+    "residual_limit": "One company cannot support a credible heldout-company result; synthetic teams do not substitute for companies.",
+    "owner": "forecast evaluation",
+    "requirement_source": "Mentor transcript lines 34–43 representativeness and company-specific modeling challenge"
+  },
+  {
+    "id": "08-E10",
+    "family": "reconciliation-changing-roster",
+    "scenario": "A reorganization changes team membership midway through the horizon while reconciliation uses a fixed historical matrix and poorly estimated covariance.",
+    "mechanism": "Coherent numbers refer to the wrong membership or reconciliation pushes unstable corrections into small teams.",
+    "detection": "Validate aggregation operator per forecast date/scenario; report correction magnitudes, covariance conditioning and team calibration.",
+    "response": "Use versioned time-dependent mappings; compare simple coherent aggregation against regularized reconciliation and retain a documented fallback.",
+    "test_assertion": "Proposed test: every scenario path sums using its own dated roster mapping; singular covariance triggers a tested fallback rather than invalid or silently clipped totals.",
+    "residual_limit": "Arithmetic coherence cannot repair biased base forecasts or unknown future membership.",
+    "owner": "forecast reconciliation and roster contracts",
+    "requirement_source": "Master plan consistent periods, team/company totals and explicit mapping; mentor changing headcount"
+  }
+]
