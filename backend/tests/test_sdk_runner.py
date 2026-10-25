@@ -365,6 +365,41 @@ def test_gate_refuses_bypasses_of_the_static_check(code):
     assert decide_permission(_raw(_script(code)))[0] == "cancel"
 
 
+@pytest.mark.parametrize("code", [
+    # live false refusals: forbidden words and escapes inside strings are data, not code
+    "text(await tools.northstar.draft_proposal({rationale: 'research-eval-plan v1 expands evaluation work.'}))",
+    "text(await tools.northstar.search_corpus({query: 'research-eval-plan'}))",
+    "text(await tools.northstar.draft_proposal({rationale: 'The approval process still applies; research will require more.'}))",
+    "text(await tools.northstar.draft_proposal({rationale: 'Do not import or fetch numbers; the forecast is a prototype.'}))",
+    "text(await tools.northstar.draft_proposal({rationale: 'Product has headroom \\u2014 move it to research.'}))",
+    "text(await tools.northstar.draft_proposal({rationale: 'Product has headroom — move it to research.'}))",
+    "text(`Covers the research eval push for ${'research'}`)",
+    "// eval usage is informal; see research-eval-plan\ntext(await tools.northstar.get_budgets({}))",
+    "text(await tools.northstar.record_signal({signal: {citations: [{quote: 'keep eval usage flat'}]}}))",
+])
+def test_gate_allows_forbidden_words_inside_strings_and_comments(code):
+    assert check_script(code)[0], check_script(code)
+    assert decide_permission(_raw(_script(code)))[0] == "proceed_once"
+
+
+@pytest.mark.parametrize("code", [
+    # a string that *is* a dangerous name stays refused, including when spelled with escapes
+    "const o = {'__proto__': text}",
+    "const o = {\"constructor\": 1}",
+    "const k = 'tools'",
+    "const k = '\\u0063onstructor'",
+    "const k = 'c\\x6fnstructor'",
+    "const k = 'ev\\141l'",
+    "text(o[\"c\\x6fnstructor\"])",
+    # dangerous code inside a template expression is still code
+    "text(`${eval('1')}`)",
+    "text(`${process.env}`)",
+])
+def test_gate_refuses_strings_that_name_forbidden_identifiers(code):
+    assert not check_script(code)[0], code
+    assert decide_permission(_raw(_script(code)))[0] == "cancel"
+
+
 @pytest.mark.parametrize("ctype", ["edit", "exec", "create", "apply_patch", "ask_user", "sandbox_violation"])
 def test_gate_never_allows_dangerous_confirmation_types(ctype):
     assert decide_permission(_raw(_script("text(await tools.northstar.get_budgets({}))", ctype)))[0] == "cancel"

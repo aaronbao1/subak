@@ -145,6 +145,24 @@ class _Refused(Exception):
     pass
 
 
+_JS_ESCAPE = re.compile(r"\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([0-7]{1,3})|(.))", re.S)
+
+
+def _decode_js_escapes(s: str) -> str:
+    """Best-effort decode of JS string escapes, enough to see what name a string spells."""
+    def repl(m: re.Match[str]) -> str:
+        hex_digits = m.group(1) or m.group(2) or m.group(3)
+        if hex_digits:
+            try:
+                return chr(int(hex_digits, 16))
+            except (ValueError, OverflowError):
+                return ""
+        if m.group(4):
+            return chr(int(m.group(4), 8))
+        return m.group(5)
+    return _JS_ESCAPE.sub(repl, s)
+
+
 def _is_ident_char(c: str) -> bool:
     return c.isalnum() or c in "_$"
 
@@ -317,20 +335,24 @@ def check_script(code: Any) -> tuple[bool, str]:
         return False, "script source missing"
     if len(code) > MAX_SCRIPT_CHARS:
         return False, f"script longer than {MAX_SCRIPT_CHARS} characters"
-    if _ESCAPE.search(code):
-        return False, "script uses a \\u, \\x or numeric escape sequence"
-    bad = _FORBIDDEN.search(code)
-    if bad:
-        return False, f"script uses forbidden identifier {bad.group(1)!r}"
     try:
         stripped, strings, brackets = _lex(code)
     except _Refused as exc:
         return False, f"script refused: {exc}"
-    if "\\" in stripped:
+    # Identifier and escape checks run on code only: string and comment contents are data, so a
+    # rationale may say "process" or cite `research-eval-plan`. Escapes outside strings stay refused.
+    if "\\" in stripped or _ESCAPE.search(stripped):
         return False, "script uses a backslash outside a string"
-    bad = _FORBIDDEN_CODE.search(stripped)
-    if bad:
-        return False, f"script uses forbidden identifier {bad.group(1)!r}"
+    for pattern in (_FORBIDDEN, _FORBIDDEN_CODE):
+        bad = pattern.search(stripped)
+        if bad:
+            return False, f"script uses forbidden identifier {bad.group(1)!r}"
+    # A string that *is* a dangerous name could still be used as a key (`{"__proto__": ...}`) or passed
+    # to an accessor, so refuse those, after decoding escapes that could spell one.
+    for s in strings:
+        name = _decode_js_escapes(s).strip()
+        if name == "tools" or _FORBIDDEN.fullmatch(name) or _FORBIDDEN_CODE.fullmatch(name):
+            return False, f"script uses a string that names a forbidden identifier {name!r}"
     for start, end, member in brackets:
         computed_key = member or stripped[end + 1:].lstrip()[:1] in (":", "(")
         if not computed_key:
