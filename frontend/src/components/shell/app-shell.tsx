@@ -52,6 +52,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { load, loaded, company, assistantOpen, setAssistantOpen } = useAppStore();
   useEffect(() => { if (!loaded) void load(); }, [loaded, load]);
+  // Optional live mode: re-fetch everything on an interval so a streaming backend (datagen/live.py) shows up
+  // without a reload. Off unless NEXT_PUBLIC_LIVE_REFRESH_MS is set (minimum 2 s).
+  useEffect(() => {
+    const ms = Number(process.env.NEXT_PUBLIC_LIVE_REFRESH_MS);
+    if (!loaded || !Number.isFinite(ms) || ms <= 0) return;
+    const id = window.setInterval(() => { void load(); }, Math.max(2000, ms));
+    return () => window.clearInterval(id);
+  }, [loaded, load]);
   const crumbs = useCrumbs(pathname);
   const showCrumbs = crumbs.length > 1;
 

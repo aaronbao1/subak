@@ -57,6 +57,19 @@ class Person:
         return self.name.split(" ")[0]
 
 
+BACKEND_INTEGRATIONS = {"slack": "slack", "teams": "slack", "asana": "asana", "monday": "monday", "gmail": "email", "outlook": "email"}
+
+
+def backend_integrations(integrations: list) -> list:
+    """Map connector names to the backend's INTEGRATIONS enum (slack, asana, monday, email, document)."""
+    out = []
+    for i in integrations:
+        m = BACKEND_INTEGRATIONS.get(i, "document")
+        if m not in out:
+            out.append(m)
+    return out
+
+
 def build_teams() -> list:
     teams = []
     for t in C.TEAMS:
@@ -89,7 +102,7 @@ def build_people(teams: list, rnd: random.Random) -> list:
                     break
             is_lead = i == 0
             if is_lead:
-                role = ("Engineering Manager", 320, 0.76, 0.35, 1.0) if team.id not in C.BUSINESS_TEAMS else ("Operations Manager", 200, 0.72, 0.30, 1.0)
+                role = ("Engineering lead", 320, 0.76, 0.35, 1.0) if team.id not in C.BUSINESS_TEAMS else ("Operations lead", 200, 0.72, 0.30, 1.0)
             else:
                 role = _pick_role(rnd, team)
             title, tokens_k, in_share, cache, _w = role

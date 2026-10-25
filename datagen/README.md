@@ -35,9 +35,10 @@ and the effect measured in the generated data.
   `model_prices`, `model_events`, `calendar`, `projects`, `events`, `messages`, `tasks`, `usage_daily`,
   `usage_daily_holdout`, `seat_subscriptions(_holdout)`, `budgets`; views `team_daily`, `person_daily`,
   `company_daily`, `model_monthly`.
-- `backend/` — `billing/*.csv` in the backend's `northstar_billing` import format (half-month files, each
-  under the 10 MB import limit), `corpus/*.md` documents with the front matter `app.services.corpus`
-  parses, and `reference.json` (periods, teams, account → team mappings, budgets per quarter).
+- `backend/` — `billing/*.csv` in the backend's `northstar_billing` import format with `user_email` (half-month
+  files, each under the 10 MB import limit), `corpus/*.md` documents with the front matter `app.services.corpus`
+  parses (team, project and person tags, integration), and `reference.json` (periods, teams, people, account → team
+  mappings, budgets per quarter).
 - `frontend/` — contract shapes from `frontend/src/lib/contracts/index.ts`: `company.json` (company,
   teams, people, budgets), `spending-records.json.gz` (per-person `SpendingRecord`s, ~130 MB unpacked),
   `spending-team-daily.json` (team × day × component × provider × model), `documents.json`
@@ -49,6 +50,27 @@ and the effect measured in the generated data.
 - `csv/` — flat tables (`usage_daily.csv.gz`, `team_daily.csv`, `people.csv`, `events.csv`, `messages.csv`,
   `tasks.csv`, `model_events.csv`, `calendar.csv`, `budgets.csv`, `seat_subscriptions.csv`, `teams.csv`).
 
+## Live demo: numbers that climb
+
+```sh
+datagen/demo.sh                              # load (first run), start the backend on backend/data/uber.db, stream usage
+datagen/demo.sh --interval 1 --speed 100     # faster
+python3 datagen/live.py --dry-run --once     # see one batch without posting
+```
+
+`datagen/live.py` keeps posting small batches of fresh usage to the running backend's `/api/imports`: every
+tick it samples a dozen of the simulated people (weighted by how heavy they are), spreads their tokens across
+their providers, models and cost categories exactly like the historical generator, and attributes each row to
+the person through `user_email`. Record ids carry the tick timestamp, so every batch is new usage and nothing is
+double counted. `--speed` compresses time (40x by default) so a few minutes of demo show hours of spend.
+
+For the UI to move without a reload, set in `frontend/.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8787/compat
+NEXT_PUBLIC_LIVE_REFRESH_MS=5000
+```
+
 ## Loading into the backend
 
 Requires the backend's Python 3.12 environment (`backend/.venv`, see `backend/README.md`). From the repo root:
@@ -58,10 +80,11 @@ backend/.venv/bin/python datagen/load_backend.py            # -> backend/data/ub
 cd backend && BACKEND_DB_PATH=data/uber.db .venv/bin/python -m app.main
 ```
 
-The loader creates the four periods, teams, mappings and budget envelopes, ingests every corpus document and
+The loader creates the four periods, teams, the 130-person directory, mappings and budget envelopes, ingests every corpus document and
 runs every billing CSV through `imports.run_import`, so dedupe, period lookup and team attribution are the
 backend's own. The frontend can then point at it with `NEXT_PUBLIC_API_URL=http://localhost:8787/compat`.
-Verified on 2026-10-24: 331,966 usage records imported, 0 unmapped, 252 documents, coverage `complete`.
+Every billing row carries `user_email`, so spend is attributed per person (`GET /compat/api/people`, `personId` on spending records), and corpus documents carry `person_tags`.
+Verified on 2026-10-24: 331,730 usage records imported, 0 unmapped, all attributed to people, 249 documents, coverage `complete`.
 
 ## Forecasting
 

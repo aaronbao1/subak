@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import config as C
-from .people import slug
+from .people import backend_integrations, slug
 
 INTEGRATION_LABEL = {"slack": "Slack", "teams": "Microsoft Teams", "gmail": "Gmail", "outlook": "Outlook", "asana": "Asana", "monday": "monday.com"}
 DOC_ORIGIN = {"slack": "slack_export", "teams": "slack_export", "gmail": "email_export", "outlook": "email_export", "asana": "upload", "monday": "upload"}
@@ -25,6 +25,22 @@ SIGNAL_MAP = {
 COMPONENT = {"direct_api": "api", "billable_overage": "extra_usage", "included_usage": "included_usage", "subscription_fee": "subscription"}
 MODEL_LABEL = {mid: v[1] for mid, v in C.MODELS.items()}
 TOOL_LABEL = {"Cursor": "cursor", "GitHub Copilot": "github", "ChatGPT Enterprise": "openai", "Gemini Enterprise": "google", "Claude Code": "anthropic"}
+
+
+BILLING_HEADER = ["record_id", "occurred_at", "source_account", "user_email", "provider", "model", "cost_category", "value_kind", "amount",
+                  "unit", "notional_value", "input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "description"]
+BACKEND_DOC_INTEGRATION = {"slack": "slack", "teams": "slack", "gmail": "email", "outlook": "email", "asana": "asana", "monday": "monday"}
+
+
+def billing_row(r, email: str) -> list:
+    """One `northstar_billing` CSV row for a UsageRow (shared by the batch export and the live feeder)."""
+    cat_tag = {"direct_api": "api", "billable_overage": "ovr", "included_usage": "inc"}[r.cost_category]
+    rid = f"ub-{r.day.isoformat()}-{r.person_id}-{r.model_id}-{cat_tag}"
+    amount = "" if r.cost_category == "included_usage" else money(r.cost_usd)
+    notional = money(r.notional_usd) if r.cost_category == "included_usage" else ""
+    return [rid, f"{r.day.isoformat()}T12:00:00Z", f"ws-{r.team_id}", email, r.provider, r.model_name, r.cost_category, "simulated",
+            amount, "USD", notional, r.input_tokens, r.cached_input_tokens, r.output_tokens, r.reasoning_tokens or "",
+            f"{r.person_id} via {r.tool}"]
 
 
 def money(x: float) -> str:
@@ -57,8 +73,8 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
     seat_by_month = defaultdict(list)
     for s in seat_rows:
         seat_by_month[half(s.month)].append(s)
-    header = ["record_id", "occurred_at", "source_account", "provider", "model", "cost_category", "value_kind", "amount", "unit",
-              "notional_value", "input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "description"]
+    email = {p.id: p.email for p in people}
+    header = BILLING_HEADER
     files = []
     for month in sorted(set(by_month) | set(seat_by_month)):
         path = bdir / "billing" / f"uber_billing_{month}.csv"
@@ -67,17 +83,11 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
             w = csv.writer(fh)
             w.writerow(header)
             for s in seat_by_month.get(month, []):
-                w.writerow([f"ub-seat-{s.month.isoformat()}-{s.person_id}", f"{s.month.isoformat()}T00:00:00Z", f"ws-{s.team_id}", s.provider, "",
-                            "subscription_fee", "simulated", money(s.amount_usd), "USD", "", "", "", "", "", f"{s.tool} seat for {s.person_id}"])
+                w.writerow([f"ub-seat-{s.month.isoformat()}-{s.person_id}", f"{s.month.isoformat()}T00:00:00Z", f"ws-{s.team_id}", email[s.person_id],
+                            s.provider, "", "subscription_fee", "simulated", money(s.amount_usd), "USD", "", "", "", "", "", f"{s.tool} seat for {s.person_id}"])
                 n += 1
             for r in by_month.get(month, []):
-                cat_tag = {"direct_api": "api", "billable_overage": "ovr", "included_usage": "inc"}[r.cost_category]
-                rid = f"ub-{r.day.isoformat()}-{r.person_id}-{r.model_id}-{cat_tag}"
-                amount = "" if r.cost_category == "included_usage" else money(r.cost_usd)
-                notional = money(r.notional_usd) if r.cost_category == "included_usage" else ""
-                w.writerow([rid, f"{r.day.isoformat()}T12:00:00Z", f"ws-{r.team_id}", r.provider, r.model_name, r.cost_category, "simulated",
-                            amount, "USD", notional, r.input_tokens, r.cached_input_tokens, r.output_tokens, r.reasoning_tokens or "",
-                            f"{r.person_id} via {r.tool}"])
+                w.writerow(billing_row(r, email[r.person_id]))
                 n += 1
         files.append({"file": path.name, "records": n, "bytes": path.stat().st_size})
 
@@ -98,7 +108,8 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
             "doc_key": key, "title": title, "origin": DOC_ORIGIN[m.channel], "doc_type": "correspondence", "plan_status": plan_status,
             "authored_at": m.sent_at.date().isoformat(), "effective_from": ev.starts_on.isoformat(),
             "effective_to": ev.ends_on.isoformat() if ev.ends_on else "", "team_tags": m.team_ids,
-            "project_tags": [slug(ev.project)] if ev.project else [], "author": m.from_name, "is_simulated": "true",
+            "project_tags": [slug(ev.project)] if ev.project else [], "author": m.from_name, "integration": BACKEND_DOC_INTEGRATION[m.channel],
+            "person_tags": m.person_ids, "is_simulated": "true",
         }
         body = f"# {title}\n\n*{INTEGRATION_LABEL[m.channel]} · {m.sent_at.strftime('%A %b %-d, %Y')} · {m.where}*\n\n{m.body}\n"
         corpus.append((idx, key, fm, body))
@@ -111,7 +122,8 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
             "doc_key": key, "title": title, "origin": "upload", "doc_type": "update", "plan_status": "approved" if t.status not in ("Not started", "Scheduled") else "draft",
             "authored_at": t.status_changed_at.date().isoformat(), "effective_from": ev.starts_on.isoformat(),
             "effective_to": ev.ends_on.isoformat() if ev.ends_on else "", "team_tags": t.team_ids,
-            "project_tags": [slug(ev.project)] if ev.project else [], "author": t.assignee_name, "is_simulated": "true",
+            "project_tags": [slug(ev.project)] if ev.project else [], "author": t.assignee_name, "integration": BACKEND_DOC_INTEGRATION[t.tool],
+            "person_tags": t.person_ids, "is_simulated": "true",
         }
         meta = f"**Board:** {t.board} · **Assignee:** {t.assignee_name} · **Status:** {t.status}" + (f" (was {t.prev_status})" if t.prev_status else "")
         if t.due_on:
@@ -134,6 +146,8 @@ def export_backend(out: Path, *, teams, people, story, usage_rows, seat_rows, bu
         "company": {"id": C.COMPANY_ID, "name": C.COMPANY_NAME, "simulated": True, "as_of": C.AS_OF.isoformat()},
         "periods": [{"id": p["id"], "label": p["label"], "starts_on": p["start"].isoformat(), "ends_on": p["end"].isoformat()} for p in C.PERIODS],
         "teams": [{"id": t.id, "name": t.name} for t in teams],
+        "people": [{"id": p.id, "team": p.team_id, "name": p.name, "role": p.role, "email": p.email, "primary_tool": p.tool,
+                    "integrations": backend_integrations(p.integrations), "is_simulated": True} for p in people],
         "team_mappings": {"northstar_billing": {f"ws-{t.id}": t.id for t in teams}},
         "budgets": {pid: {b["team_id"]: money(b["allocated_usd"]) for b in budgets if b["period_id"] == pid} for pid in [p["id"] for p in C.PERIODS]},
         "billing_files": files,

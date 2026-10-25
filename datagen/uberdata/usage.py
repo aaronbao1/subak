@@ -150,6 +150,56 @@ def provider_weights(p: Person, team: Team, d: date, active_events: list) -> dic
     return {k: v / s for k, v in keep.items()}
 
 
+def split_person_tokens(p: Person, team: Team, d: date, total: float, rnd: random.Random, active: list) -> list:
+    """Split one person's token total for day d across providers, models and cost categories."""
+    rows: list = []
+    weights = provider_weights(p, team, d, active)
+    overrides = {}
+    for ev in active:
+        if ev.model_override:
+            overrides.update(ev.model_override)
+    tool = p.tool
+    if tool == "GitHub Copilot" and d >= date(2026, 10, 1):
+        tool = "Cursor"
+    tool_cfg = C.TOOLS[tool]
+    for prov, pw in weights.items():
+        mix = overrides.get(prov) or model_mix(prov, d)
+        mix = {m: s for m, s in mix.items() if s >= 0.08}  # keep the main models only, renormalise
+        ms = sum(mix.values()) or 1.0
+        for model_id, share in mix.items():
+            share /= ms
+            tok = total * pw * share * rnd.uniform(0.85, 1.15)
+            if tok < 200:
+                continue
+            _prov, name, _pi, _pc, _po, _rel, reasoning = C.MODELS[model_id]
+            pin, pc, pout = prices(model_id, d)
+            inp = int(tok * p.input_share)
+            cached = int(inp * p.cache_rate)
+            out = int(tok - inp)
+            reason = int(out * 0.35) if reasoning else 0
+            cost = (inp - cached) / 1e6 * pin + cached / 1e6 * pc + out / 1e6 * pout
+            requests = max(1, int(tok / rnd.uniform(4500, 9000)))
+            included = tool_cfg.get("included") and tool_cfg["provider"] == prov
+            overage_share = tool_cfg.get("overage_share", 0.0) if prov in ("anthropic", "openai") else 0.0
+            parts = []
+            if included:
+                parts.append(("included_usage", tool_cfg["provider"], 1.0))
+            elif overage_share > 0:
+                parts.append(("billable_overage", tool_cfg["provider"], overage_share))
+                parts.append(("direct_api", prov, 1.0 - overage_share))
+            else:
+                parts.append(("direct_api", prov, 1.0))
+            for cat, prov_label, frac in parts:
+                c = round(cost * frac, 2)
+                rows.append(UsageRow(
+                    day=d, person_id=p.id, team_id=p.team_id, provider=prov_label, model_id=model_id, model_name=name,
+                    tool=tool, cost_category=cat, input_tokens=int(inp * frac), cached_input_tokens=int(cached * frac),
+                    output_tokens=int(out * frac), reasoning_tokens=int(reason * frac), requests=max(1, int(requests * frac)),
+                    cost_usd=0.0 if cat == "included_usage" else c, notional_usd=c,
+                ))
+    return rows
+
+
 def generate_usage(teams: list, people: list, events: list, calendar: dict, rnd: random.Random,
                    start: date, end: date, holdout: bool = False) -> tuple:
     """Returns (usage_rows, seat_rows). `holdout` marks the synthetic ground-truth future."""
@@ -198,52 +248,7 @@ def generate_usage(teams: list, people: list, events: list, calendar: dict, rnd:
                 total *= 0.55
             if total < 500:
                 continue
-            weights = provider_weights(p, team, d, active)
-            overrides = {}
-            for ev in active:
-                if ev.model_override:
-                    overrides.update(ev.model_override)
-            tool = p.tool
-            if tool == "GitHub Copilot" and d >= date(2026, 10, 1):
-                tool = "Cursor"
-            tool_cfg = C.TOOLS[tool]
-            for prov, pw in weights.items():
-                mix = overrides.get(prov) or model_mix(prov, d)
-                # keep the main models only (share >= 8%), renormalise
-                mix = {m: s for m, s in mix.items() if s >= 0.08}
-                ms = sum(mix.values()) or 1.0
-                for model_id, share in mix.items():
-                    share /= ms
-                    tok = total * pw * share * rnd.uniform(0.85, 1.15)
-                    if tok < 200:
-                        continue
-                    _prov, name, _pi, _pc, _po, _rel, reasoning = C.MODELS[model_id]
-                    pin, pc, pout = prices(model_id, d)
-                    inp = int(tok * p.input_share)
-                    cached = int(inp * p.cache_rate)
-                    out = int(tok - inp)
-                    reason = int(out * 0.35) if reasoning else 0
-                    cost = (inp - cached) / 1e6 * pin + cached / 1e6 * pc + out / 1e6 * pout
-                    requests = max(1, int(tok / rnd.uniform(4500, 9000)))
-                    # Split into cost categories.
-                    included = tool_cfg.get("included") and tool_cfg["provider"] == prov
-                    overage_share = tool_cfg.get("overage_share", 0.0) if prov in ("anthropic", "openai") else 0.0
-                    parts = []
-                    if included:
-                        parts.append(("included_usage", tool_cfg["provider"], 1.0))
-                    elif overage_share > 0:
-                        parts.append(("billable_overage", tool_cfg["provider"], overage_share))
-                        parts.append(("direct_api", prov, 1.0 - overage_share))
-                    else:
-                        parts.append(("direct_api", prov, 1.0))
-                    for cat, prov_label, frac in parts:
-                        c = round(cost * frac, 2)
-                        rows.append(UsageRow(
-                            day=d, person_id=p.id, team_id=p.team_id, provider=prov_label, model_id=model_id, model_name=name,
-                            tool=tool, cost_category=cat, input_tokens=int(inp * frac), cached_input_tokens=int(cached * frac),
-                            output_tokens=int(out * frac), reasoning_tokens=int(reason * frac), requests=max(1, int(requests * frac)),
-                            cost_usd=0.0 if cat == "included_usage" else c, notional_usd=c,
-                        ))
+            rows.extend(split_person_tokens(p, team, d, total, rnd, active))
         d += timedelta(days=1)
     return rows, seats
 

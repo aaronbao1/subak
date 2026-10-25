@@ -31,6 +31,7 @@ from app.schemas.documents import DocumentIn  # noqa: E402
 from app.services import budget as budget_svc  # noqa: E402
 from app.services import corpus as corpus_svc  # noqa: E402
 from app.services import imports as import_svc  # noqa: E402
+from app.services import people as people_svc  # noqa: E402
 
 SOURCE_KIND = "northstar_billing"
 ACTOR = "uber-datagen"
@@ -70,10 +71,13 @@ def main(argv=None) -> int:
                 session.add(m.TeamMapping(id=ids.new_id("map_"), created_at=now, source_kind=kind, source_account=account, team_id=team,
                                           effective_from=date.fromisoformat(ref["periods"][0]["starts_on"]), created_by=ACTOR))
         session.flush()
+        # People before corpus and spend: export emails and document person tags resolve against them.
+        people_svc.create_people(session, ref["people"], clock=clock)
         for period_id, allocations in ref["budgets"].items():
             budget_svc.create_envelope(session, period_id=period_id, unit="USD", allocations=allocations, clock=clock, ids=ids)
         session.commit()
-        print(f"reference: {len(ref['periods'])} periods, {len(ref['teams'])} teams, {sum(len(a) for a in ref['team_mappings'].values())} mappings, {len(ref['budgets'])} budget envelopes")
+        print(f"reference: {len(ref['periods'])} periods, {len(ref['teams'])} teams, {len(ref['people'])} people, "
+              f"{sum(len(a) for a in ref['team_mappings'].values())} mappings, {len(ref['budgets'])} budget envelopes")
 
         docs = sorted((out / "backend" / "corpus").glob("*.md"))
         created = dup = 0
@@ -94,7 +98,9 @@ def main(argv=None) -> int:
                 b = outcome.batch
                 codes = sorted({w["code"] for w in (b.error_details or {}).get("warnings", [])}) if b.error_details else []
                 errs = (b.error_details or {}).get("errors", []) if b.error_details else []
-                print(f"import {path.name}: {b.status} records={b.record_count} unmapped={b.unmapped_record_count} warnings={codes or '-'}"
+                stats = (b.error_details or {}).get("stats", {}) if b.error_details else {}
+                print(f"import {path.name}: {b.status} records={b.record_count} unmapped={b.unmapped_record_count} "
+                      f"people_resolved={stats.get('person_resolved', '?')} warnings={codes or '-'}"
                       + (f" ERRORS={errs[:3]}" if errs else ""))
                 total_records += b.record_count
                 total_unmapped += b.unmapped_record_count
