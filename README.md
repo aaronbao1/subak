@@ -17,6 +17,69 @@ The dashboard connects company, team, and person spending to the evidence behind
 
 Budget allocations are internal planning records. They do not purchase compute, move vendor credits, or change provider limits. Droid has read, evidence-recording, proposal-drafting, and forecast tools; it has no budget approval tool.
 
+## Architecture
+
+**FastAPI is the central backend.** It receives company data, schedules forecast jobs, and serves saved results to both the dashboard and Droid. A worker calls the Python numerical package directly. SQLite stores the evidence, job state, forecast history, and finance decisions. No separate forecasting server is needed.
+
+```mermaid
+flowchart TB
+  subgraph product["Finance workspace"]
+    UI["Dashboard<br/>Next.js + React"]
+    DROID["Droid assistant<br/>Backend tools"]
+  end
+
+  INPUT["Company inputs<br/>Usage, people, plans, prices"]
+  API["FastAPI + refresh worker<br/>Validate, schedule, serve"]
+  ENGINE["Python numerical package<br/>Usage, pricing, learning"]
+  DB[("SQLite<br/>Evidence, jobs, runs, decisions")]
+
+  UI <-->|HTTP /compat| API
+  DROID <-->|Tool calls| API
+  INPUT -->|Import| API
+  API <-->|Direct Python calls| ENGINE
+  API <-->|Persist and retrieve| DB
+```
+
+The arrows show component connections. The dashboard and Droid retrieve the same saved forecast run; the numerical package owns the calculations. Live company connectors still need authenticated acquisition. Today's inputs come from repository records, imports, native documents, and supported connector-shaped envelopes.
+
+### How one forecast is produced
+
+1. **Collect evidence.** The backend versions usage, source coverage, people, project records, prices, and company documents. A bounded deterministic interpreter turns supported facts into cited drivers: a workload quantity, a schedule move, a staffing change, a configuration adoption share, or a price change. Ambiguous or unsupported claims remain context-only.
+2. **Freeze the inputs.** A Monday or manual refresh creates a snapshot of what was actually known at its cutoff. Later corrections become new revisions. A missing source day stays unknown unless coverage establishes its value, including an explicit zero.
+3. **Forecast usage.** The default serving model fits exposure-weighted weekday rates from the latest 56 complete days, with compatible fallbacks. It applies the supported drivers from their effective dates to produce daily usage paths. Missing exposure prevents invented person or workload detail. A model announcement alone changes neither adoption nor token use.
+4. **Calculate cost.** Each path is priced at the complete billing-pool level, so shared allowances, tiers, and fixed charges are applied together. Costs then roll up to company, team, person, and shared views. Recorded, late, future, and fixed amounts retain their own meanings; unknown charges or unsupported terms leave totals incomplete.
+5. **Publish a saved run.** The worker saves the snapshot, forecast, source citations, and calculation receipts, then updates the published-run pointer. The dashboard shows seven daily points, four Monday–Sunday planning buckets, cumulative spending, and a separate quarter outlook. Droid can explain that exact run. Reading either interface does not recalculate it.
+6. **Compare with observed outcomes.** Validated, mature actuals are matched to the original issued predictions. Later refreshes record errors, update eligible historical-error intervals, and refit observed rates. Predictions and extracted assumptions never become observed training labels.
+
+For example, if a project moves from week two to week three, a supported schedule driver moves its identified workload without inventing extra work. The evidence appears as queued until the next publication. That refresh creates a new run; the old curve stays unchanged. Finance can inspect the source and the calculated effect, or preview a separate scenario with that driver removed.
+
+### What changes, and what stays fixed
+
+| Action | Result |
+| --- | --- |
+| Import new evidence or correct an actual | Append a revision; relevant evidence queues for the next publication. Current actuals can update separately. |
+| Open a chart or ask Droid about a run | Read its saved result and evidence; preserve the issued curve. |
+| Request a refresh | Create an idempotent, durable job; save its result and publish it if it is still eligible. |
+| Preview a scenario | Reuse the parent snapshot with a different complete driver set; save a separate result without replacing the published forecast. |
+| Approve a budget proposal | Recheck human authority, budget version, arithmetic, and evidence freshness before saving the decision. |
+
+Jobs persist leases, heartbeats, retries, and publication order. An expired worker cannot overwrite another worker's completion, and an older cutoff cannot replace a newer publication. Material evidence can make a proposal stale immediately, even while its referenced forecast remains unchanged. Droid can draft a proposal; a finance approver authorizes the budget decision.
+
+### How to read the forecast
+
+| Output | Meaning |
+| --- | --- |
+| Base forecast | The current model's estimate under the saved inputs and supported drivers. |
+| Low/base/high scenario range | Evaluated planning configurations using source bounds or week-block rate estimates; not a confidence interval. |
+| Historical-error interval | A separate interval built from enough compatible, mature observed errors. Daily, weekly, and cumulative targets are matched separately; interval widths are not added. |
+| Quarter outlook | Conditional continuation through quarter-end, distinct from the four planning weeks. It stays incomplete when required costs are unknown. |
+
+All billing days are UTC. Manual runs normally start at the next UTC midnight, excluding today's unobserved remainder; the first planning week may be partial. Neither scenario ranges nor pointwise error intervals guarantee coverage of a whole trajectory.
+
+Refreshes evaluate the configured serving procedure, challenger, and seasonal-naive reference against the same snapshot. The initial configuration uses 56 days for serving and 28 days for the challenger. Only the serving result is published. Automatic replacement requires a frozen procedure, genuine reconstructible company data, 20 calibration weeks, and 12 prospective comparison weeks under the [learning policy](docs/learning/README.md). Synthetic fixtures cannot authorize promotion. Richer learned adoption and capability models remain research work.
+
+See the [detailed architecture](docs/implementation/forecast-integration.md) for contracts, source-to-result receipts, timing, and publication rules.
+
 ## Run the integrated demo
 
 Use **Python 3.12** and **Node.js 22.13 or newer**. This Node version supports both the app and its TypeScript test harnesses. Dependency installation and the normal font-loading build need network access.
@@ -85,38 +148,7 @@ PYTHONPATH=src:backend:agent DROID_RUNNER=sdk DROID_TIMEOUT_S=300 \
 
 Use normal `app.main` for this mode. The dedicated forecasting demo constructs its own settings and remains deterministic even if `DROID_RUNNER=sdk` is set. See [agent/README.md](agent/README.md) for CLI setup, model options, tool restrictions, and the scope of earlier live verification. Missing SDK requirements produce an explicit unavailable result.
 
-## Architecture
-
-The backend calls the numerical package directly; no separate forecasting network service is required.
-
-```mermaid
-flowchart TD
-  A[Usage, billing and identity records] --> C[Versioned SQLite inputs]
-  B[Native documents and connector-shaped evidence] --> C
-  C --> D[Cited facts and supported drivers]
-  C --> E
-  D --> E[Monday or manual job: frozen input snapshot]
-  E --> F[Daily usage paths and full-pool pricing]
-  F --> G[Immutable forecast and calculation receipts]
-  G --> H[Dashboard and exact-run Droid tools]
-  H --> I[Budget proposal and finance review]
-  J[Validated observed outcomes] --> K[Error records and model evaluation]
-  G --> K
-  K --> E
-```
-
-Incoming evidence queues between publications. Current actuals have their own revision and timestamp; they do not rewrite an issued forecast. SQLite jobs persist leases, retries and publication ordering. The source archive retains immutable changed row versions, while older full captures remain readable. Material evidence invalidates dependent proposals immediately, and approval rechecks their dependencies.
-
-### Forecast meaning
-
-- Supported schedule, membership, workload, adoption and pricing changes alter identified workloads from their effective dates. A model release or benchmark improvement alone does not imply adoption or lower token use.
-- Rates use exposure-weighted weekday observations over the trailing 56 complete days, with compatible fallbacks. Missing exposure cannot support an invented person/workload decomposition.
-- Company, team, person and shared totals are aggregated inside the same daily scenario paths. Supported commercial terms price the complete billing pool before monetary summaries.
-- The **scenario range** describes evaluated low/base/high configurations. **Historical-error intervals** are separate and require enough compatible mature errors. Missing data is not zero, and neither band guarantees an entire trajectory.
-- The **quarter outlook** is conditional continuation through quarter-end. It is distinct from four planning weeks and stays incomplete when charges or commercial terms are unknown. Billing days remain UTC.
-- Each refresh refits observed rates. Automatic model replacement requires genuine reconstructible data, a frozen procedure, 20 calibration weeks and 12 prospective comparison weeks under the [learning policy](docs/learning/README.md). Synthetic fixtures cannot authorize promotion.
-
-### Main integration endpoints
+## Main integration endpoints
 
 | Interface | Purpose |
 | --- | --- |
