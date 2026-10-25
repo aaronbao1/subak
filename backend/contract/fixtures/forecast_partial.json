@@ -1,0 +1,56 @@
+{
+  "description": "availability partial: projections for three teams, missing_teams [marketing], reason",
+  "name": "forecast_partial",
+  "request": {
+    "method": "GET",
+    "path": "/api/forecasts"
+  },
+  "response": {
+    "availability": "partial",
+    "basis": "full_period_total",
+    "generated_at": "2026-10-24T12:01:00Z",
+    "method_label": "shared placeholder (not a forecast model)",
+    "missing_teams": [
+      "marketing"
+    ],
+    "projections": [
+      {
+        "amount": "65000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "engineering",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      },
+      {
+        "amount": "50000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "product",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      },
+      {
+        "amount": "85000.00",
+        "assumptions": [
+          "shared Northstar sample projection agreed across workstreams",
+          "full-period total for the planning period, not a remaining amount"
+        ],
+        "team": "research",
+        "uncertainty": "placeholder value; no model or historical fit behind it",
+        "unit": "USD"
+      }
+    ],
+    "provider": "placeholder",
+    "reason": "no placeholder projection for: marketing",
+    "target_period": "2026-P1",
+    "value_kind": "simulated"
+  },
+  "scenario": "forecast_partial",
+  "schema": "ForecastResult",
+  "status": 200
+}

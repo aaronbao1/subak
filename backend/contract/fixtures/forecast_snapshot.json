@@ -1,0 +1,65 @@
+{
+  "description": "persisted forecast that proposals and decisions can cite",
+  "name": "forecast_snapshot",
+  "request": {
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/forecasts/snapshots"
+  },
+  "response": {
+    "availability": "available",
+    "fetched_at": "2026-10-24T12:09:00Z",
+    "forecast": {
+      "availability": "available",
+      "basis": "full_period_total",
+      "generated_at": "2026-10-24T12:09:00Z",
+      "method_label": "shared placeholder (not a forecast model)",
+      "missing_teams": [],
+      "projections": [
+        {
+          "amount": "65000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "engineering",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        },
+        {
+          "amount": "50000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "product",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        },
+        {
+          "amount": "85000.00",
+          "assumptions": [
+            "shared Northstar sample projection agreed across workstreams",
+            "full-period total for the planning period, not a remaining amount"
+          ],
+          "team": "research",
+          "uncertainty": "placeholder value; no model or historical fit behind it",
+          "unit": "USD"
+        }
+      ],
+      "provider": "placeholder",
+      "reason": null,
+      "target_period": "2026-P1",
+      "value_kind": "simulated"
+    },
+    "id": "fcs_000001",
+    "period": "2026-P1",
+    "provider": "placeholder"
+  },
+  "scenario": "main",
+  "schema": "ForecastSnapshotOut",
+  "status": 201
+}

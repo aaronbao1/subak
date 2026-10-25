@@ -1,0 +1,46 @@
+{
+  "description": "a current signal resting only on a superseded document is refused",
+  "name": "error_signal_cites_superseded_only",
+  "request": {
+    "body": {
+      "change_type": "timing_shift",
+      "citations": [
+        {
+          "document_id": "doc_000002",
+          "quote": "we will push the model-evaluation expansion to next period."
+        }
+      ],
+      "status": "current",
+      "summary": "Evaluation expansion is next period.",
+      "team": "research",
+      "uncertainty": "from email"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "error": {
+      "code": "signal_cites_superseded_only",
+      "details": {
+        "reasons": [
+          {
+            "code": "signal_cites_superseded_only",
+            "doc_key": "research-timeline-thread",
+            "document_id": "doc_000002",
+            "message": "research-timeline-thread v1 has been superseded",
+            "superseded_by_document_id": "doc_000003",
+            "version": 1
+          }
+        ]
+      },
+      "message": "a current signal cannot rest only on superseded documents; cite the newer version"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 422
+}

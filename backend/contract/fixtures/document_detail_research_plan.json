@@ -1,0 +1,41 @@
+{
+  "description": "full content of the approved research plan",
+  "name": "document_detail_research_plan",
+  "request": {
+    "method": "GET",
+    "path": "/api/documents/doc_000003"
+  },
+  "response": {
+    "author": "Research leadership (simulated)",
+    "authored_at": "2026-10-08T00:00:00Z",
+    "content": "# Approved research plan - model-evaluation expansion\n\nStatus: approved by research leadership on 2026-10-08.\n\nThis plan expands model-evaluation work during the current planning period. The evaluation harness\nis complete, so the larger evaluation sweeps start this period instead of next period.\n\nThis plan supersedes the earlier email thread that proposed pushing the expansion to next period.\n\nScope: additional benchmark suites, red-team evaluation runs, and regression sweeps on each model\nupdate. Exact token volumes are not yet known; they depend on how many model updates ship.\n",
+    "content_hash": "2c30bb9b79152f7702f4084dc6c0c6821ef855693b1754ada09d91c4412bc89d",
+    "doc_key": "research-eval-plan",
+    "doc_type": "plan",
+    "effective_from": "2026-10-01",
+    "effective_to": "2026-12-31",
+    "id": "doc_000003",
+    "is_current": true,
+    "is_simulated": true,
+    "origin": "seed",
+    "plan_status": "approved",
+    "project_tags": [
+      "model-evaluation"
+    ],
+    "superseded_by": null,
+    "supersedes": {
+      "doc_key": "research-timeline-thread",
+      "id": "doc_000002",
+      "title": "Re: model-evaluation timeline",
+      "version": 1
+    },
+    "team_tags": [
+      "research"
+    ],
+    "title": "Approved research plan - model-evaluation expansion",
+    "version": 1
+  },
+  "scenario": "main",
+  "schema": "DocumentDetail",
+  "status": 200
+}

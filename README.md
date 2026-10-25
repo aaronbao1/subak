@@ -4,7 +4,7 @@ A finance workspace for understanding AI spending, comparing expected team needs
 
 The goal is to bring spending records, forecasts, and company plans into one place so finance teams can investigate changes and make informed allocation decisions.
 
-**Preliminary status:** The overview and team screens run with mock data, and the Python forecasting package runs independently. The assistant drawer and decisions page are placeholders. Connecting the UI, persistent product backend, forecasting service, and live Factory assistant remains integration work.
+**Preliminary status:** The overview and team screens run with mock data, and the Python forecasting package runs independently. The product backend (`backend/`) runs with the live Factory Droid assistant (`agent/`) and serves the frontend's API under `/compat`. The assistant drawer and decisions page are placeholders. Connecting the UI to the backend and the forecasting service to the backend remains integration work.
 
 ## The intended workflow
 
@@ -23,8 +23,9 @@ Allocations are internal planning records. They do not transfer vendor credits, 
 | --- | --- | --- |
 | [Frontend](frontend/) | Finance dashboard, team comparisons, spending charts, and evidence inspection | Next.js / React / TypeScript UI with an in-memory mock client and an HTTP client. Overview and team views are implemented; assistant and decisions views are placeholders. |
 | [Forecasting](src/forecasting/) | Numerical forecasts, scenarios, pricing, and evaluation | Runnable Python reference implementation with a CLI, local service example, SQLite artifacts, and tests. Includes baseline models, optional regression models, and joint workload/pricing paths. |
-| [Backend reference components](docs/implementation/consumer-contracts.md) | Source handling, financial validation, and saved results | Reference ingestion, storage, and budget-decision controls are implemented in Python. A complete product backend exposing the frontend's API still needs integration. |
-| [Factory / Droid workstream](docs/factory-agent-plan.md) | Interpret company context, cite evidence, and help finance prepare proposals | Planned runtime integration. Reference context contracts exist; live Droid execution is not connected to the UI. |
+| [Product backend](backend/README.md) | Spend and document ingestion, budgets, proposals, finance decisions, and the frontend API | FastAPI + SQLite service with versioned budgets, stale-proposal and self-approval checks, idempotent imports, quote-verified context signals, and a `/compat` layer serving the frontend's `/api/*` contract. 561 tests. The forecast is a placeholder provider until the forecasting service is connected. |
+| [Backend reference components](docs/implementation/consumer-contracts.md) | Source handling, financial validation, and saved results (forecasting package) | Reference ingestion, storage, and budget-decision controls inside the forecasting package. |
+| [Factory / Droid](agent/README.md) | Interpret company context, cite evidence, and help finance prepare proposals | Live Droid SDK runtime inside the backend: read and draft tools only, a static script gate (red-teamed), and a retry turn on refusals. The latest live run of each of 11 eval scenarios passes ([evals](backend/evals/README.md)). Not yet wired to the UI's assistant drawer. |
 | [Research and benchmarks](docs/robustness-2026-10-24/README.md) | Document assumptions, test mechanisms, and evaluate forecasting approaches | Research dossier, regression tests, synthetic examples, and a limited real-trace benchmark with recorded execution evidence. |
 
 ## Run locally
@@ -44,6 +45,12 @@ npm run dev
 Open [localhost:3000](http://localhost:3000). The default demo uses in-memory data and needs no backend or API key. Mock mutations reset on reload. Use `?teams=default` for Northstar or `?teams=N` for a generated company with 0–16 teams.
 
 From `frontend/`, run `npm run lint` for linting and `npm run build` for a production build.
+
+### Product backend and Droid assistant
+
+Requires **Python 3.12+**. See [`backend/README.md`](backend/README.md) for the full guide and [`backend/docs/morning-runbook.md`](backend/docs/morning-runbook.md) for the demo journey. In short, from `backend/`: create `backend/.venv`, install with `pip install -e ".[dev]"`, seed with `python -m app.seed`, and serve with `python -m app.main` on port 8787. Droid uses a deterministic fake runner by default; set `DROID_RUNNER=sdk` with `FACTORY_API_KEY` and the `droid` CLI to use the live runtime.
+
+To point the frontend at it, set `NEXT_PUBLIC_API_URL=http://localhost:8787/compat` in `frontend/.env.local`. Open gaps between the frontend contract and the backend are listed in [`backend/docs/frontend-alignment.md`](backend/docs/frontend-alignment.md).
 
 ### Forecasting reference demo
 
@@ -84,7 +91,7 @@ The forecasting tests check financial arithmetic, data boundaries, permissions, 
 
 A separate benchmark ran pinned **Chronos-Bolt Tiny** weights on a public BurstGPT input-token trace and completed 40 of 40 scheduled forecasts. Results were mixed across one-hour and four-hour horizons. The [benchmark report](docs/robustness-2026-10-24/benchmark.md) and [verification record](docs/robustness-2026-10-24/verification.md) document the results and limitations. This benchmark is separate from the frontend's placeholder projections.
 
-Live enterprise billing connections, production authentication, deployed end-to-end operation, and live Factory runtime integration are not established by the current reference implementation.
+Live enterprise billing connections, production authentication, and deployed end-to-end operation are not established. The live Factory runtime runs inside the backend and is evaluated in [`backend/evals/`](backend/evals/README.md); it is not yet connected to the UI.
 
 ## Further reading
 

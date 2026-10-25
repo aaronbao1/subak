@@ -1,0 +1,153 @@
+{
+  "description": "one team, metric remaining: allocation minus recorded spend (15k for research)",
+  "name": "chart_spend_vs_allocation_remaining",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/spend_vs_allocation",
+    "query": {
+      "metric": "remaining",
+      "team": "research"
+    }
+  },
+  "response": {
+    "coverage_status": "complete",
+    "data_labels": {
+      "real_sample": false,
+      "simulated": true
+    },
+    "forecast_availability": null,
+    "kind": "spend_vs_allocation",
+    "metric": "remaining",
+    "notes": [
+      "budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:03:00Z).",
+      "negative remaining means recorded spend already exceeds the allocation."
+    ],
+    "period": "2026-P1",
+    "row_count": 1,
+    "sources": [
+      "/api/budget?period=2026-P1",
+      "/api/spend/summary?period=2026-P1"
+    ],
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "northstar",
+        "values": [
+          {
+            "amount": "15000.00",
+            "coverage_status": "complete",
+            "series": "remaining",
+            "simulated": true,
+            "state_version": 1,
+            "team": "research",
+            "value_kind": "planned-simulated"
+          }
+        ]
+      },
+      "description": "Allocation remaining after recorded spend by team for planning period 2026-P1 in USD, team research. Value kinds: planned, simulated; simulated data (fictional Northstar example). Spend coverage complete. Built by the Northstar backend from /api/budget?period=2026-P1, /api/spend/summary?period=2026-P1; data inline, nothing estimated by the chart. budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:03:00Z). negative remaining means recorded spend already exceeds the allocation.",
+      "encoding": {
+        "color": {
+          "condition": {
+            "test": "datum.value < 0",
+            "value": "#c0392b"
+          },
+          "value": "#4c78a8"
+        },
+        "tooltip": [
+          {
+            "field": "team",
+            "title": "Team",
+            "type": "nominal"
+          },
+          {
+            "field": "series",
+            "title": "Series",
+            "type": "nominal"
+          },
+          {
+            "field": "amount",
+            "title": "Amount",
+            "type": "nominal"
+          },
+          {
+            "field": "value_kind",
+            "title": "Value kind",
+            "type": "nominal"
+          },
+          {
+            "field": "coverage_status",
+            "title": "Spend coverage",
+            "type": "nominal"
+          }
+        ],
+        "x": {
+          "field": "team",
+          "sort": null,
+          "title": "Team",
+          "type": "nominal"
+        },
+        "y": {
+          "axis": {
+            "format": ",.2f"
+          },
+          "field": "value",
+          "title": "remaining (USD)",
+          "type": "quantitative"
+        }
+      },
+      "height": 300,
+      "mark": {
+        "tooltip": true,
+        "type": "bar"
+      },
+      "title": {
+        "subtitle": [
+          "value kinds: planned, simulated (planned = internal allocation, not spend)",
+          "spend coverage: complete; team research"
+        ],
+        "text": "Allocation remaining after recorded spend by team | 2026-P1 | USD | simulated data (fictional Northstar example)"
+      },
+      "transform": [
+        {
+          "as": "value",
+          "calculate": "toNumber(datum.amount)"
+        }
+      ],
+      "usermeta": {
+        "northstar": {
+          "coverage_status": "complete",
+          "data_labels": {
+            "real_sample": false,
+            "simulated": true
+          },
+          "forecast_availability": null,
+          "kind": "spend_vs_allocation",
+          "metric": "remaining",
+          "money_field": "amount (decimal string)",
+          "period": "2026-P1",
+          "sources": [
+            "/api/budget?period=2026-P1",
+            "/api/spend/summary?period=2026-P1"
+          ],
+          "team": "research",
+          "unit": "USD",
+          "value_kinds": [
+            "planned",
+            "simulated"
+          ]
+        }
+      },
+      "width": "container"
+    },
+    "team": "research",
+    "title": "Allocation remaining after recorded spend by team | 2026-P1 | USD | simulated data (fictional Northstar example)",
+    "unit": "USD",
+    "value_kinds": [
+      "planned",
+      "simulated"
+    ]
+  },
+  "scenario": "charts",
+  "schema": "ChartSpecOut",
+  "status": 200
+}

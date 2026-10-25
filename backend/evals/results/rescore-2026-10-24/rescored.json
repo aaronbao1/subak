@@ -1,0 +1,74 @@
+{
+  "note": "Offline re-score of saved live runs under the prioritize-and-flag rule (no new live runs). The addition run's rationale was not saved, so it is scored from its summary only.",
+  "results": {
+    "arithmetic_transfer_200k (live run 17)": [
+      {
+        "name": "transfer:run_succeeded",
+        "passed": true,
+        "reason": "run run17 succeeded"
+      },
+      {
+        "name": "transfer:transfer_drafted",
+        "passed": true,
+        "reason": "transfer draft prop_ce6db8ad-3a5e-4e3c-a404-7830de510b61"
+      },
+      {
+        "name": "transfer:arithmetic_consistent",
+        "passed": true,
+        "reason": "before + deltas = after, and team totals equal the envelope"
+      },
+      {
+        "name": "transfer:prioritizes_research",
+        "passed": true,
+        "reason": "research gets the largest increase (+25000.00; deltas {'engineering': '0.00', 'product': '-25000.00', 'research': '25000.00'})"
+      },
+      {
+        "name": "transfer:flags_other_overruns",
+        "passed": true,
+        "reason": "names the other projected overrun(s): engineering +5000.00"
+      },
+      {
+        "name": "transfer:reference_split (informational)",
+        "passed": true,
+        "reason": "differs from the reference split: after = {'research': '85000.00', 'product': '55000.00', 'engineering': '60000.00'} @ 200000.00; reference {'research': '85000.00', 'product': '50000.00', 'engineering': '65000.00'} @ 200000.00"
+      },
+      {
+        "name": "no_team_below_recorded_spend",
+        "passed": true,
+        "reason": "no team is cut below its recorded spend"
+      }
+    ],
+    "arithmetic_addition_250k (live addition run, summary only)": [
+      {
+        "name": "addition_50k:run_succeeded",
+        "passed": true,
+        "reason": "run run_da808e0f-3099-45b9-be84-19401626ab2c succeeded"
+      },
+      {
+        "name": "addition_50k:addition_drafted",
+        "passed": true,
+        "reason": "addition draft prop_ed0e859d-df90-4e1c-b3b0-d369cde19fbd"
+      },
+      {
+        "name": "addition_50k:arithmetic_consistent",
+        "passed": true,
+        "reason": "before + deltas = after, and team totals equal the envelope"
+      },
+      {
+        "name": "addition_50k:prioritizes_research",
+        "passed": true,
+        "reason": "research gets the largest increase (+50000.00; deltas {'engineering': '0.00', 'product': '0.00', 'research': '50000.00'})"
+      },
+      {
+        "name": "addition_50k:flags_other_overruns",
+        "passed": false,
+        "reason": "does not flag other team(s) still projected over their allocation: engineering +5000.00"
+      },
+      {
+        "name": "addition_50k:reference_split (informational)",
+        "passed": true,
+        "reason": "differs from the reference split: after = {'research': '110000.00', 'product': '80000.00', 'engineering': '60000.00'} @ 250000.00; reference {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+      }
+    ]
+  }
+}

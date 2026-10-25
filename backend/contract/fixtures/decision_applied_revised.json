@@ -1,0 +1,110 @@
+{
+  "description": "the replacement approved: research 80k, product 60k",
+  "name": "decision_applied_revised",
+  "request": {
+    "body": {
+      "outcome": "approve",
+      "rationale": "Revised transfer matches the confirmed plans."
+    },
+    "headers": {
+      "Idempotency-Key": "approve-revised-1",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000002/decision"
+  },
+  "response": {
+    "action_type": "transfer",
+    "actor": {
+      "id": "fin-approver-alice",
+      "role": "finance_approver"
+    },
+    "after": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "60000.00",
+        "research": "80000.00"
+      },
+      "total": "200000.00"
+    },
+    "before": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "80000.00",
+        "research": "60000.00"
+      },
+      "total": "200000.00"
+    },
+    "budget_state": {
+      "allocated_total": "200000.00",
+      "allocations": [
+        {
+          "amount": "60000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "30000.00",
+          "remaining": "30000.00",
+          "team": "engineering"
+        },
+        {
+          "amount": "60000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "20000.00",
+          "remaining": "40000.00",
+          "team": "product"
+        },
+        {
+          "amount": "80000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "45000.00",
+          "remaining": "35000.00",
+          "team": "research"
+        }
+      ],
+      "envelope_total": "200000.00",
+      "last_decision_id": "dec_000001",
+      "note": "internal planning allocations; no provider credits are transferred or enforced",
+      "period": {
+        "ends_on": "2026-12-31",
+        "id": "2026-P1",
+        "label": "Northstar planning period",
+        "starts_on": "2026-10-01"
+      },
+      "spend_coverage": {
+        "notes": [
+          "recorded_spend and remaining use spend attributed to each team, to date"
+        ],
+        "status": "complete",
+        "unattributed_records": 0,
+        "unattributed_spend": "0.00"
+      },
+      "state_version": 2,
+      "unit": "USD",
+      "updated_at": "2026-10-24T12:05:00Z"
+    },
+    "decided_at": "2026-10-24T12:05:00Z",
+    "evidence_refs": [],
+    "from_version": 1,
+    "id": "dec_000001",
+    "lines": [
+      {
+        "amount": "20000.00",
+        "from_team": "product",
+        "to_team": "research"
+      }
+    ],
+    "outcome": "approved_applied",
+    "proposal_evidence_refs": [],
+    "proposal_id": "prop_000002",
+    "rationale": "Revised transfer matches the confirmed plans.",
+    "replayed": false,
+    "requester": {
+      "id": "fin-analyst-ana",
+      "role": "finance_analyst"
+    },
+    "to_version": 2
+  },
+  "scenario": "revision",
+  "schema": "DecisionOut",
+  "status": 201
+}

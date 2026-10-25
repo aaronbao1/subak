@@ -1,0 +1,77 @@
+{
+  "description": "the original: status revised, replaced_by_proposal_id -> the replacement",
+  "name": "proposal_revised_original",
+  "request": {
+    "method": "GET",
+    "path": "/api/proposals/prop_000001"
+  },
+  "response": {
+    "action_type": "transfer",
+    "after": {
+      "allocations": {
+        "engineering": "65000.00",
+        "product": "50000.00",
+        "research": "85000.00"
+      },
+      "total": "200000.00"
+    },
+    "agent_run_id": null,
+    "base_version": 1,
+    "before": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "80000.00",
+        "research": "60000.00"
+      },
+      "total": "200000.00"
+    },
+    "blocked_attempts": [],
+    "created_at": "2026-10-24T12:01:00Z",
+    "current_version": 1,
+    "decision_id": null,
+    "deltas": {
+      "engineering": "5000.00",
+      "product": "-30000.00",
+      "research": "25000.00"
+    },
+    "envelope_increase": "0.00",
+    "evidence_refs": [],
+    "id": "prop_000001",
+    "is_stale": false,
+    "lines": [
+      {
+        "amount": "25000.00",
+        "from_team": "product",
+        "to_team": "research"
+      },
+      {
+        "amount": "5000.00",
+        "from_team": "product",
+        "to_team": "engineering"
+      }
+    ],
+    "origin": "droid_run",
+    "period": "2026-P1",
+    "rationale": "Move 30k from product to research and engineering.",
+    "rebased_from_proposal_id": null,
+    "replaced_by_proposal_id": "prop_000002",
+    "requester": {
+      "id": "droid-northstar",
+      "role": "droid_agent"
+    },
+    "revises_proposal_id": null,
+    "status": "revised",
+    "unit": "USD",
+    "updated_at": "2026-10-24T12:02:00Z",
+    "warnings": [
+      {
+        "code": "no_evidence_cited",
+        "message": "the proposal cites no evidence",
+        "team": null
+      }
+    ]
+  },
+  "scenario": "revision",
+  "schema": "ProposalOut",
+  "status": 200
+}

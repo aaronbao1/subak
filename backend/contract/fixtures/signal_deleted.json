@@ -1,0 +1,16 @@
+{
+  "description": "an uncited signal removed (204, empty body); cited signals return 409",
+  "name": "signal_deleted",
+  "request": {
+    "headers": {
+      "X-Actor-Id": "fin-analyst-ana",
+      "X-Actor-Role": "finance_analyst"
+    },
+    "method": "DELETE",
+    "path": "/api/signals/sig_000005"
+  },
+  "response": null,
+  "scenario": "main",
+  "schema": "NoContent",
+  "status": 204
+}

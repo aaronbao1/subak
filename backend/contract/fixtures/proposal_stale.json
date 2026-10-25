@@ -1,0 +1,114 @@
+{
+  "description": "the stale proposal with is_stale=true and its blocked attempt",
+  "name": "proposal_stale",
+  "request": {
+    "method": "GET",
+    "path": "/api/proposals/prop_000002"
+  },
+  "response": {
+    "action_type": "addition",
+    "after": {
+      "allocations": {
+        "engineering": "75000.00",
+        "product": "80000.00",
+        "research": "95000.00"
+      },
+      "total": "250000.00"
+    },
+    "agent_run_id": null,
+    "base_version": 1,
+    "before": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "80000.00",
+        "research": "60000.00"
+      },
+      "total": "200000.00"
+    },
+    "blocked_attempts": [
+      {
+        "actor_id": "fin-approver-alice",
+        "at": "2026-10-24T12:41:00Z",
+        "details": {
+          "actor_role": "finance_approver",
+          "base_version": 1,
+          "current_version": 2
+        },
+        "event": "stale_rejected",
+        "id": "evt_000002"
+      }
+    ],
+    "created_at": "2026-10-24T12:31:00Z",
+    "current_version": 2,
+    "decision_id": null,
+    "deltas": {
+      "engineering": "15000.00",
+      "product": "0.00",
+      "research": "35000.00"
+    },
+    "envelope_increase": "50000.00",
+    "evidence_refs": [
+      {
+        "id": "sig_000001",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "sig_000003",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "sig_000004",
+        "kind": "signal",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "fcs_000001",
+        "kind": "forecast_snapshot",
+        "note": null,
+        "version": null
+      },
+      {
+        "id": "doc_000003",
+        "kind": "document",
+        "note": null,
+        "version": 1
+      }
+    ],
+    "id": "prop_000002",
+    "is_stale": true,
+    "lines": [
+      {
+        "amount": "35000.00",
+        "from_team": null,
+        "to_team": "research"
+      },
+      {
+        "amount": "15000.00",
+        "from_team": null,
+        "to_team": "engineering"
+      }
+    ],
+    "origin": "droid_run",
+    "period": "2026-P1",
+    "rationale": "Add 50k prioritizing research evaluation and engineering continuation.",
+    "rebased_from_proposal_id": null,
+    "replaced_by_proposal_id": null,
+    "requester": {
+      "id": "droid-northstar",
+      "role": "droid_agent"
+    },
+    "revises_proposal_id": null,
+    "status": "stale",
+    "unit": "USD",
+    "updated_at": "2026-10-24T12:41:00Z",
+    "warnings": []
+  },
+  "scenario": "main",
+  "schema": "ProposalOut",
+  "status": 200
+}

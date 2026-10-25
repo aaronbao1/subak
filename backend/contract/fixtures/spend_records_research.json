@@ -1,0 +1,100 @@
+{
+  "description": "research drill-down incl. included_usage with counts_toward_spend=false",
+  "name": "spend_records_research",
+  "request": {
+    "method": "GET",
+    "path": "/api/spend/records",
+    "query": {
+      "team": "research"
+    }
+  },
+  "response": {
+    "filters": {
+      "batch": null,
+      "cost_category": null,
+      "team": "research",
+      "value_kind": null
+    },
+    "items": [
+      {
+        "amount": "5000.00",
+        "cached_input_tokens": null,
+        "cost_category": "subscription_fee",
+        "counter_reset": false,
+        "counts_toward_spend": true,
+        "id": "rec_000001",
+        "import_batch_id": "imp_000001",
+        "input_tokens": null,
+        "model": null,
+        "notional_value": null,
+        "occurred_at": "2026-10-01T00:00:00Z",
+        "output_tokens": null,
+        "period": "2026-P1",
+        "provider": "anthropic",
+        "reasoning_tokens": null,
+        "source_account": "ws-research",
+        "source_kind": "northstar_billing",
+        "source_record_key": "ns-2026p1-001",
+        "stream_key": null,
+        "team": "research",
+        "unit": "USD",
+        "value_kind": "simulated"
+      },
+      {
+        "amount": null,
+        "cached_input_tokens": null,
+        "cost_category": "included_usage",
+        "counter_reset": false,
+        "counts_toward_spend": false,
+        "id": "rec_000004",
+        "import_batch_id": "imp_000001",
+        "input_tokens": 500000,
+        "model": "claude",
+        "notional_value": "3000.00",
+        "occurred_at": "2026-10-10T00:00:00Z",
+        "output_tokens": 100000,
+        "period": "2026-P1",
+        "provider": "anthropic",
+        "reasoning_tokens": null,
+        "source_account": "ws-research",
+        "source_kind": "northstar_billing",
+        "source_record_key": "ns-2026p1-004",
+        "stream_key": null,
+        "team": "research",
+        "unit": "USD",
+        "value_kind": "simulated"
+      },
+      {
+        "amount": "40000.00",
+        "cached_input_tokens": null,
+        "cost_category": "direct_api",
+        "counter_reset": false,
+        "counts_toward_spend": true,
+        "id": "rec_000005",
+        "import_batch_id": "imp_000001",
+        "input_tokens": 1000000,
+        "model": "claude",
+        "notional_value": null,
+        "occurred_at": "2026-10-15T00:00:00Z",
+        "output_tokens": 200000,
+        "period": "2026-P1",
+        "provider": "anthropic",
+        "reasoning_tokens": null,
+        "source_account": "ws-research",
+        "source_kind": "northstar_billing",
+        "source_record_key": "ns-2026p1-005",
+        "stream_key": null,
+        "team": "research",
+        "unit": "USD",
+        "value_kind": "simulated"
+      }
+    ],
+    "limit": 500,
+    "offset": 0,
+    "period": "2026-P1",
+    "total": 3
+  },
+  "scenario": "main",
+  "schema": "SpendRecordList",
+  "status": 200
+}

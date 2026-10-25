@@ -1,0 +1,210 @@
+{
+  "description": "lines per team across versions 1 -> 2, each point linked to the decision that saved it",
+  "name": "chart_budget_history",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/budget_history"
+  },
+  "response": {
+    "coverage_status": "complete",
+    "data_labels": {
+      "real_sample": false,
+      "simulated": true
+    },
+    "forecast_availability": null,
+    "kind": "budget_history",
+    "metric": "allocation",
+    "notes": [
+      "2 saved version(s); current version 2. Each point is an immutable snapshot; version 1 is the seeded starting budget."
+    ],
+    "period": "2026-P1",
+    "row_count": 6,
+    "sources": [
+      "/api/budget/history?period=2026-P1"
+    ],
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "northstar",
+        "values": [
+          {
+            "action_type": null,
+            "amount": "60000.00",
+            "decided_by": null,
+            "decision_id": null,
+            "saved_at": "2026-10-24T12:00:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "engineering",
+            "value_kind": "planned"
+          },
+          {
+            "action_type": null,
+            "amount": "80000.00",
+            "decided_by": null,
+            "decision_id": null,
+            "saved_at": "2026-10-24T12:00:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "product",
+            "value_kind": "planned"
+          },
+          {
+            "action_type": null,
+            "amount": "60000.00",
+            "decided_by": null,
+            "decision_id": null,
+            "saved_at": "2026-10-24T12:00:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "research",
+            "value_kind": "planned"
+          },
+          {
+            "action_type": "transfer",
+            "amount": "65000.00",
+            "decided_by": "fin-approver-alice",
+            "decision_id": "dec_000001",
+            "saved_at": "2026-10-24T12:07:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 2,
+            "team": "engineering",
+            "value_kind": "planned"
+          },
+          {
+            "action_type": "transfer",
+            "amount": "50000.00",
+            "decided_by": "fin-approver-alice",
+            "decision_id": "dec_000001",
+            "saved_at": "2026-10-24T12:07:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 2,
+            "team": "product",
+            "value_kind": "planned"
+          },
+          {
+            "action_type": "transfer",
+            "amount": "85000.00",
+            "decided_by": "fin-approver-alice",
+            "decision_id": "dec_000001",
+            "saved_at": "2026-10-24T12:07:00Z",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 2,
+            "team": "research",
+            "value_kind": "planned"
+          }
+        ]
+      },
+      "description": "Allocation by team across budget versions for planning period 2026-P1 in USD, all teams. Value kinds: planned; simulated data (fictional Northstar example). Spend coverage complete. Built by the Northstar backend from /api/budget/history?period=2026-P1; data inline, nothing estimated by the chart. 2 saved version(s); current version 2. Each point is an immutable snapshot; version 1 is the seeded starting budget.",
+      "encoding": {
+        "color": {
+          "field": "team",
+          "title": "Team",
+          "type": "nominal"
+        },
+        "tooltip": [
+          {
+            "field": "state_version",
+            "title": "Version",
+            "type": "ordinal"
+          },
+          {
+            "field": "team",
+            "title": "Team",
+            "type": "nominal"
+          },
+          {
+            "field": "amount",
+            "title": "Amount",
+            "type": "nominal"
+          },
+          {
+            "field": "action_type",
+            "title": "Decision type",
+            "type": "nominal"
+          },
+          {
+            "field": "decision_id",
+            "title": "Decision",
+            "type": "nominal"
+          },
+          {
+            "field": "saved_at",
+            "title": "Saved at",
+            "type": "nominal"
+          }
+        ],
+        "x": {
+          "field": "state_version",
+          "title": "Budget version",
+          "type": "ordinal"
+        },
+        "y": {
+          "axis": {
+            "format": ",.2f"
+          },
+          "field": "value",
+          "title": "USD",
+          "type": "quantitative"
+        }
+      },
+      "height": 300,
+      "mark": {
+        "point": true,
+        "tooltip": true,
+        "type": "line"
+      },
+      "title": {
+        "subtitle": [
+          "value kinds: planned (planned = internal allocation, not spend)",
+          "spend coverage: complete; all teams"
+        ],
+        "text": "Allocation by team across budget versions | 2026-P1 | USD | simulated data (fictional Northstar example)"
+      },
+      "transform": [
+        {
+          "as": "value",
+          "calculate": "toNumber(datum.amount)"
+        }
+      ],
+      "usermeta": {
+        "northstar": {
+          "coverage_status": "complete",
+          "data_labels": {
+            "real_sample": false,
+            "simulated": true
+          },
+          "forecast_availability": null,
+          "kind": "budget_history",
+          "metric": "allocation",
+          "money_field": "amount (decimal string)",
+          "period": "2026-P1",
+          "sources": [
+            "/api/budget/history?period=2026-P1"
+          ],
+          "team": null,
+          "unit": "USD",
+          "value_kinds": [
+            "planned"
+          ]
+        }
+      },
+      "width": "container"
+    },
+    "team": null,
+    "title": "Allocation by team across budget versions | 2026-P1 | USD | simulated data (fictional Northstar example)",
+    "unit": "USD",
+    "value_kinds": [
+      "planned"
+    ]
+  },
+  "scenario": "charts",
+  "schema": "ChartSpecOut",
+  "status": 200
+}

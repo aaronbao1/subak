@@ -1,0 +1,108 @@
+{
+  "description": "rejected; budget stays version 1 at 60k/80k/60k",
+  "name": "decision_rejected",
+  "request": {
+    "body": {
+      "outcome": "reject",
+      "rationale": "No new money this period; revisit after launch."
+    },
+    "headers": {
+      "Idempotency-Key": "reject-1",
+      "X-Actor-Id": "fin-approver-bob",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "action_type": "addition",
+    "actor": {
+      "id": "fin-approver-bob",
+      "role": "finance_approver"
+    },
+    "after": null,
+    "before": {
+      "allocations": {
+        "engineering": "60000.00",
+        "product": "80000.00",
+        "research": "60000.00"
+      },
+      "total": "200000.00"
+    },
+    "budget_state": {
+      "allocated_total": "200000.00",
+      "allocations": [
+        {
+          "amount": "60000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "30000.00",
+          "remaining": "30000.00",
+          "team": "engineering"
+        },
+        {
+          "amount": "80000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "20000.00",
+          "remaining": "60000.00",
+          "team": "product"
+        },
+        {
+          "amount": "60000.00",
+          "coverage_status": "complete",
+          "recorded_spend": "45000.00",
+          "remaining": "15000.00",
+          "team": "research"
+        }
+      ],
+      "envelope_total": "200000.00",
+      "last_decision_id": null,
+      "note": "internal planning allocations; no provider credits are transferred or enforced",
+      "period": {
+        "ends_on": "2026-12-31",
+        "id": "2026-P1",
+        "label": "Northstar planning period",
+        "starts_on": "2026-10-01"
+      },
+      "spend_coverage": {
+        "notes": [
+          "recorded_spend and remaining use spend attributed to each team, to date"
+        ],
+        "status": "complete",
+        "unattributed_records": 0,
+        "unattributed_spend": "0.00"
+      },
+      "state_version": 1,
+      "unit": "USD",
+      "updated_at": "2026-10-24T12:00:00Z"
+    },
+    "decided_at": "2026-10-24T12:03:00Z",
+    "evidence_refs": [],
+    "from_version": 1,
+    "id": "dec_000001",
+    "lines": [
+      {
+        "amount": "35000.00",
+        "from_team": null,
+        "to_team": "research"
+      },
+      {
+        "amount": "15000.00",
+        "from_team": null,
+        "to_team": "engineering"
+      }
+    ],
+    "outcome": "rejected",
+    "proposal_evidence_refs": [],
+    "proposal_id": "prop_000001",
+    "rationale": "No new money this period; revisit after launch.",
+    "replayed": false,
+    "requester": {
+      "id": "fin-approver-alice",
+      "role": "finance_approver"
+    },
+    "to_version": null
+  },
+  "scenario": "rejection",
+  "schema": "DecisionOut",
+  "status": 201
+}

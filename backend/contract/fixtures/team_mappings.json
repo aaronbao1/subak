@@ -1,0 +1,45 @@
+{
+  "description": "explicit source account -> team mappings",
+  "name": "team_mappings",
+  "request": {
+    "method": "GET",
+    "path": "/api/team-mappings"
+  },
+  "response": [
+    {
+      "created_by": "seed",
+      "effective_from": "2026-01-01",
+      "id": "map_000004",
+      "source_account": "codex-research-laptops",
+      "source_kind": "codex_sessions",
+      "team_id": "research"
+    },
+    {
+      "created_by": "seed",
+      "effective_from": "2026-01-01",
+      "id": "map_000001",
+      "source_account": "ws-engineering",
+      "source_kind": "northstar_billing",
+      "team_id": "engineering"
+    },
+    {
+      "created_by": "seed",
+      "effective_from": "2026-01-01",
+      "id": "map_000002",
+      "source_account": "ws-product",
+      "source_kind": "northstar_billing",
+      "team_id": "product"
+    },
+    {
+      "created_by": "seed",
+      "effective_from": "2026-01-01",
+      "id": "map_000003",
+      "source_account": "ws-research",
+      "source_kind": "northstar_billing",
+      "team_id": "research"
+    }
+  ],
+  "scenario": "main",
+  "schema": "TeamMappingOut[]",
+  "status": 200
+}

@@ -1,0 +1,25 @@
+{
+  "description": "unknown chart kind: 404 unknown_chart_kind with the supported kinds",
+  "name": "error_unknown_chart_kind",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/burn_rate"
+  },
+  "response": {
+    "error": {
+      "code": "unknown_chart_kind",
+      "details": {
+        "kinds": [
+          "spend_vs_allocation",
+          "projection_vs_allocation",
+          "spend_by_cost_category",
+          "budget_history"
+        ]
+      },
+      "message": "unknown chart kind 'burn_rate'"
+    }
+  },
+  "scenario": "charts",
+  "schema": "ErrorBody",
+  "status": 404
+}

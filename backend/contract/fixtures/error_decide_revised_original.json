@@ -1,0 +1,30 @@
+{
+  "description": "a revised proposal can no longer be decided (proposal_not_pending)",
+  "name": "error_decide_revised_original",
+  "request": {
+    "body": {
+      "outcome": "approve",
+      "rationale": "approving the old lines"
+    },
+    "headers": {
+      "Idempotency-Key": "approve-original-1",
+      "X-Actor-Id": "fin-approver-alice",
+      "X-Actor-Role": "finance_approver"
+    },
+    "method": "POST",
+    "path": "/api/proposals/prop_000001/decision"
+  },
+  "response": {
+    "error": {
+      "code": "proposal_not_pending",
+      "details": {
+        "decision_id": null,
+        "status": "revised"
+      },
+      "message": "proposal is revised; it can no longer be decided"
+    }
+  },
+  "scenario": "revision",
+  "schema": "ErrorBody",
+  "status": 409
+}

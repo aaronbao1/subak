@@ -1,0 +1,377 @@
+{
+  "runner": "sdk",
+  "generated_at": "2026-10-25T01:08:09+00:00",
+  "counts": {
+    "pass": 1,
+    "fail": 1,
+    "not_run": 0
+  },
+  "live_runs_used": 2,
+  "live_log_total": 15,
+  "notes": [],
+  "scenarios": [
+    {
+      "id": "arithmetic_transfer_200k",
+      "title": "Transfer reproduces 85k/50k/65k @ 200k",
+      "fixtures": [
+        "transfer"
+      ],
+      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "status": "fail",
+      "checks": [
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_82f2610e-cab7-4fdf-a1de-4f47adae4a79 succeeded"
+        },
+        {
+          "name": "transfer:transfer_drafted",
+          "passed": false,
+          "reason": "no transfer proposal drafted (drafts: none)"
+        }
+      ],
+      "reasons": [
+        "transfer:transfer_drafted: no transfer proposal drafted (drafts: none)"
+      ]
+    },
+    {
+      "id": "forecast_unavailable_warns",
+      "title": "Works with the forecast unavailable, with a warning",
+      "fixtures": [
+        "forecast_unavailable"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "forecast_unavailable:run_succeeded",
+          "passed": true,
+          "reason": "run run_df86e26f-842d-4625-8556-5afe19e43eb4 succeeded"
+        },
+        {
+          "name": "warns_forecast_unavailable",
+          "passed": true,
+          "reason": "the run warns that the forecast is unavailable"
+        },
+        {
+          "name": "completed_or_declined",
+          "passed": true,
+          "reason": "drafted addition prop_acdd2250-70e3-4596-93d3-1912a63fe08a"
+        },
+        {
+          "name": "no_transfer_without_forecast",
+          "passed": true,
+          "reason": "no transfer drafted on recorded spend alone"
+        },
+        {
+          "name": "no_invented_projection",
+          "passed": true,
+          "reason": "every money figure comes from backend output"
+        },
+        {
+          "name": "forecast_unavailable:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "forecast_unavailable:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (1 draft(s))"
+        },
+        {
+          "name": "forecast_unavailable:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        }
+      ],
+      "reasons": [
+        "8 check(s) passed"
+      ]
+    }
+  ],
+  "fixtures": {
+    "transfer": {
+      "fixture": "transfer",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "transfer",
+          "prioritize": "research"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_82f2610e-cab7-4fdf-a1de-4f47adae4a79",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 90.38,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal"
+      ],
+      "warning_codes": [
+        "droid_tool_error"
+      ],
+      "warnings": [
+        {
+          "code": "droid_tool_error",
+          "tool": "Script",
+          "message": "Error: Tool execution cancelled by user"
+        }
+      ],
+      "signals": [
+        {
+          "id": "sig_4ac0ff83-414f-42a0-9d8f-ef9a8f3675ba",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_f1e5c22d-1605-4a65-b6c3-84ffe59fe0cf",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_fc83104a-e006-4ce5-977b-ae1401248331",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_eafc9aed-2c95-46e5-b46e-aa6affe5c93e",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_3e8778cd-b9b3-4f6c-bd0e-eaced3c5bc12",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        }
+      ],
+      "proposals": [],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "I\u2019ll check the current signals, budgets, spend coverage, and forecast, then draft a research-prioritized transfer only if the evidence supports one.\nThe approved documents explicitly replace the older product and research timelines. I\u2019ll record those distinctions, then draft a USD 25,000.00 transfer from product to research for review. That matches research\u2019s placeholder forecast gap and leaves product USD 5,000.00 above its placeholder projection; it does not authorize taking product\u2019s funds.\nThe first signal writes were refused because of unsupported fields; nothing was recorded by those calls. I\u2019ll correct the fields and retry once.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1360,
+          "output_tokens": 7412,
+          "cache_creation_tokens": 25731,
+          "cache_read_tokens": 91368,
+          "thinking_tokens": 1173,
+          "factory_credits": 59571.0
+        },
+        "subtype": "success",
+        "duration_s": 85.064,
+        "permission_allowed": 18,
+        "permission_cancelled": 1
+      }
+    },
+    "forecast_unavailable": {
+      "fixture": "forecast_unavailable",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_df86e26f-842d-4625-8556-5afe19e43eb4",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 105.91,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "list_signals",
+        "draft_proposal"
+      ],
+      "warning_codes": [
+        "forecast_unavailable"
+      ],
+      "warnings": [],
+      "signals": [
+        {
+          "id": "sig_aa0d9f71-a7c1-4c51-a275-9393681748aa",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_29058c21-bab6-49c2-8e3d-75409e7e5e6d",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_4fe5b643-9fe3-4210-970d-7616995a1d12",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_79d99874-389d-45ce-b52a-2505987c515d",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_096c5abd-bd5f-44ba-98dc-c69f2e9500a8",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_696225e4-01c2-4678-91ad-d15b31264fd9",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        }
+      ],
+      "proposals": [
+        {
+          "id": "prop_acdd2250-70e3-4596-93d3-1912a63fe08a",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "60000.00",
+              "product": "80000.00",
+              "research": "110000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "Drafted for finance review: **`prop_acdd2250-70e3-4596-93d3-1912a63fe08a`**\n\n**Status:** `pending_review`. A finance approver must decide. The budget remains unchanged at **state_version 1**.\n\n### Proposed addition\nOne line: **USD 50,000.00 to research**, entirely new money. No transfer.\n\n| Allocation | Before | Proposed after |\n|---|---:|---:|\n| Engineering | 60,000.00 | 60,000.00 |\n| Product | 80,000.00 | 80,000.00 |\n| Research | 60,000.00 | 110,000.00 |\n| **Envelope total** | **200,000.00** | **250,000.00** |\n\nThese are internal USD planning allocations, not vendor credits or token limits.\n\n### Evidence and interpretation\n- **Current, approved:** `research-eval-plan` v1 supports prioritizing research: \u201cThis plan expands model-evaluation work during the current planning period.\u201d\n- Its disagreement with **superseded** `research-timeline-thread` v1 resolves through explicit replacement: `research-eval-plan` v1 states, \u201cThis plan supersedes the earlier email thread that proposed pushing the expansion to next period.\u201d\n- **Current, approved:** `product-launch-plan` v2 states, \u201cNear-term launch rehearsal is reduced this period; prompt tuning continues at a lower level.\u201d It supersedes v1 explicitly: \u201cThis update replaces the August launch plan.\u201d This does not authorize withdrawing product funds.\n- Neither superseded source justified the allocation. `engineering-platform-note` v1 lacked established approval and was treated as informal context; `marketing-ideas-slack` v1 was informal. No unresolved conflict between current approved documents was found.\n\nRefused signal attempts wrote nothing. Corrected signals were recorded; marketing context was recorded without a team after the backend rejected that team as unknown/inactive.\n\n### Warning and limitations\n- **Backend warning:** `forecast_unavailable`, \u201ccited forecast snapshot is unavailable.\u201d Snapshot: `fcs_709d4c6d-3292-431e-882b-5806586f62e0`. The placeholder provider is not connected; unavailable does not mean zero.\n- Spend summary `2026-P1` has complete coverage of recorded, **simulated** data only, with no unmapped records. Latest records are dated October 20 overall and October 15 for research, not full-period coverage. Included usage was not counted as extra expense.\n- The documents do not establish that **USD 50,000.00** is necessary or sufficient. `research-eval-plan` v1 states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d Future costs, funding gaps, and transferable headroom remain unestablished.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1371,
+          "output_tokens": 7047,
+          "cache_creation_tokens": 29188,
+          "cache_read_tokens": 139057,
+          "thinking_tokens": 1946,
+          "factory_credits": 63486.0
+        },
+        "subtype": "success",
+        "duration_s": 103.286,
+        "permission_allowed": 34,
+        "permission_cancelled": 0
+      }
+    }
+  }
+}

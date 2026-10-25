@@ -1,0 +1,216 @@
+{
+  "description": "partial coverage: unattributed spend is its own column (no allocation); plotted dollars are simulated; real sample token rows noted, not plotted",
+  "name": "chart_spend_vs_allocation_incomplete",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts/spend_vs_allocation"
+  },
+  "response": {
+    "coverage_status": "partial",
+    "data_labels": {
+      "real_sample": true,
+      "simulated": true
+    },
+    "forecast_availability": null,
+    "kind": "spend_vs_allocation",
+    "metric": "recorded_spend",
+    "notes": [
+      "budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:05:00Z).",
+      "1200.00 USD of unattributed spend (1 record(s)) belongs to no team; plotted as its own column with no allocation.",
+      "real sample usage in this period carries no dollar amount (token telemetry), so it is not in the plotted spend."
+    ],
+    "period": "2026-P1",
+    "row_count": 7,
+    "sources": [
+      "/api/budget?period=2026-P1",
+      "/api/spend/summary?period=2026-P1"
+    ],
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "northstar",
+        "values": [
+          {
+            "amount": "60000.00",
+            "coverage_status": "partial",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "engineering",
+            "value_kind": "planned"
+          },
+          {
+            "amount": "30000.00",
+            "coverage_status": "partial",
+            "series": "recorded_spend",
+            "simulated": true,
+            "state_version": 1,
+            "team": "engineering",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "80000.00",
+            "coverage_status": "partial",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "product",
+            "value_kind": "planned"
+          },
+          {
+            "amount": "20000.00",
+            "coverage_status": "partial",
+            "series": "recorded_spend",
+            "simulated": true,
+            "state_version": 1,
+            "team": "product",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "60000.00",
+            "coverage_status": "partial",
+            "series": "allocation",
+            "simulated": null,
+            "state_version": 1,
+            "team": "research",
+            "value_kind": "planned"
+          },
+          {
+            "amount": "45000.00",
+            "coverage_status": "partial",
+            "series": "recorded_spend",
+            "simulated": true,
+            "state_version": 1,
+            "team": "research",
+            "value_kind": "simulated"
+          },
+          {
+            "amount": "1200.00",
+            "coverage_status": "partial",
+            "series": "recorded_spend",
+            "simulated": true,
+            "state_version": 1,
+            "team": "unattributed",
+            "value_kind": "simulated"
+          }
+        ]
+      },
+      "description": "Recorded spend vs allocation by team for planning period 2026-P1 in USD, all teams. Value kinds: planned, simulated; simulated data (fictional Northstar example). Spend coverage partial. Built by the Northstar backend from /api/budget?period=2026-P1, /api/spend/summary?period=2026-P1; data inline, nothing estimated by the chart. budget state_version 1; recorded spend is attributed spend to date (as of 2026-10-24T12:05:00Z). 1200.00 USD of unattributed spend (1 record(s)) belongs to no team; plotted as its own column with no allocation. real sample usage in this period carries no dollar amount (token telemetry), so it is not in the plotted spend.",
+      "encoding": {
+        "color": {
+          "field": "series",
+          "scale": {
+            "domain": [
+              "allocation",
+              "recorded_spend"
+            ]
+          },
+          "title": "Series",
+          "type": "nominal"
+        },
+        "tooltip": [
+          {
+            "field": "team",
+            "title": "Team",
+            "type": "nominal"
+          },
+          {
+            "field": "series",
+            "title": "Series",
+            "type": "nominal"
+          },
+          {
+            "field": "amount",
+            "title": "Amount",
+            "type": "nominal"
+          },
+          {
+            "field": "value_kind",
+            "title": "Value kind",
+            "type": "nominal"
+          },
+          {
+            "field": "coverage_status",
+            "title": "Spend coverage",
+            "type": "nominal"
+          }
+        ],
+        "x": {
+          "field": "team",
+          "sort": null,
+          "title": "Team",
+          "type": "nominal"
+        },
+        "xOffset": {
+          "field": "series",
+          "sort": [
+            "allocation",
+            "recorded_spend"
+          ],
+          "type": "nominal"
+        },
+        "y": {
+          "axis": {
+            "format": ",.2f"
+          },
+          "field": "value",
+          "title": "USD",
+          "type": "quantitative"
+        }
+      },
+      "height": 300,
+      "mark": {
+        "tooltip": true,
+        "type": "bar"
+      },
+      "title": {
+        "subtitle": [
+          "value kinds: planned, simulated (planned = internal allocation, not spend)",
+          "spend coverage: partial; all teams"
+        ],
+        "text": "Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)"
+      },
+      "transform": [
+        {
+          "as": "value",
+          "calculate": "toNumber(datum.amount)"
+        }
+      ],
+      "usermeta": {
+        "northstar": {
+          "coverage_status": "partial",
+          "data_labels": {
+            "real_sample": true,
+            "simulated": true
+          },
+          "forecast_availability": null,
+          "kind": "spend_vs_allocation",
+          "metric": "recorded_spend",
+          "money_field": "amount (decimal string)",
+          "period": "2026-P1",
+          "sources": [
+            "/api/budget?period=2026-P1",
+            "/api/spend/summary?period=2026-P1"
+          ],
+          "team": null,
+          "unit": "USD",
+          "value_kinds": [
+            "planned",
+            "simulated"
+          ]
+        }
+      },
+      "width": "container"
+    },
+    "team": null,
+    "title": "Recorded spend vs allocation by team | 2026-P1 | USD | simulated data (fictional Northstar example)",
+    "unit": "USD",
+    "value_kinds": [
+      "planned",
+      "simulated"
+    ]
+  },
+  "scenario": "incomplete",
+  "schema": "ChartSpecOut",
+  "status": 200
+}

@@ -1,0 +1,189 @@
+{
+  "description": "current / superseded / informal signals with citation currency",
+  "name": "signals",
+  "request": {
+    "method": "GET",
+    "path": "/api/signals"
+  },
+  "response": {
+    "count": 5,
+    "items": [
+      {
+        "agent_run_id": null,
+        "applies_from": "2026-10-01",
+        "applies_to": "2026-12-31",
+        "change_type": "expansion",
+        "citations": [
+          {
+            "char_end": 186,
+            "char_start": 111,
+            "citation_currency": "current",
+            "doc_key": "research-eval-plan",
+            "document_id": "doc_000003",
+            "id": "cit_000001",
+            "offsets_corrected": false,
+            "quote": "This plan expands model-evaluation work during the current planning period.",
+            "superseded_by_document_id": null,
+            "title": "Approved research plan - model-evaluation expansion",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:21:00Z",
+        "id": "sig_000001",
+        "needs_review": false,
+        "produced_by": "finance",
+        "project": "model-evaluation",
+        "status": "current",
+        "summary": "Approved plan expands model-evaluation work in the current period.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": "research",
+        "uncertainty": "token volume depends on how many model updates ship; plan is not measured usage"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": null,
+        "applies_to": null,
+        "change_type": "timing_shift",
+        "citations": [
+          {
+            "char_end": 211,
+            "char_start": 152,
+            "citation_currency": "superseded",
+            "doc_key": "research-timeline-thread",
+            "document_id": "doc_000002",
+            "id": "cit_000002",
+            "offsets_corrected": false,
+            "quote": "we will push the model-evaluation expansion to next period.",
+            "superseded_by_document_id": "doc_000003",
+            "title": "Re: model-evaluation timeline",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:22:00Z",
+        "id": "sig_000002",
+        "needs_review": false,
+        "produced_by": "finance",
+        "project": "model-evaluation",
+        "status": "superseded",
+        "summary": "Older email thread pushed the evaluation expansion to next period; superseded by the approved plan.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": "research",
+        "uncertainty": "informal correspondence; replaced by the approved plan of 2026-10-08"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": null,
+        "applies_to": null,
+        "change_type": "timing_shift",
+        "citations": [
+          {
+            "char_end": 215,
+            "char_start": 117,
+            "citation_currency": "superseded",
+            "doc_key": "product-launch-plan",
+            "document_id": "doc_000001",
+            "id": "cit_000004",
+            "offsets_corrected": false,
+            "quote": "The general-availability launch milestone for the assistant workspace lands in the current period.",
+            "superseded_by_document_id": "doc_000005",
+            "title": "Product launch plan - assistant workspace GA",
+            "version": 1
+          },
+          {
+            "char_end": 180,
+            "char_start": 109,
+            "citation_currency": "current",
+            "doc_key": "product-launch-plan",
+            "document_id": "doc_000005",
+            "id": "cit_000003",
+            "offsets_corrected": false,
+            "quote": "The general-availability launch milestone moves to the following period",
+            "superseded_by_document_id": null,
+            "title": "Product launch plan update - milestone moved",
+            "version": 2
+          }
+        ],
+        "created_at": "2026-10-24T12:23:00Z",
+        "id": "sig_000003",
+        "needs_review": false,
+        "produced_by": "finance",
+        "project": "workspace-launch",
+        "status": "current",
+        "summary": "Launch milestone moved to the following period; near-term launch work reduced.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": "product",
+        "uncertainty": "pilot feedback could move the milestone again"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": null,
+        "applies_to": null,
+        "change_type": "continuation",
+        "citations": [
+          {
+            "char_end": 110,
+            "char_start": 29,
+            "citation_currency": "current",
+            "doc_key": "engineering-platform-note",
+            "document_id": "doc_000004",
+            "id": "cit_000005",
+            "offsets_corrected": false,
+            "quote": "Platform migration work continues through the current period at the current pace.",
+            "superseded_by_document_id": null,
+            "title": "Engineering platform note - code assistant rollout",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:24:00Z",
+        "id": "sig_000004",
+        "needs_review": false,
+        "produced_by": "finance",
+        "project": "platform",
+        "status": "current",
+        "summary": "Platform migration continues through the current period at the current pace.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": "engineering",
+        "uncertainty": "pace tracks the migration backlog"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": null,
+        "applies_to": null,
+        "change_type": "other",
+        "citations": [
+          {
+            "char_end": 177,
+            "char_start": 128,
+            "citation_currency": "current",
+            "doc_key": "marketing-ideas-slack",
+            "document_id": "doc_000006",
+            "id": "cit_000006",
+            "offsets_corrected": false,
+            "quote": "fun idea, no budget or approval for it yet though",
+            "superseded_by_document_id": null,
+            "title": "#marketing-ideas: AI campaign brainstorm",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:25:00Z",
+        "id": "sig_000005",
+        "needs_review": false,
+        "produced_by": "finance",
+        "project": "campaigns",
+        "status": "informal",
+        "summary": "Marketing brainstorm about generated demo videos; no budget or approval.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": null,
+        "uncertainty": "brainstorm only, explicitly not a plan"
+      }
+    ]
+  },
+  "scenario": "main",
+  "schema": "SignalList",
+  "status": 200
+}

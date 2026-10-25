@@ -1,0 +1,58 @@
+{
+  "description": "chart kinds with their metrics and defaults",
+  "name": "chart_kinds",
+  "request": {
+    "method": "GET",
+    "path": "/api/charts"
+  },
+  "response": {
+    "kinds": [
+      {
+        "default_metric": "recorded_spend",
+        "description": "Recorded spend to date next to each team's internal allocation (or allocation minus recorded spend with metric `remaining`).",
+        "extra_teams": [],
+        "kind": "spend_vs_allocation",
+        "metrics": [
+          "recorded_spend",
+          "remaining"
+        ]
+      },
+      {
+        "default_metric": "projected",
+        "description": "Full-period projection from the ForecastProvider next to each team's allocation (or projection minus allocation with metric `gap`). No projection rows when unavailable.",
+        "extra_teams": [],
+        "kind": "projection_vs_allocation",
+        "metrics": [
+          "projected",
+          "gap"
+        ]
+      },
+      {
+        "default_metric": "recorded_spend",
+        "description": "Recorded spend per team stacked by cost category; included and unpriced usage are never spend (metric `record_count` counts usage records in every category).",
+        "extra_teams": [
+          "unattributed"
+        ],
+        "kind": "spend_by_cost_category",
+        "metrics": [
+          "recorded_spend",
+          "record_count"
+        ]
+      },
+      {
+        "default_metric": "allocation",
+        "description": "Saved allocations per team across budget versions, each linked to its decision (or the envelope total per version with metric `envelope_total`).",
+        "extra_teams": [],
+        "kind": "budget_history",
+        "metrics": [
+          "allocation",
+          "envelope_total"
+        ]
+      }
+    ],
+    "vega_lite_schema": "https://vega.github.io/schema/vega-lite/v5.json"
+  },
+  "scenario": "charts",
+  "schema": "ChartKindList",
+  "status": 200
+}

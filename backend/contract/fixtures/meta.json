@@ -1,0 +1,60 @@
+{
+  "description": "modes and real-vs-simulated labels",
+  "name": "meta",
+  "request": {
+    "method": "GET",
+    "path": "/api/meta"
+  },
+  "response": {
+    "forecast_mode": "placeholder",
+    "forecast_provider": "placeholder",
+    "identity_mode": "demo_headers_unauthenticated",
+    "money_format": "decimal string with exactly two places, e.g. \"60000.00\"; never a float",
+    "period": {
+      "ends_on": "2026-12-31",
+      "id": "2026-P1",
+      "label": "Northstar planning period",
+      "starts_on": "2026-10-01"
+    },
+    "real_vs_simulated": [
+      {
+        "component": "northstar_spend_budgets_corpus",
+        "detail": "fictional Northstar Software example; value_kind=simulated, is_simulated=true",
+        "status": "simulated"
+      },
+      {
+        "component": "codex_session_parser",
+        "detail": "real Codex session format; imported samples are measured tokens, unpriced unless priced",
+        "status": "real"
+      },
+      {
+        "component": "projections",
+        "detail": "shared placeholder numbers behind ForecastProvider, not a forecasting model",
+        "status": "placeholder"
+      },
+      {
+        "component": "droid_runner",
+        "detail": "deterministic FakeDroidRunner unless DROID_RUNNER=sdk with a Factory key; runner_kind always reported",
+        "status": "fake"
+      },
+      {
+        "component": "identity",
+        "detail": "X-Actor-Id / X-Actor-Role headers are not authentication; authority rules are enforced",
+        "status": "demo"
+      }
+    ],
+    "roles": [
+      "finance_approver",
+      "finance_analyst",
+      "droid_agent",
+      "importer"
+    ],
+    "runner_kind": "fake",
+    "service": "northstar-backend",
+    "unit": "USD",
+    "version": "0.1.0"
+  },
+  "scenario": "main",
+  "schema": "MetaOut",
+  "status": 200
+}

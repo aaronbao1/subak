@@ -1,0 +1,46 @@
+{
+  "description": "quote does not occur verbatim in the cited document",
+  "name": "error_citation_not_found",
+  "request": {
+    "body": {
+      "change_type": "expansion",
+      "citations": [
+        {
+          "document_id": "doc_000003",
+          "quote": "research budget doubles this period"
+        }
+      ],
+      "status": "current",
+      "summary": "Research budget doubles.",
+      "team": "research",
+      "uncertainty": "unverified"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "error": {
+      "code": "citation_not_found",
+      "details": {
+        "reasons": [
+          {
+            "code": "citation_not_found",
+            "doc_key": "research-eval-plan",
+            "document_id": "doc_000003",
+            "line": 0,
+            "message": "quote does not occur verbatim in research-eval-plan v1",
+            "version": 1
+          }
+        ]
+      },
+      "message": "every citation must quote a stored document version exactly"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 422
+}
