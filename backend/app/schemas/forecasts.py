@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 from datetime import datetime
 from typing import Literal
 
@@ -13,12 +14,44 @@ Availability = Literal["available", "partial", "unavailable"]
 Basis = Literal["full_period_total", "remaining"]
 
 
+class DailyProjection(BaseModel):
+    """Projected spend on one day after the data as-of (frontend-integration-design §4.2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date: _dt.date
+    amount: MoneyStr
+
+
 class TeamProjection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     team: str
     amount: MoneyStr
     unit: Literal["USD"] = "USD"
+    assumptions: list[str] = Field(default_factory=list)
+    uncertainty: str | None = None
+    # Remaining projected spend per day (as-of + 1 .. period end). Built by summing the person and
+    # team-level series, so per-day person sums never exceed it. None when not provided.
+    daily: list[DailyProjection] | None = None
+
+
+class PersonProjection(BaseModel):
+    """One person's share of a team placeholder. A proportional split, NOT a person-level model.
+
+    `amount` is the full-period total (spend to date + remaining). `share` is the person's percent of
+    the split weights (recorded spend to date), one decimal place, as text - not money.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    person: str
+    team: str
+    amount: MoneyStr
+    spent_to_date: MoneyStr
+    share: str
+    unit: Literal["USD"] = "USD"
+    daily: list[DailyProjection] | None = None
     assumptions: list[str] = Field(default_factory=list)
     uncertainty: str | None = None
 
@@ -38,6 +71,10 @@ class ForecastResult(BaseModel):
     value_kind: Literal["simulated", "estimated"] = "simulated"
     method_label: str
     generated_at: datetime | None = None
+    # Optional per-person split of the team projections (sum + team-level remainder == team amount).
+    person_projections: list[PersonProjection] = Field(default_factory=list)
+    # Last day with counted usage in the period; daily points start the day after.
+    as_of: _dt.date | None = None
 
 
 class ForecastSnapshotOut(OutModel):

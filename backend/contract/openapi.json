@@ -1646,6 +1646,27 @@
         "title": "CoverageSource",
         "type": "object"
       },
+      "DailyProjection": {
+        "additionalProperties": false,
+        "description": "Projected spend on one day after the data as-of (frontend-integration-design §4.2).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "amount"
+        ],
+        "title": "DailyProjection",
+        "type": "object"
+      },
       "DataLabels": {
         "properties": {
           "real_sample": {
@@ -2768,6 +2789,18 @@
         "additionalProperties": false,
         "description": "What a ForecastProvider returns. `projections` is empty when unavailable - never zero-filled.",
         "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
           "availability": {
             "enum": [
               "available",
@@ -2807,6 +2840,13 @@
               "type": "string"
             },
             "title": "Missing Teams",
+            "type": "array"
+          },
+          "person_projections": {
+            "items": {
+              "$ref": "#/components/schemas/PersonProjection"
+            },
+            "title": "Person Projections",
             "type": "array"
           },
           "projections": {
@@ -3403,6 +3443,79 @@
           "active"
         ],
         "title": "PersonOut",
+        "type": "object"
+      },
+      "PersonProjection": {
+        "additionalProperties": false,
+        "description": "One person's share of a team placeholder. A proportional split, NOT a person-level model.\n\n`amount` is the full-period total (spend to date + remaining). `share` is the person's percent of\nthe split weights (recorded spend to date), one decimal place, as text - not money.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "daily": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DailyProjection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "share": {
+            "title": "Share",
+            "type": "string"
+          },
+          "spent_to_date": {
+            "title": "Spent To Date",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty"
+          },
+          "unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "team",
+          "amount",
+          "spent_to_date",
+          "share"
+        ],
+        "title": "PersonProjection",
         "type": "object"
       },
       "ProposalOut": {
@@ -4409,6 +4522,20 @@
             },
             "title": "Assumptions",
             "type": "array"
+          },
+          "daily": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DailyProjection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily"
           },
           "team": {
             "title": "Team",

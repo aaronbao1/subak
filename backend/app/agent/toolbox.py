@@ -206,7 +206,11 @@ class BackendToolbox:
         def fn(s: Session) -> dict:
             result = forecast_svc.forecast_for_period(s, self._provider, self._period(s), clock=self._clock)
             snap = forecast_svc.snapshot(s, result, clock=self._clock, ids=self._ids)
-            return ForecastSnapshotOut.model_validate(forecast_svc.snapshot_out(snap)).model_dump(mode="json")
+            out = ForecastSnapshotOut.model_validate(forecast_svc.snapshot_out(snap)).model_dump(mode="json")
+            # The snapshot keeps the daily series; Droid gets amounts, spent_to_date and share only.
+            for item in [*out["forecast"]["projections"], *out["forecast"]["person_projections"]]:
+                item.pop("daily", None)
+            return out
 
         return self._invoke("get_forecast", {}, fn,
                             lambda r: f"{r['availability']} ({r['provider']}), snapshot {r['id']}")

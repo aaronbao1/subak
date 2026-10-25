@@ -61,6 +61,7 @@
       "unattributed_spend": "0.00"
     },
     "forecast": {
+      "as_of": null,
       "availability": "unavailable",
       "basis": "full_period_total",
       "generated_at": "2026-10-24T12:02:00Z",
@@ -70,6 +71,7 @@
         "product",
         "research"
       ],
+      "person_projections": [],
       "projections": [],
       "provider": "placeholder",
       "reason": "forecast provider not connected",
