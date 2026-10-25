@@ -38,6 +38,13 @@ class ForecastResult(BaseModel):
     value_kind: Literal["simulated", "estimated"] = "simulated"
     method_label: str
     generated_at: datetime | None = None
+    forecast_run_id: str | None = None
+    input_snapshot_id: str | None = None
+    input_revision: str | None = None
+    repository_revision: str | None = None
+    tenant_id: str | None = None
+    information_cutoff: datetime | None = None
+    procedure_version: str | None = None
 
 
 class ForecastSnapshotOut(OutModel):

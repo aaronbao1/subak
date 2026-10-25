@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, MessageSquare, SearchX } from "lucide-react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import type { Team } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,7 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
         )}
       </header>
 
+      <ForecastPanel scopeType="person" scopeId={personId} />
       <TeamSpendChart team={asTeam} records={records} forecast={forecast} unit={unit} />
       <ContextCards team={asTeam} items={items} allItems={context} people={people} />
     </div>

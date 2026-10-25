@@ -55,6 +55,30 @@ class BuildChartSpecIn(_In):
     metric: Annotated[str, Field(min_length=1, max_length=50)] | None = None
 
 
+class ExplainForecastIn(_In):
+    run_id: Annotated[str, Field(min_length=1, max_length=200)]
+    scope_type: Literal["company", "team", "person", "shared"] = "company"
+    scope_id: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    driver_id: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+
+
+class CompareForecastsIn(_In):
+    run_ids: Annotated[list[str], Field(min_length=2, max_length=2)]
+    scope_type: Literal["company", "team", "person", "shared"] = "company"
+    scope_id: str | None = None
+
+
+class PreviewForecastScenarioIn(_In):
+    run_id: Annotated[str, Field(min_length=1, max_length=200)]
+    drivers: Annotated[list[dict[str, Any]], Field(max_length=50)]
+    scope_type: Literal["company", "team", "person", "shared"] = "company"
+    scope_id: str | None = None
+
+
+class RequestForecastRefreshIn(_In):
+    idempotency_key: Annotated[str, Field(min_length=1, max_length=200)]
+
+
 class RecordSignalIn(_In):
     """A ContextSignalIn without `agent_run_id`: the toolbox stamps the run id itself."""
 
@@ -122,10 +146,25 @@ TOOLS: tuple[ToolDef, ...] = (
             "remaining, and state_version (use it as base_version when drafting).",
             NoArgsIn),
     ToolDef("get_forecast", "read",
-            "Projections from the configured ForecastProvider (placeholder, not a model). Persists a "
+            "Quarter projections from the configured ForecastProvider; preserve its method and qualification. Persists a "
             "snapshot and returns its id so a proposal can cite exactly what it relied on. May be "
             "`unavailable`; never treat that as zero.",
             NoArgsIn),
+    ToolDef("explain_forecast", "read",
+            "Explain one immutable published forecast by exact run_id, scope and optional driver_id. "
+            "Returns stored sources, paired omission effects, calculation links and limitations; never switches to latest.",
+            ExplainForecastIn),
+    ToolDef("compare_forecasts", "read",
+            "Compare exactly two stored run_ids for one identical scope; preserve each information cutoff and unit.",
+            CompareForecastsIn),
+    ToolDef("preview_forecast_scenario", "draft",
+            "Store an isolated scenario receipt from the specified immutable run and explicit absolute driver assumptions. "
+            "Does not mutate the published baseline or any budget. Label hypothetical assumptions and receipt id.",
+            PreviewForecastScenarioIn),
+    ToolDef("request_forecast_refresh", "draft",
+            "Request idempotent forecast publication only when explicitly asked, with a stable idempotency_key. "
+            "Returns the persisted job/run receipt; do not claim publication before receipt says published.",
+            RequestForecastRefreshIn),
     ToolDef("list_signals", "read",
             "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
             ListSignalsIn),

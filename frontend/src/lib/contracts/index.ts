@@ -279,3 +279,5 @@ export interface Company {
   budgetUnit: Unit;
   currentPeriod: Period;
 }
+
+export type { ForecastView, ForecastBundle, ForecastScope, ForecastPoint, ForecastBand, ForecastDriver, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, ForecastScenarioReceipt, ForecastScenarioResponse } from "./forecast-view";

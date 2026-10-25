@@ -447,6 +447,11 @@ def run_import(
         "spend_added": format(spend_added, "f"),
     }
     session.flush()
+    if inserted:
+        from app.services.forecast_freshness import invalidate_repository_proposals
+        invalidate_repository_proposals(session, source_id=batch.id, now=clock.now())
+    from app.forecasting.repository import capture_repository_inputs
+    capture_repository_inputs(session, now=clock.now())
     return ImportOutcome(batch, created=True)
 
 

@@ -1,4 +1,4 @@
-"""Drift check: app/compat/schemas.py must mirror the frontend's TypeScript contract field for field.
+"""Current checked-out contracts (never an obsolete vendored snapshot). Drift check: app/compat/schemas.py must mirror the frontend's TypeScript contract field for field.
 
 `tests/vendored/frontend_contracts.ts` is a verbatim copy of `frontend/src/lib/contracts/index.ts` from
 origin/main (copied at 9442db9). Set COMPAT_UPSTREAM_CHECK=1 to also check against the live
@@ -19,7 +19,7 @@ import pytest
 
 from app.compat import schemas as S
 
-VENDORED = Path(__file__).parent / "vendored" / "frontend_contracts.ts"
+VENDORED = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "contracts" / "index.ts"
 UPSTREAM_PATH = "frontend/src/lib/contracts/index.ts"
 
 _IFACE = re.compile(r"export interface (\w+) \{(.*?)\n\}", re.S)
@@ -86,13 +86,13 @@ def _check(text: str) -> list[str]:
 
 def test_parser_sees_the_whole_contract():
     interfaces, aliases = parse_ts(VENDORED.read_text())
-    assert len(interfaces) == len(S.CONTRACT_MODELS) == 14
+    assert len(interfaces) == len(S.CONTRACT_MODELS) == 16
     assert {"Unit", "CostComponent", "Provenance", "ContextKind", "ClaimType", "ProposalKind"} <= set(aliases)
     assert interfaces["Forecast"]["low"] == (True, "number")
     assert interfaces["SpendingRecord"]["complete"] == (False, "boolean")
 
 
-def test_compat_schemas_match_vendored_typescript_contract():
+def test_compat_schemas_match_current_typescript_contract():
     assert _check(VENDORED.read_text()) == []
 
 

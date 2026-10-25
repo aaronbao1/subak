@@ -92,14 +92,37 @@ def seed(session: Session, *, clock: Clock, ids: IdFactory, include_spend: bool 
     return True
 
 
-def reset_database(engine, session_factory, *, clock: Clock, ids: IdFactory) -> None:
-    """Drop every table, recreate, and reseed (demo reset)."""
-    from app.db.base import Base, create_all
+def reset_database(engine, session_factory, *, clock: Clock, ids: IdFactory, forecast_store=None) -> None:
+    """Atomically replace the enabled demo database, including canonical forecasts.
 
-    Base.metadata.drop_all(engine)
-    create_all(engine)
-    s = session_factory()
-    try:
-        seed(s, clock=clock, ids=ids)
-    finally:
-        s.close()
+    Advisory maintenance locking keeps other workers from reintroducing a result
+    built before reset. Explicit BEGIN makes SQLite DDL plus reseeding one unit;
+    failures restore the preceding schema/data rather than leaving half a reset.
+    """
+    from app.db.base import Base
+    from app.forecasting.persistence import ForecastStore
+
+    forecast_store = forecast_store or ForecastStore(engine.url.database)
+    with forecast_store.operation(exclusive=True):
+        with engine.connect() as connection:
+            connection.exec_driver_sql('BEGIN EXCLUSIVE')
+            try:
+                for table in ('forecast_publications', 'forecast_scenarios', 'forecast_runs',
+                              'forecast_jobs', 'forecast_input_snapshots', 'forecast_inputs',
+                              'forecast_schema_versions'):
+                    connection.exec_driver_sql(f'DROP TABLE IF EXISTS {table}')
+                Base.metadata.drop_all(connection)
+                Base.metadata.create_all(connection)
+                forecast_store.migrate(connection=connection.connection.driver_connection)
+                # Seed helpers commit their Session, while the explicit outer
+                # transaction still owns all schema/data changes until success.
+                info = dict(getattr(session_factory, 'kw', {}).get('info', {}))
+                session = Session(bind=connection, join_transaction_mode='create_savepoint', info=info)
+                try:
+                    seed(session, clock=clock, ids=ids)
+                finally:
+                    session.close()
+                connection.commit()
+            except BaseException:
+                connection.rollback()
+                raise

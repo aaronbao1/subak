@@ -93,7 +93,7 @@
       "name": "get_budgets"
     },
     {
-      "description": "Projections from the configured ForecastProvider (placeholder, not a model). Persists a snapshot and returns its id so a proposal can cite exactly what it relied on. May be `unavailable`; never treat that as zero.",
+      "description": "Quarter projections from the configured ForecastProvider; preserve its method and qualification. Persists a snapshot and returns its id so a proposal can cite exactly what it relied on. May be `unavailable`; never treat that as zero.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {},
@@ -102,6 +102,188 @@
       },
       "kind": "read",
       "name": "get_forecast"
+    },
+    {
+      "description": "Explain one immutable published forecast by exact run_id, scope and optional driver_id. Returns stored sources, paired omission effects, calculation links and limitations; never switches to latest.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "driver_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Driver Id"
+          },
+          "run_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "default": "company",
+            "enum": [
+              "company",
+              "team",
+              "person",
+              "shared"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "ExplainForecastIn",
+        "type": "object"
+      },
+      "kind": "read",
+      "name": "explain_forecast"
+    },
+    {
+      "description": "Compare exactly two stored run_ids for one identical scope; preserve each information cutoff and unit.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "default": "company",
+            "enum": [
+              "company",
+              "team",
+              "person",
+              "shared"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids"
+        ],
+        "title": "CompareForecastsIn",
+        "type": "object"
+      },
+      "kind": "read",
+      "name": "compare_forecasts"
+    },
+    {
+      "description": "Store an isolated scenario receipt from the specified immutable run and explicit absolute driver assumptions. Does not mutate the published baseline or any budget. Label hypothetical assumptions and receipt id.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "drivers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 50,
+            "title": "Drivers",
+            "type": "array"
+          },
+          "run_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "default": "company",
+            "enum": [
+              "company",
+              "team",
+              "person",
+              "shared"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "drivers"
+        ],
+        "title": "PreviewForecastScenarioIn",
+        "type": "object"
+      },
+      "kind": "draft",
+      "name": "preview_forecast_scenario"
+    },
+    {
+      "description": "Request idempotent forecast publication only when explicitly asked, with a stable idempotency_key. Returns the persisted job/run receipt; do not claim publication before receipt says published.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "RequestForecastRefreshIn",
+        "type": "object"
+      },
+      "kind": "draft",
+      "name": "request_forecast_refresh"
     },
     {
       "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
@@ -397,6 +579,10 @@
                       },
                       {
                         "type": "number"
+                      },
+                      {
+                        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                        "type": "string"
                       }
                     ],
                     "title": "Amount"
@@ -487,6 +673,10 @@
                   },
                   {
                     "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
                   }
                 ],
                 "title": "Envelope Increase"
@@ -614,6 +804,10 @@
                       },
                       {
                         "type": "number"
+                      },
+                      {
+                        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                        "type": "string"
                       }
                     ],
                     "title": "Amount"
@@ -657,6 +851,10 @@
                   },
                   {
                     "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
                   },
                   {
                     "type": "null"

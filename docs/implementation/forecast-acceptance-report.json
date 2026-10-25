@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "automatic_extraction_queued": true,
+    "coherent_company_team_person_shared": true,
+    "current_actuals_separate_from_issued": true,
+    "current_ledger_matches_observed_days": true,
+    "droid_matches_calculation_and_source": true,
+    "immutable_error_receipts_persisted": true,
+    "isolated_scenario": true,
+    "mature_outcomes_score_and_refit": true,
+    "new_immutable_run_changes_supported_work": true,
+    "published_curve_unchanged_while_queued": true,
+    "release_and_ambiguity_context_only": true,
+    "seven_daily_four_weekly": true,
+    "synthetic_cannot_promote": true
+  },
+  "initial_quarter": 2155.87243125,
+  "initial_run_id": "run_32da29d330964a4c83997f0ec704ed9e",
+  "is_synthetic": true,
+  "limitations": [
+    "Connector-shaped fixtures; no live authenticated connector or live Droid request.",
+    "Synthetic replay demonstrates mechanics and cannot establish enterprise accuracy.",
+    "All receipts use UTC; a frozen midnight clock keeps the demo complete and deterministic."
+  ],
+  "next_run_id": "run_2759eb8660ff4c6fb12dfed09d7871d8",
+  "passed": true,
+  "published_quarter": 1742.91216075,
+  "published_run_id": "run_d9f2d2f35265425b953472df4f3919fe",
+  "scenario_id": "scenario_93a1c6cf596b4c22af226084087fb8af",
+  "truth_source": "independent synthetic observed usage, not forecast output"
+}

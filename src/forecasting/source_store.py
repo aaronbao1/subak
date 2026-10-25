@@ -92,14 +92,16 @@ class SourceStore:
                     raise ValueError('coverage must belong to its acquisition generation')
                 bound=replace(item,generation_id=receipt.generation_id,
                               known_at=max(item.known_at,receipt.fetched_at))
-                # Redelivery of an identical fact preserves first visibility;
-                # changes to state/maturity/version append a new fact.
+                # Retain each knowledge-time fact, including repeated states:
+                # an earlier delayed fact may later be inserted between them.
+                # Deduplicating against the latest state loses replay history.
                 semantic=lambda x:(x.source_id,x.start,x.end,x.state,x.maturity,x.version,x.generation_id)
                 same_partition=[old for old in merged if (old.source_id,old.start,old.end,old.generation_id)==(bound.source_id,bound.start,bound.end,bound.generation_id)]
-                latest=max(same_partition,key=lambda old:old.known_at) if same_partition else None
-                if latest is not None and latest.known_at==bound.known_at and semantic(latest)!=semantic(bound):
+                same_time=[old for old in same_partition if old.known_at==bound.known_at]
+                if any(semantic(old)!=semantic(bound) for old in same_time):
                     raise ValueError('conflicting coverage evidence at same acquisition time')
-                if latest is None or semantic(latest)!=semantic(bound):merged.append(bound)
+                if not same_time:merged.append(bound)
+            merged.sort(key=lambda item:(item.source_id,item.start,item.end,item.generation_id or '',item.known_at))
             body=canonical_json({'schema_version':'1.0','ledger':ledger.to_dict(),'coverage':tuple(merged)})
             c.execute('INSERT INTO source_state(tenant,evidence_class,source_id,adapter,body) VALUES(?,?,?,?,?) '
                       'ON CONFLICT(tenant,evidence_class,source_id) DO UPDATE SET body=excluded.body',

@@ -102,4 +102,9 @@ def upsert_mapping(
         mapping.team_id = team_id
         mapping.created_by = actor_id
     session.flush()
-    return mapping, reresolve_records(session, source_kind, source_account)
+    changed = reresolve_records(session, source_kind, source_account)
+    from app.services.forecast_freshness import invalidate_repository_proposals
+    invalidate_repository_proposals(session, source_id=mapping.id, now=clock.now())
+    from app.forecasting.repository import capture_repository_inputs
+    capture_repository_inputs(session, now=clock.now())
+    return mapping, changed

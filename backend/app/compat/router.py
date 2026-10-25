@@ -181,8 +181,25 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
     return mappers.teams(_active_teams(session), include_unattributed=unattributed)
 
 
+@router.get("/people", response_model=list[S.Person], **JSON_OPTS)
+def get_people(request: Request):
+    snapshot = request.app.state.forecast_service.current_snapshot()
+    at = snapshot['information_cutoff'][:10]
+    result = []
+    for person in snapshot.get('people', []):
+        memberships = [m for m in snapshot.get('memberships', []) if m['person_id'] == person['id']
+                       and m['effective_from'] <= at and (not m.get('effective_to') or at < m['effective_to'])]
+        teams = {m['team_id'] for m in memberships}
+        # Unresolved membership stays unattributed, not assigned to an arbitrary team.
+        row = {'id': person['id'], 'name': person['name'], 'teamId': next(iter(teams)) if len(teams) == 1 else 'unattributed'}
+        row.update({k: person[k] for k in ('role', 'email', 'integrations', 'primaryTool') if k in person})
+        result.append(row)
+    return result
+
+
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
 def get_spending(
+    request: Request,
     team_id: str | None = Query(default=None, alias="teamId"),
     date_from: date | None = Query(default=None, alias="from"),
     date_to: date | None = Query(default=None, alias="to"),
@@ -190,6 +207,15 @@ def get_spending(
     clock: Clock = Depends(get_clock),
 ):
     period = _period(session, clock)
+    if request.app.state.settings.forecast_demo:
+        from app.forecasting.fixtures import northstar_spending_records
+        try:
+            rows = northstar_spending_records(request.app.state.forecast_service.current_snapshot())
+        except ValueError as exc:
+            raise DomainError("pricing_unavailable", 422, str(exc)) from exc
+        return [r for r in rows if (not team_id or r['teamId'] == team_id)
+                and (not date_from or r['date'] >= date_from.isoformat())
+                and (not date_to or r['date'] <= date_to.isoformat())]
     records: list[dict] = []
     offset = 0
     while True:
@@ -319,7 +345,10 @@ def post_message(
     user = threads.add_message(session, thread_id, "user", content, clock=clock, ids=ids)
     session.commit()
 
-    parsed = intent.parse(content, **_intent_context(session, request, clock))
+    parsed = (intent.Intent(read_as="Explain the exact published forecast", run={
+        "task_type": "answer_question", "instruction": content,
+        "params": {"forecast_context": body.forecast_context.model_dump(exclude_none=True)},
+    }) if body.forecast_context else intent.parse(content, **_intent_context(session, request, clock)))
     if parsed.ask is not None:
         reply = threads.add_message(session, thread_id, "assistant",
                                     f"**Read as:** {parsed.read_as}.\n\n{parsed.ask}", clock=clock, ids=ids)

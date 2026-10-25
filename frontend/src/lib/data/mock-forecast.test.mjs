@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+const source = stripTypeScriptTypes(fs.readFileSync(new URL('./mock-forecast.ts',import.meta.url),'utf8'));
+const {syntheticForecastBundle} = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const fx={company:{id:'c',name:'C',budgetUnit:'usd',currentPeriod:{start:'2026-10-01',end:'2026-12-31'}},teams:[{id:'t',name:'T'}],people:[{id:'p',teamId:'t',name:'P'}],spending:[{date:'2026-10-22',teamId:'t',personId:'p',complete:true,amount:20},{date:'2026-10-23',teamId:'t',complete:true,amount:10},{date:'2026-10-23',complete:true,amount:5}]};
+test('synthetic UI scopes reconcile without inventing person allocation',()=>{
+ const {views}=syntheticForecastBundle(fx);
+ const base=(type,id)=>views.find(v=>v.scope.type===type && v.scope.id===id).quarter_outlook.base;
+ assert.equal(base('company','c'),base('team','t')+base('shared','shared'));
+ assert.equal(base('company','c'),base('person','p')+base('shared','shared')+base('shared','people_unallocated'));
+ assert.equal(views[0].is_synthetic,true); assert.equal(views[0].historical_error_interval,null);
+});
+test('manual weekend run has two-day partial first week and seven daily details',()=>{
+ const view=syntheticForecastBundle(fx).views[0];
+ assert.equal(view.daily.length,7);assert.equal(view.weekly.length,4);
+ assert.equal(view.weekly[0].start,'2026-10-24');assert.equal(view.weekly[0].end,'2026-10-26');assert.equal(view.weekly[0].partial,true);
+ assert.equal(view.weekly[0].base,2*view.daily[0].base);
+ assert.equal(view.cumulative.at(-1).base,view.components.recorded+view.weekly.reduce((a,p)=>a+p.base,0));
+});

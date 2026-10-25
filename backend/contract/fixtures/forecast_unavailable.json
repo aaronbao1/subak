@@ -8,17 +8,24 @@
   "response": {
     "availability": "unavailable",
     "basis": "full_period_total",
+    "forecast_run_id": null,
     "generated_at": "2026-10-24T12:01:00Z",
-    "method_label": "unavailable",
+    "information_cutoff": null,
+    "input_revision": null,
+    "input_snapshot_id": null,
+    "method_label": "shared placeholder (not a forecast model)",
     "missing_teams": [
       "engineering",
       "product",
       "research"
     ],
+    "procedure_version": null,
     "projections": [],
     "provider": "placeholder",
     "reason": "forecast provider not connected",
+    "repository_revision": null,
     "target_period": "2026-P1",
+    "tenant_id": null,
     "value_kind": "simulated"
   },
   "scenario": "forecast_unavailable",

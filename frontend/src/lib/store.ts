@@ -1,8 +1,9 @@
 "use client";
 import { create } from "zustand";
 import type {
-  AllocationProposal, AssistantMessage, Budget, Company, ContextItem, Decision, Forecast, Person, SpendingRecord, Team,
+  AllocationProposal, AssistantMessage, Budget, Company, ContextItem, Decision, Forecast, ForecastBundle, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, Person, SpendingRecord, Team,
 } from "@/lib/contracts";
+import { quarterForecasts } from "@/components/dashboard/forecast-derive";
 import { getDataClient } from "@/lib/data";
 
 /**
@@ -11,6 +12,12 @@ import { getDataClient } from "@/lib/data";
  */
 interface AppState {
   loaded: boolean;
+  forecastBundle?: ForecastBundle;
+  forecastEvidence: ForecastEvidence[];
+  forecastError?: string;
+  forecastRefresh?: ForecastRefresh;
+  refreshForecast: () => Promise<void>;
+  loadForecastViews: () => Promise<void>;
   company?: Company;
   teams: Team[];
   /** Everyone whose usage rolls up into a team. */
@@ -31,6 +38,8 @@ interface AppState {
   assistantOpen: boolean;
   /** Text in the assistant composer. Pages prefill it through askAssistant. */
   composer: string;
+  forecastQuestionContext?: ForecastQuestionContext;
+  askForecastAssistant: (draft: string, context: ForecastQuestionContext) => void;
 
   load: () => Promise<void>;
   refreshBudgets: () => Promise<void>;
@@ -43,8 +52,10 @@ interface AppState {
   rejectProposal: (proposalId: string) => Promise<void>;
 }
 
+let forecastLoadRequest = 0;
+
 export const useAppStore = create<AppState>((set, get) => ({
-  loaded: false,
+  loaded: false, forecastEvidence: [],
   teams: [], people: [], spending: [], spendingHistory: [], budgets: [], forecasts: [], personForecasts: [], context: [], proposals: [], decisions: [], threads: {},
   assistantOpen: false,
   composer: "",
@@ -55,11 +66,46 @@ export const useAppStore = create<AppState>((set, get) => ({
       c.getCompany(), c.getTeams(), c.getPeople(), c.getSpending(), c.getBudgets(), c.getForecasts(), c.getContext(),
       c.getProposals(), c.getDecisions(), c.getThread("main"),
     ]);
+    await get().loadForecastViews();
     const { start, end } = company.currentPeriod;
     const spending = spendingHistory.filter((r) => r.date >= start && r.date <= end);
-    const forecasts = allForecasts.filter((f) => !f.personId);
-    const personForecasts = allForecasts.filter((f) => !!f.personId);
+    const canonical = get().forecastBundle?.views.length ? quarterForecasts(get().forecastBundle!) : allForecasts;
+    const forecasts = canonical.filter((f) => !f.personId);
+    const personForecasts = canonical.filter((f) => !!f.personId);
     set({ loaded: true, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, proposals, decisions, threads: { main } });
+  },
+
+  async loadForecastViews() {
+    const request = ++forecastLoadRequest;
+    try {
+      const c = getDataClient();
+      const [forecastBundle, evidence] = await Promise.all([c.getForecastViews(), c.getForecastEvidence()]);
+      if (request !== forecastLoadRequest) return;
+      const adapted = quarterForecasts(forecastBundle);
+      set({ forecastBundle, forecastEvidence: evidence.items, forecastError: undefined, ...(forecastBundle.views.length ? { forecasts: adapted.filter(f=>!f.personId), personForecasts:adapted.filter(f=>!!f.personId) } : {}) });
+    } catch (e) {
+      if (request === forecastLoadRequest) set({ forecastError: e instanceof Error ? e.message : "Forecast publication could not be loaded." });
+    }
+  },
+
+  async refreshForecast() {
+    if (["queued", "running", "pending"].includes(get().forecastRefresh?.status ?? "")) return;
+    const c = getDataClient();
+    set({ forecastError: undefined, forecastRefresh: { id: "requesting", status: "pending" } });
+    try {
+      let job = await c.refreshForecast(crypto.randomUUID());
+      set({ forecastRefresh: job });
+      for (let attempt = 0; attempt < 120 && ["queued", "running", "pending"].includes(job.status); attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        job = await c.getForecastRefresh(job.id);
+        set({ forecastRefresh: job });
+      }
+      if (["completed", "succeeded", "published"].includes(job.status)) await get().loadForecastViews();
+      else if (job.status === "failed") set({ forecastError: job.error ?? "Forecast refresh failed. The issued publication remains visible." });
+      else set({ forecastError: "Refresh is still running. Reload to check its publication; the current issued run remains visible." });
+    } catch (e) {
+      set({ forecastRefresh: { id: get().forecastRefresh?.id ?? "requesting", status: "failed" }, forecastError: e instanceof Error ? e.message : "Refresh failed." });
+    }
   },
 
   async refreshBudgets() {
@@ -69,11 +115,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setAssistantOpen: (assistantOpen) => set({ assistantOpen }),
-  askAssistant: (composer) => set({ composer, assistantOpen: true }),
+  askAssistant: (composer) => set({ composer, assistantOpen: true, forecastQuestionContext: undefined }),
+  askForecastAssistant: (composer, forecastQuestionContext) => set({ composer, assistantOpen: true, forecastQuestionContext }),
   setComposer: (composer) => set({ composer }),
 
   async sendMessage(threadId, content) {
-    const msgs = await getDataClient().sendMessage(threadId, content);
+    const msgs = await getDataClient().sendMessage(threadId, content, get().forecastQuestionContext);
     set((s) => ({ threads: { ...s.threads, [threadId]: [...(s.threads[threadId] ?? []), ...msgs] } }));
     await get().refreshBudgets();
     return msgs;

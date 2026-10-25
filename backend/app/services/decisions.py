@@ -245,6 +245,14 @@ def _apply(session: Session, p: Proposal, env: BudgetEnvelope, body: DecisionCre
     )
     if result.rowcount != 1:
         raise _Stale()
+    # Input arrival and approval share this SQLite write lock. Re-read immutable
+    # dependency receipts here, even if the proposal was cached before ingestion.
+    from app.services.forecast_freshness import stale_forecast_refs
+    stale = stale_forecast_refs(session, p.evidence_refs, clock.now())
+    if stale:
+        raise DomainError("stale_forecast_evidence", 409,
+                          "Forecast inputs changed; publish a new forecast and review a new proposal.",
+                          {"forecast_snapshot_ids": stale})
     # Compare-and-set the proposal itself: a concurrent revise does not bump the budget version.
     if not proposal_svc.claim_status(session, p, "applied", from_statuses=("pending_review",), now=now):
         raise _Moved()

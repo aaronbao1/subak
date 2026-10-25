@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, SearchX } from "lucide-react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +51,7 @@ export function TeamDetail({ teamId }: { teamId: string }) {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <TeamHeader team={team} budget={budget} forecast={forecast} records={records} />
+      <ForecastPanel scopeType="team" scopeId={teamId} />
       <TeamSpendChart team={team} records={records} forecast={forecast} unit={unit} />
       <PeopleTable team={team} summaries={peopleSummaries} unit={unit} />
       <ContextCards team={team} items={items} allItems={context} people={people} />

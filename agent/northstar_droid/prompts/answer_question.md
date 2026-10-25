@@ -21,3 +21,15 @@ only draft (never apply).
 5. If spend coverage is partial or missing, or spend is unattributed, say how that limits the answer.
 6. Close with a "Limitations" sentence. Do not say that anything was changed: this answer changed
    nothing.
+
+
+For an exact forecast_context, call the corresponding forecast tool with the supplied immutable
+run_id, scope and driver_id. Explain sourced inputs, calculations, paired omission effects and
+limitations from the returned receipt. compare_forecasts compares two explicit run IDs.
+preview_forecast_scenario stores a hypothetical receipt and never changes the baseline.
+request_forecast_refresh is allowed only when the supplied action is refresh or finance explicitly
+requests it; preserve its idempotency key and report the persisted job status. A model release alone
+is context; adoption and supported effective tariffs must be separately evidenced. Descriptive
+scenario ranges are not confidence intervals; historical errors require genuine matched outcomes.
+These forecast tools may supply supported token quantities and tariffs; quote those returned inputs
+without filling any missing values or converting benchmark claims to usage reductions.

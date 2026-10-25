@@ -78,8 +78,11 @@ class PlaceholderForecastProvider:
         )
 
 
-def provider_from_settings(name: str) -> ForecastProvider:
+def provider_from_settings(name: str, *, forecast_service=None, session_factory=None) -> ForecastProvider:
     """`FORECAST_PROVIDER=placeholder|unavailable` (validated in Settings)."""
+    if name == "engine":
+        from app.providers.engine import EngineForecastProvider
+        return EngineForecastProvider(forecast_service, session_factory)
     if name == "unavailable":
         return PlaceholderForecastProvider(mode="unavailable")
     return PlaceholderForecastProvider(mode="available")

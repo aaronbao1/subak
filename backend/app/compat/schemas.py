@@ -3,7 +3,7 @@
 These are the response models of the compat router. They are deliberately strict (`extra="forbid"`)
 and camelCase, with TypeScript optional fields (`field?: T`) as `T | None = None`; the router serializes
 with `exclude_none`, so an optional field the backend cannot honestly fill is omitted, never `null`.
-`tests/test_compat_contract.py` parses a vendored copy of the TypeScript file and fails if a field,
+`tests/test_compat_contract.py` parses the current checked-out TypeScript file and fails if a field,
 its optionality, or a string-literal union drifts from these models.
 
 Money fields are JSON numbers here (the frontend contract) and are produced only by
@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+from app.schemas.agent import ForecastQuestionContext
 
 Unit = Literal["credits", "usd", "tokens"]
 CostComponent = Literal["subscription", "included_usage", "extra_usage", "api"]
@@ -37,6 +38,23 @@ class Team(_Model):
     color: str
 
 
+class Person(_Model):
+    id: str
+    teamId: str
+    name: str
+    role: str | None = None
+    email: str | None = None
+    integrations: list[str] | None = None
+    primaryTool: str | None = None
+
+
+class ForecastDailyPoint(_Model):
+    date: str
+    projected: Number
+    low: Number | None = None
+    high: Number | None = None
+
+
 class Period(_Model):
     start: str
     end: str
@@ -46,6 +64,7 @@ class Period(_Model):
 class SpendingRecord(_Model):
     id: str
     teamId: str
+    personId: str | None = None
     date: str
     component: CostComponent
     provider: str
@@ -67,6 +86,8 @@ class Budget(_Model):
 class Forecast(_Model):
     id: str | None = None
     teamId: str
+    personId: str | None = None
+    daily: list[ForecastDailyPoint] | None = None
     period: Period
     status: Literal["available", "unavailable"]
     basis: Literal["full_period", "remaining"] | None = None
@@ -89,6 +110,8 @@ class SourceRef(_Model):
     locator: str | None = None
     date: str | None = None
     kind: ContextKind | None = None
+    integration: Literal["slack", "asana", "monday", "email", "document"] | None = None
+    author: str | None = None
 
 
 class ContextItem(_Model):
@@ -106,6 +129,9 @@ class ContextItem(_Model):
     claimType: ClaimType | None = None
     supersededBy: str | None = None
     supersedes: list[str] | None = None
+    personIds: list[str] | None = None
+    scope: Literal["person", "team", "company"] | None = None
+    signal: Literal["project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office", "onboarding", "steady"] | None = None
 
 
 class AllocationLine(_Model):
@@ -172,6 +198,8 @@ class CompanyDocument(_Model):
     origin: str
     body: str
     supersededBy: str | None = None
+    personIds: list[str] | None = None
+    integration: Literal["slack", "asana", "monday", "email", "document"] | None = None
 
 
 class Company(_Model):
@@ -187,6 +215,7 @@ class Company(_Model):
 
 class MessageIn(BaseModel):
     content: str
+    forecast_context: ForecastQuestionContext | None = None
 
 
 class ApplyIn(BaseModel):
@@ -204,7 +233,7 @@ class ErrorOut(BaseModel):
 # Every interface in the TypeScript contract, by name (used by the drift test).
 CONTRACT_MODELS: dict[str, type[_Model]] = {
     m.__name__: m
-    for m in (Team, Period, SpendingRecord, Budget, Forecast, SourceRef, ContextItem, AllocationLine,
+    for m in (Team, Person, ForecastDailyPoint, Period, SpendingRecord, Budget, Forecast, SourceRef, ContextItem, AllocationLine,
               AllocationProposal, Decision, ToolCallSummary, AssistantMessage, CompanyDocument, Company)
 }
 CONTRACT_ALIASES = {

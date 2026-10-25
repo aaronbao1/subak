@@ -111,6 +111,8 @@ class ForecastEvidence:
     limitations: Tuple[str, ...] = ()
 
     def __post_init__(self):
+        if type(self.complete) is not bool:
+            raise ValueError('forecast completeness must be bool')
         _amounts(self.totals,signed=True)
         if not self.result_id or self.period_start >= self.period_end:
             raise ValueError('valid forecast result identity and period required')
@@ -274,6 +276,8 @@ class FinanceStore:
             c.execute('INSERT INTO budgets VALUES (?,?,?)',(self.tenant,body,spend))
 
     def grant_authority(self, actor: str, *, policy_version: str, may_approve=True, expires_at=None):
+        if type(may_approve) is not bool:
+            raise ValueError('may_approve must be bool')
         if not actor or not policy_version:
             raise ValueError('actor and explicit policy version required')
         if expires_at is not None:
@@ -287,6 +291,8 @@ class FinanceStore:
             c.execute('UPDATE authority SET may_approve=0 WHERE tenant=? AND actor=?',(self.tenant,actor))
 
     def set_dependency(self, name: str, version: str, *, material=True):
+        if type(material) is not bool:
+            raise ValueError('material must be bool')
         if not name or not version:
             raise ValueError('dependency name and version required')
         with self._transaction() as c:
@@ -553,15 +559,25 @@ def forecast_evidence(payload: dict, *, provenance: str = 'unspecified') -> Fore
 
     Late amounts currently have company scope, without a team allocation. Unknown
     or nonzero late amounts therefore cannot establish complete team forecasts.
-    Source provenance is caller-supplied until it exists in the service manifest.
+    Bound service provenance cannot be relabeled. Legacy unbound payloads may
+    retain an explicit host label; incurred coverage is checked independently
+    from the numerical late-charge estimate.
     """
     if payload.get('schema_version')!='1.0':
         raise FinanceError('unsupported forecast schema')
     result=payload['result'];target=result['target']
+    bound=payload['manifest'].get('evidence_class','unspecified')
+    if bound!='unspecified':
+        if provenance not in ('unspecified',bound):
+            raise FinanceError('forecast evidence provenance cannot be relabeled')
+        provenance=bound
     output=payload['manifest']['request']['output']
     if output not in ('full_period','remainder'):
         raise FinanceError('unsupported forecast period semantics')
-    available=result['status']!='unavailable' and payload.get('capabilities',{}).get('point',False)
+    point=payload.get('capabilities',{}).get('point',False)
+    if type(point) is not bool:
+        raise FinanceError('point capability must be bool')
+    available=result['status']!='unavailable' and point
     totals=()
     if available:
         totals=tuple((entity, exact_sum((_financial_value(row['future']),
@@ -569,7 +585,16 @@ def forecast_evidence(payload: dict, *, provenance: str = 'unspecified') -> Fore
                      for entity,row in payload['entities'].items())
     late=result.get('late')
     limitations=list(result.get('limitations',()))
-    complete=available and bool(totals) and late is not None and _financial_value(late)==0
+    incurred_flags=tuple(container['incurred_complete'] for container in (payload,payload['manifest'])
+                         if 'incurred_complete' in container)
+    if any(type(flag) is not bool for flag in incurred_flags):
+        raise FinanceError('incurred_complete must be bool')
+    # An adapter-level flag cannot upgrade incompleteness bound in the issued
+    # manifest. Legacy limitations remain conservative evidence as well.
+    incurred_complete=all(incurred_flags) and not any(v.startswith('incurred_gap:') for v in limitations)
+    complete=available and bool(totals) and incurred_complete and late is not None and _financial_value(late)==0
+    if not incurred_complete:
+        limitations.append('Incomplete observed incurred coverage prevents a complete full-period comparison.')
     if late is None or _financial_value(late)!=0:
         limitations.append('Team totals exclude unavailable or unallocated late-incurred amounts.')
     if payload.get('read_status')=='stale' or result['status']=='stale':

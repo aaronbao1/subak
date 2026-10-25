@@ -274,6 +274,8 @@ def fit_joint_blocks(series, *, target, snapshot_id, as_of, dates, axes,
     """
     series, dates, axes = tuple(series), tuple(dates), tuple(axes)
     aware(as_of)
+    if type(allow_direct_fallback) is not bool:
+        raise ContractError('allow_direct_fallback must be bool')
     if target.measure != 'metered_usage':
         raise ContractError('native usage generator cannot fit exact money from float Series')
     if not series:
@@ -332,13 +334,21 @@ def fit_joint_blocks(series, *, target, snapshot_id, as_of, dates, axes,
         for start in range(required, n-horizon+1, horizon):
             block_dates = series[0].dates[start:start+horizon]
             block = []
-            for s in series:
-                prefix = Series(s.entity_id, s.dates[:start], s.values[:start])
-                predicted = forecast(prefix, block_dates, baseline, cfg).daily_values
-                if predicted is None:
-                    raise ModelUnavailable('baseline has no daily path')
-                residual = tuple(_sum((s.values[start+j], -predicted[j])) for j in range(horizon))
-                block.append(residual)
+            try:
+                for s in series:
+                    prefix = Series(s.entity_id, s.dates[:start], s.values[:start])
+                    predicted = forecast(prefix, block_dates, baseline, cfg).daily_values
+                    if predicted is None:
+                        raise ModelUnavailable('baseline has no daily path')
+                    residual = tuple(_sum((s.values[start+j], -predicted[j])) for j in range(horizon))
+                    block.append(residual)
+            except ModelUnavailable as exc:
+                # Registry minima do not include horizon-specific mature labels
+                # for learned baselines. Skip only these ineligible prefixes;
+                # later nonoverlapping origins can have enough honest labels.
+                if str(exc).startswith(('insufficient history', 'insufficient mature training rows')):
+                    continue
+                raise
             blocks.append(tuple(block))
             starts.append(start)
     except ModelUnavailable as exc:

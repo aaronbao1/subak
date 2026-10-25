@@ -15,5 +15,6 @@ def reset(request: Request) -> dict:
     state = request.app.state
     if not state.settings.allow_reset:
         raise DomainError("reset_disabled", 403, "reset is disabled; set BACKEND_ALLOW_RESET=1 to enable it")
-    reset_database(state.engine, state.session_factory, clock=state.clock, ids=state.id_factory)
+    reset_database(state.engine, state.session_factory, clock=state.clock, ids=state.id_factory,
+                   forecast_store=state.forecast_service.store)
     return {"status": "reset", "seeded": True}

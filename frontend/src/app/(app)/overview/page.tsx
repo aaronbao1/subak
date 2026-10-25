@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import { Hero, HeroSkeleton } from "@/components/dashboard/hero";
 import { SpendByTeamChart, SpendByTeamChartSkeleton } from "@/components/dashboard/spend-by-team-chart";
@@ -52,6 +53,7 @@ export default function OverviewPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl min-w-0 space-y-6">
+      <ForecastPanel />
       <Hero
         unit={unit} spent={spent} envelope={envelope} projected={projected}
         projectedTeamCount={withProjection.length} unavailableCount={unavailableCount} unavailableTeams={unavailableTeams} teamCount={teams.length}
