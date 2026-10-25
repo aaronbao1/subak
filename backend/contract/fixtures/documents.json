@@ -1,12 +1,12 @@
 {
-  "description": "six seeded documents with supersedes links and is_current",
+  "description": "13 seeded documents with supersedes links, is_current, integration and person_tags",
   "name": "documents",
   "request": {
     "method": "GET",
     "path": "/api/documents"
   },
   "response": {
-    "count": 6,
+    "count": 13,
     "filters": {
       "doc_type": null,
       "include_superseded": true,
@@ -24,10 +24,12 @@
         "effective_from": "2026-10-01",
         "effective_to": "2026-12-31",
         "id": "doc_000001",
+        "integration": null,
         "is_current": false,
         "is_simulated": true,
         "matches": [],
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "workspace-launch"
@@ -55,10 +57,12 @@
         "effective_from": null,
         "effective_to": null,
         "id": "doc_000002",
+        "integration": null,
         "is_current": false,
         "is_simulated": true,
         "matches": [],
         "origin": "email_export",
+        "person_tags": [],
         "plan_status": "informal",
         "project_tags": [
           "model-evaluation"
@@ -86,10 +90,12 @@
         "effective_from": "2026-10-01",
         "effective_to": "2026-12-31",
         "id": "doc_000003",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "matches": [],
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "model-evaluation"
@@ -117,10 +123,12 @@
         "effective_from": null,
         "effective_to": null,
         "id": "doc_000004",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "matches": [],
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "n/a",
         "project_tags": [
           "platform"
@@ -135,6 +143,36 @@
         "version": 1
       },
       {
+        "author": "Arjun Rao (Engineering lead)",
+        "authored_at": "2026-10-13T00:00:00Z",
+        "content_hash": "c6e4fd13b944c9cd83fe19f70f929253666497e2615dea51dfbc06a3d9c021aa",
+        "doc_key": "engineering-welcome-slack",
+        "doc_type": "correspondence",
+        "effective_from": "2026-10-13",
+        "effective_to": null,
+        "id": "doc_000011",
+        "integration": "slack",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "person_tags": [
+          "engineering-hana-sato"
+        ],
+        "plan_status": "n/a",
+        "project_tags": [
+          "platform"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "engineering"
+        ],
+        "title": "Slack #eng-platform: welcome Hana",
+        "version": 1
+      },
+      {
         "author": "Product planning (simulated)",
         "authored_at": "2026-10-14T00:00:00Z",
         "content_hash": "236df658924d17c1b5081b4ad549f09d32d0e40d4b44a7a768b6b0c424629cb2",
@@ -143,10 +181,12 @@
         "effective_from": "2026-10-01",
         "effective_to": "2027-03-31",
         "id": "doc_000005",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "matches": [],
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "workspace-launch"
@@ -166,6 +206,36 @@
         "version": 2
       },
       {
+        "author": "Ava Chen (Research lead)",
+        "authored_at": "2026-10-14T00:00:00Z",
+        "content_hash": "6696b2d2006b0f68966485edf8f83c94a8274fa5145a7f776a16a230ed84a9f1",
+        "doc_key": "research-harness-asana",
+        "doc_type": "update",
+        "effective_from": "2026-10-14",
+        "effective_to": "2026-11-03",
+        "id": "doc_000007",
+        "integration": "asana",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "person_tags": [
+          "research-leila-novak"
+        ],
+        "plan_status": "approved",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "Asana: Eval harness v2 - implementation",
+        "version": 1
+      },
+      {
         "author": "Marketing channel (simulated Slack export)",
         "authored_at": "2026-10-16T00:00:00Z",
         "content_hash": "7fc768c6f70ca7f59c8a362832ef0f0805e7852409479c27b3ca8a121e224e4b",
@@ -174,10 +244,12 @@
         "effective_from": null,
         "effective_to": null,
         "id": "doc_000006",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "matches": [],
         "origin": "slack_export",
+        "person_tags": [],
         "plan_status": "informal",
         "project_tags": [
           "campaigns"
@@ -189,6 +261,152 @@
           "marketing"
         ],
         "title": "#marketing-ideas: AI campaign brainstorm",
+        "version": 1
+      },
+      {
+        "author": "Omar Haddad",
+        "authored_at": "2026-10-16T00:00:00Z",
+        "content_hash": "f76d2c30df5b3ecd2825d47596aa408adb673ed74ee1972703b0b97aa1031e53",
+        "doc_key": "research-model-switch-slack",
+        "doc_type": "correspondence",
+        "effective_from": "2026-10-19",
+        "effective_to": null,
+        "id": "doc_000008",
+        "integration": "slack",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "person_tags": [
+          "research-omar-haddad"
+        ],
+        "plan_status": "n/a",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "Slack #research-evals: moving sweeps to a smaller model tier",
+        "version": 1
+      },
+      {
+        "author": "Theo Brandt",
+        "authored_at": "2026-10-18T00:00:00Z",
+        "content_hash": "1e5bde503f08d94b1ec8421a165cafa25913ac4d779b93938c06cead0e5796b6",
+        "doc_key": "research-availability-monday",
+        "doc_type": "update",
+        "effective_from": "2026-10-26",
+        "effective_to": "2026-10-30",
+        "id": "doc_000009",
+        "integration": "monday",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "person_tags": [
+          "research-theo-brandt"
+        ],
+        "plan_status": "n/a",
+        "project_tags": [],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "monday.com: Research availability board",
+        "version": 1
+      },
+      {
+        "author": "Arjun Rao (Engineering lead)",
+        "authored_at": "2026-10-19T00:00:00Z",
+        "content_hash": "da246c9d1106c61cffc35ff5877c32e6da7c19395434984a38b246fef1cf2484",
+        "doc_key": "engineering-cutover-monday",
+        "doc_type": "update",
+        "effective_from": "2026-10-22",
+        "effective_to": null,
+        "id": "doc_000010",
+        "integration": "monday",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "person_tags": [
+          "engineering-sofia-reyes"
+        ],
+        "plan_status": "approved",
+        "project_tags": [
+          "platform"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "engineering"
+        ],
+        "title": "monday.com: Platform cutover moved up",
+        "version": 1
+      },
+      {
+        "author": "Felix Weber",
+        "authored_at": "2026-10-19T00:00:00Z",
+        "content_hash": "2f73c29f5f74424785563aad6ba59bc87681bfc17347357329ba31a8ec4dd5af",
+        "doc_key": "product-tool-switch-slack",
+        "doc_type": "correspondence",
+        "effective_from": "2026-10-21",
+        "effective_to": null,
+        "id": "doc_000012",
+        "integration": "slack",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "person_tags": [
+          "product-felix-weber"
+        ],
+        "plan_status": "n/a",
+        "project_tags": [
+          "workspace-launch"
+        ],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "product"
+        ],
+        "title": "Slack #product-launch: tuning scripts move to the API",
+        "version": 1
+      },
+      {
+        "author": "Arjun Rao (Engineering lead)",
+        "authored_at": "2026-10-20T00:00:00Z",
+        "content_hash": "1a45a7f9641c841c80a128cea74d258151c25d82910702ff583f44e243474966",
+        "doc_key": "company-model-announcement-slack",
+        "doc_type": "correspondence",
+        "effective_from": "2026-11-02",
+        "effective_to": null,
+        "id": "doc_000013",
+        "integration": "slack",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "person_tags": [],
+        "plan_status": "n/a",
+        "project_tags": [],
+        "score": 0,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research",
+          "product",
+          "engineering"
+        ],
+        "title": "Slack #announcements: new default model",
         "version": 1
       }
     ],

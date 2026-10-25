@@ -209,7 +209,7 @@ def scenario_main(r: Recorder) -> None:
     r.call("overview", "GET", "/api/overview", schema="Overview", expect=200,
            description="spend + budget + forecast combined, per-team comparison")
     r.call("documents", "GET", "/api/documents", schema="DocumentList", expect=200,
-           description="six seeded documents with supersedes links and is_current")
+           description="13 seeded documents with supersedes links, is_current, integration and person_tags")
     r.call("documents_search_model_evaluation", "GET", "/api/documents",
            params={"q": "model-evaluation", "include_superseded": "true"}, schema="DocumentList", expect=200,
            description="keyword search with exact match offsets; superseded thread still listed, marked")
@@ -269,8 +269,39 @@ def scenario_main(r: Recorder) -> None:
         "uncertainty": "brainstorm only, explicitly not a plan",
         "citations": [{"document_id": mkt_id, "quote": "fun idea, no budget or approval for it yet though"}],
     })
+    omar_doc = _doc_id(r, "research-model-switch-slack")
+    announce_doc = _doc_id(r, "company-model-announcement-slack")
+    r.call("signal_person_created", "POST", "/api/signals", headers=DROID, schema="ContextSignalOut", expect=201,
+           description="person-scope signal: team derived from the person, signal_kind model_change", json_body={
+        "scope": "person", "person_ids": ["research-omar-haddad"], "signal_kind": "model_change",
+        "title": "Omar Haddad moving eval sweeps to a cheaper model tier", "project": "model-evaluation",
+        "change_type": "reduction", "status": "current", "applies_from": "2026-10-19",
+        "summary": "Omar Haddad moves his nightly eval sweeps to the smaller model tier from 2026-10-19.",
+        "uncertainty": "no prices or token volumes for either tier",
+        "citations": [{"document_id": omar_doc,
+                       "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model "
+                                "to the smaller model tier."}],
+    })
+    r.call("signal_company_created", "POST", "/api/signals", headers=DROID, schema="ContextSignalOut", expect=201,
+           description="company-scope signal: no team, no people; applies to every team", json_body={
+        "scope": "company", "signal_kind": "model_change", "title": "Company-wide default model change from Nov 2",
+        "change_type": "other", "status": "current", "applies_from": "2026-11-02",
+        "summary": "Every team's default model moves to a new mid-tier model from 2026-11-02.",
+        "uncertainty": "the net effect on each team's bill is not known",
+        "citations": [{"document_id": announce_doc,
+                       "quote": "the net effect on each team's bill is not known yet."}],
+    })
+    r.call("error_signal_scope", "POST", "/api/signals", headers=DROID, schema="ErrorBody", expect=422,
+           description="scope rules: every person in a person signal must be on one team (person_team_mismatch)",
+           json_body={
+        "scope": "person", "person_ids": ["research-omar-haddad", "product-felix-weber"], "team": "research",
+        "change_type": "other", "status": "current", "summary": "Two people on two teams.",
+        "uncertainty": "invalid on purpose",
+        "citations": [{"document_id": omar_doc, "quote": "just the cheaper tier for everything except the final "
+                                                         "comparison runs."}],
+    })
     r.call("signals", "GET", "/api/signals", schema="SignalList", expect=200,
-           description="current / superseded / informal signals with citation currency")
+           description="team / person / company signals (current, superseded, informal) with citation currency")
     r.call("signal_detail_product", "GET", f"/api/signals/{product['id']}", schema="ContextSignalOut", expect=200,
            description="product timing shift citing v2 (current) and v1 (superseded)")
     r.call("error_citation_not_found", "POST", "/api/signals", headers=DROID, schema="ErrorBody", expect=422,

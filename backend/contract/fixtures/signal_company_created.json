@@ -1,0 +1,67 @@
+{
+  "description": "company-scope signal: no team, no people; applies to every team",
+  "name": "signal_company_created",
+  "request": {
+    "body": {
+      "applies_from": "2026-11-02",
+      "change_type": "other",
+      "citations": [
+        {
+          "document_id": "doc_000013",
+          "quote": "the net effect on each team's bill is not known yet."
+        }
+      ],
+      "scope": "company",
+      "signal_kind": "model_change",
+      "status": "current",
+      "summary": "Every team's default model moves to a new mid-tier model from 2026-11-02.",
+      "title": "Company-wide default model change from Nov 2",
+      "uncertainty": "the net effect on each team's bill is not known"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "agent_run_id": null,
+    "applies_from": "2026-11-02",
+    "applies_to": null,
+    "change_type": "other",
+    "citations": [
+      {
+        "char_end": 367,
+        "char_start": 315,
+        "citation_currency": "current",
+        "doc_key": "company-model-announcement-slack",
+        "document_id": "doc_000013",
+        "id": "cit_000008",
+        "offsets_corrected": false,
+        "quote": "the net effect on each team's bill is not known yet.",
+        "superseded_by_document_id": null,
+        "title": "Slack #announcements: new default model",
+        "version": 1
+      }
+    ],
+    "created_at": "2026-10-24T12:31:00Z",
+    "id": "sig_000007",
+    "needs_review": false,
+    "person_ids": [],
+    "produced_by": "droid_fake",
+    "project": null,
+    "scope": "company",
+    "signal_kind": "model_change",
+    "status": "current",
+    "summary": "Every team's default model moves to a new mid-tier model from 2026-11-02.",
+    "superseded_by_signal_id": null,
+    "supersedes_signal_ids": [],
+    "team": null,
+    "title": "Company-wide default model change from Nov 2",
+    "uncertainty": "the net effect on each team's bill is not known"
+  },
+  "scenario": "main",
+  "schema": "ContextSignalOut",
+  "status": 201
+}

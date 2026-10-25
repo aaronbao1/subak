@@ -211,7 +211,7 @@ def test_sdk_runs_nothing_when_cap_minus_reserve_is_reached(tmp_path, monkeypatc
     assert res.live_runs_used == 0 and live_count(log) == 13 and res.live_log_total == 13
     assert "Fixtures not run live" in res.notes[0]
     md = report.markdown(res)
-    assert "**0 pass, 0 fail, 11 not run**" in md and "Total lines in `backend/data/live_runs.log` afterwards: 13" in md
+    assert f"**0 pass, 0 fail, {len(SCENARIOS)} not run**" in md and "Total lines in `backend/data/live_runs.log` afterwards: 13" in md
 
 
 def test_sdk_live_runs_are_logged_and_limited(tmp_path):
@@ -318,3 +318,70 @@ def test_cli_sdk_without_live_runs_keeps_recorded_results(tmp_path):
     assert code == 0
     assert json.loads((out / "sdk.json").read_text()) == {"kept": True}
     assert json.loads((out / "sdk.not-live.json").read_text())["counts"]["not_run"] == len(SCENARIOS)
+
+
+def test_setup_droid_runs_count_against_the_live_cap(tmp_path):
+    # propose_reuses_signals needs an interpret run in setup: two live runs, both logged
+    log = tmp_path / "live_runs.log"
+    _log(log, 10)
+    res = run_suite("sdk", workdir=tmp_path / "db", runner=StubSdkRunner(), live_log=log,
+                    scenario_ids=["propose_reuses_signals"])
+    assert res.live_runs_used == 2 and live_count(log) == 12
+    assert "setup run" in log.read_text().splitlines()[10]
+    assert _by_id(res)["propose_reuses_signals"]["status"] == "pass"
+    # with room for only one more run the fixture is skipped, not half-run
+    _log(log, 12)
+    res = run_suite("sdk", workdir=tmp_path / "db2", runner=StubSdkRunner(), live_log=log, live_cap=15,
+                    live_reserve=2, scenario_ids=["propose_reuses_signals"])
+    assert res.live_runs_used == 0 and live_count(log) == 12
+    assert _by_id(res)["propose_reuses_signals"]["status"] == "not_run"
+
+
+class WrongPeopleRunner(FakeDroidRunner):
+    """Records person signals with the wrong people/kind, a team signal with people, and no company signal."""
+
+    def run(self, task, tools):
+        if task.type != "interpret_corpus":
+            return super().run(task, tools)
+        docs = {d["doc_key"]: d for d in tools.search_corpus("")["items"]}
+        quote = "Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away."
+        base = {"summary": "Theo is away and saves 40% of the research budget ($9,000.00).", "change_type": "reduction",
+                "status": "current", "uncertainty": "u",
+                "citations": [{"document_id": docs["research-availability-monday"]["id"], "quote": quote}]}
+        tools.record_signal({**base, "scope": "person", "person_ids": ["research-ava-chen"],
+                             "signal_kind": "steady"})
+        try:
+            tools.record_signal({**base, "scope": "team", "team": "research", "person_ids": ["research-theo-brandt"]})
+        except ToolError:
+            pass
+        return AgentRunOutput(summary="Recorded people.")
+
+
+def test_person_signals_scorer_catches_wrong_people_kinds_and_figures(tmp_path):
+    s = _by_id(run_suite("fake", workdir=tmp_path, runner=WrongPeopleRunner(),
+                         scenario_ids=["person_signals_cited"]))["person_signals_cited"]
+    assert s["status"] == "fail"
+    failed = {c["name"]: c["reason"] for c in s["checks"] if not c["passed"]}
+    theo = failed["person:research-availability-monday"]
+    assert "research-ava-chen" in theo and "signal_kind 'steady'" in theo
+    assert "want exactly one current person signal citing research-harness-asana, got 0" in failed[
+        "person:research-harness-asana"]
+    assert "company:company-model-announcement-slack" in failed
+    assert "40%" in failed["no_new_figures"] and "$9,000.00" in failed["no_new_figures"]
+    # the backend refused the team-scope signal that named a person, so the eval sees none
+    assert "team_signals_name_no_people" not in failed and "person_ids_real" not in failed
+
+
+class RereadingProposeRunner(FakeDroidRunner):
+    """Re-reads the whole corpus before every proposal even though current signals exist."""
+
+    def _propose(self, task, tools):
+        self._interpret(tools)
+        return super()._propose(task, tools)
+
+
+def test_propose_reuses_signals_fails_when_the_corpus_is_reread(tmp_path):
+    s = _by_id(run_suite("fake", workdir=tmp_path, runner=RereadingProposeRunner(),
+                         scenario_ids=["propose_reuses_signals"]))["propose_reuses_signals"]
+    assert s["status"] == "fail"
+    assert [c["name"] for c in s["checks"] if not c["passed"]] == ["no_corpus_reread"]

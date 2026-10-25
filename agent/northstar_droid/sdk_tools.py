@@ -68,16 +68,22 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
     def list_signals(status: str | None = None, team: str | None = None) -> str:
         return _respond(lambda: toolbox.call("list_signals", {"status": status, "team": team}))
 
+    def list_people(team: str | None = None) -> str:
+        return _respond(lambda: toolbox.call("list_people", {"team": team}))
+
     def build_chart_spec(kind: str, team: str | None = None, metric: str | None = None) -> str:
         return _respond(lambda: toolbox.call("build_chart_spec", {"kind": kind, "team": team, "metric": metric}))
 
     def record_signal(summary: str, change_type: str, status: str, uncertainty: str,
                       citations: list[dict[str, Any]], team: str | None = None, project: str | None = None,
                       applies_from: str | None = None, applies_to: str | None = None,
-                      supersedes_signal_id: str | None = None) -> str:
+                      supersedes_signal_id: str | None = None, scope: str = "team",
+                      person_ids: list[str] | None = None, signal_kind: str | None = None,
+                      title: str | None = None) -> str:
         signal = {"summary": summary, "change_type": change_type, "status": status, "uncertainty": uncertainty,
                   "citations": citations, "team": team, "project": project, "applies_from": applies_from,
-                  "applies_to": applies_to, "supersedes_signal_id": supersedes_signal_id}
+                  "applies_to": applies_to, "supersedes_signal_id": supersedes_signal_id, "scope": scope,
+                  "person_ids": person_ids or [], "signal_kind": signal_kind, "title": title}
         return _respond(lambda: toolbox.call("record_signal", {"signal": signal}))
 
     def draft_proposal(action_type: str, base_version: int, rationale: str, lines: list[dict[str, Any]],
@@ -93,7 +99,8 @@ def tool_functions(toolbox: Any) -> list[tuple[str, str, Callable[..., str]]]:
         return _respond(lambda: toolbox.call("rebase_proposal", {"proposal_id": proposal_id, "rationale": rationale}))
 
     fns = {f.__name__: f for f in (search_corpus, read_document, get_spend_summary, get_budgets, get_forecast,
-                                   list_signals, build_chart_spec, record_signal, draft_proposal, rebase_proposal)}
+                                   list_signals, list_people, build_chart_spec, record_signal, draft_proposal,
+                                   rebase_proposal)}
     return [(t.name, t.description, fns[t.name]) for t in TOOLS]
 
 

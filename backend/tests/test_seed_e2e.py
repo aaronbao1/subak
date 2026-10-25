@@ -49,7 +49,7 @@ def test_seed_cli_twice_then_agent_proposal_approved_end_to_end(tmp_path, monkey
             assert first["spend"] == SPEND and first["company_total"] == "95000.00"
             assert first["coverage"] == "complete"
             assert first["allocations"] == INITIAL and first["envelope"] == "200000.00" and first["version"] == 1
-            assert first["documents"] == 6 and first["imports"] == 1
+            assert first["documents"] == 13 and first["imports"] == 1
 
             # Seed a third time in-process and re-post the seed export through the API: nothing changes.
             s = app.state.session_factory()

@@ -10,7 +10,9 @@ invocation; otherwise it is skipped (its scenarios are `not_run`), never silentl
 After each live attempt one line is appended: ISO time | purpose | result | usage. Every attempt whose
 run request was sent counts, whatever its outcome (succeeded, failed, unavailable mid-stream after a
 Droid process or connection error, or an exception in the request itself), except the pre-flight 503
-`runner_unavailable` (no key / SDK / CLI), which starts no Droid process.
+`runner_unavailable` (no key / SDK / CLI), which starts no Droid process. A fixture whose setup starts
+its own Droid run (`Fixture.setup_runs`, e.g. interpret before propose) needs room for those runs too,
+and each one is logged as a `setup run` line.
 """
 
 from __future__ import annotations
@@ -94,6 +96,7 @@ def execute_fixture(fx: Fixture, runner_kind: str, workdir: Path, *, runner: Any
         finally:
             s.close()
         with TestClient(app) as client:
+            ctx.setup_started = fx.setup is not None
             ctx.setup = fx.setup(client) if fx.setup else {}
             ctx.budget_before = client.get("/api/budget").json()
             ctx.decisions_before = client.get("/api/decisions").json()
@@ -111,6 +114,7 @@ def execute_fixture(fx: Fixture, runner_kind: str, workdir: Path, *, runner: Any
             ctx.budget_after = client.get("/api/budget").json()
             ctx.decisions_after = client.get("/api/decisions").json()
             ctx.signals = client.get("/api/signals").json()["items"]
+            ctx.people = client.get("/api/people").json()
             ctx.spend = client.get("/api/spend/summary").json()
             ctx.forecast = client.get("/api/forecasts").json()
             for d in client.get("/api/documents").json()["items"]:
@@ -177,16 +181,21 @@ def run_suite(runner_kind: str, *, scenario_ids: Iterable[str] | None = None, wo
             if live:
                 count = live_count(live_log)
                 limit = live_cap - live_reserve
-                if count >= limit:
+                if count + fx.setup_runs >= limit:
                     ctxs[name] = RunCtx(fixture=name, runner=runner_kind, skip_reason=(
                         f"live cap: {count} runs in live_runs.log, cap {live_cap} with {live_reserve} kept spare"))
                     continue
-                if max_live is not None and used >= max_live:
+                if max_live is not None and used + fx.setup_runs >= max_live:
                     ctxs[name] = RunCtx(fixture=name, runner=runner_kind,
                                         skip_reason=f"max_live={max_live} reached in this invocation")
                     continue
             ctx = execute_fixture(fx, runner_kind, workdir, runner=runner)
             ctxs[name] = ctx
+            if live and fx.setup_runs and ctx.setup_started:
+                used += fx.setup_runs
+                for _ in range(fx.setup_runs):
+                    append_live_line(live_log, f"evals sdk: {name}: setup run",
+                                     "ok" if ctx.setup else f"error: {ctx.error}"[:200], None)
             if live and live_attempt(ctx):
                 used += 1
                 result = ctx.run.get("status") or (f"error: {ctx.error}"[:200] if ctx.error else "unknown")

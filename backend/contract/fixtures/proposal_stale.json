@@ -28,7 +28,7 @@
     "blocked_attempts": [
       {
         "actor_id": "fin-approver-alice",
-        "at": "2026-10-24T12:43:00Z",
+        "at": "2026-10-24T12:48:00Z",
         "details": {
           "actor_role": "finance_approver",
           "base_version": 1,
@@ -38,7 +38,7 @@
         "id": "evt_000002"
       }
     ],
-    "created_at": "2026-10-24T12:33:00Z",
+    "created_at": "2026-10-24T12:38:00Z",
     "current_version": 2,
     "decision_id": null,
     "deltas": {
@@ -105,7 +105,7 @@
     "revises_proposal_id": null,
     "status": "stale",
     "unit": "USD",
-    "updated_at": "2026-10-24T12:43:00Z",
+    "updated_at": "2026-10-24T12:48:00Z",
     "warnings": []
   },
   "scenario": "main",

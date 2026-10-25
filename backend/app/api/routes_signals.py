@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.orm import Session
 
@@ -20,9 +22,14 @@ def list_signals(
     team: str | None = Query(default=None, description="team id, or 'none' for company-wide signals"),
     status: str | None = Query(default=None),
     project: str | None = Query(default=None),
+    scope: Literal["person", "team", "company"] | None = Query(default=None),
+    person: str | None = Query(default=None, description="person id: signals that name this person"),
+    include_company: bool = Query(default=False, description="with team: also list company-wide signals"),
     session: Session = Depends(get_session),
 ):
-    items = [svc.signal_out(session, s) for s in svc.list_signals(session, team=team, status=status, project=project)]
+    items = [svc.signal_out(session, s) for s in svc.list_signals(
+        session, team=team, status=status, project=project, scope=scope, person=person,
+        include_company=include_company)]
     return {"count": len(items), "items": items}
 
 

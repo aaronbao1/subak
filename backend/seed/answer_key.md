@@ -92,7 +92,7 @@ the wrong allocation.
 
 | ID | Check | Expected |
 |---|---|---|
-| P4 | Corpus + `interpret_corpus` (fake runner) | 8 documents; Slack doc `plan_status: informal`; thread `superseded_by` research-eval-plan; the only current research signal cites research-eval-plan; the thread signal is `superseded`; the fake runner reports `document_not_interpreted` for `ap-late-invoice-email` and `research-standup-slack` (it does not pretend to have read them) |
+| P4 | Corpus + `interpret_corpus` (fake runner) | 15 documents (13 seed + 2 planted); Slack doc `plan_status: informal`; thread `superseded_by` research-eval-plan; the only current research team-scope signal cites research-eval-plan (person-scope signals cite their own documents); the thread signal is `superseded`; the fake runner reports `document_not_interpreted` for `ap-late-invoice-email` and `research-standup-slack` (it does not pretend to have read them) |
 
 Expected with the real Droid SDK runner (not checked automatically, because no key exists yet): record the Slack
 item as `conflicting` or `informal` and cite the newer approved plan as the current timeline. Record the

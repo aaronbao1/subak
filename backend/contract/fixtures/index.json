@@ -341,7 +341,7 @@
       "status": 200
     },
     {
-      "description": "six seeded documents with supersedes links and is_current",
+      "description": "13 seeded documents with supersedes links, is_current, integration and person_tags",
       "file": "documents.json",
       "method": "GET",
       "name": "documents",
@@ -445,6 +445,16 @@
       "file": "error_signal_cites_superseded_only.json",
       "method": "POST",
       "name": "error_signal_cites_superseded_only",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ErrorBody",
+      "status": 422
+    },
+    {
+      "description": "scope rules: every person in a person signal must be on one team (person_team_mismatch)",
+      "file": "error_signal_scope.json",
+      "method": "POST",
+      "name": "error_signal_scope",
       "path": "/api/signals",
       "scenario": "main",
       "schema": "ErrorBody",
@@ -691,6 +701,16 @@
       "status": 200
     },
     {
+      "description": "company-scope signal: no team, no people; applies to every team",
+      "file": "signal_company_created.json",
+      "method": "POST",
+      "name": "signal_company_created",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ContextSignalOut",
+      "status": 201
+    },
+    {
       "description": "verified signal: exact quote from the approved research plan",
       "file": "signal_created.json",
       "method": "POST",
@@ -731,7 +751,17 @@
       "status": 200
     },
     {
-      "description": "current / superseded / informal signals with citation currency",
+      "description": "person-scope signal: team derived from the person, signal_kind model_change",
+      "file": "signal_person_created.json",
+      "method": "POST",
+      "name": "signal_person_created",
+      "path": "/api/signals",
+      "scenario": "main",
+      "schema": "ContextSignalOut",
+      "status": 201
+    },
+    {
+      "description": "team / person / company signals (current, superseded, informal) with citation currency",
       "file": "signals.json",
       "method": "GET",
       "name": "signals",

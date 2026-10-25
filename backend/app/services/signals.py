@@ -12,17 +12,22 @@ Rules:
 - `produced_by` is derived from the caller, never trusted from the body: finance roles -> `finance`,
   the Droid role -> the runner kind of its agent run (or the configured runner).
 - Signals are never hard-deleted once used as evidence; delete is refused with 409 `signal_in_use`.
+- Scope (frontend-integration-design §2.4): `person` signals name active people who all work on one
+  team (the team is derived when omitted and must match when given); `team` signals name no people;
+  `company` signals have no team and no people and apply to every team. Every violation is 422
+  `validation_failed` with `reasons[].code` (`person_ids_required`, `unknown_person`,
+  `person_team_mismatch`, `person_ids_not_allowed`, `team_not_allowed`).
 """
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.actors import FINANCE_ROLES, Actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import AgentRun, ContextSignal, CorpusDocument, Proposal, SignalCitation, Team
+from app.db.models import AgentRun, ContextSignal, CorpusDocument, Person, Proposal, SignalCitation, Team
 from app.schemas.signals import ContextSignalIn, ContextSignalPatch
 
 
@@ -56,10 +61,50 @@ def get_signal(session: Session, signal_id: str) -> ContextSignal:
     return sig
 
 
+def _scope_reasons(session: Session, body: ContextSignalIn) -> tuple[list[dict], str | None]:
+    """Validate scope / person_ids / team. Returns (reasons, effective team)."""
+    reasons: list[dict] = []
+    team = body.team
+    if body.scope == "person":
+        if not body.person_ids:
+            reasons.append({"code": "person_ids_required", "field": "person_ids",
+                            "message": "a person-scope signal must name at least one person (ids from list_people)"})
+            return reasons, team
+        people = []
+        for pid in body.person_ids:
+            person = session.get(Person, pid)
+            if person is None or not person.active:
+                reasons.append({"code": "unknown_person", "field": "person_ids", "person_id": pid,
+                                "message": f"unknown or inactive person {pid!r}"})
+            else:
+                people.append(person)
+        teams = sorted({p.team_id for p in people})
+        if len(teams) > 1:
+            reasons.append({"code": "person_team_mismatch", "field": "person_ids", "teams": teams,
+                            "message": f"all people in one signal must be on one team, got {teams}"})
+        elif teams and team is not None and team != teams[0]:
+            reasons.append({"code": "person_team_mismatch", "field": "team", "teams": teams,
+                            "message": f"team {team!r} does not match the people's team {teams[0]!r}"})
+        elif teams and team is None:
+            team = teams[0]
+    elif body.scope == "team":
+        if body.person_ids:
+            reasons.append({"code": "person_ids_not_allowed", "field": "person_ids",
+                            "message": "a team-scope signal names no people; use scope person"})
+    else:  # company
+        if body.team is not None:
+            reasons.append({"code": "team_not_allowed", "field": "team",
+                            "message": "a company-scope signal applies to every team; leave team null"})
+        if body.person_ids:
+            reasons.append({"code": "person_ids_not_allowed", "field": "person_ids",
+                            "message": "a company-scope signal names no people"})
+    return reasons, team
+
+
 def create_signal(
     session: Session, body: ContextSignalIn, *, actor: Actor, runner_kind: str, clock: Clock, ids: IdFactory
 ) -> tuple[ContextSignal, set[tuple[str, int]]]:
-    reasons: list[dict] = []
+    reasons, team_id = _scope_reasons(session, body)
     if body.team is not None:
         team = session.get(Team, body.team)
         if team is None or not team.active:
@@ -120,7 +165,8 @@ def create_signal(
 
     now = clock.now()
     sig = ContextSignal(
-        id=ids.new_id("sig_"), created_at=now, team_id=body.team, project=body.project, summary=body.summary,
+        id=ids.new_id("sig_"), created_at=now, team_id=team_id, scope=body.scope, person_ids=list(body.person_ids),
+        signal_kind=body.signal_kind, title=body.title, project=body.project, summary=body.summary,
         change_type=body.change_type, applies_from=body.applies_from, applies_to=body.applies_to,
         status=body.status, uncertainty=body.uncertainty,
         produced_by=_producer(session, actor, body.agent_run_id, runner_kind), agent_run_id=body.agent_run_id,
@@ -142,17 +188,28 @@ def create_signal(
 
 
 def list_signals(session: Session, *, team: str | None = None, status: str | None = None,
-                 project: str | None = None) -> list[ContextSignal]:
+                 project: str | None = None, scope: str | None = None, person: str | None = None,
+                 include_company: bool = False) -> list[ContextSignal]:
+    """`include_company` adds every company-scope signal to a `team` filter (company signals have no team
+    but apply to every team). `person` matches signals whose person_ids contain that id."""
     q = select(ContextSignal).order_by(ContextSignal.created_at, ContextSignal.id)
     if team == "none":
         q = q.where(ContextSignal.team_id.is_(None))
+    elif team and include_company:
+        q = q.where(or_(ContextSignal.team_id == team, ContextSignal.scope == "company"))
     elif team:
         q = q.where(ContextSignal.team_id == team)
     if status:
         q = q.where(ContextSignal.status == status)
     if project:
         q = q.where(ContextSignal.project == project)
-    return list(session.scalars(q))
+    if scope:
+        q = q.where(ContextSignal.scope == scope)
+    rows = list(session.scalars(q))
+    if person:
+        # Filtered in Python so the JSON containment check stays portable across databases.
+        rows = [r for r in rows if person in (r.person_ids or [])]
+    return rows
 
 
 def patch_signal(session: Session, signal_id: str, body: ContextSignalPatch, *, clock: Clock) -> ContextSignal:
@@ -223,7 +280,8 @@ def signal_out(session: Session, sig: ContextSignal, corrected: set[tuple[str, i
         select(ContextSignal.id).where(ContextSignal.superseded_by_signal_id == sig.id).order_by(ContextSignal.id)
     ))
     return {
-        "id": sig.id, "team": sig.team_id, "project": sig.project, "summary": sig.summary,
+        "id": sig.id, "team": sig.team_id, "scope": sig.scope, "person_ids": list(sig.person_ids or []),
+        "signal_kind": sig.signal_kind, "title": sig.title, "project": sig.project, "summary": sig.summary,
         "change_type": sig.change_type, "applies_from": sig.applies_from, "applies_to": sig.applies_to,
         "status": sig.status, "uncertainty": sig.uncertainty, "produced_by": sig.produced_by,
         "agent_run_id": sig.agent_run_id, "superseded_by_signal_id": sig.superseded_by_signal_id,

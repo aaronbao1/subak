@@ -12,7 +12,9 @@ cd backend
 ```
 
 - Each fixture runs on its own fresh, seeded SQLite file through the real app in-process. Scenarios that
-  read the same fixture share one run, so 11 scenarios cost 6 runs.
+  read the same fixture share one run, so 13 scenarios cost 7 fixtures (8 Droid runs: the
+  `addition_50k_after_interpret` setup starts its own `interpret_corpus` run, which the live cap counts and
+  logs as a `setup run` line).
 - `--runner sdk` uses the backend's `SdkDroidRunner` unchanged. That means the scoped `northstar` tools
   only (`restrict_tools` allowlist, checked at startup), an empty temp cwd, built-in skills disabled, and
   the permission gate that cancels edit/exec/create. Droid has no apply or decide tool.

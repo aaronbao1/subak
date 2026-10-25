@@ -49,7 +49,7 @@
     },
     "state_version": 2,
     "unit": "USD",
-    "updated_at": "2026-10-24T12:38:00Z"
+    "updated_at": "2026-10-24T12:43:00Z"
   },
   "scenario": "main",
   "schema": "BudgetState",

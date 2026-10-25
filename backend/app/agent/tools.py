@@ -49,6 +49,10 @@ class ListSignalsIn(_In):
     team: str | None = None
 
 
+class ListPeopleIn(_In):
+    team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
+
+
 class BuildChartSpecIn(_In):
     kind: ChartKind
     team: Annotated[str, Field(min_length=1, max_length=100)] | None = None
@@ -129,6 +133,11 @@ TOOLS: tuple[ToolDef, ...] = (
     ToolDef("list_signals", "read",
             "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
             ListSignalsIn),
+    ToolDef("list_people", "read",
+            "People directory: active team members with id, team, name, role, primary_tool and "
+            "integrations. Use it to turn a name in a document into a person id for a person-scope signal. "
+            "Optional team narrows the list.",
+            ListPeopleIn),
     ToolDef("build_chart_spec", "read",
             "Build a Vega-Lite v5 chart spec from backend data only (data inline; nothing estimated). kind: "
             "spend_vs_allocation (metric recorded_spend | remaining), projection_vs_allocation (projected | gap; "
@@ -141,7 +150,12 @@ TOOLS: tuple[ToolDef, ...] = (
             "Record a cited context signal (what is planned/changing, team, timing, status current|"
             "superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored "
             "document version exactly; the backend verifies it. A current signal may not rest only on "
-            "superseded or only on cancelled documents. Does not change any budget.",
+            "superseded or only on cancelled documents. scope: `person` (person_ids from list_people, all on "
+            "one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` "
+            "(team null and no person_ids; every team is affected). signal_kind is one of project_deferred, "
+            "project_accelerated, model_change, tool_change, out_of_office, onboarding, steady. title is a "
+            "short label of at most 120 characters. Never name a person the cited text does not name. Does "
+            "not change any budget.",
             RecordSignalIn),
     ToolDef("draft_proposal", "draft",
             "Draft an allocation proposal for finance review: action_type `addition` (new money enters "

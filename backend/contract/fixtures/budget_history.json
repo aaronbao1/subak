@@ -31,12 +31,12 @@
           "product": "50000.00",
           "research": "85000.00"
         },
-        "created_at": "2026-10-24T12:38:00Z",
+        "created_at": "2026-10-24T12:43:00Z",
         "decision": {
           "action_type": "transfer",
           "actor_id": "fin-approver-alice",
           "actor_role": "finance_approver",
-          "decided_at": "2026-10-24T12:38:00Z",
+          "decided_at": "2026-10-24T12:43:00Z",
           "id": "dec_000001",
           "proposal_id": "prop_000001",
           "rationale": "Matches the approved research plan and the launch update."

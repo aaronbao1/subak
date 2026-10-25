@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Annotated, Literal
 
@@ -12,6 +13,16 @@ from app.schemas.common import InModel, OutModel
 ChangeType = Literal["expansion", "reduction", "continuation", "timing_shift", "other"]
 SignalStatus = Literal["current", "superseded", "conflicting", "informal", "cancelled"]
 Producer = Literal["droid_fake", "droid_sdk", "finance"]
+# person: one or more named people on one team; team: a team plan; company: every team (team null).
+SignalScope = Literal["person", "team", "company"]
+# Why usage is expected to move (the frontend `SignalKind`):
+# project_deferred (work pushed back), project_accelerated (work moved earlier), model_change (moving to a
+# different model), tool_change (moving between tools or billing paths), out_of_office (away for dates),
+# onboarding (a new person or seat), steady (continues at the current pace).
+SignalKind = Literal["project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office",
+                     "onboarding", "steady"]
+MAX_SIGNAL_PEOPLE = 10
+_PERSON_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 
 class CitationIn(InModel):
@@ -40,6 +51,13 @@ class CitationIn(InModel):
 
 class ContextSignalIn(InModel):
     team: str | None = None
+    # Scope rules (checked by the signal service, 422 validation_failed with reasons[].code):
+    # person -> person_ids required, all active people on one team (team derived when omitted);
+    # team -> no person_ids; company -> team null and no person_ids.
+    scope: SignalScope = "team"
+    person_ids: list[str] = Field(default_factory=list)
+    signal_kind: SignalKind | None = None
+    title: Annotated[str, Field(min_length=1, max_length=120)] | None = None
     project: Annotated[str, Field(max_length=200)] | None = None
     summary: Annotated[str, Field(min_length=1, max_length=5000)]
     change_type: ChangeType
@@ -58,6 +76,29 @@ class ContextSignalIn(InModel):
         if not v.strip():
             raise ValueError("must not be blank")
         return v.strip()
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if not v.strip():
+            raise ValueError("title must not be blank")
+        return v.strip()
+
+    @field_validator("person_ids")
+    @classmethod
+    def _person_ids(cls, v: list[str]) -> list[str]:
+        out: list[str] = []
+        for raw in v:
+            pid = str(raw).strip().lower()
+            if not _PERSON_ID.match(pid):
+                raise ValueError(f"person_ids entries must be person id slugs, got {raw!r}")
+            if pid not in out:
+                out.append(pid)
+        if len(out) > MAX_SIGNAL_PEOPLE:
+            raise ValueError(f"at most {MAX_SIGNAL_PEOPLE} person_ids")
+        return out
 
     @model_validator(mode="after")
     def _dates(self) -> "ContextSignalIn":
@@ -92,6 +133,10 @@ class CitationOut(OutModel):
 class ContextSignalOut(OutModel):
     id: str
     team: str | None
+    scope: SignalScope
+    person_ids: list[str]
+    signal_kind: SignalKind | None
+    title: str | None
     project: str | None
     summary: str
     change_type: ChangeType

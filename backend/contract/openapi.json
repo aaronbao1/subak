@@ -1282,6 +1282,13 @@
             "title": "Citations",
             "type": "array"
           },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Ids",
+            "type": "array"
+          },
           "project": {
             "anyOf": [
               {
@@ -1293,6 +1300,36 @@
               }
             ],
             "title": "Project"
+          },
+          "scope": {
+            "default": "team",
+            "enum": [
+              "person",
+              "team",
+              "company"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "signal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "project_deferred",
+                  "project_accelerated",
+                  "model_change",
+                  "tool_change",
+                  "out_of_office",
+                  "onboarding",
+                  "steady"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Kind"
           },
           "status": {
             "enum": [
@@ -1332,6 +1369,19 @@
               }
             ],
             "title": "Team"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "uncertainty": {
             "maxLength": 5000,
@@ -1418,6 +1468,13 @@
             "title": "Needs Review",
             "type": "boolean"
           },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Ids",
+            "type": "array"
+          },
           "produced_by": {
             "enum": [
               "droid_fake",
@@ -1437,6 +1494,35 @@
               }
             ],
             "title": "Project"
+          },
+          "scope": {
+            "enum": [
+              "person",
+              "team",
+              "company"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "signal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "project_deferred",
+                  "project_accelerated",
+                  "model_change",
+                  "tool_change",
+                  "out_of_office",
+                  "onboarding",
+                  "steady"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Kind"
           },
           "status": {
             "enum": [
@@ -1482,6 +1568,17 @@
             ],
             "title": "Team"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
           "uncertainty": {
             "title": "Uncertainty",
             "type": "string"
@@ -1490,6 +1587,10 @@
         "required": [
           "id",
           "team",
+          "scope",
+          "person_ids",
+          "signal_kind",
+          "title",
           "project",
           "summary",
           "change_type",
@@ -1978,6 +2079,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -1995,6 +2114,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2064,6 +2190,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -2140,6 +2268,24 @@
             ],
             "title": "Effective To"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_simulated": {
             "default": false,
             "title": "Is Simulated",
@@ -2155,6 +2301,14 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "default": "n/a",
@@ -2365,6 +2519,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -2389,6 +2561,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2462,6 +2641,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -2537,6 +2718,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -2554,6 +2753,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2623,6 +2829,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -7427,6 +7635,57 @@
                 }
               ],
               "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "person",
+                    "team",
+                    "company"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "description": "person id: signals that name this person",
+            "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "person id: signals that name this person",
+              "title": "Person"
+            }
+          },
+          {
+            "description": "with team: also list company-wide signals",
+            "in": "query",
+            "name": "include_company",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "with team: also list company-wide signals",
+              "title": "Include Company",
+              "type": "boolean"
             }
           }
         ],

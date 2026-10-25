@@ -148,7 +148,7 @@ def test_unattributed_spend_gets_a_pseudo_team_and_marks_partial(c):
 
 def test_documents_list_has_bodies_and_supersession(c):
     docs = get(c, "documents")
-    assert len(docs) == 6 and all(d["body"].strip() for d in docs)
+    assert len(docs) == 13 and all(d["body"].strip() for d in docs)
     v1 = next(d for d in docs if d["title"].startswith("Product launch plan - assistant"))
     assert v1["supersededBy"] and v1["kind"] == "plan" and v1["origin"].endswith("(simulated)")
     assert get(c, f"documents/{v1['id']}")["body"] == v1["body"]
@@ -162,18 +162,21 @@ def test_context_is_empty_until_interpreted_then_cited(c):
     say(c, "Read the documents and tell me what changed")
     items = get(c, "context", list[S.ContextItem])
     research = [i for i in items if i["teamIds"] == ["research"]]
-    current = next(i for i in research if "supersededBy" not in i)
+    # The research plan and the thread it supersedes (person-scope research items cite other documents).
+    current = next(i for i in research if "supersedes" in i)
     old = next(i for i in research if "supersededBy" in i)
     assert current["expectedEffect"] == "increase" and current["confidence"] == "high"
     assert current["claimType"] == "stated_plan" and current["kind"] == "plan"
     assert old["confidence"] == "low" and old["supersededBy"] == current["id"]
     assert current["supersedes"] == [old["id"]]
-    product = next(i for i in items if i["teamIds"] == ["product"])
+    product = next(i for i in items if i["teamIds"] == ["product"]
+                   and i["sources"][0]["title"].startswith("Product launch plan"))
     assert product["expectedEffect"] == "unknown"  # timing shift: direction not stored, not guessed
     for i in items:
         assert i["sources"] and all(s["excerpt"] and s["locator"].startswith("chars ") for s in i["sources"])
         assert len(i["title"]) <= mappers.TITLE_MAX
-    assert {i["id"] for i in get(c, "context?teamId=product")} == {product["id"]}
+    by_product = get(c, "context?teamId=product")
+    assert product["id"] in {i["id"] for i in by_product} and all(i["teamIds"] == ["product"] for i in by_product)
 
 
 def test_read_routes_never_write(c, seeded):

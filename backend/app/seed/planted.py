@@ -2,7 +2,7 @@
 
 The files live in `backend/seed/planted/` and the expected outcomes in `backend/seed/answer_key.md`.
 They are NOT part of the default seed: the default seed keeps the shared 45k/20k/30k = 95k table (616
-daily records) and the six-document corpus that the contract fixtures are built from.
+daily records) and the 13-document corpus that the contract fixtures are built from.
 
 - `load_planted(session, ...)` adds the data traps to an already-seeded database (four imports and two
   extra corpus documents). Every step goes through the normal services, so loading twice adds nothing.
@@ -218,11 +218,13 @@ def _scenario(client) -> list[Check]:
     key_by_id = {d["id"]: d["doc_key"] for d in items}
     run = client.post("/api/agent/runs", headers=ANALYST, json={"task_type": "interpret_corpus"}).json()
     sigs = client.get("/api/signals").json()["items"]
-    research_current = [s for s in sigs if s["team"] == "research" and s["status"] == "current"]
+    # Team-scope only: person signals (Leila, Omar, Theo) cite their own documents (frontend-integration §5.4).
+    research_current = [s for s in sigs if s["team"] == "research" and s["status"] == "current"
+                        and s.get("scope", "team") == "team"]
     not_interpreted = sorted(key_by_id.get(w.get("document_id"), "?") for w in (run.get("output") or {}).get("warnings", [])
                              if w["code"] == "document_not_interpreted")
     add("P4", "approved plan wins over older thread and informal restatement",
-        {"documents": 8, "slack_plan_status": "informal", "thread_superseded_by": "research-eval-plan",
+        {"documents": 15, "slack_plan_status": "informal", "thread_superseded_by": "research-eval-plan",
          "research_current_cites": ["research-eval-plan"], "thread_signal": "superseded",
          "not_interpreted_by_fake_runner": ["ap-late-invoice-email", "research-standup-slack"]},
         {"documents": len(items), "slack_plan_status": docs["research-standup-slack"]["plan_status"],
