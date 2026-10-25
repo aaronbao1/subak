@@ -5,7 +5,6 @@ import { TopBar } from "./top-bar";
 import { FeatureSection } from "./feature-section";
 import { MediaSlot } from "./media-slot";
 import { KineticDots } from "./kinetic-dots";
-import { HeroMock, ReceiptMock, TeamListMock } from "./mocks";
 import { container, cta } from "./cta";
 
 /* The hero line is repeated verbatim in the closing band. 5 words, two declaratives, sentence case. */
@@ -14,52 +13,85 @@ const HEADLINE = "See the spend. Decide faster.";
 const FEATURES = [
   {
     id: "how-it-works",
-    eyebrow: "Company view",
-    heading: "One number for the company",
-    body: "Spent, projected and allotted on one bar.",
+    eyebrow: "Company outlook",
+    heading: "See this week. Plan the next.",
+    body: "Compare recorded spend with the forecast, review each week, and see how much room is left in the company budget.",
     href: "/overview",
     mediaSrc: "/media/overview.webm",
-    mediaAlt: "Overview: company spend against total allocation",
-    cropRecordedHeader: true,
+    mediaPoster: "/media/overview.webp",
+    mediaAlt: "Current Overview with company budget, recorded and expected spend, weekly forecasts, and team allocations",
     mediaSide: "right",
-    placeholder: <HeroMock compact />,
   },
   {
     id: "team-breakdown",
-    eyebrow: "Team detail",
-    heading: "Click a team, see the breakdown",
-    body: "Open a team to see its costs and its people.",
+    eyebrow: "Team spending",
+    heading: "Follow the forecast into every team",
+    body: "Compare allocations and expected spend, then open a team to explore its spending outlook, people, and the plans behind the numbers.",
     href: "/teams",
     mediaSrc: "/media/team-breakdown.webm",
-    mediaAlt: "Team breakdown: cost components, provenance, people",
-    cropRecordedHeader: true,
+    mediaPoster: "/media/team-breakdown.webp",
+    mediaAlt: "Teams comparison and team spending outlook with expected spend and allocation details",
     mediaSide: "left",
-    placeholder: <TeamListMock />,
+  },
+  {
+    id: "team-requests",
+    eyebrow: "Team requests",
+    heading: "Bring the team's plans into the review",
+    body: "Review project updates and funding requests alongside each team's budget position, supporting evidence, and finance discussion.",
+    href: "/requests",
+    mediaSrc: "/media/requests.webm",
+    mediaPoster: "/media/requests.webp",
+    mediaAlt: "Team requests inbox and a project update with team budget position and supporting context",
+    mediaSide: "right",
+  },
+  {
+    id: "usage-activity",
+    eyebrow: "Usage activity",
+    heading: "Trace spend to the day and model",
+    body: "Switch between spend and tokens, filter by team or provider, and open a day to inspect the models and people behind the activity.",
+    href: "/usage",
+    mediaSrc: "/media/usage.webm",
+    mediaPoster: "/media/usage.webp",
+    mediaAlt: "Usage activity with spend and token views, daily activity calendar, and model breakdown",
+    mediaSide: "left",
+  },
+  {
+    id: "evidence",
+    eyebrow: "Evidence",
+    heading: "Keep the source within reach",
+    body: "Find the documents behind a team's plans, inspect source details, and review assessments and forecast changes in the same workspace.",
+    href: "/evidence",
+    mediaSrc: "/media/evidence.webm",
+    mediaPoster: "/media/evidence.webp",
+    mediaAlt: "Evidence workspace with source documents, filters, and an open source detail",
+    mediaSide: "right",
   },
   {
     id: "decisions",
-    eyebrow: "Decisions",
+    eyebrow: "Allocations and decisions",
     heading: "Reallocate with receipts",
-    body: "Review a proposal, apply it, keep the receipt.",
+    body: "Adjust team allocations, review the impact on the company budget, and apply the change with a reason and a saved decision record.",
     href: "/decisions",
     mediaSrc: "/media/reallocate.webm",
-    mediaAlt: "Reallocate: proposal review, apply, and the decision log",
-    cropRecordedHeader: true,
-    mediaSide: "right",
-    placeholder: <ReceiptMock />,
+    mediaPoster: "/media/reallocate.webp",
+    mediaAlt: "Allocation workbench with a reviewed budget change and its saved decision receipt",
+    mediaSide: "left",
   },
 ] as const;
 
-/* The three product rules, as one quiet row. The mocks above show each in context. */
 const RULES = [
-  { icon: ArrowLeftRight, label: "Add budget is never redistribute" },
-  { icon: FileSearch, label: "Provenance on every amount" },
+  { icon: ArrowLeftRight, label: "Separate funding from redistribution" },
+  { icon: FileSearch, label: "Evidence behind the forecast" },
   { icon: Receipt, label: "A receipt for every decision" },
 ] as const;
 
 const FOOTER_LINKS = [
   { label: "Overview", href: "/overview" },
   { label: "Teams", href: "/teams" },
+  { label: "Team requests", href: "/requests" },
+  { label: "Usage", href: "/usage" },
+  { label: "Planning", href: "/planning" },
+  { label: "Evidence", href: "/evidence" },
   { label: "Decisions", href: "/decisions" },
 ] as const;
 
@@ -72,39 +104,36 @@ export function LandingPage() {
         <section className="relative">
           <KineticDots className="absolute inset-0 size-full" />
           <div className={`${container} relative pt-20 pb-12 text-center md:pt-28 md:pb-20`}>
-          <p className="eyebrow">AI spend planning for finance</p>
-          <h1 className="mx-auto mt-4 max-w-[1050px] text-[40px] leading-none md:text-5xl lg:text-[64px]">{HEADLINE}</h1>
-          <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-[1.35] text-muted-foreground md:text-lg">
-            AI spend by team, projected, with receipts.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/overview" className={cta("brand", "hero")}>
-              Open dashboard
-            </Link>
-            <Link href="#how-it-works" className={cta("ghost", "hero")}>
-              See how it works
-            </Link>
-          </div>
-
-          {/* Product frame: a live recording of the overview (the static mock shows until it loads), cropped by a fade into the page. */}
-          <div className="relative mx-auto mt-10 max-w-[1050px] md:mt-14">
-            <div className="overflow-hidden rounded-xl border border-border bg-card text-left">
-              <div className="flex h-10 items-center justify-between border-b border-border px-4">
-                <span className="eyebrow">Overview</span>
-              </div>
-              <MediaSlot
-                src="/media/hero.webm"
-                cropRecordedHeader
-                alt="Overview: the daily spend chart panned back through nine weeks of history"
-                placeholder={<HeroMock />}
-                className="rounded-none border-0"
-              />
+            <p className="eyebrow">AI spend planning for finance</p>
+            <h1 className="mx-auto mt-4 max-w-[1050px] text-[40px] leading-none md:text-5xl lg:text-[64px]">{HEADLINE}</h1>
+            <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-[1.35] text-muted-foreground md:text-lg">
+              AI spend, weekly forecasts, and team budgets in one workspace.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/overview" className={cta("brand", "hero")}>
+                Open dashboard
+              </Link>
+              <Link href="#how-it-works" className={cta("ghost", "hero")}>
+                See how it works
+              </Link>
             </div>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] rounded-b-xl bg-linear-to-b from-transparent to-background"
-            />
-          </div>
+
+            {/* Real product recording and a matching still from the current demo workspace. */}
+            <div className="relative mx-auto mt-10 max-w-[1050px] md:mt-14">
+              <div className="overflow-hidden rounded-xl border border-border bg-card text-left">
+                <div className="flex h-10 items-center justify-between border-b border-border px-4">
+                  <span className="eyebrow">Overview</span>
+                  <span className="text-xs text-muted-foreground">Demo workspace</span>
+                </div>
+                <MediaSlot
+                  src="/media/hero.webm"
+                  poster="/media/hero.webp"
+                  alt="Subak Overview: company outlook, weekly actual and forecast spending, team allocations, and requests"
+                  priority
+                  className="rounded-none border-0"
+                />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -112,7 +141,7 @@ export function LandingPage() {
           <FeatureSection key={f.id} {...f} />
         ))}
 
-        {/* The rules, as three label + icon items; the mocks above already show each one. */}
+        {/* Shared principles across the planning workflow. */}
         <section className="py-12 md:py-16" aria-label="Planning rules">
           <ul className={`${container} grid gap-4 border-t border-border pt-12 sm:grid-cols-3 md:pt-16`}>
             {RULES.map((r) => (
@@ -143,7 +172,7 @@ export function LandingPage() {
             <BrandMark />
             <span className="text-sm font-medium">Subak</span>
           </span>
-          <nav aria-label="Footer" className="flex gap-5">
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-3">
             {FOOTER_LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="transition-colors duration-300 hover:text-foreground">
                 {l.label}

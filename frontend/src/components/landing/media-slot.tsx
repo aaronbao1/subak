@@ -1,61 +1,85 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface MediaSlotProps {
-  /** Product video, e.g. /media/overview.mp4. Rendered over the placeholder; a missing file fails silently. */
-  src?: string;
-  poster?: string;
+  src: string;
+  poster: string;
   alt: string;
-  /** Quiet JSX mock shown until (or instead of) the video. Falls back to the alt text. */
-  placeholder?: ReactNode;
   className?: string;
-  /** Original 1440×810 recordings include a 56px header with the previous wordmark. */
-  cropRecordedHeader?: boolean;
+  priority?: boolean;
 }
 
-/**
- * 16:9 product frame for the landing page: 1px border, card surface, no shadow or ring.
- * The placeholder always renders underneath; when a video is given it sits on top and simply
- * disappears if the browser cannot load it, so dropping a file into public/media is all that is needed.
- */
-export function MediaSlot({ src, poster, alt, placeholder, className, cropRecordedHeader = false }: MediaSlotProps) {
+function subscribeToReducedMotion(callback: () => void) {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const serverReducedMotion = () => true;
+
+/** Current product captures, with the same screen visible before playback and on failure. */
+export function MediaSlot({ src, poster, alt, className, priority = false }: MediaSlotProps) {
+  const frame = useRef<HTMLDivElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const showVideo = Boolean(src) && !failed;
+  const [paused, setPaused] = useState(false);
+  const reducedMotion = useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, serverReducedMotion);
+  const shouldPlay = visible && !paused && !reducedMotion;
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.15 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const element = video.current;
+    if (!element) return;
+    let active = true;
+    if (shouldPlay) {
+      void element.play().catch(() => { if (active) setPaused(true); });
+    } else {
+      element.pause();
+    }
+    return () => { active = false; };
+  }, [shouldPlay, loaded]);
 
   return (
-    <div
-      className={cn("relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-card", className)}
-      style={cropRecordedHeader ? { aspectRatio: "1440 / 754" } : undefined}
-      role={showVideo ? undefined : "img"}
-      aria-label={showVideo ? undefined : alt}
-    >
-      <div className="absolute inset-0" aria-hidden>
-        {placeholder ?? <Fallback alt={alt} />}
-      </div>
-      {showVideo && (
+    <div ref={frame} className={cn("relative aspect-[8/5] w-full overflow-hidden rounded-xl border border-border bg-white", className)}>
+      <Image src={poster} alt={alt} fill sizes={priority ? "(min-width: 1200px) 1050px, 100vw" : "(min-width: 1440px) 624px, (min-width: 1024px) 45vw, 100vw"} preload={priority} className="object-contain" />
+      {!failed && !reducedMotion && (visible || loaded) && (
         <video
-          className="absolute inset-0 size-full object-cover"
-          style={cropRecordedHeader ? { top: `${-56 / 754 * 100}%`, height: `${810 / 754 * 100}%` } : undefined}
+          ref={video}
+          className={cn("absolute inset-0 size-full object-contain transition-opacity", loaded ? "opacity-100" : "opacity-0")}
           src={src}
           poster={poster}
-          autoPlay
           muted
           loop
           playsInline
           preload="metadata"
-          aria-label={alt}
+          aria-hidden="true"
+          onLoadedData={() => setLoaded(true)}
           onError={() => setFailed(true)}
         />
       )}
-    </div>
-  );
-}
-
-function Fallback({ alt }: { alt: string }) {
-  return (
-    <div className="flex size-full items-end p-4">
-      <span className="text-xs text-muted-foreground">{alt}</span>
+      {!failed && !reducedMotion && loaded && (
+        <button
+          type="button"
+          onClick={() => setPaused(value => !value)}
+          aria-label={paused ? "Play demo" : "Pause demo"}
+          className="absolute right-3 bottom-3 flex size-8 items-center justify-center rounded-full border border-black/10 bg-white/95 text-gray-800 shadow-sm transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600"
+        >
+          {paused ? <Play aria-hidden className="size-3.5" /> : <Pause aria-hidden className="size-3.5" />}
+        </button>
+      )}
     </div>
   );
 }

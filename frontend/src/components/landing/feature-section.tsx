@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ArrowLink } from "./arrow-link";
 import { MediaSlot } from "./media-slot";
@@ -14,9 +13,7 @@ export interface FeatureSectionProps {
   href: string;
   mediaSrc: string;
   mediaAlt: string;
-  cropRecordedHeader?: boolean;
-  /** Quiet JSX mock rendered inside the frame until the video loads. */
-  placeholder?: ReactNode;
+  mediaPoster: string;
   /** Media on the right (default) or on the left at lg and up. Stacks text-first on phones either way. */
   mediaSide?: "right" | "left";
 }
@@ -29,14 +26,13 @@ export function FeatureSection({
   href,
   mediaSrc,
   mediaAlt,
-  cropRecordedHeader,
-  placeholder,
+  mediaPoster,
   mediaSide = "right",
 }: FeatureSectionProps) {
   const headingId = id ? `${id}-heading` : undefined;
   return (
     <section id={id} className="scroll-mt-20 py-12 md:py-20" aria-labelledby={headingId}>
-      {/* Fades up once on first entry (20% in view); the mock inside starts its own motion at the same moment. */}
+      {/* Reveal each feature when it enters the viewport. */}
       <Reveal className={cn(container, "grid items-center gap-8 lg:grid-cols-2 lg:gap-16")}>
         <div className={cn(mediaSide === "left" && "lg:order-2")}>
           <p className="eyebrow">{eyebrow}</p>
@@ -48,7 +44,7 @@ export function FeatureSection({
             See it in the dashboard
           </ArrowLink>
         </div>
-        <MediaSlot cropRecordedHeader={cropRecordedHeader} src={mediaSrc} alt={mediaAlt} placeholder={placeholder} className={cn(mediaSide === "left" && "lg:order-1")} />
+        <MediaSlot src={mediaSrc} poster={mediaPoster} alt={mediaAlt} className={cn(mediaSide === "left" && "lg:order-1")} />
       </Reveal>
     </section>
   );
