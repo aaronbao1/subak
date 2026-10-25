@@ -11,6 +11,7 @@ from app.core.clock import Clock
 from app.core.errors import DomainError
 from app.db.session import get_session
 from app.schemas.meta import MetaOut
+from app.services import company as company_svc
 from app.services import coverage as coverage_svc
 
 router = APIRouter(prefix="/api", tags=["meta"])
@@ -41,7 +42,13 @@ def meta(
         period = coverage_svc.resolve_period(session, None, clock.now())
     except DomainError:
         period = None  # empty database: meta must still answer
+    company = company_svc.resolve(session)
     rows = [dict(r) for r in REAL_VS_SIMULATED]
+    if company["id"] != company_svc.DEFAULT_ID and company["source"] != "default":
+        # Another dataset is loaded (e.g. datagen's Uber data): label it by name, keep the component key.
+        rows[0] = {**rows[0], "status": "simulated" if company["is_simulated"] else "real",
+                   "detail": f"{company['name']} dataset loaded from datagen; "
+                             f"is_simulated={str(company['is_simulated']).lower()}"}
     if settings.droid_runner == "sdk":
         rows[3] = {**rows[3], "status": "real",
                    "detail": "Factory Droid SDK runner selected; runs fail with 503 if no key is configured"}
@@ -50,6 +57,7 @@ def meta(
     return {
         "service": "northstar-backend",
         "version": request.app.version,
+        "company": company,
         "period": period,
         "unit": "USD",
         "money_format": "decimal string with exactly two places, e.g. \"60000.00\"; never a float",

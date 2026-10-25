@@ -69,6 +69,7 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
 | `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos (reseeds and reruns the stand-in interpretation) |
+| `BACKEND_COMPANY_ID`, `BACKEND_COMPANY_NAME` | unset | Override the company shown by `/api/meta` and `/compat/api/company`. Otherwise the `company_profile` row (written by `python -m app.seed` or `datagen/load_backend.py`) is used, then the Northstar default |
 | `BACKEND_COMPAT` | on | `0` unmounts the frontend compat layer under `/compat/api` (see below) |
 | `NEXT_PUBLIC_API_URL` (frontend, in `frontend/.env.local`) | unset (mock data) | `http://localhost:8787/compat` points the UI at this backend |
 

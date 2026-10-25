@@ -1182,6 +1182,57 @@
         "title": "CompanyCoverage",
         "type": "object"
       },
+      "CompanyMeta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "env",
+              "db",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "as_of",
+          "is_simulated",
+          "source",
+          "detail"
+        ],
+        "title": "CompanyMeta",
+        "type": "object"
+      },
       "CompanyOverview": {
         "properties": {
           "envelope_total": {
@@ -3351,6 +3402,9 @@
       },
       "MetaOut": {
         "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyMeta"
+          },
           "forecast_mode": {
             "enum": [
               "placeholder",
@@ -3421,6 +3475,7 @@
         "required": [
           "service",
           "version",
+          "company",
           "period",
           "unit",
           "money_format",

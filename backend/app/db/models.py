@@ -97,6 +97,25 @@ class _IdMixin:
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
 
 
+# ---- company profile ---------------------------------------------------------------------------
+
+
+class CompanyProfile(Base):
+    """The loaded dataset's company (single row, `slot = 1`). Written by the Northstar seed and by
+    `datagen/load_backend.py`; read by `/api/meta` and `/compat/api/company` (app/services/company.py)."""
+
+    __tablename__ = "company_profile"
+
+    slot: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    company_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    as_of: Mapped[date | None] = mapped_column(Date)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (CheckConstraint("slot = 1", name="single_row"),)
+
+
 # ---- 3.1 / 3.2 / 3.3 -------------------------------------------------------------------------
 
 

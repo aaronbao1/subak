@@ -29,6 +29,7 @@ from app.db import models as m  # noqa: E402
 from app.db.base import Base, create_all, make_engine, make_session_factory  # noqa: E402
 from app.schemas.documents import DocumentIn  # noqa: E402
 from app.services import budget as budget_svc  # noqa: E402
+from app.services import company as company_svc  # noqa: E402  (backend-owner edit: company record)
 from app.services import corpus as corpus_svc  # noqa: E402
 from app.services import imports as import_svc  # noqa: E402
 from app.services import people as people_svc  # noqa: E402
@@ -57,6 +58,13 @@ def main(argv=None) -> int:
     clock, ids = SystemClock(), UuidIdFactory()
     t0 = time.time()
     try:
+        # Backend-owner edit (minimal): store reference.json's company so /api/meta and /compat/api/company
+        # name it ("Uber (simulated)") without env vars. BACKEND_COMPANY_ID/NAME still override at serve time.
+        # Written before the "already loaded" check so an existing DB gets the record too.
+        co = ref["company"]
+        company_svc.set_profile(session, company_id=co["id"], name=co["name"], is_simulated=co.get("simulated", True),
+                                as_of=date.fromisoformat(co["as_of"]) if co.get("as_of") else None, clock=clock)
+        session.commit()
         if session.get(m.PlanningPeriod, ref["periods"][0]["id"]) is not None:
             print(f"{db_path} already holds the dataset (period {ref['periods'][0]['id']} exists); use --reset to reload")
             return 0

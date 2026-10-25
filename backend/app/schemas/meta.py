@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from app.schemas.budget import BudgetState
@@ -18,9 +18,20 @@ class RealVsSimulated(OutModel):
     detail: str
 
 
+class CompanyMeta(OutModel):
+    id: str
+    name: str
+    as_of: date | None
+    is_simulated: bool
+    # Where the name came from: env var > company_profile record > Northstar default.
+    source: Literal["env", "db", "default"]
+    detail: str
+
+
 class MetaOut(OutModel):
     service: str
     version: str
+    company: CompanyMeta
     period: PeriodOut | None
     unit: Literal["USD"]
     money_format: str

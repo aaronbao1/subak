@@ -18,8 +18,6 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
 
 from __future__ import annotations
 
-import os
-
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -56,9 +54,6 @@ from app.services import signals as signal_svc
 from app.services import spending as spending_svc
 
 PREFIX = "/compat/api"
-# The backend stores no company row; the loaded dataset names it (datagen/demo.sh sets these for the Uber data).
-COMPANY_ID = os.environ.get("BACKEND_COMPANY_ID", "northstar")
-COMPANY_NAME = os.environ.get("BACKEND_COMPANY_NAME", "Northstar Software")
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
 MAX_MESSAGE = 4000
@@ -194,7 +189,8 @@ def get_company(request: Request, session: Session = Depends(get_session), clock
     meta = routes_meta.meta(request, session, clock, provider)
     if meta["period"] is None:
         raise DomainError("not_seeded", 503, "the database is not seeded yet")
-    return mappers.company(meta, company_id=COMPANY_ID, name=COMPANY_NAME)
+    # meta["company"]: BACKEND_COMPANY_ID/NAME env vars > company_profile row > Northstar default.
+    return mappers.company(meta, company_id=meta["company"]["id"], name=meta["company"]["name"])
 
 
 @router.get("/teams", response_model=list[S.Team], **JSON_OPTS)

@@ -25,6 +25,7 @@ from app.core.clock import Clock, IdFactory
 from app.db import models as m
 from app.schemas.documents import DocumentIn
 from app.services import budget as budget_svc
+from app.services import company as company_svc
 from app.services import corpus as corpus_svc
 from app.services import imports as import_svc
 from app.services import people as people_svc
@@ -89,6 +90,8 @@ def is_seeded(session: Session) -> bool:
 
 def seed_reference(session: Session, *, clock: Clock, ids: IdFactory) -> None:
     now = clock.now()
+    company_svc.set_profile(session, company_id=company_svc.DEFAULT_ID, name=company_svc.DEFAULT_NAME,
+                            is_simulated=True, clock=clock)
     session.add(m.PlanningPeriod(created_at=now, **PERIOD))
     session.add_all([m.Team(id=t, name=n, created_at=now) for t, n in TEAMS.items()])
     session.flush()

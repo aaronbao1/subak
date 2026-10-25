@@ -6,6 +6,14 @@
     "path": "/api/meta"
   },
   "response": {
+    "company": {
+      "as_of": null,
+      "detail": "company_profile record written by the data loader",
+      "id": "northstar",
+      "is_simulated": true,
+      "name": "Northstar Software",
+      "source": "db"
+    },
     "forecast_mode": "placeholder",
     "forecast_provider": "placeholder",
     "identity_mode": "demo_headers_unauthenticated",
