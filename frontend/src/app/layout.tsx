@@ -7,7 +7,7 @@ const sans = Instrument_Sans({ variable: "--font-instrument-sans", subsets: ["la
 const mono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "AI Spend Planner",
+  title: "Subak",
   description:
     "Daily AI spend, projections and allocations by team, with an assistant that proposes reallocations and leaves a receipt.",
 };

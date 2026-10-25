@@ -94,9 +94,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-14 items-center gap-4 px-4 md:gap-6 md:px-6">
-          <Link href="/" aria-label="About AI Spend Planner" className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-4 focus-visible:ring-ring">
+          <Link href="/" aria-label="About Subak" className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-4 focus-visible:ring-ring">
             <BrandMark />
-            <span className="hidden truncate text-[15px] font-medium text-foreground lg:block" title={company?.name}>AI Spend Planner</span>
+            <span className="hidden truncate text-[15px] font-medium text-foreground lg:block" title={company?.name}>Subak</span>
           </Link>
 
           {tabs("hidden h-14 items-center md:flex")}

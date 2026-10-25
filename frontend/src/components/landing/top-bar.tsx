@@ -19,7 +19,7 @@ export function TopBar() {
       <div className={`${container} flex h-full items-center justify-between gap-4`}>
         <Link href="/" className="flex items-center gap-2.5 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
           <BrandMark />
-          <span className="text-[15px] font-medium">AI Spend Planner</span>
+          <span className="text-[15px] font-medium">Subak</span>
         </Link>
 
         <nav aria-label="Sections" className="hidden items-center gap-x-6 lg:flex">

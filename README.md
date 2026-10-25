@@ -1,4 +1,4 @@
-# AI Spend Planner
+# Subak
 
 A finance workspace for understanding company AI spending, forecasting future needs, and reviewing internal budget changes. Built for Cal Hacks 13.0 with Next.js, FastAPI, SQLite, a Python numerical engine, and the Factory Droid SDK.
 

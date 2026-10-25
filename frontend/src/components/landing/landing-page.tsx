@@ -131,7 +131,7 @@ export function LandingPage() {
         <div className={`${container} flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground md:text-[13px]`}>
           <span className="flex items-center gap-2.5 text-foreground">
             <BrandMark />
-            <span className="text-sm font-medium">AI Spend Planner</span>
+            <span className="text-sm font-medium">Subak</span>
           </span>
           <nav aria-label="Footer" className="flex gap-5">
             {FOOTER_LINKS.map((l) => (

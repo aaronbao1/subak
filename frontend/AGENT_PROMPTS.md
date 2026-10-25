@@ -49,9 +49,9 @@ Jumping straight into the numbers is overwhelming. Build a Ramp-style marketing 
 - `src/app/(marketing)/layout.tsx` + `src/app/(marketing)/page.tsx` — landing. Minimal top bar: product name on the left, one "Open dashboard" button on the right linking to `/overview`.
 - `src/app/(app)/layout.tsx` — wraps children in the existing `AppShell` inside `<Suspense>` (the root layout currently does this; move it here). Move the current `src/app/page.tsx` to `src/app/(app)/overview/page.tsx`, and move `src/app/teams/**` and `src/app/decisions/**` under `(app)/`. Root `layout.tsx` keeps fonts, globals.css and metadata only.
 - Update `nav` in `src/components/shell/app-shell.tsx`: Overview → `/overview` (fix `isActive`), Teams, Decisions. Add a small link back to the landing page in the sidebar footer. Update `src/components/shell/team-count-switcher.tsx` so switching teams reloads `/overview?teams=N`, not `/?teams=N`.
-- Metadata: title "AI Spend Planner", description = the tagline below.
+- Metadata: title "Subak", description = the tagline below.
 
-Landing content (product name is **AI Spend Planner**; tune the copy but keep the meaning):
+Landing content (product name is **Subak**; tune the copy but keep the meaning):
 - Headline: "See every team's AI spend before the quarter is over."
 - Subhead: "Real-time token spend, projections, and allocations for finance teams. Every manager gets a number to run to; FP&A gets one view of the company and an assistant that proposes reallocations with receipts."
 - Buttons: primary "Open dashboard" → `/overview`; secondary "See how it works" → anchor to the first feature block.
