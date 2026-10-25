@@ -1,6 +1,6 @@
 {
   "runner": "fake",
-  "generated_at": "2026-10-25T05:25:19+00:00",
+  "generated_at": "2026-10-25T05:37:11+00:00",
   "counts": {
     "pass": 13,
     "fail": 0,
@@ -598,7 +598,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.07,
+      "duration_s": 0.13,
       "tools_called": [
         "search_corpus",
         "read_document",
@@ -776,7 +776,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.13,
+      "duration_s": 0.16,
       "tools_called": [
         "list_signals",
         "search_corpus",
@@ -1190,7 +1190,7 @@
         "before": 1,
         "after": 1
       },
-      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:00:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Limitation: the deterministic fake runner does not interpret free-text questions; this is the standard per-team comparison. Analyses beyond it (for example token multipliers or scenarios the forecast provider does not supply) are not computed.",
+      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:00:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Limitation: the deterministic fake runner does not interpret free-text questions; this is the standard per-team comparison. Analyses beyond it (for example token multipliers or scenarios the forecast provider does not supply) are not computed.",
       "usage": null
     },
     "addition_50k": {
@@ -1213,7 +1213,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.13,
+      "duration_s": 0.12,
       "tools_called": [
         "list_signals",
         "search_corpus",

@@ -1,6 +1,6 @@
 # Droid eval results: `fake` runner
 
-Generated 2026-10-25T05:25:19+00:00 by `python -m evals.run --runner fake`. Answer key: [`../answer_key.md`](../answer_key.md).
+Generated 2026-10-25T05:37:11+00:00 by `python -m evals.run --runner fake`. Answer key: [`../answer_key.md`](../answer_key.md).
 
 **13 pass, 0 fail, 0 not run** (of 13 scenarios).
 
@@ -26,11 +26,11 @@ FakeDroidRunner is a deterministic scripted playbook, not a model: passing here 
 
 | Fixture | Run | Status | Duration | Tools | Drafts | Signals | Credits |
 |---|---|---|---|---|---|---|---|
-| interpret | `run_000001` | succeeded | 0.07 s | 28 | none | 12 | - |
-| transfer | `run_000001` | succeeded | 0.13 s | 34 | transfer pending_review | 12 | - |
+| interpret | `run_000001` | succeeded | 0.13 s | 28 | none | 12 | - |
+| transfer | `run_000001` | succeeded | 0.16 s | 34 | transfer pending_review | 12 | - |
 | forecast_unavailable | `run_000001` | succeeded | 0.11 s | 34 | addition pending_review | 12 | - |
 | unsupported_question | `run_000001` | succeeded | 0.05 s | 3 | none | 0 | - |
-| addition_50k | `run_000001` | succeeded | 0.13 s | 34 | addition pending_review | 12 | - |
+| addition_50k | `run_000001` | succeeded | 0.12 s | 34 | addition pending_review | 12 | - |
 | stale_recovery | `run_000001` | succeeded | 0.01 s | 1 | addition pending_review | 0 | - |
 | addition_50k_after_interpret | `run_000002` | succeeded | 0.06 s | 6 | addition pending_review | 0 | - |
 

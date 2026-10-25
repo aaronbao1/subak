@@ -549,8 +549,11 @@ class FakeDroidRunner:
             return (f"{r['team']}: allocation {r['allocation']}, recorded {r['recorded_spend']}{flag}, "
                     f"projected {proj_txt}")
 
+        latest = max((str(t.get("last_record_at"))[:10] for t in spend["teams"] if t.get("last_record_at")),
+                     default=None)
+        through = f" (latest record dated {latest})" if latest else ""
         parts = [f"Period {period['id']} ({period['starts_on']} to {period['ends_on']}), {unit}; recorded spend "
-                 f"is to date as of {spend['as_of']}.", "; ".join(team_text(r) for r in rows) + "."]
+                 f"is to date as of {spend['as_of']}{through}.", "; ".join(team_text(r) for r in rows) + "."]
         if cov["status"] != "complete":
             msg = f"Spend coverage is {cov['status']}: the recorded figures may be incomplete"
             if unattributed["record_count"]:

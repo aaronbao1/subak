@@ -331,6 +331,8 @@ def test_question_is_read_only_answer(c):
     reply = say(c, "How is product tracking against its allocation?")
     assert reply["content"].startswith("**Read as:** a question")
     assert "proposalId" not in reply and reply["toolCalls"]
+    # The answer names the data's own as-of day (the fixed Oct 20 export), not only the clock time.
+    assert "(latest record dated 2026-10-20)" in reply["content"]
     assert by_team(get(c, "budgets"), "allocated") == ALLOCATED
 
 
