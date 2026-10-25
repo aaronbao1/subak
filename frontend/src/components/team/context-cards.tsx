@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ContextItem, Person, Team } from "@/lib/contracts";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleHelp, History, Minus } from "lucide-react";
-import { SourceBadge, sourceOf } from "@/components/context/source-brand";
+import { SourceBadge, SourceLogos, sourceOf } from "@/components/context/source-brand";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/components/shared/motion";
@@ -129,8 +129,11 @@ function ContextRow({ item, allItems, people, open, onToggle, onViewSource }: {
         className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left outline-none transition-colors duration-300 hover:bg-popover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       >
         <Icon aria-label={superseded ? "Superseded" : EFFECT_LABEL[item.expectedEffect]} strokeWidth={1.75} className={cn("size-4 shrink-0", tone)} />
-        <span className={cn("min-w-0 flex-1 truncate text-sm", superseded ? "text-muted-foreground line-through decoration-muted-foreground" : "text-foreground")}>
-          {item.title}
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className={cn("truncate text-sm", superseded ? "text-muted-foreground line-through decoration-muted-foreground" : "text-foreground")}>
+            {item.title}
+          </span>
+          <SourceLogos sources={item.sources} className={cn(superseded && "opacity-50")} />
         </span>
         <span className="hidden min-w-0 shrink items-center gap-x-1.5 text-xs text-muted-foreground sm:flex">
           {superseded ? <span>Superseded</span> : item.claimType && <span>{CLAIM_LABEL[item.claimType]}</span>}

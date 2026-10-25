@@ -240,11 +240,11 @@ export function ForecastPanel({ scopeType = "company", scopeId, embedded = false
       </div>
     </div>
 
-    {/* Next four weeks and per-team split */}
+    {/* Next month (four weeks) and per-team split */}
     <div className={`mt-5 grid gap-6 border-t border-border pt-4 ${teamViews.length ? "md:grid-cols-2" : ""}`}>
       <div className="min-w-0 space-y-2">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="eyebrow">Next four weeks</span>
+          <span className="eyebrow">Next month</span>
           <span className="num text-xs text-foreground" title={dates(view.weekly[0]?.start, view.weekly.at(-1)?.end)}>{amount(fourWeeks, unit)}</span>
         </div>
         <ColumnStrip items={weeks} unit={unit} />

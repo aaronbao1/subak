@@ -63,18 +63,21 @@ export function SignedBar({ value, max }: { value?: number; max: number }) {
 }
 
 /** Columns for a short horizon; partial buckets are lighter. Exact values live in the title. */
+/**
+ * Short horizon as one compact row per period: label, bar scaled to the largest period, amount.
+ * A partial period (the current week) is drawn lighter and labeled, so it never reads as a dip.
+ */
 export function ColumnStrip({ items, unit }: { items: Array<{ key: string; label: string; value?: number; partial?: boolean }>; unit: string }) {
   const max = Math.max(1, ...items.map(i => i.value ?? 0));
-  return <div className="flex h-20 items-end gap-2">
-    {items.map((item, i) => <div key={item.key} className="flex min-w-0 flex-1 flex-col items-center gap-1.5" title={`${item.label}: ${exact(item.value, unit)}${item.partial ? " · partial week" : ""}`}>
-      <div className="flex h-12 w-full max-w-6 items-end">
-        {item.value === undefined
-          ? <div className="h-full w-full rounded-t-sm border border-dashed border-border" />
-          : <div className={`animate-grow-y w-full rounded-t-sm ${item.partial ? "bg-foreground/25" : "bg-foreground/60"}`} style={{ height: `${Math.max(2, (item.value / max) * 100)}%`, animationDelay: `${i * 60}ms` }} />}
-      </div>
-      <span className="num truncate text-[11px] text-muted-foreground">{item.label}</span>
-    </div>)}
-  </div>;
+  return <ul className="space-y-1.5">
+    {items.map((item, i) => <li key={item.key} className="grid grid-cols-[6.5rem_minmax(0,1fr)_4.5rem] items-center gap-3 text-xs" title={`${item.label}: ${exact(item.value, unit)}${item.partial ? " · partial week" : ""}`}>
+      <span className="num truncate text-muted-foreground">{item.label}{item.partial && <span className="text-[10px]"> · so far</span>}</span>
+      <span className="relative h-1.5 overflow-hidden rounded-sm bg-border">
+        {item.value !== undefined && <span className={`animate-grow-x absolute inset-y-0 left-0 rounded-sm ${item.partial ? "bg-foreground/30" : "bg-foreground/70"}`} style={{ width: `${Math.max(1.5, (item.value / max) * 100)}%`, animationDelay: `${i * 60}ms` }} />}
+      </span>
+      <span className="num text-right text-foreground">{item.value === undefined ? "—" : amount(item.value, unit, true)}</span>
+    </li>)}
+  </ul>;
 }
 
 export function Swatch({ className, children }: { className: string; children: ReactNode }) {

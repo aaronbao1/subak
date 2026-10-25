@@ -5,7 +5,7 @@ import type { Unit } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CLAIM_LABEL, CONFIDENCE_LABEL, fmtDate } from "@/components/team/labels";
-import { SourceBadge, sourceOf } from "@/components/context/source-brand";
+import { SourceBadge, SourceLogos, sourceOf } from "@/components/context/source-brand";
 import { SIGNAL_LABEL } from "@/components/person/signal-badges";
 import { rowNet, type EvidenceRow } from "./derive";
 import { attributionText, CATEGORY_LABEL, dateRangeText, magnitudeText, signedAmount, signedPct } from "./labels";
@@ -56,8 +56,11 @@ export function EvidenceRowItem({ row, unit, max, open, onToggle, onViewSource, 
         )}
       >
         <EffectArrow effect={item.expectedEffect} muted={superseded} hollow={interpretation} />
-        <span className={cn("truncate text-sm", interpretation && "italic", superseded ? "text-muted-foreground line-through decoration-muted-foreground" : "text-foreground")}>
-          {item.title}
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={cn("truncate text-sm", interpretation && "italic", superseded ? "text-muted-foreground line-through decoration-muted-foreground" : "text-foreground")}>
+            {item.title}
+          </span>
+          <SourceLogos sources={item.sources} className={cn(superseded && "opacity-50")} />
         </span>
         <span className="hidden items-center sm:flex">
           {people.length > 0 ? <InitialsStack people={people} teams={teams} /> : row.scope === "company" ? <span className="text-xs text-muted-foreground">All teams</span> : <TeamDots teams={teams} />}

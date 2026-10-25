@@ -5,6 +5,7 @@ import type { ContextItem, Person, Team } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fmtDate } from "@/components/team/labels";
+import { SourceLogos } from "@/components/context/source-brand";
 import { EFFECT_TEXT } from "@/components/shared/tone";
 
 const SHOWN = 4;
@@ -65,8 +66,9 @@ export function RecentEvidence({ items, teams, people }: { items: ContextItem[];
                     <span className="sr-only">{e.label}: </span>
                     <span className="line-clamp-2 text-sm leading-snug text-foreground" title={e.label}>{item.title}</span>
                   </span>
-                  <span className="num mt-2 block truncate pl-6 text-xs text-muted-foreground">
-                    {whoText(item, teams, people)}{item.effectiveFrom ? ` · ${fmtDate(item.effectiveFrom)}` : ""}
+                  <span className="mt-2 flex items-center gap-2 pl-6 text-xs text-muted-foreground">
+                    <SourceLogos sources={item.sources} />
+                    <span className="num truncate">{whoText(item, teams, people)}{item.effectiveFrom ? ` · ${fmtDate(item.effectiveFrom)}` : ""}</span>
                   </span>
                 </Link>
               </li>

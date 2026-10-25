@@ -182,3 +182,16 @@ export function Avatar({ name, accent, className }: { name: string; accent: stri
     </span>
   );
 }
+
+/** The distinct integrations an item came from, as a row of small logos (max 3), with the names on hover. */
+export function SourceLogos({ sources, className, max = 3 }: { sources: Pick<SourceRef, "integration">[]; className?: string; max?: number }) {
+  const list = Array.from(new Set(sources.map(sourceOf)));
+  if (list.length === 0) return null;
+  const names = list.map((i) => SOURCE_META[i].label).join(", ");
+  return (
+    <span className={cn("inline-flex shrink-0 items-center gap-1", className)} title={`From ${names}`} aria-label={`From ${names}`}>
+      {list.slice(0, max).map((i) => <SourceLogo key={i} integration={i} className="size-3.5" />)}
+      {list.length > max && <span className="text-[10px] text-muted-foreground">+{list.length - max}</span>}
+    </span>
+  );
+}

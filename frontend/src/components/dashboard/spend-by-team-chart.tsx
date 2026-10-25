@@ -18,7 +18,7 @@ const HALF_DAY = 43_200_000;
 /** Up to two weeks of days get one tick per day with a weekday label; longer ranges fall back to weekly ticks. */
 const DAILY_TICK_LIMIT = 14;
 /** How much of the history is in view. 0 means everything. */
-const ZOOMS = [{ days: 7, label: "Week" }, { days: 28, label: "4 weeks" }, { days: 0, label: "All" }] as const;
+const ZOOMS = [{ days: 7, label: "Week" }, { days: 28, label: "Month" }, { days: 0, label: "All" }] as const;
 type ZoomDays = (typeof ZOOMS)[number]["days"];
 /** The categorical palette has 8 slots. Past that, the smallest teams fold into one neutral "Other" line. */
 const MAX_LINES = 8;
