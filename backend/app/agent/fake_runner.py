@@ -11,6 +11,9 @@ the same scoped toolbox the SDK runner gets, so every claim it makes is verified
   from `list_people`, kept only when the person is on the team and named in the text) and one
   company-scope model change. Every quote is located verbatim in the stored content first; an expected
   passage that is missing is reported, never invented.
+  A scoped run (`params.document_ids`) reads only those documents and skips the "expected document
+  missing" checks; documents outside the playbook (any non-Northstar corpus) yield no signal, only a
+  `document_not_interpreted` warning each.
 - propose_allocation: reads budgets, spend, forecast (snapshot) and current signals (interpreting the
   corpus first if no current signal exists) and drafts outcome B (addition, prioritize research) or
   outcome A (transfer). The proposal stays `pending_review`; the runner never reports it as saved.
@@ -209,6 +212,7 @@ class FakeDroidRunner:
 
     def _interpret(self, tools: AgentToolbox) -> dict[str, Any]:
         tools.emit("assistant_text", {"text": "Reading the company corpus to find what is planned or changing."})
+        scoped = getattr(tools, "doc_scope", None) is not None
         listing = tools.search_corpus(query="")
         docs = [tools.read_document(item["id"]) for item in listing["items"]]
         by_id = {d["id"]: d for d in docs}
@@ -253,6 +257,8 @@ class FakeDroidRunner:
         people = tools.list_people()["items"]
         for key in TEAM_KEYS + PERSON_KEYS + COMPANY_KEYS:
             doc = current_by_key.get(key)
+            if doc is None and scoped:
+                continue  # a scoped batch (python -m app.interpret) only covers the documents it was given
             if doc is None:
                 warnings.append({"code": "expected_document_missing", "message": f"no current document {key!r}"})
                 tools.emit("warning", warnings[-1])

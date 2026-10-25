@@ -108,6 +108,12 @@ def task_prompt(task: AgentTask, current_signals: list[dict[str, Any]] | None = 
     covers the prioritized team, the prompt lists them and omits the interpretation steps."""
     if task.type == "interpret_corpus":
         body = load_prompt("interpret_corpus")
+        if task.params.get("document_ids"):
+            # A scoped batch (python -m app.interpret): the toolbox lists and allows only these ids.
+            body += ("\n\nScope: this run covers ONLY these documents (search_corpus lists only them; reading or "
+                     "citing any other document is refused with `document_out_of_scope`). Interpret each one; "
+                     "record nothing for a document that changes no AI usage in the current period, and say so "
+                     "in the summary.\n" + "\n".join(f"- {d}" for d in task.params["document_ids"]))
     elif task.type == "propose_allocation" and task.params.get("stale_proposal_id"):
         body = load_prompt("recover_stale_proposal").replace("{proposal_id}", str(task.params["stale_proposal_id"]))
     elif task.type == "propose_allocation":

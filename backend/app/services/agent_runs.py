@@ -23,11 +23,14 @@ from app.agent.runner import AgentTask, RunnerUnavailable
 from app.agent.toolbox import BackendToolbox
 from app.core.actors import Actor
 from app.core.errors import DomainError
-from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, Proposal, Team
+from app.db.models import AgentRun, AgentRunEvent, AgentRunStep, ContextSignal, CorpusDocument, Proposal, Team
 from app.db.session import transaction
 from app.schemas.agent import AgentRunCreate, AnswerParams, ProposeParams
 
 MAX_BACKGROUND_RUNS = 2
+# interpret_corpus `params.document_ids`: a scoped batch (python -m app.interpret). Matches the
+# toolbox's search cap, so a scoped run always sees every document it was given.
+MAX_SCOPE_DOCUMENTS = 20
 _background = threading.BoundedSemaphore(MAX_BACKGROUND_RUNS)
 
 
@@ -71,10 +74,41 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
                                for e in exc.errors()]) from exc
         if a.chart is not None:
             params = {"chart": a.chart.model_dump(exclude_none=True)}
+    elif body.task_type == "interpret_corpus" and body.params:
+        params = _scope_params(session, body.params)
     elif body.params:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
     return AgentTask(type=body.task_type, instruction=body.instruction, params=params)
+
+
+def _scope_params(session: Session, raw: dict[str, Any]) -> dict[str, Any]:
+    """interpret_corpus takes one optional param, `document_ids`: interpret only these current documents.
+    Anything else is still `unexpected_params`."""
+    extra = sorted(k for k in raw if k != "document_ids")
+    if extra:
+        raise _validation([{"code": "unexpected_params",
+                            "message": f"interpret_corpus takes only document_ids, not {', '.join(extra)}",
+                            "field": "params"}])
+    ids = raw.get("document_ids")
+    if (not isinstance(ids, list) or not ids or len(ids) > MAX_SCOPE_DOCUMENTS
+            or not all(isinstance(i, str) and i for i in ids) or len(set(ids)) != len(ids)):
+        raise _validation([{"code": "invalid_params",
+                            "message": f"document_ids must be 1-{MAX_SCOPE_DOCUMENTS} distinct document ids",
+                            "field": "params.document_ids"}])
+    reasons = []
+    for doc_id in ids:
+        doc = session.get(CorpusDocument, doc_id)
+        if doc is None:
+            reasons.append({"code": "unknown_document", "message": f"document {doc_id!r} not found",
+                            "field": "params.document_ids"})
+        elif doc.superseded_by_document_id is not None:
+            reasons.append({"code": "document_superseded",
+                            "message": f"document {doc_id!r} is superseded; scope only current documents",
+                            "field": "params.document_ids"})
+    if reasons:
+        raise _validation(reasons)
+    return {"document_ids": list(ids)}
 
 
 def _recovery_params(session: Session, raw: dict[str, Any], proposal_id: str) -> dict[str, Any]:
@@ -124,7 +158,9 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
     toolbox = BackendToolbox(session_factory=factory, run_id=run_id, source=source, runner_kind=kind,
                              clock=clock, ids=ids, forecast_provider=app_state.forecast_provider,
                              rebase_target=(task.params.get("stale_proposal_id")
-                                            if task.type == "propose_allocation" else None))
+                                            if task.type == "propose_allocation" else None),
+                             doc_scope=(task.params.get("document_ids")
+                                        if task.type == "interpret_corpus" else None))
     if unavailable is not None:
         toolbox.emit("error", {"code": "runner_unavailable", "reason": unavailable.reason, "message": str(unavailable)},
                      source="backend")
