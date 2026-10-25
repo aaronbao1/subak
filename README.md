@@ -1,67 +1,97 @@
-# Evidence-bound forecasting
+# AI Spend Planner
 
-A runnable Python reference implementation of the forecasting architecture in [the research dossier](docs/forecasting-research/README.md). It preserves financial meaning, historical availability, source permissions, model eligibility and immutable reviewed outputs. Backend owns source acquisition and financial transactions; Factory owns evidence extraction/explanation; this package owns numerical forecasts and their evaluation.
+A finance workspace for understanding AI spending, comparing expected team needs, and planning internal budgets. Built for Cal Hacks 13.0.
 
-The core and synthetic integration tests run locally. No enterprise dataset, authenticated provider account, live Factory runtime or prospective outcomes were supplied. The included model ranking is a synthetic mechanism demonstration, not a production champion or enterprise accuracy claim.
+The goal is to bring spending records, forecasts, and company plans into one place so finance teams can investigate changes and make informed allocation decisions.
 
-## Run
+**Preliminary status:** The overview and team screens run with mock data, and the Python forecasting package runs independently. The assistant drawer and decisions page are placeholders. Connecting the UI, persistent product backend, forecasting service, and live Factory assistant remains integration work.
 
-Python 3.9 or newer. The core has no third-party runtime dependency. NumPy/scikit-learn enable the actual regression and tabular challengers.
+## The intended workflow
+
+1. Review company and team spending alongside internal allocations.
+2. Compare projected needs and inspect the assumptions, source coverage, and uncertainty behind them.
+3. Consult company plans and correspondence to understand changes in workload.
+4. Review a proposed redistribution or additional funding allocation, then record finance's decision.
+
+The shared demo company is **Northstar Software**, with research, product, and engineering teams. Its example asks how to support research when it is projected to exceed its allocation while product has headroom. Demo spending, budgets, documents, and UI projections are synthetic.
+
+Allocations are internal planning records. They do not transfer vendor credits, purchase compute, or change provider limits. Usage, reported charges, cost estimates, and internal budgets retain their own units and provenance.
+
+## What is in the repository
+
+| Component | Role | Current state |
+| --- | --- | --- |
+| [Frontend](frontend/) | Finance dashboard, team comparisons, spending charts, and evidence inspection | Next.js / React / TypeScript UI with an in-memory mock client and an HTTP client. Overview and team views are implemented; assistant and decisions views are placeholders. |
+| [Forecasting](src/forecasting/) | Numerical forecasts, scenarios, pricing, and evaluation | Runnable Python reference implementation with a CLI, local service example, SQLite artifacts, and tests. Includes baseline models, optional regression models, and joint workload/pricing paths. |
+| [Backend reference components](docs/implementation/consumer-contracts.md) | Source handling, financial validation, and saved results | Reference ingestion, storage, and budget-decision controls are implemented in Python. A complete product backend exposing the frontend's API still needs integration. |
+| [Factory / Droid workstream](docs/factory-agent-plan.md) | Interpret company context, cite evidence, and help finance prepare proposals | Planned runtime integration. Reference context contracts exist; live Droid execution is not connected to the UI. |
+| [Research and benchmarks](docs/robustness-2026-10-24/README.md) | Document assumptions, test mechanisms, and evaluate forecasting approaches | Research dossier, regression tests, synthetic examples, and a limited real-trace benchmark with recorded execution evidence. |
+
+## Run locally
+
+Run each component separately. Commands below assume a checkout of the current `main` branch.
+
+### Frontend demo
+
+Requires **Node.js 20.9+** and npm. From the repository root:
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+Open [localhost:3000](http://localhost:3000). The default demo uses in-memory data and needs no backend or API key. Mock mutations reset on reload. Use `?teams=default` for Northstar or `?teams=N` for a generated company with 0–16 teams.
+
+From `frontend/`, run `npm run lint` for linting and `npm run build` for a production build.
+
+### Forecasting reference demo
+
+Requires **Python 3.9+**. From the repository root, in a separate terminal:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[models,test]'
 .venv/bin/python -m pytest -q
 .venv/bin/forecasting demo --output-dir artifacts/northstar-first-run
+```
+
+The demo imports synthetic source data, saves forecasts and scenarios, and exercises two independent allocation alternatives through the reference backend. Use a fresh output directory for each run. Finance approvals in this demo are simulated.
+
+The core package has no third-party runtime dependencies; the install above adds the optional numerical models and test dependencies. The Chronos benchmark uses a separate Python 3.11 environment and its own [dependency file](benchmarks/robustness/requirements-chronos.txt).
+
+Additional CLI examples:
+
+```sh
+.venv/bin/forecasting models
 .venv/bin/forecasting evaluate --seed 7 --output artifacts/evaluation.json
+.venv/bin/forecasting forecast examples/northstar-config.json --store artifacts/results.sqlite
 ```
 
-The demo requires a fresh output directory, writes normalized source/config files, archives raw bytes, saves immutable forecasts/scenarios, and executes the two independent Northstar allocation alternatives through the reference backend. Its computed forecasts differ from the original illustrative placeholders. Every number is synthetic. Both backend reviews are explicitly simulated finance actors.
+## Connecting the components
 
-If dependencies are already installed, the verified offline source invocation is:
+The intended flow is: backend acquires spending and company documents; Factory interprets context; forecasting produces numerical results; the frontend presents evidence and proposals; finance approves changes that the backend validates and saves.
 
-```sh
-PYTHONPATH=src python3 -m pytest -q
-PYTHONPATH=src python3 -m forecasting forecast examples/northstar-config.json --store artifacts/results.sqlite
-PYTHONPATH=src python3 -m forecasting models
-PYTHONPATH=src python3 -m forecasting show RESULT_ARTIFACT_ID --store artifacts/results.sqlite --tenant northstar --source billing
-```
+The frontend's payload definitions live in [its TypeScript contracts](frontend/src/lib/contracts/index.ts). The [frontend integration guide](docs/frontend-integration.md) lists the required `/api/*` endpoints. Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to select the HTTP client once a compatible backend is available.
 
-`show` assesses current age and source access without altering the reviewed result. Unavailable forecasts retain measured spending; an unsupported probability is never displayed as zero.
+The forecasting package exposes a separate `/v1/*` interface through [the local WSGI example](examples/serve.py). It is not a drop-in implementation of the frontend API. See the [forecasting API guide](docs/implementation/api.md) for authentication, trusted data inputs, and request/response contracts, and the [consumer guide](docs/implementation/consumer-contracts.md) for reference handoffs.
 
-For actual authorized files, acquisition and historical availability are separate:
+The remaining product integration work is to connect those contracts, implement the live assistant and decision UI, and verify that an approved allocation persists and appears consistently across the dashboard and assistant.
 
-```sh
-PYTHONPATH=src python3 -m forecasting ingest your-config.json --store artifacts/production-reference.sqlite
-# Later, use a nonfuture reporting-midnight as_of in the same config/store.
-PYTHONPATH=src python3 -m forecasting forecast your-config.json --store artifacts/production-reference.sqlite
-```
+## Evidence and current limits
 
-Use `evidence_class: "authorized_local_file"` for these files. Original receipts and coverage revisions persist in the adjacent `production-reference-sources.sqlite`; synthetic examples use a separate namespace and cannot be relabeled as historical real acquisition. Fresh imports never enter an earlier origin. Reimporting identical active bytes preserves their first receipt; a replacement reverting to earlier content records its new activation time.
+The forecasting tests check financial arithmetic, data boundaries, permissions, historical availability, and reference workflows. Synthetic demos establish executable behavior; they do not establish enterprise forecasting accuracy.
 
-Delayed sources can opt into an explicit `history_end` (exclusive end of the contiguous mature training prefix) and `max_history_lag_days` (default 0, maximum 30). The service forecasts across this bridge and returns only genuine future dates. A separate same-source snapshot retains known partial incurred amounts in the gap; missing late charges stay unknown. Direct cumulative slicing and new entities without training support are unavailable. Missing dates inside the training prefix are still rejected. See the [full delayed-source contract](docs/implementation/api.md#durable-acquisition-and-delayed-daily-data).
+A separate benchmark ran pinned **Chronos-Bolt Tiny** weights on a public BurstGPT input-token trace and completed 40 of 40 scheduled forecasts. Results were mixed across one-hour and four-hour horizons. The [benchmark report](docs/robustness-2026-10-24/benchmark.md) and [verification record](docs/robustness-2026-10-24/verification.md) document the results and limitations. This benchmark is separate from the frontend's placeholder projections.
 
+Live enterprise billing connections, production authentication, deployed end-to-end operation, and live Factory runtime integration are not established by the current reference implementation.
 
-## What runs
+## Further reading
 
-- Strict versioned Decimal financial contracts; authorized normalized JSON/CSV and native Anthropic Console Cost Report file imports; atomic replacement, delta, revision and counter semantics; exact arithmetic, raw archives and replay manifests.
-- Coverage and maturity gates, as-of source/processing timestamps, bitemporal attribution, explicit shared/unattributed amounts and company conservation.
-- Ten real numerical candidates: last observation, trailing/weekday means, seasonal naive, exponential smoothing, damped local linear trend, calendar ridge regression, pooled ridge, tabular daily mean, and direct cumulative tabular regression. Eligibility and dependency failures are explicit.
-- Full-period/remainder forecasts, coherent entity sums, disclosed point versus mean semantics, full-contract linear/graduated/volume pricing and explicit conditional workload scenarios.
-- Availability-aware rolling origins, locked development/calibration/final selection, proper scores, all-opportunity denominators, cohort and donor diagnostics, cumulative split-conformal intervals and explicit weighted joint-path arithmetic. Serving does not automatically promote these uncertainty capabilities.
-- SQLite immutable artifacts; authenticated WSGI adapter; source-backed context; independent backend finance review, current-authority/stale-evidence checks, exactly-once receipts and frontend reference adapters.
-
-Optional neural/foundation/LLM/session methods, arbitrary distributions, automated safe-transfer recommendations, latent unmet demand, causal savings, native account acquisition and live Factory execution remain explicitly unsupported or evidence-blocked. The [capability and requirement ledger](docs/implementation/requirements-and-capabilities.md) and [all 206 edge records](docs/implementation/edge-ledger.json) preserve exact scope and residual limits.
-
-## Integrate
-
-See [API and schema contracts](docs/implementation/api.md), [consumer wiring](docs/implementation/consumer-contracts.md), [verification evidence](docs/implementation/verification.md), [dependency/license inventory](docs/implementation/dependencies.md) and [implementation plan](docs/implementation/plan.md).
-
-`ForecastApplication` is a thin WSGI boundary. Your backend supplies authentication and a trusted snapshot resolver; HTTP request bodies cannot choose files or grant permissions. A local bearer-authenticated example is included:
-
-```sh
-# Set FORECASTING_DEMO_TOKEN privately in your environment first.
-PYTHONPATH=src python3 examples/serve.py --config examples/northstar-config.json --store artifacts/service.sqlite --port 8080
-```
-
-Routes: `GET /v1/models`, `POST /v1/forecast`, `GET /v1/results/{artifact_id}`. The example binds to loopback and fixes source/tenant scope at startup. It is not production authentication or a deployment.
+- [Product scope and shared demo story](docs/ai-spend-master-plan.md)
+- [Frontend integration contract](docs/frontend-integration.md)
+- [Backend and ingestion plan](docs/backend-plan.md)
+- [Factory assistant plan](docs/factory-agent-plan.md)
+- [Forecasting capabilities and limits](docs/implementation/requirements-and-capabilities.md)
+- [Forecasting research dossier](docs/forecasting-research/README.md)
+- [Joint forecasting and benchmark work](docs/robustness-2026-10-24/README.md)
