@@ -121,8 +121,16 @@ def seed_spend(session: Session, *, clock: Clock, ids: IdFactory):
 
 
 def seed(session: Session, *, clock: Clock, ids: IdFactory, include_spend: bool = True,
-         include_corpus: bool = True, include_budget: bool = True) -> bool:
-    """Seed everything; returns False (and does nothing) if the database is already seeded."""
+         include_corpus: bool = True, include_budget: bool = True, interpret: str = "none",
+         settings=None) -> bool:
+    """Seed everything; returns False (and does nothing) if the database is already seeded.
+
+    `interpret` ("none" by default, "fake" or "live") then runs one audited `interpret_corpus` task on
+    the freshly seeded data (app/seed/interpret.py), so context signals exist on first load. It never
+    runs on an already seeded database. A failed or unavailable interpretation leaves the seed in place.
+    """
+    if interpret not in ("none", "fake", "live"):
+        raise ValueError(f"unknown interpret mode {interpret!r}")
     if is_seeded(session):
         return False
     seed_reference(session, clock=clock, ids=ids)
@@ -134,17 +142,31 @@ def seed(session: Session, *, clock: Clock, ids: IdFactory, include_spend: bool 
     if include_spend:
         seed_spend(session, clock=clock, ids=ids)
     session.commit()
+    if interpret != "none":
+        from app.config import Settings
+        from app.db.base import make_session_factory
+        from app.seed.interpret import interpret_at_seed
+
+        interpret_at_seed(make_session_factory(session.get_bind()), settings=settings or Settings(),
+                          clock=clock, ids=ids, mode=interpret)
     return True
 
 
-def reset_database(engine, session_factory, *, clock: Clock, ids: IdFactory) -> None:
-    """Drop every table, recreate, and reseed (demo reset)."""
+def reset_database(engine, session_factory, *, clock: Clock, ids: IdFactory, settings=None,
+                   forecast_provider=None) -> None:
+    """Drop every table, recreate, and reseed (demo reset), with the stand-in interpretation so the
+    dashboard shows context cards again (signals labeled `droid_fake`)."""
+    from app.config import Settings
     from app.db.base import Base, create_all
+    from app.seed.interpret import interpret_at_seed
 
     Base.metadata.drop_all(engine)
     create_all(engine)
     s = session_factory()
     try:
-        seed(s, clock=clock, ids=ids)
+        created = seed(s, clock=clock, ids=ids)
     finally:
         s.close()
+    if created:
+        interpret_at_seed(session_factory, settings=settings or Settings(), clock=clock, ids=ids, mode="fake",
+                          forecast_provider=forecast_provider)

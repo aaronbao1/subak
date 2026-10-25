@@ -104,7 +104,7 @@
       "name": "get_forecast"
     },
     {
-      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
+      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency. Read these before a proposal: when a current signal covers the team, cite it by id instead of re-reading documents.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {

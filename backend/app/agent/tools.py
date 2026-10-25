@@ -131,7 +131,9 @@ TOOLS: tuple[ToolDef, ...] = (
             "`unavailable`; never treat that as zero.",
             NoArgsIn),
     ToolDef("list_signals", "read",
-            "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
+            "Context signals already recorded (by finance or earlier Droid runs), with citation currency. "
+            "Read these before a proposal: when a current signal covers the team, cite it by id instead of "
+            "re-reading documents.",
             ListSignalsIn),
     ToolDef("list_people", "read",
             "People directory: active team members with id, team, name, role, primary_tool and "
