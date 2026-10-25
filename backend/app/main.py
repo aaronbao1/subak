@@ -58,8 +58,10 @@ def create_app(
     from app.services.forecast_freshness import invalidate_dependent_proposals
 
     from app.forecasting.repository import capture_repository_inputs, repository_snapshot_factory
-    forecast_store = ForecastStore(settings.db_path, on_input=invalidate_dependent_proposals)
-    app.state.session_factory.configure(info={'forecast_store': forecast_store, 'forecast_clock': app.state.clock.now})
+    forecast_store = ForecastStore(settings.db_path, on_input=lambda conn, record:
+        invalidate_dependent_proposals(conn, record, now=app.state.clock.now()))
+    session_info = {'forecast_store': forecast_store, 'forecast_clock': app.state.clock.now}
+    app.state.session_factory.configure(info=session_info)
     # Capture preexisting repository state at actual initialization time. This
     # explicit write never backdates knowledge or runs on forecast read paths.
     with app.state.session_factory() as session:
@@ -73,6 +75,20 @@ def create_app(
         forecast_store,
         snapshot_factory=snapshot_factory, now=lambda: app.state.clock.now().isoformat(),
     )
+    session_info['forecast_service'] = app.state.forecast_service
+    if settings.forecast_demo:
+        from app.forecasting.directory import snapshot_people
+        session_info['people_directory'] = lambda: snapshot_people(app.state.forecast_service.current_snapshot())
+    app.state.session_factory.configure(info=session_info)
+    # The seed CLI predates the bound input store. Capture existing native
+    # documents at startup receipt time, never by backdating their authored time.
+    from sqlalchemy import select
+    from app.db.models import CorpusDocument
+    from app.forecasting.native_evidence import capture_native_documents
+    with app.state.session_factory() as session:
+        capture_native_documents(session, list(session.scalars(select(CorpusDocument))),
+                                 now=app.state.clock.now())
+        session.commit()
     app.state.forecast_worker = ForecastWorker(app.state.forecast_service)
     app.state.forecast_provider = forecast_provider or provider_from_settings(
         settings.forecast_provider, forecast_service=app.state.forecast_service,

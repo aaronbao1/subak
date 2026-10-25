@@ -657,7 +657,13 @@ class FakeDroidRunner:
                              f"base effect {effect.get('base_delta','unavailable')}; {effect.get('qualification','')}")
             limitations.extend(str(x) for x in bundle.get("limitations", []))
         if action == "preview":
-            parts.append(f"Hypothetical scenario receipt {receipt.get('scenario_id',receipt.get('run_id'))}; published baseline unchanged.")
+            parts.append(f"Hypothetical scenario receipt {receipt.get('scenario_id',receipt.get('run_id'))}: "
+                         f"status {receipt.get('status', 'unknown')}; job {receipt.get('job_id', 'unknown')}; "
+                         "published baseline unchanged.")
+            if receipt.get("status") != "succeeded":
+                parts.append("Scenario results are not available yet.")
+            if receipt.get("last_error"):
+                parts.append(f"Last calculation error: {receipt['last_error']}.")
         elif action == "refresh":
             parts.append(f"Refresh receipt {receipt.get('id')}: status {receipt.get('status','unknown')}; publication is reported by the stored job.")
         parts.append("Limitations: " + ("; ".join(dict.fromkeys(limitations)) or

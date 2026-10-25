@@ -68,9 +68,22 @@ def _fit(snapshot, start, cutoff, limitations):
     """Fit weighted rates only on complete, available, mature observed days."""
     required = set(snapshot.get('required_sources', []))
     coverage = defaultdict(set)
+    latest_coverage = {}
     for row in snapshot.get('coverage', []):
-        if row.get('complete') is True and (not row.get('available_at') or _instant(row['available_at']) <= cutoff):
-            coverage[_day(row['date'])].add(row.get('source_id'))
+        available = _instant(row['available_at']) if row.get('available_at') else datetime.min.replace(tzinfo=timezone.utc)
+        if available > cutoff:
+            continue
+        revision = str(row.get('revision', row.get('source_revision', '')))
+        revision_key = (1, int(revision)) if revision.isdecimal() else (0, revision)
+        # Equal unidentified revisions are conservative: an incomplete attestation
+        # cannot be erased merely by reordering the same source/day payload.
+        stamp = (available, revision_key, row.get('complete') is not True)
+        identity = (_day(row['date']), row.get('source_id'))
+        if identity not in latest_coverage or stamp > latest_coverage[identity][0]:
+            latest_coverage[identity] = (stamp, row)
+    for (day, source), (_, row) in latest_coverage.items():
+        if row.get('complete') is True:
+            coverage[day].add(source)
     complete_through = _day(snapshot.get('history_complete_through', start-timedelta(days=1)))
     complete = {d for d, sources in coverage.items() if required and required <= sources and d <= complete_through}
     rows = []
@@ -283,13 +296,38 @@ def _select_drivers(snapshot, drivers, fits, cutoff, limitations):
             if 'exposure' in reason.lower():limitations.add(reason)
         else:candidates.append(d)
     conflicts=set()
-    for i,a in enumerate(candidates):
-        for b in candidates[i+1:]:
+    def scopes_overlap(a, b, first, last):
+        for fit in fits.values():
+            original=fit['component']
+            if a['kind'] not in ('workload','adoption'):
+                if _matches(a,original) and _matches(b,original):return True
+                continue
+            # These effects execute against membership at the target date, not
+            # the historical component's team. Check each constant-state segment.
+            memberships=[(m,m.get('team_id')) for m in snapshot.get('memberships',[])
+                         if m.get('person_id') is not None and m['person_id']==original['person_id']]
+            memberships.extend((d,d['parameters']['team_id']) for d in candidates
+                               if d['kind']=='membership' and d['id'] not in conflicts and _matches(d,original))
+            boundaries={first}
+            for member,_ in memberships:
+                for key in ('effective_from','effective_to'):
+                    if member.get(key) and first<_day(member[key])<last:boundaries.add(_day(member[key]))
+            for day in boundaries:
+                component=dict(original)
+                for member,team in memberships:
+                    if _active(member,day):component['team_id']=team
+                if _matches(a,component) and _matches(b,component):return True
+        return False
+    # Resolve membership conflicts first so an excluded move cannot create a
+    # spurious collision between otherwise disjoint absolute workload states.
+    ordered=sorted(candidates,key=lambda d:d['kind']!='membership')
+    for i,a in enumerate(ordered):
+        for b in ordered[i+1:]:
             if a['kind']!=b['kind']:
                 continue
-            overlap=max(_day(a.get('effective_from','0001-01-01')),_day(b.get('effective_from','0001-01-01'))) < min(_day(a.get('effective_to') or '9999-12-31'),_day(b.get('effective_to') or '9999-12-31'))
-            scopes=any(_matches(a,f['component']) and _matches(b,f['component']) for f in fits.values())
-            if overlap and scopes and (a.get('parameters')!=b.get('parameters') or a.get('scope')!=b.get('scope')):
+            first=max(_day(a.get('effective_from','0001-01-01')),_day(b.get('effective_from','0001-01-01')))
+            last=min(_day(a.get('effective_to') or '9999-12-31'),_day(b.get('effective_to') or '9999-12-31'))
+            if first<last and scopes_overlap(a,b,first,last) and (a.get('parameters')!=b.get('parameters') or a.get('scope')!=b.get('scope')):
                 conflicts.update((a['id'],b['id']))
     accepted=[]
     seen=set()
@@ -309,8 +347,26 @@ def _parameter(parameters, name, branch):
     return _number(parameters.get(name+'_'+branch, parameters[name]))
 
 
+def _driver_states(drivers):
+    """Group repeated evidence of one absolute state without losing its dates."""
+    states=[]
+    for driver in drivers:
+        state=next((group for group in states if all(driver.get(key,{})==group[0].get(key,{})
+                   for key in ('kind','scope','parameters'))),None)
+        if state is None:states.append([driver])
+        else:state.append(driver)
+    return states
+
+
+def _active_states(states, day):
+    for group in states:
+        active=next((driver for driver in group if _active(driver,day)),None)
+        if active is not None:yield active
+
+
 def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, period_start, end):
     entries=[]
+    states=_driver_states(drivers)
     def state_at(fit,d):
         component=dict(fit['component'])
         exposure=fit['exposures'][d.weekday()]
@@ -319,8 +375,8 @@ def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, 
                 component['team_id']=membership.get('team_id')
                 if 'exposure' in membership and fit['has_exposure']:
                     exposure=fit['exposures'][d.weekday()]*_number(membership['exposure'])
-        for driver in drivers:
-            if driver['kind']=='membership' and _matches(driver,fit['component']) and _active(driver,d):
+        for driver in _active_states(states,d):
+            if driver['kind']=='membership' and _matches(driver,fit['component']):
                 p=driver['parameters'];component['team_id']=p['team_id']
                 if 'exposure' in p and fit['has_exposure']:
                     exposure=fit['exposures'][d.weekday()]*_parameter(p,'exposure',branch)
@@ -336,8 +392,8 @@ def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, 
             rate=fit['rates'][d.weekday()][branch]
             if rate is None:rate=fit['rates'][d.weekday()]['base']
             component,exposure=state_at(fit,d)
-            for driver in drivers:
-                if not _matches(driver,component) or not _active(driver,d):continue
+            for driver in _active_states(states,d):
+                if not _matches(driver,component):continue
                 p=driver['parameters']
                 if driver['kind']=='workload':
                     affected=[state_at(f,d) for f in fits.values() if _matches(driver,state_at(f,d)[0])]
@@ -346,12 +402,13 @@ def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, 
                     exposure=_parameter(p,'exposure',branch)*weight
             daily[d]={'date':d,'component':component,'quantity':0. if exposure==0 else None if rate is None else rate*exposure,'recorded':False,'fixed':False}
         # Move existing future workload one-to-one; no arbitrary count multiplier.
-        for driver in drivers:
+        for group in states:
+            driver=group[0]
             if driver['kind']!='project_schedule' or not _matches(driver,original):continue
             p=driver['parameters'];a,b,c=_day(p['from_start']),_day(p['from_end']),_day(p['to_start'])
             moved=[]
             for d in _days(a,b):
-                if d in daily and _active(driver,d):
+                if d in daily and any(_active(member,d) for member in group):
                     destination=c+(d-a)
                     moved.append((destination,daily[d]['quantity']))
                     daily[d]['quantity']=0.
@@ -360,8 +417,8 @@ def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, 
                     daily[destination]['quantity']=None if quantity is None or daily[destination]['quantity'] is None else daily[destination]['quantity']+quantity
         for d,row in daily.items():
             remaining=row['quantity'];adopted=[]
-            for driver in drivers:
-                if driver['kind']!='adoption' or not _matches(driver,row['component']) or not _active(driver,d):continue
+            for driver in _active_states(states,d):
+                if driver['kind']!='adoption' or not _matches(driver,row['component']):continue
                 p=driver['parameters'];share=_parameter(p,'share',branch)
                 component=dict(row['component']);component['configuration_id']=p['configuration_id']
                 if p.get('billing_pool'):component['billing_pool']=p['billing_pool']
@@ -371,7 +428,7 @@ def _quantity_paths(snapshot, fits, observed, complete, drivers, branch, start, 
     return entries
 
 
-def _price(snapshot, entries, complete, drivers, branch, start, period_start, end, cutoff, limitations):
+def _price(snapshot, entries, complete, drivers, branch, start, period_start, end, cutoff, limitations, *, horizon_end=None):
     currency=snapshot.get('target',{}).get('unit','USD')
     quantity_target=snapshot.get('target',{}).get('quantity') in ('usage','quantity','tokens')
     output=[]
@@ -440,7 +497,9 @@ def _price(snapshot, entries, complete, drivers, branch, start, period_start, en
     fixed_contracts=defaultdict(list)
     for tariff in tariffs:
         fixed_date=_day(tariff.get('period_start',period_start))
-        if not period_start<=fixed_date<end:continue
+        # Daily/weekly paths may extend past the displayed quarter. Keep every
+        # known obligation on that common path; quarter views slice it by date.
+        if not period_start<=fixed_date<(horizon_end or end):continue
         if tariff.get('known_at') and _instant(tariff['known_at'])>cutoff:continue
         if tariff.get('fixed',0)==0 and tariff.get('fixed_known',True):continue
         identity=(tariff.get('billing_pool'),tariff.get('configuration_id'),tariff.get('meter'),str(fixed_date),tariff.get('period_end'))
@@ -524,7 +583,7 @@ def build_forecast(snapshot: dict, *, run_id: str, generated_at: str, drivers=No
         horizon_end=max(end,start-timedelta(days=start.weekday())+timedelta(days=28),start+timedelta(days=7))
         for branch in BRANCHES:
             entries=_quantity_paths(snapshot,fits,observed,complete,active,branch,start,period_start,horizon_end)
-            paths[branch],missing=_price(snapshot,entries,complete,active,branch,start,period_start,end,cutoff,limitations)
+            paths[branch],missing=_price(snapshot,entries,complete,active,branch,start,period_start,end,cutoff,limitations,horizon_end=horizon_end)
         return paths,missing
     priced,missing=run(selected)
     people={row.get('id'):row.get('name',row.get('id')) for row in snapshot.get('people',[])}

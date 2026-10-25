@@ -6524,6 +6524,47 @@
         ]
       }
     },
+    "/api/forecast-outcomes": {
+      "post": {
+        "operationId": "ingest_outcome_api_forecast_outcomes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Outcome",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Ingest Outcome",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
     "/api/forecast-refreshes": {
       "post": {
         "operationId": "refresh_api_forecast_refreshes_post",

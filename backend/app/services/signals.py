@@ -33,8 +33,9 @@ from sqlalchemy.orm import Session
 from app.core.actors import FINANCE_ROLES, Actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import AgentRun, ContextSignal, CorpusDocument, Person, Proposal, SignalCitation, Team
+from app.db.models import AgentRun, ContextSignal, CorpusDocument, Proposal, SignalCitation, Team
 from app.schemas.signals import ContextSignalIn, ContextSignalPatch
+from app.services import people as people_svc
 
 
 def _fail(code: str, message: str, reasons: list[dict]) -> DomainError:
@@ -78,7 +79,10 @@ def _scope_reasons(session: Session, body: ContextSignalIn) -> tuple[list[dict],
             return reasons, team
         people = []
         for pid in body.person_ids:
-            person = session.get(Person, pid)
+            try:
+                person = people_svc.get_person(session, pid)
+            except DomainError:
+                person = None
             if person is None or not person.active:
                 reasons.append({"code": "unknown_person", "field": "person_ids", "person_id": pid,
                                 "message": f"unknown or inactive person {pid!r}"})
@@ -115,14 +119,17 @@ def _ungrounded_people(session: Session, person_ids: list[str], docs: list[Corpu
     """Reasons for each person id that no cited document version names in its text."""
     if not person_ids:
         return []
-    active = list(session.scalars(select(Person).where(Person.active.is_(True))))
+    active = people_svc.list_people(session)
     first_counts: dict[str, int] = {}
     for p in active:
         first = p.name.split()[0].lower() if p.name.split() else ""
         first_counts[first] = first_counts.get(first, 0) + 1
     reasons = []
     for pid in person_ids:
-        person = session.get(Person, pid)
+        try:
+            person = people_svc.get_person(session, pid)
+        except DomainError:
+            person = None
         if person is None:
             continue  # already reported by _scope_reasons
         parts = person.name.split()
@@ -225,6 +232,10 @@ def create_signal(
         prior.status = "superseded"
     session.flush()
     session.refresh(sig)
+    from app.forecasting.native_evidence import capture_signal_documents
+    capture_signal_documents(session, sig, now=now)
+    if prior is not None:
+        capture_signal_documents(session, prior, now=now)
     return sig, corrected_flags
 
 
@@ -287,11 +298,14 @@ def patch_signal(session: Session, signal_id: str, body: ContextSignalPatch, *, 
                               {"reasons": [{"code": "uncertainty_required", "message": "uncertainty is required"}]})
         sig.uncertainty = body.uncertainty.strip()
     session.flush()
+    from app.forecasting.native_evidence import capture_signal_documents
+    capture_signal_documents(session, sig, now=clock.now())
     return sig
 
 
 def delete_signal(session: Session, signal_id: str) -> None:
     sig = get_signal(session, signal_id)
+    documents = [session.get(CorpusDocument, c.document_id) for c in sig.citations]
     users = [p.id for p in session.scalars(select(Proposal))
              if any(r.get("kind") == "signal" and r.get("id") == sig.id for r in (p.evidence_refs or []))]
     successors = list(session.scalars(select(ContextSignal.id).where(ContextSignal.superseded_by_signal_id == sig.id)))
@@ -304,6 +318,10 @@ def delete_signal(session: Session, signal_id: str) -> None:
         session.delete(c)
     session.delete(sig)
     session.flush()
+    from app.forecasting.native_evidence import capture_native_documents
+    trusted_clock = session.info.get('forecast_clock')
+    if trusted_clock is not None:
+        capture_native_documents(session, documents, now=trusted_clock())
 
 
 def signal_out(session: Session, sig: ContextSignal, corrected: set[tuple[str, int]] | None = None) -> dict:

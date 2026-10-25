@@ -49,6 +49,7 @@ Each refresh refits observed parameters and archives the final priced serving, s
 | [Droid](agent/README.md) | Shared tools and SDK wrappers for explanations, comparisons, scenarios, and refresh requests |
 | [Architecture](docs/implementation/forecast-integration.md) | Data contracts, publication timing, evidence chain, and API boundaries |
 | [Verification and limits](docs/implementation/forecast-integration-limits.md) | Executed checks and remaining integration/empirical limits |
+| [Architecture audit](docs/implementation/forecast-architecture-audit.md) | Producer/consumer checks, fixes, actual frontend/API journey and rendering evidence |
 
 Allocations are internal planning records. They do not transfer vendor credits, purchase compute, or change provider limits. Financial approval still uses the existing authority, budget-version, and dependency checks. New material evidence can stale a proposal immediately while its referenced forecast remains immutable.
 
@@ -59,12 +60,15 @@ PYTHONPATH=src:backend:agent .venv/bin/python -m pytest tests backend/tests -q
 PYTHONPATH=src:backend:agent .venv/bin/python -m app.contract.export --check
 PYTHONPATH=src:backend .venv/bin/python -m forecasting.replay_report \
   --output artifacts/northstar-replay.json
-node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs frontend/src/lib/store.test.mjs
+node --test frontend/src/components/dashboard/*test.mjs frontend/src/components/person/*test.mjs frontend/src/lib/data/*test.mjs frontend/src/lib/store.test.mjs
+FORECAST_TEST_PYTHON=.venv/bin/python node --test frontend/tests/forecast-backend.integration.mjs
 cd frontend
 npm run lint
 npx tsc --noEmit
 npm run build
 ```
+
+The Node test harnesses require Node 22.13 or newer for TypeScript type stripping. The cross-language integration test runs the actual frontend HTTP client and Zustand store against FastAPI, SQLite, the forecast worker and Droid tools through an in-process HTTP transport. It needs the backend Python dependencies but no listening socket or API key; it does not replace browser testing.
 
 The [replay report](docs/learning/replay-summary.json) compares extracted context, no context, independently encoded oracle inputs, and two direct weekly challengers, retaining failed opportunities in each denominator. It establishes synthetic mechanism behavior; enterprise accuracy and calibration require subsequent company data.
 

@@ -18,19 +18,41 @@ period, lead, duration, aggregation, scope, unit, basis, procedure and history
 delay. Missing or incomplete bases do not become predictions. The backend saves
 issued records by target ID atomically with publication.
 
-Truth is an append-only input of kind `truth_revisions`:
+Trusted integrations submit independently observed outcomes to
+`POST /api/forecast-outcomes` (or `ForecastService.ingest_outcome` in process).
+The service validates the exact archived target and appends immutable
+`truth_revisions`; it records the actual server receipt time separately from
+source availability. An exact retry returns the original receipt; changing a
+previous target/revision returns a conflict.
 
 ```json
-{"target_id":"issued-target-id","revision":1,"available_at":"2027-01-11T00:00:00Z","mature_at":"2027-01-11T00:00:00Z","status":"mature","value":150.25,"source_id":"observed-ledger-revision","is_synthetic":false}
+{"target_id":"issued-target-id","revision":1,"available_at":"2027-01-11T00:00:00Z","mature_at":"2027-01-11T00:00:00Z","status":"mature","value":150.25,"source_id":"observed-ledger-revision","is_synthetic":false,"complete":true,"quantity":"spend","unit":"USD","basis":"planning","timezone":"UTC","scope_type":"company","scope_id":"northstar","start":"2027-01-04","end":"2027-01-11","provenance":{"kind":"observed","reference":"ledger:finalized-week-2027-01-04:revision-1"}}
 ```
+
+Copy target dimensions from the issued archive; values must come from the
+independent observed source. The endpoint rejects unknown targets, mismatched
+units/basis/period/scope/quantity, missing completeness or observed provenance,
+nonfinite values, and synthetic/genuine mismatches. Mature outcomes require
+complete target coverage. Pending/disputed corrections retain explicit
+completeness and provenance; they withdraw the preceding score. A future
+`mature_at` is accepted but cannot score before that time. Future source
+availability is rejected, and late receipt never backfills an older snapshot.
+The application's authentication and source verification remain deployment
+responsibilities; a caller's provenance attestation is not verified against a
+live ledger by this endpoint.
 
 Only the latest revision available at the scoring cutoff can score. A pending
 or disputed correction withdraws the previous score; a later correction does
 not rewrite an earlier published run. Values must be observed final outcomes
 for exactly the issued target, in its archived units and basis. Backend input
 storage preserves all revisions and receipt-time gates reconstruction. There
-is no live ledger connector: production truth ingestion must supply these
-observed mature outcomes and trustworthy provenance.
+is no live ledger connector or automatic conversion of repository imports into
+issued-target outcomes: production integrations must supply these independently
+observed mature outcomes and trustworthy provenance. Ordinary imports with
+unknown daily completeness produce no scoring evidence. Bare token counters
+are never treated as monetary truth. Each subsequent refresh automatically
+scores eligible accepted outcomes; rate fitting continues to use observed usage
+inputs, not errors or forecasts.
 
 ## Persisted error receipts
 
@@ -97,8 +119,9 @@ of 20 calibration weeks followed by 12 prospective weeks. Configuration,
 policy windows, and policy identity are immutable. A SHA-256 artifact digest
 freezes the planning, pricing, calibration/scoring, and contract implementation.
 It also incorporates the explicit snapshot `procedure_dependencies` manifest.
-The backend supplies versioned SHA-256 entries for the native evidence extractor
-and repository adapter, covering numerical extraction, feature and mapping code.
+The backend supplies versioned SHA-256 entries for the native evidence extractor,
+document/signal bridge, repository adapter/archive and observed-outcome validator,
+covering numerical extraction, feature, mapping and learning-ingestion code.
 The current extractor is deterministic and uses no LLM prompt; answer-only
 assistant prompts do not affect numerical forecasts and are excluded. Core code
 does not import backend modules: it hashes the supplied canonical JSON manifest,

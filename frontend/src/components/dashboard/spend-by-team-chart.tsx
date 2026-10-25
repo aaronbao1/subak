@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { formatAmount, unitNoun } from "@/lib/format";
 import { WEEKEND_PATTERN_ID, isWeekend } from "@/components/shared/components";
 import { EASE_CSS, ENTER_STAGGER_MS, usePrefersReducedMotion } from "@/components/shared/motion";
-import { dateLabel, dayLabel, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
+import { dateLabel, dayLabel, hasProjectedAmount, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
 import { TeamPicker } from "./team-picker";
 
 const HALF_DAY = 43_200_000;
@@ -210,11 +210,12 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   }, [rows, daily]);
 
   const weekendTs = useMemo(() => rows.filter((r) => isWeekend(r.date)).map((r) => r.ts), [rows]);
-  const projectedStart = useMemo(() => rows.find((r) => r.kind === "projected")?.ts, [rows]);
-  const projectedDays = useMemo(() => rows.filter((r) => r.kind === "projected").length, [rows]);
+  const projectedRows = useMemo(() => rows.filter(r => series.some(s => hasProjectedAmount(r, s.id))), [rows, series]);
+  const projectedStart = projectedRows[0]?.ts;
+  const projectedDays = projectedRows.length;
   const hasProjection = projectedStart !== undefined;
   /** Index of the first projected row, so projected dots pop from the boundary rather than from the chart's left edge. */
-  const projectedIdx0 = useMemo(() => Math.max(0, rows.findIndex((r) => r.kind === "projected")), [rows]);
+  const projectedIdx0 = useMemo(() => Math.max(0, rows.findIndex(r => r.ts === projectedStart)), [rows, projectedStart]);
   const showDots = daily && (!animating || phase >= PHASE.dots);
   const showProjectedDots = daily && (!animating || phase >= PHASE.projectedDots);
   const tickLabel = (v: number) => (daily ? dayLabel(v) : dateLabel(v));
@@ -345,11 +346,12 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         const value = typeof recorded === "number" ? recorded : typed(projected);
                         if (value === undefined) return null;
                         const fullDay = row.partial && typeof recorded === "number" && typeof projected === "number" ? projected : undefined;
-                        return { s, value, projected: isProjected, fullDay };
+                        return { s, value, projected: typeof recorded !== "number", fullDay };
                       })
                       .filter((x): x is { s: Series; value: number; projected: boolean; fullDay: number | undefined } => x !== null)
                       .sort((a, b) => b.value - a.value);
                     if (items.length === 0) return null;
+                    const mixed = items.some(i => i.projected) && items.some(i => !i.projected);
                     const total = items.reduce((s, i) => s + i.value, 0);
                     const fullDayTotal = row.partial && items.every((i) => i.fullDay !== undefined) ? items.reduce((s, i) => s + (i.fullDay ?? 0), 0) : undefined;
                     return (
@@ -357,7 +359,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         <div className="mb-1.5 flex items-center justify-between gap-3">
                           <span className="text-foreground">{dayLabel(Number(label), { month: true })}</span>
                           <span className="text-muted-foreground">
-                            {isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
+                            {mixed ? "recorded + projected" : isProjected ? "projected" : row.partial ? "partial day" : "recorded"}
                           </span>
                         </div>
                         {row.partial && !isProjected && (
@@ -461,7 +463,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                         const k = key ?? undefined;
                         // The anchor point on the last recorded day already has a solid dot.
                         // Hollow dots only where the value is a projection: projected days and the partial day's full-day total.
-                        const show = payload?.kind === "projected" || (payload?.partial && payload[teamKey(s.id)] !== null && payload[projectedKey(s.id)] !== payload[teamKey(s.id)]);
+                        const show = payload && hasProjectedAmount(payload, s.id);
                         if (!showProjectedDots || !show || cx === undefined || cy === undefined) return <g key={k} />;
                         return (
                           <circle
@@ -503,7 +505,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
               <>Shaded {partialDates.length === 1 ? "day is" : "days are"} partial (<span className="num">{partialDates.map(dateLabel).join(", ")}</span>): some sources have not reported yet. </>
             )}
             {hasProjection && (
-              <>Dashed lines and hollow dots are projections ({projectedDays} {projectedDays === 1 ? "day" : "days"} ahead), not recorded usage.</>
+              <>Dashed lines and hollow dots are projections ({projectedDays} {projectedDays === 1 ? "day" : "days"}), not recorded usage.</>
             )}
           </p>
         )}

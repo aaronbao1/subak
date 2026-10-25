@@ -30,11 +30,11 @@ export function EvidenceFeed({ rows, unit, mounted, enterAt = 0, onClearFilters,
   if (rows.length === 0) {
     return (
       <div className={cn("flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-6 py-16 text-center", rise)} style={riseAt(enterAt)}>
-        <div className="eyebrow">{filtersActive ? "No evidence matches these filters" : "No evidence yet"}</div>
+        <div className="eyebrow">{filtersActive ? "No company context matches these filters" : "No company context linked yet"}</div>
         <p className="max-w-sm text-sm text-muted-foreground">
           {filtersActive
             ? "Widen the scope, effect or category, or pick another team."
-            : "No plans, documents or messages have been linked to this period."}
+            : "No plans, documents or messages have been linked to this context feed."}
         </p>
         {filtersActive && (
           <button type="button" onClick={onClearFilters} className="mt-2 text-sm underline underline-offset-4 decoration-border-strong transition-colors duration-300 hover:decoration-foreground">

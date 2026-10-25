@@ -4,11 +4,14 @@ from __future__ import annotations
 from copy import deepcopy
 from functools import wraps
 import hashlib
+import logging
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 import uuid
 
 from .persistence import ForecastStore, ImmutableConflict, encode, identity, iso
+
+log = logging.getLogger(__name__)
 
 
 def utc_now():
@@ -23,6 +26,12 @@ def procedure_dependency_manifest():
                                 'sha256': hashlib.sha256((root / 'evidence.py').read_bytes()).hexdigest()},
         'repository_adapter': {'version': 'repository-snapshot-v1',
                                'sha256': hashlib.sha256((root / 'repository.py').read_bytes()).hexdigest()},
+        'native_evidence_adapter': {'version': 'native-corpus-signals-v1',
+                                    'sha256': hashlib.sha256((root / 'native_evidence.py').read_bytes()).hexdigest()},
+        'outcome_ingestion': {'version': 'observed-target-outcome-v1',
+                              'sha256': hashlib.sha256((root / 'outcomes.py').read_bytes()).hexdigest()},
+        'repository_archive': {'version': 'repository-row-archive-v2',
+                               'sha256': hashlib.sha256((root / 'archive.py').read_bytes()).hexdigest()},
     }
 
 
@@ -90,7 +99,8 @@ class ForecastService:
         for kind, records in collections.items():
             snapshot[kind] = records
         # Calibration uses all issued records and truth revisions, never latest-only corrections.
-        all_rows = self.store.input_records(now, tenant_id)
+        all_rows = self.store.input_records(now, tenant_id,
+                                            kinds=('issued_targets', 'truth_revisions', 'forecast_errors'))
         for kind in ('issued_targets', 'truth_revisions', 'forecast_errors'):
             records = [r['payload'] for r in all_rows if r['kind'] == kind]
             if records:
@@ -151,9 +161,13 @@ class ForecastService:
     @coordinated_operation
     def current_actuals(self, tenant_id='northstar'):
         snapshot = self.current_snapshot(tenant_id=tenant_id)
-        return {'as_of': snapshot['information_cutoff'], 'history_complete_through': snapshot.get('history_complete_through'),
-                'observations': snapshot.get('observations', []), 'coverage': snapshot.get('coverage', []),
-                'required_sources': snapshot.get('required_sources', [])}
+        actuals = {'history_complete_through': snapshot.get('history_complete_through'),
+                   'observations': snapshot.get('observations', []), 'coverage': snapshot.get('coverage', []),
+                   'required_sources': snapshot.get('required_sources', [])}
+        # A fresh read timestamp is not a correction to the observed dataset.
+        # Current actuals have their own content identity, separate from the run.
+        return {**actuals, 'as_of': snapshot['information_cutoff'],
+                'revision': 'actuals_' + identity(actuals)}
 
     @staticmethod
     def _filter(bundle, scope_type=None, scope_id=None):
@@ -175,11 +189,20 @@ class ForecastService:
         return result
 
     @coordinated_operation
-    def views(self, scope_type=None, scope_id=None, run_id=None, *, tenant_id='northstar'):
+    def views(self, scope_type=None, scope_id=None, run_id=None, *, tenant_id='northstar', include_current_actuals=True):
         publication = self.store.publication(tenant_id)
         chosen = run_id or (publication or {}).get('run_id')
         result = self._filter(self.store.get_run(chosen)['bundle'], scope_type, scope_id) if chosen else {'views': []}
-        result['current_actuals'] = self.current_actuals(tenant_id)
+        if include_current_actuals:
+            try:
+                result['current_actuals'] = self.current_actuals(tenant_id)
+            except Exception:
+                # The latest actuals are separate from the immutable issuance.
+                # No empty observations or false freshness timestamp may imply
+                # that failed acquisition established zero current usage.
+                log.exception('current forecast actuals could not be loaded')
+                result['current_actuals'] = {'status': 'unavailable',
+                    'reason': 'Current actuals could not be loaded. The issued forecast is unchanged.'}
         result['publication'] = publication if publication and publication['run_id'] == chosen else None
         return result
 
@@ -249,6 +272,11 @@ class ForecastService:
                 encode(driver)
             except (TypeError, ValueError) as exc:
                 raise ValueError('driver must contain finite JSON values') from exc
+
+    @coordinated_operation
+    def ingest_outcome(self, envelope, *, tenant_id='northstar'):
+        from .outcomes import ingest_outcome
+        return ingest_outcome(self, envelope, tenant_id=tenant_id)
 
     @coordinated_operation
     def ingest_evidence(self, envelope, *, tenant_id='northstar'):

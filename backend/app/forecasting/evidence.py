@@ -179,7 +179,7 @@ def extract_event(envelope: dict, snapshot: dict) -> list[dict]:
     if payload.get('conflicting') or payload.get('status') in ('conflicting', 'cancelled', 'informal') or re.search(r"\b(?:maybe|might|could|would|should|consider|proposed|proposal|hypothetical|cancelled|canceled|tentative|unconfirmed|if approved|do not|don't|not approved)\b", text, re.I):
         eligible = False
         reason = 'Conflicting, cancelled, informal or tentative evidence remains context only.'
-    if source not in ('slack', 'asana', 'monday', 'model_release'):
+    if source not in ('slack', 'asana', 'monday', 'model_release', 'native_document'):
         eligible = False
         reason = 'Unsupported connector source.'
     if not text or not envelope.get('source_id') or not envelope.get('revision') or not envelope.get('occurred_at') or not envelope.get('available_at'):

@@ -15,17 +15,17 @@
     "synthetic_cannot_promote": true
   },
   "initial_quarter": 2155.87243125,
-  "initial_run_id": "run_32da29d330964a4c83997f0ec704ed9e",
+  "initial_run_id": "run_90f5c6d5e2dc488c908f67a1c47a26d7",
   "is_synthetic": true,
   "limitations": [
     "Connector-shaped fixtures; no live authenticated connector or live Droid request.",
     "Synthetic replay demonstrates mechanics and cannot establish enterprise accuracy.",
     "All receipts use UTC; a frozen midnight clock keeps the demo complete and deterministic."
   ],
-  "next_run_id": "run_2759eb8660ff4c6fb12dfed09d7871d8",
+  "next_run_id": "run_c4ac8bc5da8e410d8254812f8be40033",
   "passed": true,
   "published_quarter": 1742.91216075,
-  "published_run_id": "run_d9f2d2f35265425b953472df4f3919fe",
-  "scenario_id": "scenario_93a1c6cf596b4c22af226084087fb8af",
+  "published_run_id": "run_3a8575ea9674462892b25e31c73c188c",
+  "scenario_id": "scenario_e50fe52622e3413c8b93c396188e6988",
   "truth_source": "independent synthetic observed usage, not forecast output"
 }

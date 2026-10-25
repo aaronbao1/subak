@@ -170,6 +170,7 @@ def reset_database(engine, session_factory, *, clock: Clock, ids: IdFactory, for
             try:
                 for table in ('forecast_publications', 'forecast_scenarios', 'forecast_runs',
                               'forecast_jobs', 'forecast_input_snapshots', 'forecast_inputs',
+                              'forecast_repository_row_versions', 'forecast_repository_captures',
                               'forecast_schema_versions'):
                     connection.exec_driver_sql(f'DROP TABLE IF EXISTS {table}')
                 Base.metadata.drop_all(connection)

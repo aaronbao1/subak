@@ -76,3 +76,8 @@ def evidence(request: Request):
 @router.post('/forecast-evidence', status_code=201)
 def ingest_evidence(request: Request, envelope: dict[str, Any] = Body()):
     return call(service(request).ingest_evidence, envelope)
+
+
+@router.post('/forecast-outcomes', status_code=201)
+def ingest_outcome(request: Request, outcome: dict[str, Any] = Body()):
+    return call(service(request).ingest_outcome, outcome)

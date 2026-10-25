@@ -106,6 +106,7 @@ def test_historical_snapshot_does_not_project_current_mutable_attribution_backwa
 
 
 def test_explicit_sync_appends_versions_and_old_snapshot_stays_immutable(repository, tmp_path):
+    from app.forecasting.archive import resolve_material
     from app.forecasting.repository import synchronize_repository_inputs
     add_record(repository, 'a')
     store = ForecastStore(tmp_path / 'forecast.sqlite')
@@ -120,8 +121,11 @@ def test_explicit_sync_appends_versions_and_old_snapshot_stays_immutable(reposit
     assert newer['revision'] != first['revision']
     rows = store.input_records(NOW)
     assert len(rows) == 2
-    assert rows[0]['payload']['observations'][0]['team_id'] == 'engineering'
-    assert rows[1]['payload']['observations'][0]['team_id'] is None
+    with store.transaction() as connection:
+        original = resolve_material(connection, rows[0]['payload'], tenant_id='northstar')
+        corrected = resolve_material(connection, rows[1]['payload'], tenant_id='northstar')
+    assert original['records'][0]['team_id'] == 'engineering'
+    assert corrected['records'][0]['team_id'] is None
 
 
 def test_archive_records_reversion_as_new_revision(repository, tmp_path):

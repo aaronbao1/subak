@@ -24,7 +24,11 @@ export function evidenceDrivers(view: ForecastView, evidence: Array<{ drivers?: 
   const queued = new Set(view.queued_changes.map(d => d.id));
   const all = new Map<string, ForecastDriver>();
   for (const d of [...view.included_drivers, ...view.queued_changes, ...evidence.flatMap(e => e.drivers ?? [])]) if (!all.has(d.id)) all.set(d.id, d);
-  return [...all.values()].map(driver => ({ driver, status: included.has(driver.id) ? "Included" : queued.has(driver.id) || driver.queue_status === "queued" ? "Queued" : "Context only" }));
+  return [...all.values()].map(driver => {
+    const contextOnly = driver.status === "context_only" || driver.queue_status === "context_only"
+      || driver.publication_status === "excluded" && driver.publication_reason !== "Available after this publication information cutoff.";
+    return { driver, status: included.has(driver.id) ? "Included" : contextOnly ? "Context only" : queued.has(driver.id) || driver.queue_status === "queued" ? "Queued" : "Context only" };
+  });
 }
 
 /** Compatibility surfaces receive the full conditional quarter, never a four-week subtotal. */
@@ -32,9 +36,14 @@ export function quarterForecasts(bundle: ForecastBundle): import("../../lib/cont
   return bundle.views.filter(v=>v.scope.type === "team" || v.scope.type === "person").map(view=>{
     const q = view.quarter_outlook;
     const base = finite(q?.base);
+    // Published daily details cover only their supplied horizon, not the whole quarter.
+    const daily = (view.daily ?? []).flatMap(point => {
+      const projected = finite(point.base);
+      return point.date && projected !== undefined ? [{ date: point.date, projected }] : [];
+    });
     const endExclusive = typeof q?.end === "string" ? q.end : "";
     const end = endExclusive ? new Date(Date.parse(`${endExclusive}T00:00:00Z`)-86400000).toISOString().slice(0,10) : "";
-    return { id:view.id ?? `${view.run_id}:${view.scope.type}:${view.scope.id}`,teamId:view.scope.type === "team" ? view.scope.id ?? "shared" : "",...(view.scope.type === "person" ? {personId:view.scope.id ?? "shared"} : {}),period:{start:typeof q?.start === "string" ? q.start : "",end,label:"Conditional quarter outlook"},status:base===undefined ? "unavailable" as const : "available" as const,basis:"full_period" as const,kind:"forecast" as const,origin:view.is_synthetic ? "placeholder" as const : "forecasting_service" as const,projected:base,unit:view.target.unit.toLowerCase() as "usd" | "credits" | "tokens",assumptions:["Conditional quarter continuation; see issued scenario envelope and limitations.",...(Array.isArray(q?.assumptions)?q.assumptions.map(String):[])],limitations:view.limitations,generatedAt:String(view.publication?.generated_at ?? view.generated_at ?? ""),unavailableReason:base===undefined ? "Quarter continuation unavailable; see issued publication limitations." : undefined };
+    return { id:view.id ?? `${view.run_id}:${view.scope.type}:${view.scope.id}`,teamId:view.scope.type === "team" ? view.scope.id ?? "shared" : "",...(view.scope.type === "person" ? {personId:view.scope.id ?? "shared"} : {}),period:{start:typeof q?.start === "string" ? q.start : "",end,label:"Conditional quarter outlook"},status:base===undefined ? "unavailable" as const : "available" as const,basis:"full_period" as const,kind:"forecast" as const,origin:view.is_synthetic ? "placeholder" as const : "forecasting_service" as const,projected:base,daily,dailyCoverage:"published_detail" as const,unit:view.target.unit.toLowerCase() as "usd" | "credits" | "tokens",assumptions:["Conditional quarter continuation; see issued scenario envelope and limitations.",...(Array.isArray(q?.assumptions)?q.assumptions.map(String):[])],limitations:[...view.limitations,"Daily chart projections contain only the supplied published daily details; they do not decompose the full conditional quarter."],generatedAt:String(view.publication?.generated_at ?? view.generated_at ?? ""),unavailableReason:base===undefined ? "Quarter continuation unavailable; see issued publication limitations." : undefined };
   });
 }
 

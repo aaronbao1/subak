@@ -6,7 +6,7 @@ import { MessageSquare, RefreshCw } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { completeScenario } from "@/lib/data/scenario-job";
 import { getDataClient } from "@/lib/data";
-import type { ForecastBundle, ForecastDriver, ForecastScenarioReceipt } from "@/lib/contracts";
+import type { ForecastBundle, ForecastDriver, ForecastEvidence, ForecastScenarioReceipt } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { evidenceDrivers, finite, forecastPrompt, historicalRange, omissionDrivers, pointRange, scopeView, selectedDriverForView, sumPointBases } from "@/components/dashboard/forecast-derive";
@@ -68,6 +68,7 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
     <p className="mt-2 text-xs text-muted-foreground" role="status">
       {forecastRefresh && `Refresh ${forecastRefresh.id}: ${forecastRefresh.status}`}
     </p>
+    {scopeType === "company" && <EvidenceProcessing evidence={forecastEvidence} includeDrivers />}
   </section>;
 
   const unit = view.target.unit;
@@ -116,7 +117,7 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
 
     <p className="text-xs text-muted-foreground">Weekly publication: Monday 00:00 UTC. Manual refresh publishes a new run.</p>
 
-    {forecastBundle?.current_actuals && <p className="text-xs text-muted-foreground">Current actuals received through {String(forecastBundle.current_actuals.as_of ?? "unknown")}; complete through {String(forecastBundle.current_actuals.history_complete_through ?? "unknown")}. Shown separately from the frozen issued forecast.</p>}
+    {forecastBundle?.current_actuals && <p className="text-xs text-muted-foreground">{forecastBundle.current_actuals.status === "unavailable" ? String(forecastBundle.current_actuals.reason ?? "Current actuals are unavailable. The issued forecast is unchanged.") : <>Current actuals received through {String(forecastBundle.current_actuals.as_of ?? "unknown")}; complete through {String(forecastBundle.current_actuals.history_complete_through ?? "unknown")}. Shown separately from the frozen issued forecast.</>}</p>}
 
     {forecastRefresh && <p className="text-xs text-muted-foreground" role="status">Refresh {forecastRefresh.id}: {forecastRefresh.status}. Issued runs remain immutable.</p>}
 
@@ -240,7 +241,7 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
                 {label(driver)}
               </span>
               <span className="mt-1 block text-muted-foreground">
-                {driver.reason ?? (status === "Included" ? "Used in this immutable publication" : status === "Queued" ? "Arrived after publication; waits for refresh" : "Does not change forecast numbers")}
+                {String(driver.publication_reason ?? driver.reason ?? (status === "Included" ? "Used in this immutable publication" : status === "Queued" ? "Arrived after publication; waits for refresh" : "Does not change forecast numbers"))}
               </span>
             </span>
             <span className="shrink-0 rounded-md border px-2 py-1">
@@ -250,6 +251,8 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
         </li>)}
       </ul>}
     </div>
+
+    {scopeType === "company" && <EvidenceProcessing evidence={forecastEvidence} />}
 
     {view.limitations.length > 0 && <details className="border-t border-border pt-3 text-xs">
       <summary className="cursor-pointer text-muted-foreground">Assumptions and limitations ({view.limitations.length})</summary>
@@ -271,7 +274,7 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
         {selectedDriver && <div className="space-y-5 px-4 pb-6 text-xs">
           <p className="text-muted-foreground">Driver {selectedDriver.id} · {selectedDriver.source_id ?? "source unavailable"} revision {selectedDriver.source_revision ?? "unknown"}</p>
           <p>
-            {selectedDriver.reason}
+            {String(selectedDriver.publication_reason ?? selectedDriver.reason ?? "")}
           </p>
           <p>Effective {dates(selectedDriver.effective_from, selectedDriver.effective_to ?? undefined)}</p>
           <h4 className="font-medium">Cited source passages</h4>
@@ -294,7 +297,9 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
             {selectedEffect?.qualification ?? "Paired reruns use common randomness. Interacting driver effects need not add to the total change."}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => { askForecastAssistant(forecastPrompt(issued, selectedDriver), { action: "explain", run_id: issued.run_id, scope_type: issued.scope.type, scope_id: issued.scope.id, driver_id: selectedDriver.id }); setDriverSelection(undefined); }}>Ask Droid about this driver</Button>
+            {issued.included_drivers.some(d => d.id === selectedDriver.id) || issued.queued_changes.some(d => d.id === selectedDriver.id)
+              ? <Button variant="outline" size="sm" onClick={() => { askForecastAssistant(forecastPrompt(issued, selectedDriver), { action: "explain", run_id: issued.run_id, scope_type: issued.scope.type, scope_id: issued.scope.id, driver_id: selectedDriver.id }); setDriverSelection(undefined); }}>Ask Droid about this driver</Button>
+              : <p className="text-muted-foreground">This evidence is not in the issued snapshot. Refresh before asking Droid about its effect on a published run.</p>}
             {issued.included_drivers.some(d => d.id === selectedDriver.id) && <Button variant="outline" size="sm" disabled={previewBusy} onClick={() => void previewWithout(selectedDriver)}>
               {previewBusy ? "Calculating…" : validPreviewJob?.omitted === selectedDriver.id ? validPreviewJob.receipt.status === "failed" ? "Retry preview" : "Check scenario status" : "Preview without this driver"}
             </Button>}
@@ -314,6 +319,24 @@ export function ForecastPanel({ scopeType = "company", scopeId }: { scopeType?: 
     </Sheet>
 
   </section>;
+}
+function EvidenceProcessing({ evidence, includeDrivers = false }: { evidence: ForecastEvidence[]; includeDrivers?: boolean }) {
+  const items = evidence.filter(item => includeDrivers || !item.drivers?.length);
+  if (!items.length) return null;
+  return <div className="mt-4 space-y-2 border-t border-border pt-3 text-xs" aria-label="Evidence processing">
+    <h3 className="font-medium">Evidence processing</h3>
+    <ul className="space-y-3">
+      {items.map((item, index) => {
+        const envelope = item.envelope as Record<string, unknown> | undefined;
+        return <li key={item.id ?? item.source_id ?? index}>
+          <p>{String(item.source_id ?? envelope?.source_id ?? item.id ?? "Source")} · {String(item.status ?? item.queue_status ?? "received")}</p>
+          {typeof item.last_error === "string" && <p className="mt-1 text-destructive">{item.last_error}</p>}
+          {item.drivers?.map(driver => <p key={driver.id} className="mt-1 text-muted-foreground">{label(driver)} · {driver.status === "context_only" ? "Context only" : "Queued"}</p>)}
+          {!item.drivers?.length && <p className="mt-1 text-muted-foreground">No numerical driver is available from this evidence. The issued forecast is unchanged.</p>}
+        </li>;
+      })}
+    </ul>
+  </div>;
 }
 function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button aria-pressed={selected} onClick={onClick} className={`rounded-md border px-2.5 py-1.5 text-xs ${selected ? "border-foreground/30 bg-muted text-foreground" : "border-border text-muted-foreground"}`}>

@@ -207,22 +207,9 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
 def get_people(request: Request, session: Session = Depends(get_session)):
-    if not request.app.state.settings.forecast_demo:
-        active = {t.id for t in _active_teams(session)}
-        return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
-    snapshot = request.app.state.forecast_service.current_snapshot()
-    at = snapshot["information_cutoff"][:10]
-    result = []
-    for person in snapshot.get("people", []):
-        memberships = [m for m in snapshot.get("memberships", []) if m["person_id"] == person["id"]
-                       and m["effective_from"] <= at and (not m.get("effective_to") or at < m["effective_to"])]
-        teams = {m["team_id"] for m in memberships}
-        # An unresolved membership stays unattributed instead of choosing an arbitrary team.
-        row = {"id": person["id"], "name": person["name"],
-               "teamId": next(iter(teams)) if len(teams) == 1 else mappers.UNATTRIBUTED}
-        row.update({k: person[k] for k in ("role", "email", "integrations", "primaryTool") if k in person})
-        result.append(row)
-    return sorted(result, key=lambda row: (row["teamId"], row["name"], row["id"]))
+    active = {t.id for t in _active_teams(session)}
+    return [mappers.person(p) for p in people_svc.list_people(session)
+            if request.app.state.settings.forecast_demo or p.team_id in active]
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)

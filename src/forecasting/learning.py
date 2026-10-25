@@ -97,7 +97,7 @@ def archive_issued_targets(bundle, snapshot):
                          origin=origin,start=start,end=end,lead_days=(_day(start)-_day(origin)).days,
                          duration_days=(_day(end)-_day(start)).days,aggregation=aggregation,
                          scope_type=view['scope']['type'],scope_id=view['scope']['id'],
-                         unit=view['target']['unit'],basis=view['target'].get('basis','planning'),
+                         unit=view['target']['unit'],quantity=view['target'].get('quantity'),basis=view['target'].get('basis','planning'),
                          timezone=view.get('timezone','UTC'),procedure_id=view.get('procedure_id',view.get('procedure_version')),
                          history_delay_days=view.get('history_delay_days',delay),prediction=point['base'],
                          is_synthetic=bool(snapshot.get('is_synthetic',False)))
@@ -303,6 +303,10 @@ def promotion_decision(policy,rows,*,procedure_dependencies=None):
                 phase_required=required if phase=='prospective' else ['weekly_company_mae','daily_mae','availability','invariant_failures']
                 if any(k not in row or row[k] is None or isinstance(row[k],bool) or not isinstance(row[k],(int,float)) or not math.isfinite(row[k]) or row[k]<0 for k in phase_required):
                     reasons.append('missing or invalid metrics'); break
+                # Calibration outcomes are part of the frozen eligibility window,
+                # even though comparative performance uses prospective metrics.
+                if name==policy['shadow'] and row['invariant_failures']!=0:
+                    reasons.append('candidate invariant failure')
             else:
                 if phase=='prospective': metrics[name]={k:math.fsum(row[k]/len(values) for row in values) for k in required}
     if len(metrics)==3:

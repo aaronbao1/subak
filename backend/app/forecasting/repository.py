@@ -13,12 +13,14 @@ from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import json
+from pathlib import Path
 import sqlite3
 
 from sqlalchemy import select
 
 from app.db.models import ImportBatch, Person, PlanningPeriod, Team, TeamMapping, UsageRecord
 
+from .archive import capture_material, resolve_material
 from .persistence import identity, iso
 from .service import empty_snapshot
 
@@ -90,12 +92,13 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
         snapshot = empty_snapshot(now=iso(now), tenant_id=tenant_id)
         material = None
         if historical and store is not None:
-            archives = [row for row in store.input_records(now, tenant_id)
-                        if row['kind'] == 'repository_state' and row['source_id'] == 'repository']
+            archives = store.input_records(now, tenant_id, latest=True,
+                                           kinds=('repository_state',), source_id='repository')
             if archives:
                 archived = archives[-1]
-                if archived['payload'].get('repository_capture_version') == 1:
-                    material = deepcopy(archived['payload']['repository_material'])
+                if archived['payload'].get('repository_capture_version') in (1, 2):
+                    with store.transaction() as connection:
+                        material = resolve_material(connection, archived['payload'], tenant_id=tenant_id)
                     material['records'] = [r for r in material['records'] if _instant(r['occurred_at']) <= cutoff]
                     historical = False  # These are frozen, previously known assignments.
                 elif archived['available_at'] == iso(now) and archived['received_at'] == iso(now):
@@ -195,12 +198,24 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
             snapshot = frozen_factory(now=now, tenant_id=tenant_id, as_of=False)
             return _capture_payload(snapshot, _material(session, now, include_future=True))
     snapshot_factory.capture_payload = capture_payload
-    def capture_inputs(*, now, tenant_id='northstar'):
+    def source_material(*, now, tenant_id='northstar'):
         with session_factory() as session:
+            connection = session.connection().connection.driver_connection
+            if not connection.in_transaction:
+                connection.execute('BEGIN')
+            return _material(session, now, include_future=True)
+    snapshot_factory.capture_material = source_material
+    def capture_inputs(*, now, tenant_id='northstar', target_store=None):
+        with session_factory() as session:
+            if target_store is not None:
+                bound_store = session.info.get('forecast_store')
+                if bound_store is None or Path(bound_store.path).resolve() != Path(target_store.path).resolve():
+                    return None
             receipt = capture_repository_inputs(session, now=now, tenant_id=tenant_id)
             session.commit()
             return receipt
     snapshot_factory.capture_inputs = capture_inputs
+    snapshot_factory.capture_to_store = capture_inputs
     return snapshot_factory
 
 
@@ -218,16 +233,33 @@ def synchronize_repository_inputs(store, snapshot_factory, *, now, tenant_id='no
     time. Existing issued snapshots remain immutable. Caller runs this on startup
     or after successful input mutations, outside normal read paths.
     """
+    capture = getattr(snapshot_factory, 'capture_to_store', None)
+    if capture is not None:
+        # A bound same-database capture takes its write transaction before
+        # reading source material, so a concurrent import cannot be overwritten
+        # by an older extracted state. Different-store factories stay read-only.
+        receipt = capture(now=now, tenant_id=tenant_id, target_store=store)
+        if receipt is not None:
+            return receipt
+    if hasattr(snapshot_factory, 'capture_material'):
+        material = snapshot_factory.capture_material(now=now, tenant_id=tenant_id)
+        with store.transaction() as connection:
+            return _append_repository_capture(store, connection, material, now=now,
+                                              tenant_id=tenant_id, receipt_cutoff=now)
     if hasattr(snapshot_factory, 'capture_payload'):
         payload = snapshot_factory.capture_payload(now=now, tenant_id=tenant_id)
+        if payload.get('repository_capture_version') == 1:
+            with store.transaction() as connection:
+                return _append_repository_capture(store, connection, payload['repository_material'],
+                                                  now=now, tenant_id=tenant_id, receipt_cutoff=now)
     else:
         options = {'as_of': False} if getattr(snapshot_factory, 'supports_as_of', False) else {}
         snapshot = snapshot_factory(now=now, tenant_id=tenant_id, **options)
         # Clock/publication fields are not source content and must not break dedupe.
         payload = {k: v for k, v in snapshot.items() if k not in {
             'information_cutoff', 'history_complete_through', 'forecast_start', 'generated_at', 'id'}}
-    rows = [row for row in store.input_records(now, tenant_id)
-            if row['kind'] == 'repository_state' and row['source_id'] == 'repository']
+    rows = store.input_records(now, tenant_id, latest=True,
+                               kinds=('repository_state',), source_id='repository')
     previous = rows[-1] if rows else None
     if previous is not None and previous['payload'] == payload:
         return previous
@@ -236,6 +268,28 @@ def synchronize_repository_inputs(store, snapshot_factory, *, now, tenant_id='no
     revision = identity({'payload': payload, 'predecessor': previous['revision'] if previous else None})
     return store.append_input('repository_state', 'repository', revision, payload,
                               available_at=now, received_at=now, tenant_id=tenant_id)
+
+
+def _append_repository_capture(store, connection, material, *, now, tenant_id, receipt_cutoff=None):
+    """Store changed source rows and their compact receipt in one transaction."""
+    payload = capture_material(connection, material, tenant_id=tenant_id)
+    query = "SELECT * FROM forecast_inputs WHERE tenant_id=? AND kind='repository_state' AND source_id='repository'"
+    params = [tenant_id]
+    if receipt_cutoff is not None:
+        query += ' AND available_at<=? AND received_at<=?'
+        params.extend((iso(receipt_cutoff), iso(receipt_cutoff)))
+    query += ' ORDER BY available_at DESC,received_at DESC,rowid DESC LIMIT 1'
+    previous_factory = connection.row_factory
+    connection.row_factory = sqlite3.Row
+    try:
+        previous = connection.execute(query, params).fetchone()
+        if previous is not None and json.loads(previous['payload']) == payload:
+            return store._input(previous)
+        revision = identity({'payload': payload, 'predecessor': previous['revision'] if previous else None})
+        return store._append_input(connection, 'repository_state', 'repository', revision,
+                                   payload, now, now, tenant_id)
+    finally:
+        connection.row_factory = previous_factory
 
 
 def capture_repository_inputs(session, *, now, tenant_id='northstar'):
@@ -255,19 +309,5 @@ def capture_repository_inputs(session, *, now, tenant_id='northstar'):
     trusted_clock = session.info.get('forecast_clock')
     if trusted_clock is not None:
         now = max(_instant(now), _instant(trusted_clock()))
-    factory = repository_snapshot_factory(lambda: nullcontext(session), clock=lambda: now)
-    snapshot = factory(now=now, tenant_id=tenant_id, as_of=False)
-    payload = _capture_payload(snapshot, _material(session, now, include_future=True))
-    previous_factory = connection.row_factory
-    connection.row_factory = sqlite3.Row
-    try:
-        previous = connection.execute('''SELECT * FROM forecast_inputs WHERE tenant_id=?
-            AND kind='repository_state' AND source_id='repository'
-            ORDER BY available_at DESC,received_at DESC,rowid DESC LIMIT 1''', (tenant_id,)).fetchone()
-        if previous is not None and json.loads(previous['payload']) == payload:
-            return store._input(previous)
-        revision = identity({'payload': payload, 'predecessor': previous['revision'] if previous else None})
-        return store._append_input(connection, 'repository_state', 'repository', revision,
-                                   payload, now, now, tenant_id)
-    finally:
-        connection.row_factory = previous_factory
+    return _append_repository_capture(store, connection, _material(session, now, include_future=True),
+                                      now=now, tenant_id=tenant_id)

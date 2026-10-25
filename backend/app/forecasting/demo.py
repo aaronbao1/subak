@@ -131,9 +131,13 @@ def run_demo(output_dir):
         matching=[r for r in issued if r['run_id'].startswith(refresh['run_id']) and r['scope_type']=='company' and r['aggregation']=='weekly' and r['start']=='2026-10-26' and r['end']=='2026-11-02']
         truth=[]
         for target in matching:
-            outcome=dict(target_id=target['target_id'],revision=1,available_at=clock.now().isoformat(),mature_at=clock.now().isoformat(),status='mature',value=float(realized),source_id='northstar-observed-week-2026-10-26',is_synthetic=True)
-            service.store.append_input('truth_revisions',target['target_id'],'1',outcome,available_at=clock.now().isoformat(),received_at=clock.now().isoformat())
-            truth.append(outcome)
+            outcome=dict(target_id=target['target_id'],revision=1,available_at=clock.now().isoformat(),mature_at=clock.now().isoformat(),status='mature',value=float(realized),source_id='northstar-observed-week-2026-10-26',is_synthetic=True,complete=True,
+                         provenance={'kind':'observed','reference':'northstar-independent-observed-usage-week-2026-10-26'},
+                         **{key:target[key] for key in ('quantity','unit','basis','timezone','scope_type','scope_id','start','end')})
+            receipt=client.post('/api/forecast-outcomes',json=outcome)
+            if receipt.status_code!=201:
+                raise RuntimeError('Observed outcome ingestion failed: '+receipt.text)
+            truth.append(receipt.json()['outcome'])
         scores=score_issued_intervals(issued,truth,cutoff=clock.now().isoformat())
         next_job=service.refresh('demo-next-week')
         assert app.state.forecast_worker.process_one(job_id=next_job['id'])

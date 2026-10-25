@@ -1,5 +1,6 @@
 """Directory changes use the same receipt transaction as other repository inputs."""
 from app.services.people import create_people
+from app.forecasting.archive import resolve_material
 
 
 def test_bound_directory_creation_is_archived_at_actual_write_cutoff(seeded, clock):
@@ -10,9 +11,12 @@ def test_bound_directory_creation_is_archived_at_actual_write_cutoff(seeded, clo
         create_people(session,[{'id':'new-researcher','team':'research','name':'New Researcher','email':'new@northstar.example'}],clock=clock)
         session.commit()
     rows=[r for r in svc.store.input_records(clock.now().isoformat()) if r['kind']=='repository_state']
-    latest=rows[-1]['payload']['repository_material']
+    with svc.store.transaction() as connection:
+        latest=resolve_material(connection,rows[-1]['payload'],tenant_id='northstar')
     assert 'new-researcher' in {p['id'] for p in latest['people']}
-    earlier=[r for r in svc.store.input_records(before) if r['kind']=='repository_state'][-1]['payload']['repository_material']
+    earlier_receipt=[r for r in svc.store.input_records(before) if r['kind']=='repository_state'][-1]
+    with svc.store.transaction() as connection:
+        earlier=resolve_material(connection,earlier_receipt['payload'],tenant_id='northstar')
     assert 'new-researcher' not in {p['id'] for p in earlier['people']}
     snapshot=svc.snapshot_factory(now=clock.now().isoformat(),as_of=True)
     assert 'new-researcher' in {p['id'] for p in snapshot['people']}

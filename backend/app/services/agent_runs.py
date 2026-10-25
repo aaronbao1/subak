@@ -126,6 +126,7 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
     toolbox = BackendToolbox(session_factory=factory, run_id=run_id, source=source, runner_kind=kind,
                              clock=clock, ids=ids, forecast_provider=app_state.forecast_provider,
                              forecast_service=getattr(app_state, "forecast_service", None),
+                             forecast_context=task.params.get("forecast_context"),
                              rebase_target=(task.params.get("stale_proposal_id")
                                             if task.type == "propose_allocation" else None))
     if unavailable is not None:

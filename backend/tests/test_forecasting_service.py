@@ -381,9 +381,12 @@ def test_snapshot_freezes_explicit_numerical_adapter_dependencies(tmp_path, monk
     package=Path(service_module.__file__).parent
     assert dependencies=={
         'evidence_extraction':{'version':'native-envelope-v1','sha256':hashlib.sha256((package/'evidence.py').read_bytes()).hexdigest()},
-        'repository_adapter':{'version':'repository-snapshot-v1','sha256':hashlib.sha256((package/'repository.py').read_bytes()).hexdigest()}}
+        'repository_adapter':{'version':'repository-snapshot-v1','sha256':hashlib.sha256((package/'repository.py').read_bytes()).hexdigest()},
+        'native_evidence_adapter':{'version':'native-corpus-signals-v1','sha256':hashlib.sha256((package/'native_evidence.py').read_bytes()).hexdigest()},
+        'outcome_ingestion':{'version':'observed-target-outcome-v1','sha256':hashlib.sha256((package/'outcomes.py').read_bytes()).hexdigest()},
+        'repository_archive':{'version':'repository-row-archive-v2','sha256':hashlib.sha256((package/'archive.py').read_bytes()).hexdigest()}}
     changed=deepcopy(dependencies)
-    changed['evidence_extraction']['sha256']='f'*64
+    changed['native_evidence_adapter']['sha256']='f'*64
     monkeypatch.setattr(service_module,'procedure_dependency_manifest',lambda:deepcopy(changed))
     second=svc.refresh('dependency-after')
     assert svc.store.get_snapshot(second['snapshot_id'])['procedure_dependencies']==changed

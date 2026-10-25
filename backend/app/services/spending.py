@@ -98,6 +98,10 @@ def spend_summary(session: Session, period: PlanningPeriod, *, clock: Clock) -> 
     )
     attributed = sum((t["recorded_spend"] for t in teams), ZERO)
     notes = list(NOTES)
+    if session.info.get('people_directory') is not None:
+        notes.append('This summary is the imported repository charge ledger. The separate synthetic forecast fixture '
+                     'has its own observed usage and person identities; these ledger totals do not establish '
+                     'spend or zero spend for a forecast-demo person. Use the exact forecast explanation for that fixture.')
     if inactive_spend:
         notes.append("company_total includes spend attributed to inactive teams")
     return {
@@ -149,7 +153,13 @@ def list_records(
     if batch is not None and session.get(ImportBatch, batch) is None:
         reasons.append({"code": "unknown_batch", "message": f"import batch {batch!r} not found"})
     if person is not None and session.get(Person, person) is None:
-        reasons.append({"code": "unknown_person", "message": f"unknown person {person!r}"})
+        directory = session.info.get('people_directory')
+        if directory is not None and any(p.id == person for p in directory()):
+            reasons.append({'code': 'person_not_in_repository_ledger',
+                            'message': f'Forecast-demo person {person!r} has no repository charge identity; '
+                                       'this is unavailable attribution, not zero spend.'})
+        else:
+            reasons.append({"code": "unknown_person", "message": f"unknown person {person!r}"})
     if reasons:
         raise DomainError("validation_failed", 422, "invalid record filter", {"reasons": reasons})
 

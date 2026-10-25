@@ -6,6 +6,7 @@ The product backend calls `forecasting.planning` and `forecasting.learning` dire
 flowchart TD
   R[Usage and repository records] --> E[Versioned evidence and coverage]
   C[Slack Asana Monday and model release envelopes] --> E
+  D[Native document versions and cited signals] --> E
   E --> X[Cited facts and supported driver states]
   X --> Q[Queued input revisions]
   Q --> J[Monday or manual job]
@@ -17,7 +18,8 @@ flowchart TD
   S --> A[Source fact driver rate calculation receipts]
   A --> U
   P --> T[Issued serving shadow and reference targets]
-  O[Mature observed truth revisions] --> L[Errors calibration and frozen promotion policy]
+  I[Validated observed-outcome API] --> O[Mature observed truth revisions]
+  O --> L[Errors calibration and frozen promotion policy]
   T --> L
   L --> J
 ```
@@ -27,6 +29,8 @@ flowchart TD
 A `ForecastInputSnapshot` identifies tenant, target, unit, financial basis, period, UTC timezone, source revisions, coverage/maturity, people, effective memberships, projects, configurations, pricing, and active drivers. Canonical components preserve person-or-shared, project-or-shared, configuration, meter, and billing pool.
 
 `information_cutoff`, `history_complete_through`, `forecast_start`, `generated_at`, and actual publication time have distinct meanings. A source must be both available and received by an historical cutoff. Corrections append versions. A required source/day is unknown unless a completion record establishes its value, including explicit zero. Repository charge imports alone do not attest complete daily usage, exposure, or person identity.
+
+Repository archive v2 stores immutable changed row versions and deletion tombstones behind compact capture receipts. Historical resolution remains tenant-scoped and receipt-gated; v1 full captures remain readable. Same-database capture and source mutation share a transaction. Transfers to a separate archive database retain snapshot-transfer semantics rather than a cross-database transaction.
 
 Monday jobs freeze Monday 00:00 UTC as origin and cutoff. Missed schedules recover using only reconstructible information, with their actual issuance time preserved. Manual jobs use current information and begin at the next UTC midnight, or the current midnight when requested exactly at that boundary. Today's unobserved remainder is excluded. The first manual week may be partial and carries explicit covered dates.
 
@@ -63,13 +67,14 @@ The source chain is persisted as `source revision → fact → driver → rate/m
 | `POST /api/forecast-runs/{id}/scenarios` | Isolated scenario; `drivers` replaces the complete global driver set |
 | `GET /api/forecast-scenarios/{id}` | Stored completed scenario; pending jobs use the refresh-status route |
 | `GET/POST /api/forecast-evidence` | Evidence states and connector envelope ingestion |
+| `POST /api/forecast-outcomes` | Validated observed outcome revision for an exact archived target; subsequent refreshes score eligible mature truth |
 
 The same forecast routes mount beneath `/compat` for the frontend HTTP client. Legacy quarter consumers adapt only an actual matching quarter outlook, preserving unavailable totals. Droid tools are `explain_forecast`, `compare_forecasts`, `preview_forecast_scenario`, and `request_forecast_refresh`. Structured requests pin exact run, scope, and driver IDs; they do not infer a run from the latest chart.
 
 Workers use persisted leases, heartbeats, retries, and fencing. Completion atomically archives issued predictions and conditionally updates the publication pointer. An older cutoff cannot displace a newer publication. A scenario never updates that pointer. Material evidence invalidates dependent finance proposals in the ingestion transaction; drafting and approval recheck under a write lock. Derived error bookkeeping is excluded from material fingerprints.
 
 Procedure fingerprints cover the core numerical implementation plus explicit versioned hashes of
-the evidence extractor and repository adapter. Changed interpretation or feature mappings cannot
+the evidence extractor, native document/signal bridge, repository adapter/archive, and outcome validator. Changed interpretation or feature mappings cannot
 reuse an older procedure's errors or frozen promotion experiment. The current deterministic
 extractor uses no model prompt; answer-only Droid prompts do not affect the numerical procedure.
 

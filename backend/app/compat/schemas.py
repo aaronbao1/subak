@@ -115,6 +115,7 @@ class Forecast(_Model):
     low: Number | None = None
     high: Number | None = None
     daily: list[ForecastDailyPoint] | None = None
+    dailyCoverage: Literal["period_remainder", "published_detail"] | None = None
     baseline: Number | None = None
     adjustments: list[ForecastAdjustment] | None = None
     unit: Unit

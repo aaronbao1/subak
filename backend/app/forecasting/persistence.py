@@ -93,12 +93,16 @@ class ForecastStore:
             os.close(descriptor)
 
     def migrate(self, *, connection=None):
+        from .archive import migrate_archive
+
         with (self.transaction() if connection is None else nullcontext(connection)) as c:
             c.execute('CREATE TABLE IF NOT EXISTS forecast_schema_versions(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
             c.execute('''CREATE TABLE IF NOT EXISTS forecast_inputs(
                 id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, kind TEXT NOT NULL, source_id TEXT NOT NULL,
                 revision TEXT NOT NULL, available_at TEXT NOT NULL, received_at TEXT NOT NULL, payload TEXT NOT NULL,
                 UNIQUE(tenant_id,kind,source_id,revision))''')
+            c.execute('''CREATE INDEX IF NOT EXISTS forecast_inputs_source_cutoff
+                ON forecast_inputs(tenant_id,kind,source_id,available_at,received_at)''')
             c.execute('''CREATE TABLE IF NOT EXISTS forecast_input_snapshots(
                 id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, cutoff TEXT NOT NULL, payload TEXT NOT NULL)''')
             c.execute('''CREATE TABLE IF NOT EXISTS forecast_jobs(
@@ -132,6 +136,8 @@ class ForecastStore:
             c.execute("INSERT OR IGNORE INTO forecast_schema_versions VALUES(1, strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
             c.execute("INSERT OR IGNORE INTO forecast_schema_versions VALUES(2, strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
             c.execute("INSERT OR IGNORE INTO forecast_schema_versions VALUES(3, strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
+            migrate_archive(c)
+            c.execute("INSERT OR IGNORE INTO forecast_schema_versions VALUES(4, strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
 
     def _append_input(self, c, kind, source_id, revision, payload, available_at, received_at, tenant_id):
         value = encode(payload)
@@ -162,16 +168,48 @@ class ForecastStore:
             row = c.execute('SELECT * FROM forecast_inputs WHERE tenant_id=? AND kind=? AND source_id=? AND revision=?', (tenant_id, kind, source_id, str(revision))).fetchone()
         return self._input(row) if row else None
 
-    def input_records(self, cutoff, tenant_id='northstar', *, latest=False):
-        with self.transaction() as c:
-            rows = c.execute('SELECT * FROM forecast_inputs WHERE tenant_id=? AND available_at<=? AND received_at<=? ORDER BY available_at,received_at,rowid', (tenant_id, iso(cutoff), iso(cutoff))).fetchall()
-        result = [self._input(r) for r in rows]
+    def input_records(self, cutoff, tenant_id='northstar', *, latest=False, kinds=None, source_id=None):
+        """Select usable source revisions before loading their JSON payloads.
+
+        Latest selection retains the historical API's first-source encounter
+        order, including rowid as the final tie breaker for equal timestamps.
+        """
+        cutoff = iso(cutoff)
+        conditions = ['tenant_id=?', 'available_at<=?', 'received_at<=?']
+        params = [tenant_id, cutoff, cutoff]
+        if kinds is not None:
+            kinds = (kinds,) if isinstance(kinds, str) else tuple(kinds)
+            if not kinds:
+                return []
+            conditions.append('kind IN (' + ','.join('?' for _ in kinds) + ')')
+            params.extend(kinds)
+        if source_id is not None:
+            conditions.append('source_id=?')
+            params.append(source_id)
+        where = ' AND '.join(conditions)
         if latest:
-            latest_rows = {}
-            for r in result:
-                latest_rows[(r['kind'], r['source_id'])] = r
-            return list(latest_rows.values())
-        return result
+            # Window only metadata: repository captures can be large, and old
+            # payloads must not be read/decoded merely to discard their revisions.
+            query = f'''WITH ranked AS (
+                SELECT rowid AS input_rowid,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY kind,source_id
+                        ORDER BY available_at DESC,received_at DESC,rowid DESC) AS latest_rank,
+                    FIRST_VALUE(rowid) OVER (
+                        PARTITION BY kind,source_id
+                        ORDER BY available_at,received_at,rowid) AS first_rowid
+                FROM forecast_inputs WHERE {where})
+                SELECT current.* FROM ranked
+                JOIN forecast_inputs AS current ON current.rowid=ranked.input_rowid
+                JOIN forecast_inputs AS first ON first.rowid=ranked.first_rowid
+                WHERE ranked.latest_rank=1
+                ORDER BY first.available_at,first.received_at,first.rowid'''
+        else:
+            query = f'''SELECT * FROM forecast_inputs WHERE {where}
+                ORDER BY available_at,received_at,rowid'''
+        with self.transaction() as c:
+            rows = c.execute(query, params).fetchall()
+        return [self._input(r) for r in rows]
 
     def save_snapshot(self, snapshot):
         value = encode(snapshot)
@@ -252,15 +290,20 @@ class ForecastStore:
 
     def complete(self, job_id, token, bundle, now, *, issued_targets=()):
         bundle = deepcopy(bundle)
-        if not bundle.get('is_scenario'):
-            for view in bundle.get('views', []):
-                view.setdefault('publication', {})['issued_at'] = iso(now)
-                view['publication']['published_at'] = iso(now)
-        encoded = encode(bundle)
         with self.transaction() as c:
             row = c.execute("SELECT * FROM forecast_jobs WHERE id=? AND status='running' AND lease_token=? AND lease_until>?", (job_id, token, iso(now))).fetchone()
             if not row:
                 return False
+            if row['job_type'] == 'refresh':
+                cutoff = c.execute('SELECT cutoff FROM forecast_input_snapshots WHERE id=?', (row['snapshot_id'],)).fetchone()[0]
+                current = c.execute('SELECT information_cutoff,sequence FROM forecast_publications WHERE tenant_id=?', (row['tenant_id'],)).fetchone()
+                publishes = current is None or (cutoff, row['sequence']) > (current['information_cutoff'], current['sequence'])
+                for view in bundle.get('views', []):
+                    view.setdefault('publication', {})['issued_at'] = iso(now)
+                    # A completed issuance can lose the publication fence. Its
+                    # immutable receipt must not claim that it was ever served.
+                    view['publication']['published_at'] = iso(now) if publishes else None
+            encoded = encode(bundle)
             if row['job_type'] == 'interpretation':
                 native = json.loads(row['job_payload'])['envelope']
                 self._append_input(c, 'evidence', native['source_id'], str(native['revision']), bundle, native['available_at'], row['created_at'], row['tenant_id'])
@@ -275,7 +318,6 @@ class ForecastStore:
                 target = dict(target, issued_at=iso(now))
                 self._append_input(c, 'issued_targets', target['target_id'], '1', target, now, now, row['tenant_id'])
             c.execute("UPDATE forecast_jobs SET status='succeeded',completed_at=?,lease_token=NULL,lease_owner=NULL,lease_until=NULL WHERE id=?", (iso(now), job_id))
-            cutoff = c.execute('SELECT cutoff FROM forecast_input_snapshots WHERE id=?', (row['snapshot_id'],)).fetchone()[0]
             c.execute('''INSERT INTO forecast_publications(tenant_id,run_id,sequence,published_at,information_cutoff) VALUES(?,?,?,?,?) ON CONFLICT(tenant_id) DO UPDATE
                 SET run_id=excluded.run_id,sequence=excluded.sequence,published_at=excluded.published_at,information_cutoff=excluded.information_cutoff
                 WHERE excluded.information_cutoff>forecast_publications.information_cutoff OR (excluded.information_cutoff=forecast_publications.information_cutoff AND excluded.sequence>forecast_publications.sequence)''', (row['tenant_id'], row['run_id'], row['sequence'], iso(now), cutoff))

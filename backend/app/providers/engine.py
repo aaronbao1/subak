@@ -27,7 +27,9 @@ class EngineForecastProvider:
             if period is None:
                 return unavailable('unknown planning period')
             start, end = period.starts_on.isoformat(), (period.ends_on + timedelta(days=1)).isoformat()
-        bundle = self.service.views()
+        # This adapter consumes only the issued quarter. Current actuals have
+        # separate acquisition and availability and must not gate a stored run.
+        bundle = self.service.views(include_current_actuals=False)
         run_id = bundle.get('run_id')
         if not run_id:
             return unavailable('no published forecast; request a refresh')

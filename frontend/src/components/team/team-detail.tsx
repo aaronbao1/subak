@@ -53,7 +53,7 @@ export function TeamDetail({ teamId }: { teamId: string }) {
   const unit = teamUnit(budget, records);
   const items = context.filter((c) => c.teamIds.includes(team.id));
   const period = budget?.period ?? forecast?.period ?? company?.currentPeriod;
-  const peopleSummaries = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period) : [];
+  const peopleSummaries = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period, forecast) : [];
 
   return (
     <div className="space-y-8">

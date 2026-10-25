@@ -22,7 +22,9 @@ def test_enabled_reset_clears_old_canonical_records_and_reseeds(tmp_path, clock,
         assert client.post('/api/admin/reset').status_code==200
         assert svc.store.publication() is None
         assert not old_input_ids.intersection(r['id'] for r in svc.store.input_records(svc.now()))
-        assert not any(r['kind']!='repository_state' for r in svc.store.input_records(svc.now()))
+        reset_inputs = svc.store.input_records(svc.now())
+        assert {r['kind'] for r in reset_inputs} == {'repository_state', 'evidence'}
+        assert all(r['source_id'].startswith('native:document:') for r in reset_inputs if r['kind'] == 'evidence')
         assert svc.store.list_jobs()==[]
         for method,arg in [(svc.store.get_run,job['run_id']),(svc.store.get_job,evidence['interpretation_job_id']),(svc.store.get_scenario,scenario['scenario_id'])]:
             with pytest.raises(KeyError):method(arg)

@@ -41,7 +41,8 @@ ACTOR = "uber-datagen"
 
 CANONICAL_TABLES = (
     'forecast_publications', 'forecast_scenarios', 'forecast_runs', 'forecast_jobs',
-    'forecast_input_snapshots', 'forecast_inputs', 'forecast_schema_versions',
+    'forecast_input_snapshots', 'forecast_inputs',
+    'forecast_repository_row_versions', 'forecast_repository_captures', 'forecast_schema_versions',
 )
 
 

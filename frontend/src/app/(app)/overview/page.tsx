@@ -52,7 +52,7 @@ export default function OverviewPage() {
   // Drop a selection that no longer exists (e.g. dataset switched).
   const selected = selectedId !== null ? summaries.find((s) => s.team.id === selectedId) ?? null : null;
   const selectedPeople = useMemo(
-    () => (selected && period ? summarizePeople(people, selected.team.id, spending, spendingHistory, personForecasts, context, period) : []),
+    () => (selected && period ? summarizePeople(people, selected.team.id, spending, spendingHistory, personForecasts, context, period, selected.forecast) : []),
     [selected, period, people, spending, spendingHistory, personForecasts, context],
   );
 

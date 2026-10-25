@@ -54,9 +54,23 @@ def stale_forecast_refs(session, refs: list[dict], now) -> list[str]:
     return stale
 
 
-def invalidate_dependent_proposals(conn, record: dict) -> None:
+def invalidate_dependent_proposals(conn, record: dict, *, now=None) -> None:
     """Called inside append_input's BEGIN IMMEDIATE, before evidence is committed."""
     if record['kind'] in NON_MATERIAL:
+        return
+    from app.forecasting.persistence import iso
+    cutoff = iso(now or datetime.now(timezone.utc))
+    if max(record['available_at'], record['received_at']) > cutoff:
+        return
+    # A delayed older revision is archived but does not replace the state used
+    # by current_snapshot/current_revision. Keep the invalidation decision under
+    # this same write lock at actual completion time. Interpretation retries keep
+    # their original receipt times even when a newer job has already completed.
+    latest = conn.execute('''SELECT id,available_at,received_at FROM forecast_inputs
+        WHERE tenant_id=? AND kind=? AND source_id=? AND available_at<=? AND received_at<=?
+        ORDER BY available_at DESC,received_at DESC,rowid DESC LIMIT 1''',
+        (record['tenant_id'], record['kind'], record['source_id'], cutoff, cutoff)).fetchone()
+    if latest and latest['id'] != record['id']:
         return
     if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='proposals'").fetchone():
         return
@@ -69,7 +83,7 @@ def invalidate_dependent_proposals(conn, record: dict) -> None:
             continue
         warnings = json.loads(proposal['warnings'])
         warnings.append({'code': 'forecast_evidence_changed', 'message': 'New forecast evidence requires a new forecast and proposal review.', 'input_id': record['id']})
-        at = datetime.fromisoformat(record['received_at'].replace('Z', '+00:00')).astimezone(timezone.utc).replace(tzinfo=None).isoformat(sep=' ')
+        at = datetime.fromisoformat(cutoff.replace('Z', '+00:00')).replace(tzinfo=None).isoformat(sep=' ')
         conn.execute("UPDATE proposals SET status='stale',warnings=?,updated_at=? WHERE id=? AND status='pending_review'",
                      (json.dumps(warnings), at, proposal['id']))
 

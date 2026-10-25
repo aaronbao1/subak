@@ -44,10 +44,36 @@ For an omission scenario, take the **same run's company view** `included_drivers
 
 Use `DROID_RUNNER=sdk` with the established Factory setup in [agent/README](../../agent/README.md) for a live SDK request. The integrated acceptance journey uses the deterministic runner and stored calculation tools; it does not prove live SDK availability.
 
+Native repository documents also enter the canonical evidence stream. Their exact stored passages, document versions and verified signal references are captured in the same transaction as the source change. Signal summaries and legacy multipliers are not observed measurements. Unsupported, draft, superseded or conflicting facts stay context-only. Existing documents are captured at startup using the actual capture time; their old authored date does not make them available to an earlier forecast.
+
+The dashboard's evidence page includes the canonical publication and its included, queued and context-only reasons alongside the repository context feed. A driver that arrived after publication cannot be explained as part of that frozen run. Refresh first to include eligible evidence. The shared Droid toolbox enforces selected run/scope/action identifiers in addition to supplying them in the prompt.
+
+## Verify the frontend/API boundary without a server
+
+With Node 22.13 or newer and the installed backend environment:
+
+```sh
+FORECAST_TEST_PYTHON=.venv/bin/python node --test frontend/tests/forecast-backend.integration.mjs
+```
+
+This executes the real TypeScript HTTP client and Zustand store against FastAPI through a line-delimited TestClient transport. It checks full dashboard loading, matching person identities, scoped immutable views, seven daily points, idempotent refresh, evidence queuing, exact cited Droid answers, isolated scenarios and current actuals advancing independently of the publication. Only TCP transport is replaced; API responses are produced by the real SQLite-backed app and numerical worker. Rendering, hydration, chart layout, browser interaction and live Factory availability remain separate checks.
+
+Render the real React components with a generated publication:
+
+```sh
+node frontend/tests/render-forecast.cjs \
+  --bundle artifacts/northstar-integration/published-forecast.json \
+  --output-dir artifacts/forecast-ui-render
+```
+
+This records source/runtime hashes and checks company/team/person markup and exact daily values. Optional evidence and outage payload cases are described by `--help`; omitted cases are marked `not_requested`. SSR has no layout engine and does not verify chart geometry, hydration, styling or user interaction.
+
 ## Learning and recovery
 
-Mature outcomes enter as versioned `truth_revisions` for exact issued target IDs, units, basis, and periods. Each refresh records new error or withdrawal receipts and refits observed rates. See the [truth schema and scoring policy](../learning/README.md). Production integrations must derive truth from actual observations, never forecast values.
+Trusted integrations post independently observed outcomes to `POST /api/forecast-outcomes`; in-process adapters use `ForecastService.ingest_outcome`. The complete request identifies an exact archived target and its quantity, units, basis, UTC period, scope, completeness and observed-source provenance. Successful responses return an immutable receipt; exact retries preserve its original receipt time and conflicting revisions return 409. Each subsequent refresh records eligible error or withdrawal receipts and refits observed usage rates. See the [outcome request schema and scoring policy](../learning/README.md). The acceptance demo exercises this endpoint. Production integrations must derive truth from independently observed outcomes, never forecast values or unpriced token counts. Legacy repository imports have unknown completeness and do not automatically become learning truth; live ledger acquisition and source authentication remain deployment responsibilities.
 
 Canonical tables migrate idempotently on startup; legacy finance tables retain their existing creation mechanism. Worker claims are leased, and publication is fenced by cutoff and sequence. An expired worker cannot complete a replacement claim. Reset is a destructive demo operation, disabled by default; it is not a production migration strategy.
+
+Migration 4 adds immutable row-version repository archives. Existing v1 source receipts and issued snapshots stay intact and readable. New captures record changed rows and tombstones; reset clears both archive and publication tables atomically. Same-database synchronization serializes source capture with writes. A separate archive database uses an explicit snapshot transfer and cannot guarantee atomicity across both databases. Capture still scans current material, so measure ingestion cadence against the intended ledger size.
 
 Run the full verification commands in the README after code changes. Regenerate OpenAPI and fixtures with `PYTHONPATH=src:backend:agent .venv/bin/python -m app.contract.export` when contracts change. Keep historical evaluation and synthetic/genuine evidence distinct.
