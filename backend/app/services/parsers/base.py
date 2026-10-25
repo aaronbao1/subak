@@ -39,6 +39,9 @@ class ParsedRecord:
     tokens: dict[str, int | None] = field(default_factory=dict)
     stream_key: str | None = None
     cumulative: dict[str, int] | None = None
+    # Lowercased user email from the export. Resolved to a person only through the people directory,
+    # and only for a person on the team the mapping resolved; never used for team attribution.
+    user_ref: str | None = None
 
     def fingerprint(self) -> tuple:
         """Content identity used to detect a record key restated with different values."""

@@ -68,7 +68,7 @@
       "total": "200000.00"
     },
     "blocked_attempts": [],
-    "created_at": "2026-10-24T12:31:00Z",
+    "created_at": "2026-10-24T12:33:00Z",
     "current_version": 1,
     "decision_id": null,
     "deltas": {
@@ -135,7 +135,7 @@
     "revises_proposal_id": null,
     "status": "pending_review",
     "unit": "USD",
-    "updated_at": "2026-10-24T12:31:00Z",
+    "updated_at": "2026-10-24T12:33:00Z",
     "warnings": []
   },
   "scenario": "main",

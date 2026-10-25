@@ -37,7 +37,8 @@ cd backend
 Health check: `curl http://127.0.0.1:8787/health` (also `/api/health`).
 
 There are no migrations: tables are created on startup. After pulling a schema change, delete
-`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`.
+`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`. Startup and
+`python -m app.seed` refuse an outdated file with a message naming the missing columns.
 
 ## Test
 
@@ -99,7 +100,8 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 | Route | Returns |
 |---|---|
 | `GET /api/meta` | period, unit, runner/provider modes, real-vs-simulated labels |
-| `GET /api/spend/summary`, `GET /api/spend/records` | team/company spend by cost category and value kind, coverage, drill-down |
+| `GET /api/spend/summary`, `GET /api/spend/records` | team/company spend by cost category and value kind, coverage, drill-down (records carry `person`; filter `?person=`) |
+| `GET /api/people`, `GET /api/people/{id}` | people directory (`?team=`); spend is attributed to a person only via a known email on the mapped team |
 | `GET /api/coverage` | completeness per team, unattributed bucket, contributing batches |
 | `GET /api/budget`, `GET /api/budget/history` | current allocations + version, immutable snapshots |
 | `GET /api/forecasts`, `POST /api/forecasts/snapshots` | ForecastProvider result (200 even when unavailable), citable snapshot |

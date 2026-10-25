@@ -8,7 +8,7 @@
   "response": [
     {
       "actor_id": "droid-northstar",
-      "at": "2026-10-24T12:35:00Z",
+      "at": "2026-10-24T12:37:00Z",
       "details": {
         "actor_role": "droid_agent",
         "outcome": "approve"
@@ -19,7 +19,7 @@
     },
     {
       "actor_id": "fin-approver-alice",
-      "at": "2026-10-24T12:41:00Z",
+      "at": "2026-10-24T12:43:00Z",
       "details": {
         "actor_role": "finance_approver",
         "base_version": 1,

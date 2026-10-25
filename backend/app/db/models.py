@@ -55,6 +55,9 @@ FORECAST_AVAILABILITY = ("available", "partial", "unavailable")
 AGENT_TASK_TYPES = ("interpret_corpus", "propose_allocation", "answer_question")
 RUNNER_KINDS = ("fake", "sdk")
 AGENT_RUN_STATUSES = ("running", "succeeded", "failed", "unavailable")
+# Where a person works / where a document came from (frontend `Integration`).
+INTEGRATIONS = ("slack", "asana", "monday", "email", "document")
+PERSON_ID_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}$"
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -117,6 +120,30 @@ class Team(Base):
     __table_args__ = (CheckConstraint("id <> 'unattributed'", name="no_unattributed_row"),)
 
 
+class Person(Base):
+    """A fictional (or imported) individual on a team. Spend is attributed to a person only through a
+    known directory entry (email), never from an export alone (frontend-integration-design §2.2)."""
+
+    __tablename__ = "people"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # slug, e.g. research-ava-chen
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str | None] = mapped_column(String(200))
+    email: Mapped[str | None] = mapped_column(String(320), unique=True)  # stored lowercase
+    primary_tool: Mapped[str | None] = mapped_column(String(100))
+    integrations: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("id <> 'unattributed'", name="no_unattributed_person"),
+        CheckConstraint("email IS NULL OR email = lower(email)", name="email_lowercase"),
+        Index("ix_people_team", "team_id"),
+    )
+
+
 class TeamMapping(_IdMixin, Base):
     __tablename__ = "team_mappings"
 
@@ -172,6 +199,8 @@ class UsageRecord(_IdMixin, Base):
     source_record_key: Mapped[str] = mapped_column(String(500), nullable=False)
     source_account: Mapped[str | None] = mapped_column(String(200))
     team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id"))
+    # Set only when the export's user_email matches an active person on the mapped team.
+    person_id: Mapped[str | None] = mapped_column(ForeignKey("people.id"))
     period_id: Mapped[str] = mapped_column(ForeignKey("planning_periods.id"), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     provider: Mapped[str | None] = mapped_column(String(100))
@@ -210,6 +239,7 @@ class UsageRecord(_IdMixin, Base):
             name="non_negative_token_deltas",
         ),
         Index("ix_usage_records_team_period", "team_id", "period_id"),
+        Index("ix_usage_records_team_person_period", "team_id", "person_id", "period_id"),
         Index("ix_usage_records_stream", "source_kind", "stream_key", "occurred_at"),
     )
 

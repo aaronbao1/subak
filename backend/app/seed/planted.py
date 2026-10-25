@@ -1,8 +1,8 @@
 """Planted-error pack for the Northstar seed (all values simulated).
 
 The files live in `backend/seed/planted/` and the expected outcomes in `backend/seed/answer_key.md`.
-They are NOT part of the default seed: the default seed keeps the shared 45k/20k/30k = 95k table and the
-six-document corpus that the contract fixtures are built from.
+They are NOT part of the default seed: the default seed keeps the shared 45k/20k/30k = 95k table (616
+daily records) and the six-document corpus that the contract fixtures are built from.
 
 - `load_planted(session, ...)` adds the data traps to an already-seeded database (four imports and two
   extra corpus documents). Every step goes through the normal services, so loading twice adds nothing.
@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.config import BACKEND_ROOT, Settings
 from app.core.clock import Clock, IdFactory
 from app.schemas.documents import DocumentIn
+from app.seed import daily_spend
 from app.services import corpus as corpus_svc
 from app.services import imports as import_svc
 
@@ -40,6 +41,8 @@ OUTDATED_PROPOSAL_FILE = "05_outdated_proposal.json"
 CODEX_ACCOUNT = "codex-research-laptops"
 UNMAPPED_ACCOUNT = "proj-fable-eval-sandbox"
 PLANTED_ACTOR = "seed-planted"
+# The re-export (P1b) repeats every record of the generated daily seed export.
+EXPECTED_SEED_RECORDS = len(daily_spend.rows())
 
 
 @dataclass(frozen=True)
@@ -157,7 +160,7 @@ def _scenario(client) -> list[Check]:
     r = _upload(client, PLANTED_IMPORTS[1])
     b = r.json()
     add("P1b", "re-export with a new hash dedupes per record key",
-        {"http": 201, "records_added": 0, "skipped_duplicates": 8, "spend_added": "0.00"},
+        {"http": 201, "records_added": 0, "skipped_duplicates": EXPECTED_SEED_RECORDS, "spend_added": "0.00"},
         {"http": r.status_code, "records_added": b["record_count"],
          "skipped_duplicates": b["skipped_duplicate_records"], "spend_added": b["spend_added"]})
     s = client.get("/api/spend/summary").json()

@@ -3321,6 +3321,90 @@
         "title": "PeriodRef",
         "type": "object"
       },
+      "PersonOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "integrations": {
+            "items": {
+              "enum": [
+                "slack",
+                "asana",
+                "monday",
+                "email",
+                "document"
+              ],
+              "type": "string"
+            },
+            "title": "Integrations",
+            "type": "array"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Tool"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team",
+          "name",
+          "role",
+          "email",
+          "primary_tool",
+          "integrations",
+          "is_simulated",
+          "active"
+        ],
+        "title": "PersonOut",
+        "type": "object"
+      },
       "ProposalOut": {
         "properties": {
           "action_type": {
@@ -3869,6 +3953,17 @@
           "period": {
             "title": "Period",
             "type": "string"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
           },
           "provider": {
             "anyOf": [
@@ -6409,6 +6504,111 @@
         ]
       }
     },
+    "/api/people": {
+      "get": {
+        "operationId": "list_people_api_people_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonOut"
+                  },
+                  "title": "Response List People Api People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "List People",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/api/people/{person_id}": {
+      "get": {
+        "operationId": "get_person_api_people__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Get Person",
+        "tags": [
+          "people"
+        ]
+      }
+    },
     "/api/proposals": {
       "get": {
         "operationId": "list_proposals_api_proposals_get",
@@ -7577,6 +7777,24 @@
                 }
               ],
               "title": "Batch"
+            }
+          },
+          {
+            "description": "person id; team-level records have none",
+            "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "person id; team-level records have none",
+              "title": "Person"
             }
           },
           {

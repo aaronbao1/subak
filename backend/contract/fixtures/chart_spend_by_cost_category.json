@@ -32,7 +32,7 @@
             "amount": "4000.00",
             "cost_category": "subscription_fee",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 88,
             "simulated": true,
             "team": "engineering",
             "value_kind": "simulated"
@@ -41,7 +41,7 @@
             "amount": "26000.00",
             "cost_category": "direct_api",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 88,
             "simulated": true,
             "team": "engineering",
             "value_kind": "simulated"
@@ -50,7 +50,7 @@
             "amount": "4000.00",
             "cost_category": "subscription_fee",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 80,
             "simulated": true,
             "team": "product",
             "value_kind": "simulated"
@@ -59,7 +59,7 @@
             "amount": "16000.00",
             "cost_category": "billable_overage",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 80,
             "simulated": true,
             "team": "product",
             "value_kind": "simulated"
@@ -68,7 +68,7 @@
             "amount": "5000.00",
             "cost_category": "subscription_fee",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 120,
             "simulated": true,
             "team": "research",
             "value_kind": "simulated"
@@ -77,7 +77,7 @@
             "amount": "40000.00",
             "cost_category": "direct_api",
             "counts_toward_spend": true,
-            "record_count": 1,
+            "record_count": 120,
             "simulated": true,
             "team": "research",
             "value_kind": "simulated"

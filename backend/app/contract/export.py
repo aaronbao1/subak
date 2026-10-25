@@ -37,6 +37,7 @@ from app.schemas.documents import DocumentDetail, DocumentIngestResult, Document
 from app.schemas.forecasts import ForecastResult, ForecastSnapshotOut
 from app.schemas.imports import CoverageReport, ImportResult, TeamMappingOut, TeamMappingUpsertResult, TeamOut
 from app.schemas.meta import MetaOut, Overview
+from app.schemas.people import PersonOut
 from app.schemas.proposals import ProposalOut
 from app.schemas.signals import ContextSignalOut, SignalList
 from app.schemas.spending import SpendRecordList, SpendSummary
@@ -64,7 +65,7 @@ OUTCOME_B_LINES = [
 # (`components.schemas.<name>`); `<name>[]` is a JSON array of that component; `NoContent` is an empty
 # 204 body. `ErrorBody` is used for every error case.
 SCHEMAS: dict[str, Any] = {
-    "MetaOut": MetaOut, "TeamOut[]": list[TeamOut], "TeamMappingOut[]": list[TeamMappingOut],
+    "MetaOut": MetaOut, "TeamOut[]": list[TeamOut], "PersonOut[]": list[PersonOut], "TeamMappingOut[]": list[TeamMappingOut],
     "TeamMappingUpsertResult": TeamMappingUpsertResult,
     "BudgetState": BudgetState, "BudgetHistory": BudgetHistory, "SpendSummary": SpendSummary,
     "SpendRecordList": SpendRecordList, "CoverageReport": CoverageReport, "ImportResult": ImportResult,
@@ -182,6 +183,8 @@ def scenario_main(r: Recorder) -> None:
     r.call("meta", "GET", "/api/meta", schema="MetaOut", expect=200,
            description="modes and real-vs-simulated labels")
     r.call("teams", "GET", "/api/teams", schema="TeamOut[]", expect=200, description="three Northstar teams")
+    r.call("people", "GET", "/api/people", schema="PersonOut[]", expect=200,
+           description="fifteen fictional people (6 research / 4 product / 5 engineering), simulated")
     r.call("team_mappings", "GET", "/api/team-mappings", schema="TeamMappingOut[]", expect=200,
            description="explicit source account -> team mappings")
     r.call("budget_state_initial", "GET", "/api/budget", schema="BudgetState", expect=200,
@@ -190,9 +193,14 @@ def scenario_main(r: Recorder) -> None:
            description="recorded spend 45k/20k/30k = 95k; included usage notional only; coverage complete")
     r.call("coverage", "GET", "/api/coverage", schema="CoverageReport", expect=200,
            description="coverage per team and company for the seeded data")
-    r.call("spend_records_research", "GET", "/api/spend/records", params={"team": "research"},
+    r.call("spend_records_research", "GET", "/api/spend/records", params={"team": "research", "limit": 8},
            schema="SpendRecordList", expect=200,
-           description="research drill-down incl. included_usage with counts_toward_spend=false")
+           description="research drill-down (first 8 of 260 daily records): per-person rows carry `person`; "
+                       "team-level included_usage has person null and counts_toward_spend=false")
+    r.call("spend_records_person", "GET", "/api/spend/records",
+           params={"person": "research-omar-haddad", "cost_category": "direct_api", "limit": 20},
+           schema="SpendRecordList", expect=200,
+           description="one person's daily API spend Oct 1-20 (usage halves from Oct 19)")
     r.call("forecast_available", "GET", "/api/forecasts", schema="ForecastResult", expect=200,
            description="placeholder projections 85k/50k/65k, full_period_total, simulated (not a model)")
     snap = r.call("forecast_snapshot", "POST", "/api/forecasts/snapshots", headers=DROID,

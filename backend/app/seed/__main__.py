@@ -16,7 +16,7 @@ import sys
 
 from app.config import Settings
 from app.core.clock import SystemClock, UuidIdFactory
-from app.db.base import create_all, make_engine, make_session_factory
+from app.db.base import SchemaOutdated, check_schema, create_all, make_engine, make_session_factory
 from app.seed.northstar import seed
 
 
@@ -37,6 +37,12 @@ def main(argv: list[str] | None = None) -> int:
     settings = Settings.from_env()
     engine = make_engine(settings.db_path)
     create_all(engine)
+    try:
+        check_schema(engine)
+    except SchemaOutdated as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        engine.dispose()
+        return 2
     session = make_session_factory(engine)()
     clock, ids = SystemClock(), UuidIdFactory()
     try:

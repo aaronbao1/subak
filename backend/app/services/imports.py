@@ -11,6 +11,9 @@ Guarantees:
   booked) so the next in-period snapshot is still measured from the right starting point.
 - Team comes only from explicit mappings; unmapped accounts are stored with team_id NULL.
 - A batch with any invalid row fails as a whole (nothing inserted) and is kept for audit.
+- Person comes only from the people directory: a record's `user_email` sets `person_id` when it names
+  an active person on the team the mapping resolved. Anything else leaves `person_id` NULL and is
+  counted as `person_unresolved`; an email never moves spend to another team.
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from sqlalchemy.orm import Session
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
 from app.db.models import VALUE_KINDS, CounterBaseline, ImportBatch, PlanningPeriod, UsageRecord
+from app.services import people as people_svc
 from app.services.parsers import codex_sessions, northstar_csv
 from app.services.parsers.base import TOKEN_FIELDS, ParsedRecord, ParseIssue, ParseResult
 from app.services.teams import MappingResolver
@@ -348,6 +352,7 @@ def run_import(
     # 2. period, team, record-key dedupe
     period_of = _period_lookup(session)
     resolver = MappingResolver(session, source_kind)
+    directory = people_svc.people_by_email(session) if any(r.user_ref for r in candidates) else {}
     keys = [r.source_record_key for r in candidates]
     existing: dict[str, UsageRecord] = {}
     for chunk_start in range(0, len(keys), 500):
@@ -362,6 +367,7 @@ def run_import(
     session.flush()
 
     inserted = skipped_dup = conflicts = unmapped = out_of_period = baselines = 0
+    person_resolved = person_unresolved = 0
     unmapped_accounts: dict[str, int] = defaultdict(int)
     spend_added = Decimal("0.00")
     for rec in sorted(candidates, key=lambda r: r.row):
@@ -396,6 +402,14 @@ def run_import(
         if team_id is None:
             unmapped += 1
             unmapped_accounts[acct or "<none>"] += 1
+        person_id = None
+        if rec.user_ref:
+            person = directory.get(rec.user_ref)
+            if team_id is not None and person is not None and person.team_id == team_id:
+                person_id = person.id
+                person_resolved += 1
+            else:
+                person_unresolved += 1
         category = rec.cost_category
         counts = UsageRecord.derive_counts_toward_spend(category)
         if counts and rec.amount is not None:
@@ -408,6 +422,7 @@ def run_import(
             source_record_key=rec.source_record_key,
             source_account=acct,
             team_id=team_id,
+            person_id=person_id,
             period_id=period_id,
             occurred_at=rec.occurred_at,
             provider=rec.provider,
@@ -436,6 +451,15 @@ def run_import(
     })
     if baselines:
         stats["out_of_period_baselines_saved"] = baselines
+    if person_resolved or person_unresolved:
+        stats["person_resolved"] = person_resolved
+        stats["person_unresolved"] = person_unresolved
+    if person_unresolved:
+        warnings.append(ParseIssue(
+            "person_unresolved",
+            f"{person_unresolved} record(s) name a user_email that is not an active person on the mapped "
+            "team; kept as team-level spend",
+        ))
     batch.record_count = inserted
     batch.skipped_duplicate_records = skipped_dup
     batch.unmapped_record_count = unmapped

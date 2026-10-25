@@ -611,6 +611,16 @@
       "status": 200
     },
     {
+      "description": "fifteen fictional people (6 research / 4 product / 5 engineering), simulated",
+      "file": "people.json",
+      "method": "GET",
+      "name": "people",
+      "path": "/api/people",
+      "scenario": "main",
+      "schema": "PersonOut[]",
+      "status": 200
+    },
+    {
       "description": "outcome B drafted at the same base version: +50k envelope, research +35k, engineering +15k",
       "file": "proposal_addition_pending.json",
       "method": "POST",
@@ -731,7 +741,17 @@
       "status": 200
     },
     {
-      "description": "research drill-down incl. included_usage with counts_toward_spend=false",
+      "description": "one person's daily API spend Oct 1-20 (usage halves from Oct 19)",
+      "file": "spend_records_person.json",
+      "method": "GET",
+      "name": "spend_records_person",
+      "path": "/api/spend/records",
+      "scenario": "main",
+      "schema": "SpendRecordList",
+      "status": 200
+    },
+    {
+      "description": "research drill-down (first 8 of 260 daily records): per-person rows carry `person`; team-level included_usage has person null and counts_toward_spend=false",
       "file": "spend_records_research.json",
       "method": "GET",
       "name": "spend_records_research",

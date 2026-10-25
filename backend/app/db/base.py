@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Engine, MetaData, create_engine, event
+from sqlalchemy import Engine, MetaData, create_engine, event, inspect
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 NAMING_CONVENTION = {
@@ -48,3 +48,29 @@ def create_all(engine: Engine) -> None:
     from app.db import models  # noqa: F401  (register tables)
 
     Base.metadata.create_all(engine)
+
+
+class SchemaOutdated(RuntimeError):
+    """The SQLite file was created by an older backend. There are no migrations: `create_all` does not
+    add columns to an existing table, so a stale file would otherwise fail later as an opaque 500."""
+
+
+def check_schema(engine: Engine) -> None:
+    """Raise `SchemaOutdated` if any mapped table in the database lacks a mapped column."""
+    from app.db import models  # noqa: F401  (register tables)
+
+    insp = inspect(engine)
+    existing_tables = set(insp.get_table_names())
+    missing: list[str] = []
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            missing.append(table.name)
+            continue
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        missing += [f"{table.name}.{c.name}" for c in table.columns if c.name not in have]
+    if missing:
+        db = engine.url.database or "the database"
+        raise SchemaOutdated(
+            f"{db} predates this backend (missing {', '.join(missing)}). "
+            "Delete it and run `python -m app.seed`."
+        )

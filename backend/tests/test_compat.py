@@ -115,8 +115,8 @@ def test_included_usage_counts_zero_and_is_labeled(c):
     rows = [r for r in get(c, "spending") if r["component"] == "included_usage"]
     assert {r["teamId"] for r in rows} == {"research", "engineering"}
     assert all(r["amount"] == 0 and r["provenance"] == "usage_only" for r in rows)
-    research = next(r for r in rows if r["teamId"] == "research")
-    assert "notional value $3,000.00 is not counted" in research["source"]
+    research = next(r for r in rows if r["teamId"] == "research" and r["date"] == "2026-10-01")
+    assert "notional value $" in research["source"] and "is not counted as spend" in research["source"]
     assert "(simulated)" in research["source"].lower() or "simulated" in research["source"].lower()
 
 
