@@ -246,9 +246,12 @@ cd backend && PYTHONPATH=../src:.:../agent BACKEND_DB_PATH=data/uber.db .venv/bi
 - **Live refresh in the UI.** In `frontend/.env.local` set `NEXT_PUBLIC_API_URL=http://localhost:8787/compat`
   and `NEXT_PUBLIC_LIVE_REFRESH_MS=1000`. The frontend currently clamps the interval to at least 2 s
   (`frontend/src/components/shell/app-shell.tsx`); the backend is built to answer every 1 s. Responses are
-  gzipped, and `/compat/api/spending` and `/people` keep their rendered JSON keyed by a data
-  stamp (write generation + latest usage row id) plus query parameters, so an unchanged poll is a cache hit
-  ([`app/compat/cache.py`](app/compat/cache.py)).
+  gzipped. `/compat/api/people` keeps its rendered JSON keyed by a data stamp (write generation + latest
+  usage row id) plus query parameters, so an unchanged poll is a cache hit
+  ([`app/compat/cache.py`](app/compat/cache.py)). `/compat/api/spending` uses an incremental index
+  ([`app/compat/spending_index.py`](app/compat/spending_index.py)): an unchanged poll serves the stored
+  body, and a pure append (what live imports do) reads only the new rows and re-renders only the rows
+  they touch.
 
 Measured on the default dataset (331,731 records, in-process TestClient, fake runner, 2026-10-25; forecast
 reads are served from the engine's stored publication and are not response-cached here):
@@ -258,7 +261,9 @@ reads are served from the engine's stored publication and are not response-cache
 | `GET /compat/api/spending` (~3 MB JSON before gzip) | 358 ms | 4 ms |
 | `GET /compat/api/people` | 7 ms | 2 ms |
 
-After a live import the next spending read rebuilds once (~0.4-0.8 s), then is cached again.
+A live import does not trigger a full spending rebuild: the next read folds in only the appended rows.
+A full rebuild happens only after an in-place UPDATE/DELETE on `usage_records` (for example a team
+re-attribution or a demo reset), a schema change, or a period change.
 
 ## Frontend compat layer
 

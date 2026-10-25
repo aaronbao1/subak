@@ -225,6 +225,21 @@ def _append_log(path: Path, at: str, purpose: str, result: str, usage: Any) -> N
         fh.write(line.replace("\n", " ") + "\n")
 
 
+def _forecast_service(settings: Settings, session_factory: sessionmaker, clock: Clock) -> Any:
+    """The engine's published-forecast reader over this database, built like app/main.py's but read-only:
+    the CLI's sessions are not bound to the forecast store (standalone sessions keep their original
+    contract; the server captures new documents at its next start) and nothing is captured or refreshed
+    here. Forecast and chart tools then read the same published runs the server serves."""
+    from app.forecasting.persistence import ForecastStore
+    from app.forecasting.repository import repository_snapshot_factory
+    from app.forecasting.service import ForecastService
+
+    store = ForecastStore(settings.db_path)
+    return ForecastService(store, snapshot_factory=repository_snapshot_factory(session_factory, clock=clock.now,
+                                                                               store=store),
+                           now=lambda: clock.now().isoformat())
+
+
 def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clock, ids: IdFactory,
                 runner: Any, runner_kind: str, since: date, include_announced: bool, batch_size: int,
                 credit_cap: float, batch_estimate: float = DEFAULT_BATCH_ESTIMATE, force: bool = False,
@@ -265,11 +280,12 @@ def run_batches(session_factory: sessionmaker, *, settings: Settings, clock: Clo
     if dry_run or not batches:
         return report
 
-    provider = forecast_provider or provider_from_settings(settings.forecast_provider)
-    if forecast_provider is None and callable(getattr(provider, "bind", None)):
-        provider.bind(session_factory, clock)
+    forecast_service = _forecast_service(settings, session_factory, clock)
+    provider = forecast_provider or provider_from_settings(
+        settings.forecast_provider, forecast_service=forecast_service, session_factory=session_factory)
     state = SimpleNamespace(settings=replace(settings, droid_runner=runner_kind), clock=clock, id_factory=ids,
-                            session_factory=session_factory, forecast_provider=provider, droid_runner=runner)
+                            session_factory=session_factory, forecast_provider=provider,
+                            forecast_service=forecast_service, droid_runner=runner)
     largest = 0.0
     for i, batch in enumerate(batches, 1):
         projected = report.spent + max(largest, batch_estimate)
