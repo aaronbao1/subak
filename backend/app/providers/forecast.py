@@ -232,7 +232,11 @@ class PlaceholderForecastProvider:
 
 
 def provider_from_settings(name: str) -> ForecastProvider:
-    """`FORECAST_PROVIDER=placeholder|unavailable` (validated in Settings)."""
+    """`FORECAST_PROVIDER=placeholder|unavailable|forecasting_package` (validated in Settings)."""
+    if name == "forecasting_package":
+        from app.providers.forecasting_pkg import ForecastingPackageProvider
+
+        return ForecastingPackageProvider()  # create_app binds it to the database (bind())
     if name == "unavailable":
         return PlaceholderForecastProvider(mode="unavailable")
     return PlaceholderForecastProvider(mode="available")

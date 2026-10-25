@@ -84,3 +84,41 @@ class ForecastSnapshotOut(OutModel):
     availability: Availability
     fetched_at: datetime
     forecast: ForecastResult
+
+
+class ForecastModelChoice(BaseModel):
+    """One team's model from the latest model run (ForecastingPackageProvider)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    team: str
+    model: str
+    validated: bool          # chosen by backtest (False: too little history, used unvalidated)
+    wape: str | None = None  # backtest WAPE as a ratio, 4 places (text, not money)
+    scored_origins: int = 0
+    history_days: int = 0
+
+
+class ForecastSkip(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    team: str
+    reason: str
+
+
+class ForecastRefreshOut(BaseModel):
+    """POST /api/forecasts/refresh. `refreshed` is false for providers without a model cache."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    refreshed: bool
+    reason: str | None = None
+    period: str | None = None
+    history_end: _dt.date | None = None   # first day not in the fitted history (the partial latest day)
+    horizon_days: int | None = None
+    backtest_origins: int | None = None
+    computed_at: datetime | None = None
+    elapsed_ms: int | None = None
+    teams: list[ForecastModelChoice] = Field(default_factory=list)
+    skipped: list[ForecastSkip] = Field(default_factory=list)

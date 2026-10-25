@@ -3044,6 +3044,165 @@
         "title": "EvidenceRef",
         "type": "object"
       },
+      "ForecastModelChoice": {
+        "additionalProperties": false,
+        "description": "One team's model from the latest model run (ForecastingPackageProvider).",
+        "properties": {
+          "history_days": {
+            "default": 0,
+            "title": "History Days",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "scored_origins": {
+            "default": 0,
+            "title": "Scored Origins",
+            "type": "integer"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "validated": {
+            "title": "Validated",
+            "type": "boolean"
+          },
+          "wape": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wape"
+          }
+        },
+        "required": [
+          "team",
+          "model",
+          "validated"
+        ],
+        "title": "ForecastModelChoice",
+        "type": "object"
+      },
+      "ForecastRefreshOut": {
+        "additionalProperties": false,
+        "description": "POST /api/forecasts/refresh. `refreshed` is false for providers without a model cache.",
+        "properties": {
+          "backtest_origins": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backtest Origins"
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "history_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History End"
+          },
+          "horizon_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon Days"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "refreshed": {
+            "title": "Refreshed",
+            "type": "boolean"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastSkip"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastModelChoice"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider",
+          "refreshed"
+        ],
+        "title": "ForecastRefreshOut",
+        "type": "object"
+      },
       "ForecastResult": {
         "additionalProperties": false,
         "description": "What a ForecastProvider returns. `projections` is empty when unavailable - never zero-filled.",
@@ -3151,6 +3310,25 @@
           "method_label"
         ],
         "title": "ForecastResult",
+        "type": "object"
+      },
+      "ForecastSkip": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "reason"
+        ],
+        "title": "ForecastSkip",
         "type": "object"
       },
       "ForecastSnapshotOut": {
@@ -3408,7 +3586,8 @@
           "forecast_mode": {
             "enum": [
               "placeholder",
-              "unavailable"
+              "unavailable",
+              "forecasting_package"
             ],
             "title": "Forecast Mode",
             "type": "string"
@@ -6433,6 +6612,66 @@
           }
         },
         "summary": "Get Forecast",
+        "tags": [
+          "forecasts"
+        ]
+      }
+    },
+    "/api/forecasts/refresh": {
+      "post": {
+        "description": "Recompute the provider's cached model run now (model selection + future), then report it.\n\nChanges no records: it only replaces derived, in-memory forecast state. Providers without a model\ncache (the placeholder) answer `refreshed: false`.",
+        "operationId": "refresh_forecast_api_forecasts_refresh_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastRefreshOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `unknown_period`, `no_budget`, `no_periods`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Refresh Forecast",
         "tags": [
           "forecasts"
         ]

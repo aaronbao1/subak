@@ -264,6 +264,10 @@ class UsageRecord(_IdMixin, Base):
         Index("ix_usage_records_team_period", "team_id", "period_id"),
         Index("ix_usage_records_team_person_period", "team_id", "person_id", "period_id"),
         Index("ix_usage_records_stream", "source_kind", "stream_key", "occurred_at"),
+        # Covers the grouped spend-to-date query (services.forecasts.attribution_for_period): ~7 ms
+        # instead of ~50 ms per request on the 330k-row Uber dataset (forecasting-integration-notes §3).
+        Index("ix_usage_records_spend_to_date", "period_id", "counts_toward_spend", "team_id", "person_id",
+              "occurred_at", "amount"),
     )
 
     @staticmethod

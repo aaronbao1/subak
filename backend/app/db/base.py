@@ -48,6 +48,15 @@ def create_all(engine: Engine) -> None:
     from app.db import models  # noqa: F401  (register tables)
 
     Base.metadata.create_all(engine)
+    # create_all skips the indexes of tables that already exist; add any new index to an existing file
+    # (CREATE INDEX IF NOT EXISTS; no data change, no migration needed).
+    # An index on a column the file lacks is skipped: check_schema then reports the outdated file.
+    insp = inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        for index in table.indexes:
+            if {c.name for c in index.columns} <= have:
+                index.create(engine, checkfirst=True)
 
 
 class SchemaOutdated(RuntimeError):

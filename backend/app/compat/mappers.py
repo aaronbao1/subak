@@ -262,7 +262,8 @@ def forecasts(result: Any, *, period_row: Any, team_ids: Iterable[str], now: dat
         assumptions = list(pr.get("assumptions") or [])
         split = sorted(persons_by_team.get(team, []), key=lambda pp: pp["person"])
         if split:
-            assumptions.append(f"Sum of {len(split)} individual placeholder projections")
+            assumptions.append(f"Sum of {len(split)} individual placeholder projections" if origin == "placeholder"
+                               else f"Sum of {len(split)} person projections (team projection split by share of spend to date)")
             team_level = Decimal(str(pr["amount"])) - sum((Decimal(str(pp["amount"])) for pp in split), Decimal("0"))
             if team_level > 0:
                 assumptions.append(f"Includes {money_text(team_level)} of team-level spend not attributed to a person")

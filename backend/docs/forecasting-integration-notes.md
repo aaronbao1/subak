@@ -219,3 +219,29 @@ ForecastingPackageProvider(name="forecasting_package", supports_attribution=True
   series, that persons sum exactly to the team, that the cache is reused while `max(rowid)` changes
   only today, that refresh fires when a new day appears, and that the provider fails closed on
   `ImportError`.
+
+## 6. As built (`app/providers/forecasting_pkg.py`)
+
+- `FORECAST_PROVIDER=forecasting_package` (`datagen/demo.sh` sets it and installs the package into the venv
+  if `import forecasting` fails). `create_app` calls `provider.bind(session_factory, clock)`, which starts
+  the first model run in the background.
+- **Model run** (one background worker, never on the request path): history = counted spend without seat
+  fees, per team and day, from the team's first counted day to the day before the latest record in the
+  period (exact cents in SQL, interior gaps zero-filled and counted in the assumptions). Up to 8 weekly
+  backtest origins at the real horizon (latest record date .. period end, inclusive), each with at least
+  a week of history. Per team: most scored origins, then lowest WAPE, then registry order. Teams without
+  a scorable origin use the first eligible fallback model, labeled "used without a backtest". Teams
+  without history are `missing_teams`, never zero.
+- **Cache**: per period. A run is reused while its `history_end` equals the latest record date. A new
+  complete day serves the old run (future days after today, with a "refit running" assumption) and
+  queues a refit. Late rows on a complete day (rowid scan of rows newer than the last check) or a
+  shrinking table mark the run stale and queue a refit. A failed run is not retried on every request;
+  `POST /api/forecasts/refresh` refits synchronously and reports each team's model and WAPE.
+- **Per request**: `projected = Attribution spend to date (incl. today) + cached daily future after today +
+  latest month's seat fees on each remaining 1st`. Person and team-level shares are split per day by
+  spend-to-date cents (largest remainder), so `_sanitize` keeps them. Built results are cached by the
+  attribution content, so unchanged data costs one grouped SQL query (~7 ms with
+  `ix_usage_records_spend_to_date`, which `create_all` now adds to existing files).
+- Measured on the Uber DB (331k rows): model run 1.2 s (backtest + forecasts for 16 teams);
+  `/api/forecasts` 26 ms unchanged, ~80 ms after a new live row; `/compat/api/forecasts` 120-170 ms
+  (mostly response validation of ~10k daily points; response caching is a separate change).

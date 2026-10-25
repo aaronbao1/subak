@@ -43,6 +43,9 @@ def create_app(
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
     app.state.forecast_provider = forecast_provider or provider_from_settings(settings.forecast_provider)
+    # Providers that read history themselves (ForecastingPackageProvider) get the session factory.
+    if callable(getattr(app.state.forecast_provider, "bind", None)):
+        app.state.forecast_provider.bind(app.state.session_factory, app.state.clock)
     # None: the runner is selected per run from settings (DROID_RUNNER), so a missing Factory key is a
     # visible 503 on the run, not a startup crash. Tests may inject a runner.
     app.state.droid_runner = droid_runner

@@ -64,7 +64,7 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `BACKEND_DB_PATH` | `backend/data/app.db` | SQLite file (directory is created; `data/` is gitignored) |
 | `BACKEND_PORT` | `8787` | Port used by `python -m app.main` |
 | `BACKEND_CORS_ORIGIN_REGEX` | localhost / 127.0.0.1, any port | Allowed browser origins; credentials are never allowed |
-| `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model) or `unavailable` |
+| `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model), `unavailable`, or `forecasting_package` (per-team models from the repo-root forecasting package, chosen by rolling backtest; install with `.venv/bin/pip install -e ..`; `POST /api/forecasts/refresh` refits now; see `docs/forecasting-integration-notes.md` §6) |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |

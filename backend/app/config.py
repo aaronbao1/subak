@@ -13,7 +13,7 @@ DEFAULT_PORT = 8787
 # Any port on localhost / 127.0.0.1 (frontend dev servers). No credentials are allowed.
 DEFAULT_CORS_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
-FORECAST_PROVIDERS = ("placeholder", "unavailable")
+FORECAST_PROVIDERS = ("placeholder", "unavailable", "forecasting_package")
 DROID_RUNNERS = ("fake", "sdk")
 
 
