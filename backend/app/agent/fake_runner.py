@@ -522,6 +522,8 @@ class FakeDroidRunner:
         """Allocation vs recorded vs projected per team, keeping units, dates and uncertainty visible:
         the period and as-of date, that totals are to date, spend coverage (partial / missing data and
         unattributed spend are called out, never hidden), and how projections are labeled."""
+        if task.params.get("forecast_context"):
+            return self._answer_forecast(task, tools)
         budget = tools.get_budgets()
         spend = tools.get_spend_summary()
         forecast = tools.get_forecast()["forecast"]
@@ -603,6 +605,72 @@ class FakeDroidRunner:
         for w in warnings:
             tools.emit("warning", w)
         return AgentRunOutput(summary=summary, findings=rows + [coverage_row] + chart_findings, warnings=warnings)
+
+    def _answer_forecast(self, task: AgentTask, tools: AgentToolbox) -> AgentRunOutput:
+        """The deterministic runner handles exact forecast context through stored receipts."""
+        context = task.params["forecast_context"]
+        action = context.get("action", "explain")
+        scope = {"scope_type":context.get("scope_type", "company"),"scope_id":context.get("scope_id")}
+        try:
+            if action == "compare":
+                if not context.get("compare_run_id"):
+                    raise ToolError("compare_forecasts", "invalid_arguments", "compare_run_id is required")
+                receipt = tools.compare_forecasts(run_ids=[context["run_id"],context["compare_run_id"]], **scope)
+            elif action == "preview":
+                receipt = tools.preview_forecast_scenario(run_id=context["run_id"],drivers=context.get("drivers", []), **scope)
+            elif action == "refresh":
+                if not context.get("idempotency_key"):
+                    raise ToolError("request_forecast_refresh", "invalid_arguments", "idempotency_key is required")
+                receipt = tools.request_forecast_refresh(idempotency_key=context["idempotency_key"])
+            else:
+                receipt = tools.explain_forecast(run_id=context["run_id"],driver_id=context.get("driver_id"), **scope)
+        except ToolError as exc:
+            summary = f"Forecast request for {context['run_id']} could not be completed: {exc.message}."
+            tools.emit("assistant_text", {"text":summary})
+            return AgentRunOutput(summary=summary,warnings=[exc.as_dict()])
+        parts = [f"Forecast {context['run_id']} ({scope['scope_type']} {scope['scope_id'] or ''})."]
+        if receipt.get("summary"):
+            parts.append(str(receipt["summary"]))
+        bundles = receipt.get("runs", [receipt])
+        limitations = []
+        for bundle in bundles:
+            for view in bundle.get("views", []):
+                quarter = view.get("quarter_outlook", {})
+                unit = view.get("target", {}).get("unit", "")
+                amount = quarter.get("base")
+                parts.append(f"{view.get('run_id',bundle.get('run_id',''))}: {quarter.get('label','Conditional quarter continuation')} "
+                             f"{quarter.get('start','')} to {quarter.get('end','')}, "
+                             f"base {amount if amount is not None else 'unavailable'} {unit}.")
+                limitations.extend(str(x) for x in view.get("limitations", []))
+                for driver in view.get("included_drivers", []):
+                    if isinstance(driver, dict) and (not context.get("driver_id") or driver.get("id")==context["driver_id"]):
+                        parts.append(f"Driver {driver.get('id')}: {driver.get('reason',driver.get('kind',''))}.")
+                        for citation in driver.get("citations", []):
+                            parts.append(f"Source {citation.get('source_id')} revision {citation.get('source_revision')}: "
+                                         + str(citation.get("quote", "")))
+            scoped_effects = [effect for view in bundle.get("views", []) for effect in view.get("driver_effects", [])]
+            for effect in scoped_effects or bundle.get("driver_effects", []):
+                if context.get("driver_id") and effect.get("driver_id") != context["driver_id"]:
+                    continue
+                effect_scope = effect.get("scope", {"type":"company","id":""})
+                parts.append(f"Paired omission {effect.get('driver_id')} ({effect_scope.get('type')} {effect_scope.get('id')}): "
+                             f"base effect {effect.get('base_delta','unavailable')}; {effect.get('qualification','')}")
+            limitations.extend(str(x) for x in bundle.get("limitations", []))
+        if action == "preview":
+            parts.append(f"Hypothetical scenario receipt {receipt.get('scenario_id',receipt.get('run_id'))}: "
+                         f"status {receipt.get('status', 'unknown')}; job {receipt.get('job_id', 'unknown')}; "
+                         "published baseline unchanged.")
+            if receipt.get("status") != "succeeded":
+                parts.append("Scenario results are not available yet.")
+            if receipt.get("last_error"):
+                parts.append(f"Last calculation error: {receipt['last_error']}.")
+        elif action == "refresh":
+            parts.append(f"Refresh receipt {receipt.get('id')}: status {receipt.get('status','unknown')}; publication is reported by the stored job.")
+        parts.append("Limitations: " + ("; ".join(dict.fromkeys(limitations)) or
+                     "Conditional assumptions and descriptive scenario bounds; historical coverage is available only when separately reported."))
+        summary = " ".join(parts)
+        tools.emit("assistant_text", {"text":summary})
+        return AgentRunOutput(summary=summary,findings=[{"type":"forecast_receipt","action":action,"receipt":receipt}])
 
 
 # ---- helpers -----------------------------------------------------------------------------------

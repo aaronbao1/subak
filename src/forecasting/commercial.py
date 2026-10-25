@@ -95,6 +95,8 @@ class PeriodUsage(Serializable):
     complete: bool
 
     def __post_init__(self):
+        if type(self.complete) is not bool:
+            raise ContractError('period completeness must be bool')
         interval(self.period_start,self.period_end)
         if not self.path_id or not self.pool or not self.period_start<=self.through<=self.period_end:
             raise ContractError('path/pool and in-period coverage boundary required')

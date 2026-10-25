@@ -6,7 +6,7 @@ import type {
   CompanyDocument,
   ContextItem,
   Decision,
-  Forecast,
+  Forecast, ForecastBundle, ForecastRefresh, ForecastEvidence, ForecastDriver, ForecastQuestionContext, ForecastScenarioResponse,
   Person,
   SpendingRecord,
   Team,
@@ -23,6 +23,13 @@ export interface SpendingFilter {
  * Keep it async everywhere so swapping implementations is a no-op for the UI.
  */
 export interface DataClient {
+  getForecastViews(filter?: { scope_type?: string; scope_id?: string; run_id?: string }): Promise<ForecastBundle>;
+  refreshForecast(idempotencyKey: string): Promise<ForecastRefresh>;
+  getForecastRefresh(id: string): Promise<ForecastRefresh>;
+  getForecastExplanation(runId: string): Promise<Record<string, unknown>>;
+  previewForecastScenario(runId: string, drivers: ForecastDriver[]): Promise<ForecastScenarioResponse>;
+  getForecastScenario(scenarioId: string): Promise<ForecastScenarioResponse>;
+  getForecastEvidence(): Promise<{ items: ForecastEvidence[] }>;
   getCompany(): Promise<Company>;
   getTeams(): Promise<Team[]>;
   /** Everyone whose usage rolls up into a team. */
@@ -39,7 +46,7 @@ export interface DataClient {
   getDecisions(): Promise<Decision[]>;
   getThread(threadId: string): Promise<AssistantMessage[]>;
   /** Sends a finance message; resolves with the new messages (user echo + assistant reply). */
-  sendMessage(threadId: string, content: string): Promise<AssistantMessage[]>;
+  sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext): Promise<AssistantMessage[]>;
   applyProposal(proposalId: string, note?: string): Promise<Decision>;
   rejectProposal(proposalId: string): Promise<AllocationProposal>;
 }

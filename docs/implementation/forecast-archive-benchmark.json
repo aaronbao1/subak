@@ -1,0 +1,54 @@
+[
+  {
+    "mode": "v1",
+    "imports": 10,
+    "records": 200,
+    "receipts": 11,
+    "row_versions": 0,
+    "receipt_payload_bytes": 2160650,
+    "row_payload_bytes": 0,
+    "all_archive_payload_bytes": 2160650,
+    "sqlite_allocated_bytes": 2646016,
+    "last_five_capture_seconds_median": 0.008834083913825452,
+    "current_snapshot_seconds_median": 0.013390833046287298
+  },
+  {
+    "mode": "v2",
+    "imports": 10,
+    "records": 200,
+    "receipts": 11,
+    "row_versions": 218,
+    "receipt_payload_bytes": 1927,
+    "row_payload_bytes": 130321,
+    "all_archive_payload_bytes": 132248,
+    "sqlite_allocated_bytes": 667648,
+    "last_five_capture_seconds_median": 0.003992249956354499,
+    "current_snapshot_seconds_median": 0.00894225004594773
+  },
+  {
+    "mode": "v1",
+    "imports": 60,
+    "records": 1200,
+    "receipts": 61,
+    "row_versions": 0,
+    "receipt_payload_bytes": 71133675,
+    "row_payload_bytes": 0,
+    "all_archive_payload_bytes": 71133675,
+    "sqlite_allocated_bytes": 72155136,
+    "last_five_capture_seconds_median": 0.06350608298089355,
+    "current_snapshot_seconds_median": 0.07426870800554752
+  },
+  {
+    "mode": "v2",
+    "imports": 60,
+    "records": 1200,
+    "receipts": 61,
+    "row_versions": 1268,
+    "receipt_payload_bytes": 10727,
+    "row_payload_bytes": 776321,
+    "all_archive_payload_bytes": 787048,
+    "sqlite_allocated_bytes": 2011136,
+    "last_five_capture_seconds_median": 0.023501124931499362,
+    "current_snapshot_seconds_median": 0.03813412494491786
+  }
+]

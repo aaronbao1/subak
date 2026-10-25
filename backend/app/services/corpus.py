@@ -3,7 +3,8 @@
 Rules:
 - Content is stored with normalized newlines; citation offsets index into stored content.
 - A document's identity is its content plus its authoritative metadata (doc_type, plan_status,
-  effective dates, team tags). An identity equal to ANY existing version of a doc_key is a no-op
+  effective dates, team/project/person tags, simulated provenance). An identity equal to ANY existing
+  version of a doc_key is a no-op
   (re-importing an old export can never make an outdated version current again). Changed content, or
   the same content with changed metadata (e.g. a plan moving from draft to approved, or cancelled),
   creates version+1 that supersedes the previous latest version.
@@ -32,6 +33,7 @@ from sqlalchemy.orm import Session
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
 from app.db.models import CorpusDocument, Person
+from app.services import people as people_svc
 
 SNIPPET_RADIUS = 80
 MAX_MATCHES_PER_DOC = 3
@@ -96,6 +98,13 @@ def _check_person_tags(session: Session, tags: list[str]) -> None:
     reasons = []
     for tag in tags:
         person = session.get(Person, tag)
+        if person is None:
+            # Historical seed tags remain valid while explicit demo identities
+            # resolve through the directory exposed by native and SDK reads.
+            try:
+                person = people_svc.get_person(session, tag)
+            except DomainError:
+                person = None
         if person is None or not person.active:
             reasons.append({"code": "unknown_person", "field": "person_tags", "person_id": tag,
                             "message": f"unknown or inactive person {tag!r}"})
@@ -113,10 +122,10 @@ def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory
     existing = versions(session, data.doc_key) if _key_exists(session, data.doc_key) else []
 
     identity = _identity(digest, data.doc_type, data.plan_status, data.effective_from, data.effective_to,
-                         data.team_tags)
+                         data.team_tags, data.project_tags, person_tags, data.is_simulated)
     for doc in existing:
         if _identity(doc.content_hash, doc.doc_type, doc.plan_status, doc.effective_from, doc.effective_to,
-                     doc.team_tags) == identity:
+                     doc.team_tags, doc.project_tags, doc.person_tags, doc.is_simulated) == identity:
             return IngestOutcome(doc, created=False, duplicate_of_version=doc.version)
 
     latest = existing[-1] if existing else None
@@ -187,13 +196,16 @@ def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory
     if target is not None:
         target.superseded_by_document_id = doc.id
     session.flush()
+    from app.forecasting.native_evidence import capture_native_documents
+    capture_native_documents(session, [doc, target], now=clock.now())
     return IngestOutcome(doc, created=True)
 
 
 def _identity(digest: str, doc_type: Any, plan_status: Any, effective_from: Any, effective_to: Any,
-              team_tags: Any) -> tuple:
-    norm_tags = tuple(sorted({str(t).strip().lower() for t in (team_tags or [])}))
-    return (digest, doc_type, plan_status, effective_from, effective_to, norm_tags)
+              team_tags: Any, project_tags: Any, person_tags: Any, is_simulated: bool) -> tuple:
+    norm_tags = tuple(tuple(sorted({str(tag).strip().lower() for tag in (values or [])}))
+                      for values in (team_tags, project_tags, person_tags))
+    return (digest, doc_type, plan_status, effective_from, effective_to, *norm_tags, is_simulated)
 
 
 def _key_exists(session: Session, doc_key: str) -> bool:

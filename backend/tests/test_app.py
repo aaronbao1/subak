@@ -48,7 +48,7 @@ def test_settings_defaults():
     s = Settings.from_env({})
     assert s.port == 8787
     assert s.db_path == DEFAULT_DB_PATH
-    assert s.forecast_provider == "placeholder"
+    assert s.forecast_provider == "engine"
     assert s.droid_runner == "fake"
     assert s.allow_reset is False
 

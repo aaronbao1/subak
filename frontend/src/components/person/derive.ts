@@ -46,7 +46,7 @@ function weekOverWeek(records: SpendingRecord[], period: Period) {
 }
 
 /**
- * Roll a team's people up from the same records the team view uses, so the two never disagree.
+ * List the current team's people without assigning shared spend or historical transfers to them.
  * `spendingHistory` supplies last week for the week-over-week change; `spending` is the current period.
  */
 export function summarizePeople(
@@ -57,12 +57,13 @@ export function summarizePeople(
   personForecasts: Forecast[],
   context: ContextItem[],
   period: Period,
+  teamForecast?: Forecast,
 ): PersonSummary[] {
   const members = people.filter((p) => p.teamId === teamId);
-  const teamProjected = members.reduce((s, p) => {
-    const f = personForecasts.find((x) => x.personId === p.id);
-    return f?.status === "available" && f.projected != null ? s + f.projected : s;
-  }, 0);
+  const teamSpent = spending.filter(r => r.teamId === teamId && r.unit === teamForecast?.unit).reduce((sum, r) => sum + r.amount, 0);
+  const teamProjected = teamForecast?.status === "available" && Number.isFinite(teamForecast.projected)
+    ? teamForecast.projected! + (teamForecast.basis === "remaining" ? teamSpent : 0)
+    : undefined;
 
   return members.map((person) => {
     const own = spending.filter((r) => r.personId === person.id);
@@ -71,6 +72,11 @@ export function summarizePeople(
     const forecast = personForecasts.find((f) => f.personId === person.id);
     const available = forecast?.status === "available" && forecast.projected != null;
     const projected = available ? (forecast!.basis === "remaining" ? spent + forecast!.projected! : forecast!.projected) : undefined;
+    // Directory membership is current metadata, not proof that the person's frozen
+    // whole-period total belongs to this team. Canonical person views leave teamId unknown.
+    const comparable = forecast?.teamId === teamId && teamForecast?.teamId === teamId
+      && forecast?.unit === teamForecast?.unit
+      && forecast?.period.start === teamForecast?.period.start && forecast?.period.end === teamForecast?.period.end;
     const weekChange = weekOverWeek(ownHistory, period);
     const trend: Trend = weekChange === undefined ? "unknown" : weekChange > 0.15 ? "up" : weekChange < -0.15 ? "down" : "flat";
     const signals = context
@@ -80,7 +86,7 @@ export function summarizePeople(
       person, spent, forecast, projected,
       low: available ? forecast!.low : undefined,
       high: available ? forecast!.high : undefined,
-      share: available && teamProjected > 0 ? (projected as number) / teamProjected : undefined,
+      share: available && comparable && teamProjected !== undefined && teamProjected > 0 ? (projected as number) / teamProjected : undefined,
       weekChange, trend, signals,
     };
   });

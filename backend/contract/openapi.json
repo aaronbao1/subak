@@ -52,6 +52,10 @@
               },
               {
                 "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
               }
             ],
             "title": "Envelope Increase"
@@ -123,6 +127,10 @@
               },
               {
                 "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
               }
             ],
             "title": "Amount"
@@ -3027,6 +3035,17 @@
             "title": "Basis",
             "type": "string"
           },
+          "forecast_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Run Id"
+          },
           "generated_at": {
             "anyOf": [
               {
@@ -3038,6 +3057,40 @@
               }
             ],
             "title": "Generated At"
+          },
+          "information_cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Information Cutoff"
+          },
+          "input_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Revision"
+          },
+          "input_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Snapshot Id"
           },
           "method_label": {
             "title": "Method Label",
@@ -3056,6 +3109,17 @@
             },
             "title": "Person Projections",
             "type": "array"
+          },
+          "procedure_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Version"
           },
           "projections": {
             "items": {
@@ -3079,9 +3143,31 @@
             ],
             "title": "Reason"
           },
+          "repository_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Revision"
+          },
           "target_period": {
             "title": "Target Period",
             "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
           },
           "value_kind": {
             "default": "simulated",
@@ -3353,6 +3439,7 @@
         "properties": {
           "forecast_mode": {
             "enum": [
+              "engine",
               "placeholder",
               "unavailable"
             ],
@@ -3655,7 +3742,7 @@
       },
       "PersonProjection": {
         "additionalProperties": false,
-        "description": "One person's share of a team placeholder. A proportional split, NOT a person-level model.\n\n`amount` is the full-period total (spend to date + remaining). `share` is the person's percent of\nthe split weights (recorded spend to date), one decimal place, as text - not money.",
+        "description": "A person's full-period projection, with method identified by its provider.\n\nThe placeholder uses a proportional spend-to-date split; the engine supplies\nonly compatible, immutable issued person quarters. `share` is the provider's\ndeclared percentage of the team total, as text rather than money.",
         "properties": {
           "amount": {
             "title": "Amount",
@@ -4020,6 +4107,53 @@
           "status"
         ],
         "title": "RunProposalRef",
+        "type": "object"
+      },
+      "ScenarioRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "drivers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "title": "Drivers",
+            "type": "array"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "company",
+                  "team",
+                  "person",
+                  "shared"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Type"
+          }
+        },
+        "required": [
+          "drivers"
+        ],
+        "title": "ScenarioRequest",
         "type": "object"
       },
       "SearchMatch": {
@@ -4907,6 +5041,10 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -4978,6 +5116,10 @@
               },
               {
                 "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
               }
             ],
             "title": "Amount"
@@ -6321,6 +6463,494 @@
         "summary": "Get Document",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/api/forecast-evidence": {
+      "get": {
+        "operationId": "evidence_api_forecast_evidence_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Evidence",
+        "tags": [
+          "forecasting"
+        ]
+      },
+      "post": {
+        "operationId": "ingest_evidence_api_forecast_evidence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Envelope",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Ingest Evidence",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-outcomes": {
+      "post": {
+        "operationId": "ingest_outcome_api_forecast_outcomes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Outcome",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Ingest Outcome",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-refreshes": {
+      "post": {
+        "operationId": "refresh_api_forecast_refreshes_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-refreshes/{job_id}": {
+      "get": {
+        "operationId": "refresh_status_api_forecast_refreshes__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Refresh Status",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-runs/{run_id}/explanation": {
+      "get": {
+        "operationId": "explanation_api_forecast_runs__run_id__explanation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "company",
+                    "team",
+                    "person",
+                    "shared"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "driver_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Driver Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Explanation",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-runs/{run_id}/scenarios": {
+      "post": {
+        "operationId": "scenario_api_forecast_runs__run_id__scenarios_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Scenario",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-scenarios/{scenario_id}": {
+      "get": {
+        "operationId": "get_scenario_api_forecast_scenarios__scenario_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Get Scenario",
+        "tags": [
+          "forecasting"
+        ]
+      }
+    },
+    "/api/forecast-views": {
+      "get": {
+        "operationId": "views_api_forecast_views_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "company",
+                    "team",
+                    "person",
+                    "shared"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Views",
+        "tags": [
+          "forecasting"
         ]
       }
     },

@@ -71,6 +71,8 @@ def build_task(session: Session, body: AgentRunCreate) -> AgentTask:
                                for e in exc.errors()]) from exc
         if a.chart is not None:
             params = {"chart": a.chart.model_dump(exclude_none=True)}
+        if a.forecast_context is not None:
+            params["forecast_context"] = a.forecast_context.model_dump(exclude_none=True)
     elif body.params:
         raise _validation([{"code": "unexpected_params", "message": f"{body.task_type} takes no params",
                             "field": "params"}])
@@ -123,6 +125,8 @@ def start_run(app_state: Any, body: AgentRunCreate, *, actor: Actor) -> tuple[st
     source = "droid_sdk" if kind == "sdk" else "fake_runner"
     toolbox = BackendToolbox(session_factory=factory, run_id=run_id, source=source, runner_kind=kind,
                              clock=clock, ids=ids, forecast_provider=app_state.forecast_provider,
+                             forecast_service=getattr(app_state, "forecast_service", None),
+                             forecast_context=task.params.get("forecast_context"),
                              rebase_target=(task.params.get("stale_proposal_id")
                                             if task.type == "propose_allocation" else None))
     if unavailable is not None:
@@ -178,6 +182,8 @@ def execute(app_state: Any, run_id: str, runner: Any, task: AgentTask, toolbox: 
     output["signal_ids"] = list(toolbox.signal_ids)
     if toolbox.charts:  # charts the toolbox actually built (a runner cannot claim one it did not build)
         output["charts"] = list(toolbox.charts)
+    if toolbox.forecast_receipts:
+        output["forecast_receipts"] = list(toolbox.forecast_receipts)
     output["applied_changes"] = False
     _finish(factory, clock, run_id, "succeeded", output, None)
     finished = {"status": "succeeded", "summary": out.summary, "applied_changes": False,

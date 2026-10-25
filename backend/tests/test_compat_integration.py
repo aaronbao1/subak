@@ -396,3 +396,28 @@ def test_readable_error_messages(c):
     for code in ("self_approval_forbidden", "role_forbidden", "proposal_not_found", "not_seeded"):
         assert MESSAGES[code].endswith((".", "`."))
     assert plain_message("proposal_not_pending", "x", {"status": "revised"}).startswith("This proposal was replaced")
+
+
+def test_explicit_forecast_demo_directory_matches_unavailable_person_forecasts(tmp_path, clock, id_factory):
+    from app.config import Settings
+    from app.main import create_app
+    from app.seed.northstar import seed
+
+    app = create_app(Settings(db_path=tmp_path / "engine-demo.db", forecast_provider="engine",
+                              forecast_demo=True, forecast_worker=False), clock=clock, id_factory=id_factory)
+    with app.state.session_factory() as session:
+        seed(session, clock=clock, ids=id_factory)
+    try:
+        with TestClient(app) as client:
+            people = get(client, "people", list[S.Person])
+            assert len(people) == 6  # explicit canonical demonstration directory, not the 15 DB seed people
+            forecasts = get(client, "forecasts", list[S.Forecast])
+            persons = [f for f in forecasts if "personId" in f]
+            assert {f["personId"] for f in persons} == {p["id"] for p in people}
+            assert all(f["status"] == "unavailable" and "projected" not in f for f in forecasts)
+            assert not app.state.forecast_service.store.publication()
+            from app.compat.router import router
+            paths = [r.path for r in router.routes]
+            assert paths.count(f"{API}/people") == 1
+    finally:
+        app.state.engine.dispose()

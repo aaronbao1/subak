@@ -24,7 +24,19 @@ class ProposeParams(InModel):
     stale_proposal_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
+class ForecastQuestionContext(InModel):
+    action: Literal["explain", "compare", "preview", "refresh"] = "explain"
+    run_id: str = Field(min_length=1, max_length=200)
+    scope_type: Literal["company", "team", "person", "shared"] = "company"
+    scope_id: str | None = Field(default=None, max_length=200)
+    driver_id: str | None = Field(default=None, max_length=200)
+    compare_run_id: str | None = Field(default=None, max_length=200)
+    drivers: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
+    idempotency_key: str | None = Field(default=None, max_length=200)
+
+
 class AnswerParams(InModel):
+    forecast_context: ForecastQuestionContext | None = None
     # Optional: also build this chart with the read-only `build_chart_spec` tool; the spec is attached to
     # the run output as `output.charts[]` (only charts the toolbox actually built).
     chart: ChartRequest | None = None

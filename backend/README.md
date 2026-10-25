@@ -12,15 +12,17 @@ FastAPI + SQLite backend for the Northstar AI-spend planning workspace.
   [`docs/edge-cases.md`](docs/edge-cases.md). Overnight report: [`docs/overnight-report.md`](docs/overnight-report.md).
 Product plans live in the repo-level `docs/` folder and are authoritative.
 
-This workstream only touches `backend/` and `agent/`. No UI code, no forecasting models.
+The backend calls the numerical package directly and serves the dashboard and Droid forecast tools.
+Start the connected forecast demo with the [integration runbook](../docs/implementation/forecast-integration-runbook.md).
 
 ## Setup
 
-Python 3.12+ (developed on 3.13). From the repo root:
+Use Python 3.12 for the integrated numerical runtime and its pinned model dependencies.
+The backend alone supports Python 3.12+. From the repo root:
 
 ```bash
-python3 -m venv backend/.venv
-backend/.venv/bin/pip install -e "backend[dev]"
+python3.12 -m venv backend/.venv
+backend/.venv/bin/pip install -e '.[models,test]' -e './backend[dev]'
 ```
 
 ## Run
@@ -41,9 +43,12 @@ cd backend
 
 Health check: `curl http://127.0.0.1:8787/health` (also `/api/health`).
 
-There are no migrations: tables are created on startup. After pulling a schema change, delete
-`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`. Startup and
-`python -m app.seed` refuse an outdated file with a message naming the missing columns.
+Canonical forecasting tables use versioned, idempotent SQLite migrations on startup.
+Legacy finance tables are checked for missing columns; startup refuses an outdated native
+schema with a `SchemaOutdated` message. Preserve and back up databases containing evidence,
+forecast history, or decisions before a reviewed native-schema upgrade. The explicitly enabled
+admin reset is a separate destructive operation for disposable demo databases, and recreates
+both finance and canonical forecasting tables before reseeding and stand-in interpretation.
 
 ## Test
 
@@ -64,7 +69,9 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `BACKEND_DB_PATH` | `backend/data/app.db` | SQLite file (directory is created; `data/` is gitignored) |
 | `BACKEND_PORT` | `8787` | Port used by `python -m app.main` |
 | `BACKEND_CORS_ORIGIN_REGEX` | localhost / 127.0.0.1, any port | Allowed browser origins; credentials are never allowed |
-| `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model) or `unavailable` |
+| `FORECAST_PROVIDER` | `engine` | Numerical `engine`, explicit simulated `placeholder`, or `unavailable` |
+| `FORECAST_DEMO` | off | `1` opts into deterministic synthetic usage/exposure/pricing fixtures |
+| `FORECAST_WORKER` | on | `0` disables scheduled and background processing for controlled tests |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
@@ -77,8 +84,11 @@ key from the environment only when `DROID_RUNNER=sdk`.
 
 ## Conventions
 
-- Money is `decimal.Decimal`, two decimal places, never float. On the wire it is a JSON string
+- Legacy financial ledger money is `decimal.Decimal`, two decimal places, never float. On the wire it is a JSON string
   (`"60000.00"`); in SQLite it is stored as a canonical string. Binding a float raises `TypeError`.
+- Canonical forecast views expose finite numeric estimates with declared units and basis; supported
+  commercial calculations price full pools before summaries. Compatibility adapters round only at
+  the legacy ledger boundary.
 - Every error response is `{"error": {"code", "message", "details"}}`.
 - All timestamps are timezone-aware UTC.
 
@@ -112,6 +122,10 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 | `GET /api/coverage` | completeness per team, unattributed bucket, contributing batches |
 | `GET /api/budget`, `GET /api/budget/history` | current allocations + version, immutable snapshots |
 | `GET /api/forecasts`, `POST /api/forecasts/snapshots` | ForecastProvider result (200 even when unavailable), citable snapshot |
+| `GET /api/forecast-views`, `POST /api/forecast-refreshes` | Immutable scoped views/current actuals; idempotent manual job |
+| `GET /api/forecast-refreshes/{id}` | Durable job status and failure |
+| `GET /api/forecast-runs/{id}/explanation`, `POST /api/forecast-runs/{id}/scenarios` | Stored source/calculation chain; isolated what-if job |
+| `GET /api/forecast-scenarios/{id}`, `GET/POST /api/forecast-evidence` | Scenario receipt; included/queued/context-only evidence and ingestion |
 | `GET /api/overview` | spend + budget + forecast; each section degrades independently |
 | `GET /api/documents[?q=]`, `GET /api/documents/{id}`, `.../by-key/{key}/versions` | corpus search/read |
 | `GET/POST /api/signals`, `GET/PATCH/DELETE /api/signals/{id}` | context signals with verified citations |

@@ -28,13 +28,14 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
   const totalSpent = rows.reduce((s, r) => s + r.spent, 0);
   const withProjection = rows.filter((r) => r.projected != null);
   const totalProjected = withProjection.length ? withProjection.reduce((s, r) => s + (r.projected as number), 0) : undefined;
+  const totalShare = rows.length && rows.every(r => r.share != null) ? rows.reduce((sum, r) => sum + r.share!, 0) : undefined;
 
   return (
     <section className="space-y-3" aria-labelledby="people-heading">
       <div className={rise} style={riseAt(enterAt)}>
         <h2 id="people-heading" className="text-base font-medium">People</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {rows.length} {rows.length === 1 ? "person" : "people"} on {team.name}. The team&apos;s numbers are the sum of these rows; signals come from Slack, Asana and Monday.
+          {rows.length} {rows.length === 1 ? "person" : "people"} currently on {team.name}. Shared spend and historical team changes can make these person totals differ from the team total.
         </p>
       </div>
 
@@ -90,7 +91,7 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
               </TableBody>
               <TableFooter>
                 <TableRow className={cn("hover:bg-transparent", rise)} style={rowAt(rows.length - 1)}>
-                  <TableCell className="text-xs">Team total</TableCell>
+                  <TableCell className="text-xs">Attributed people subtotal</TableCell>
                   <TableCell className="num text-right text-xs">{formatAmount(totalSpent, unit)}</TableCell>
                   <TableCell className="num text-right text-xs">
                     {totalProjected != null ? formatAmount(totalProjected, unit) : <span className="text-muted-foreground">—</span>}
@@ -98,7 +99,7 @@ export function PeopleTable({ team, summaries, unit, enterAt = 0 }: Props) {
                       <span className="ml-1.5 font-sans font-normal text-muted-foreground">{withProjection.length} with a projection</span>
                     )}
                   </TableCell>
-                  <TableCell className="num text-right text-xs text-muted-foreground">{totalProjected != null ? "100%" : "—"}</TableCell>
+                  <TableCell className="num text-right text-xs text-muted-foreground">{totalShare != null ? formatPct(totalShare * 100) : "—"}</TableCell>
                   <TableCell colSpan={3} />
                 </TableRow>
               </TableFooter>

@@ -226,6 +226,9 @@ def _validate_dates(series, dates, max_horizon):
 
 
 def _finish(name, dates, daily, total, cfg, metadata, limitations):
+    # Support projection must never turn failed floating arithmetic into zero.
+    if not isfinite(total) or (daily is not None and not all(isfinite(v) for v in daily)):
+        raise ModelUnavailable('nonfinite fitted prediction before support projection')
     projection_count = 0
     if cfg['nonnegative']:
         if daily is not None:

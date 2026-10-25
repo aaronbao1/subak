@@ -37,10 +37,11 @@ class TeamProjection(BaseModel):
 
 
 class PersonProjection(BaseModel):
-    """One person's share of a team placeholder. A proportional split, NOT a person-level model.
+    """A person's full-period projection, with method identified by its provider.
 
-    `amount` is the full-period total (spend to date + remaining). `share` is the person's percent of
-    the split weights (recorded spend to date), one decimal place, as text - not money.
+    The placeholder uses a proportional spend-to-date split; the engine supplies
+    only compatible, immutable issued person quarters. `share` is the provider's
+    declared percentage of the team total, as text rather than money.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -71,6 +72,13 @@ class ForecastResult(BaseModel):
     value_kind: Literal["simulated", "estimated"] = "simulated"
     method_label: str
     generated_at: datetime | None = None
+    forecast_run_id: str | None = None
+    input_snapshot_id: str | None = None
+    input_revision: str | None = None
+    repository_revision: str | None = None
+    tenant_id: str | None = None
+    information_cutoff: datetime | None = None
+    procedure_version: str | None = None
     # Optional per-person split of the team projections (sum + team-level remainder == team amount).
     person_projections: list[PersonProjection] = Field(default_factory=list)
     # Last day with counted usage in the period; daily points start the day after.

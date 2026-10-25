@@ -32,6 +32,8 @@ export interface HeroProps {
   /** Sum of available full-period projections; undefined when none is available. */
   projected?: number;
   projectedTeamCount: number;
+  /** Override legacy coverage wording for an authoritative immutable company view. */
+  projectionCoverageNote?: string;
   unavailableCount: number;
   /** Names of teams with no projection, so the hero can say which ones are excluded from the projected figure. */
   unavailableTeams?: string[];
@@ -64,7 +66,7 @@ export function Hero(p: HeroProps) {
   const spentTone: StatTone = envelope === undefined ? "neutral" : p.spent > envelope ? "over" : p.spent >= envelope * 0.9 ? "close" : "neutral";
   const projectedTone: StatTone = envelope === undefined || projected === undefined ? "neutral" : projected > envelope ? "over" : "under";
   const likelyOver = (p.summaries ?? []).filter((s) => teamStatus(s.budget, s.forecast, s.spent) === "likely_over").map((s) => s.team.name);
-  const excluded = p.unavailableCount > 0 ? excludedSentence(p.unavailableCount, p.unavailableTeams ?? []) : undefined;
+  const excluded = p.projectionCoverageNote ?? (p.unavailableCount > 0 ? excludedSentence(p.unavailableCount, p.unavailableTeams ?? []) : undefined);
 
   // The first projection is derived from the current spend (delayed count from spent); once it has changed, later values tick in place.
   const [initialProjected] = useState(projected);

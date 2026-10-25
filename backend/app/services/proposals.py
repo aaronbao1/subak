@@ -364,7 +364,13 @@ def create_proposal(
         updated_at=now,
     )
     session.add(p)
-    session.flush()
+    session.flush()  # acquire the SQLite write lock before checking input dependencies
+    from app.services.forecast_freshness import stale_forecast_refs
+    stale = stale_forecast_refs(session, evidence, clock.now())
+    if stale:
+        raise validation_failed([_reason("stale_forecast_evidence",
+            "New forecast evidence arrived; publish a new forecast before drafting against it.",
+            field_name="evidence_refs")], forecast_snapshot_ids=stale)
     return p
 
 

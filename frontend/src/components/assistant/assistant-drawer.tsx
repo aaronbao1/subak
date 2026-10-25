@@ -22,7 +22,7 @@ const THREAD = "main";
  * and an inline proposal card when the assistant prepared one. Review/apply happens in ProposalReview.
  */
 export function AssistantDrawer() {
-  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded } = useAppStore();
+  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded, forecastQuestionContext, askAssistant } = useAppStore();
   const messages = threads[THREAD] ?? [];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -78,7 +78,7 @@ export function AssistantDrawer() {
       ? `We have another ${formatAmount(extra, unit)} to allocate this week; how should we split it?`
       : "We have additional budget to allocate this week; how should we split it?",
   ];
-  const showPrompts = messages.length <= 1 && !sending;
+  const showPrompts = messages.length <= 1 && !sending && !forecastQuestionContext;
 
   return (
     /* Non-modal: the dashboard stays visible and usable, so the hero updates in plain sight when a proposal is applied. */
@@ -89,6 +89,7 @@ export function AssistantDrawer() {
           <SheetDescription className="text-xs leading-tight">Asks questions, prepares proposals. Nothing changes until you apply it.</SheetDescription>
         </SheetHeader>
 
+        {forecastQuestionContext && <div className="space-y-2 border-b border-border bg-muted/20 px-4 py-3 text-xs"><p className="break-all text-muted-foreground">Issued run {forecastQuestionContext.run_id} · {forecastQuestionContext.scope_type} {forecastQuestionContext.scope_id}{forecastQuestionContext.driver_id && ` · driver ${forecastQuestionContext.driver_id}`}</p><button className="text-xs underline underline-offset-2" onClick={() => askAssistant(text)}>Clear forecast context</button></div>}
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {!loaded ? (
             <p className="text-xs text-muted-foreground">Loading…</p>

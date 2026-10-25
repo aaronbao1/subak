@@ -29,6 +29,13 @@ def normalize_email(value: str | None) -> str | None:
 
 
 def list_people(session: Session, team: str | None = None, *, include_inactive: bool = False) -> list[Person]:
+    directory = session.info.get("people_directory")
+    if directory is not None:
+        return sorted(
+            (person for person in directory()
+             if (team is None or person.team_id == team) and (include_inactive or person.active)),
+            key=lambda person: (person.team_id, person.name, person.id),
+        )
     q = select(Person)
     if team is not None:
         q = q.where(Person.team_id == team)
@@ -38,7 +45,10 @@ def list_people(session: Session, team: str | None = None, *, include_inactive: 
 
 
 def get_person(session: Session, person_id: str) -> Person:
-    person = session.get(Person, person_id)
+    if session.info.get("people_directory") is not None:
+        person = next((p for p in list_people(session, include_inactive=True) if p.id == person_id), None)
+    else:
+        person = session.get(Person, person_id)
     if person is None:
         raise DomainError("not_found", 404, f"person {person_id!r} not found")
     return person
@@ -107,4 +117,6 @@ def create_people(session: Session, rows: Iterable[Mapping[str, Any]], *, clock:
     ]
     session.add_all(people)
     session.flush()
+    from app.forecasting.repository import capture_repository_inputs
+    capture_repository_inputs(session, now=clock.now())
     return people

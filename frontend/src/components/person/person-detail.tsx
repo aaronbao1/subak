@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, MessageSquare, SearchX } from "lucide-react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import type { Team } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ const CONTEXT_AT = 420;
 
 /** /teams/[teamId]/people/[personId]: one individual's spend, projection, and the connector signals that explain it. */
 export function PersonDetail({ teamId, personId }: { teamId: string; personId: string }) {
-  const { loaded, company, teams, people, spending, spendingHistory, budgets, personForecasts, context, askAssistant } = useAppStore();
+  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant } = useAppStore();
   const mounted = useMounted();
   const rise = mounted ? "animate-rise" : "opacity-0";
   if (!loaded) return <TeamDetailSkeleton />;
@@ -50,7 +51,7 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
   }
 
   const period = company?.currentPeriod ?? budgets[0]?.period;
-  const summary = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period).find((s) => s.person.id === person.id) : undefined;
+  const summary = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period, forecasts.find(f => f.teamId === team.id)).find((s) => s.person.id === person.id) : undefined;
   const unit = budgets.find((b) => b.teamId === team.id)?.unit ?? company?.budgetUnit ?? "usd";
   const records = spending.filter((r) => r.personId === person.id);
   const forecast = summary?.forecast;
@@ -119,7 +120,7 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
               label="Share of team projection"
               value={summary?.share != null ? <CountUpPct value={summary.share * 100} delay={180} /> : "—"}
               muted={summary?.share == null}
-              caption="Of the team's projected total"
+              caption={summary?.share != null ? "Of the team's projected total" : "Requires a matching team total and historical team attribution"}
             />
           </div>
           <div className={rise} style={riseDelay(4)}>
@@ -143,6 +144,7 @@ export function PersonDetail({ teamId, personId }: { teamId: string; personId: s
         )}
       </header>
 
+      <ForecastPanel scopeType="person" scopeId={personId} />
       <TeamSpendChart team={asTeam} records={records} forecast={forecast} unit={unit} enterAt={CHART_AT} />
       <ContextCards team={asTeam} items={items} allItems={context} people={people} enterAt={CONTEXT_AT} evidenceHref={`/evidence?scope=person&team=${encodeURIComponent(team.id)}`} />
     </div>

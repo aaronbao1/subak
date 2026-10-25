@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
+import { companyQuarterProjection, scopeView } from "@/components/dashboard/forecast-derive";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import { Hero, HeroSkeleton } from "@/components/dashboard/hero";
 import { SpendByTeamChart, SpendByTeamChartSkeleton } from "@/components/dashboard/spend-by-team-chart";
@@ -17,7 +19,7 @@ import { riseDelay, useMounted } from "@/components/shared/motion";
 
 
 export default function OverviewPage() {
-  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant } = useAppStore();
+  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant, forecastBundle } = useAppStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const toggleTeam = useCallback((id: string) => setSelectedId((cur) => (cur === id ? null : id)), []);
   // Entrance: hero, chart and cost components rise in with a 60ms stagger (0 / 60 / 120ms, 700ms each, done by 820ms).
@@ -32,14 +34,16 @@ export default function OverviewPage() {
   const rows = useMemo(() => buildDailyRows(teams, spendingHistory, forecasts, period), [teams, spendingHistory, forecasts, period]);
   const { asOf, partialDates } = useMemo(() => completion(spending), [spending]);
 
-  const spent = summaries.reduce((s, t) => s + t.spent, 0);
+  const spent = spending.filter(r => r.unit === unit).reduce((sum, r) => sum + r.amount, 0);
   const envelope = budgets.length ? budgets.reduce((s, b) => s + b.allocated, 0) : undefined;
   const withProjection = summaries.filter((s) => typeof s.projected === "number");
   // Teams without a projection are counted at their spend to date (a floor, never a forecast), so the company
   // projection can never read below the company spend. The hero names those teams and says they are counted at spend.
-  const projected = withProjection.length
+  const legacyProjected = withProjection.length
     ? summaries.reduce((s, t) => s + (typeof t.projected === "number" ? t.projected : t.spent), 0)
     : undefined;
+  const issuedCompany = scopeView(forecastBundle, "company");
+  const projected = companyQuarterProjection(forecastBundle, legacyProjected);
   const unavailableCount = teams.length - withProjection.length;
   const unavailableTeams = useMemo(() => summaries.filter((s) => typeof s.projected !== "number").map((s) => s.team.name), [summaries]);
   const hasPlaceholder = forecasts.some((f) => f.origin === "placeholder");
@@ -48,7 +52,7 @@ export default function OverviewPage() {
   // Drop a selection that no longer exists (e.g. dataset switched).
   const selected = selectedId !== null ? summaries.find((s) => s.team.id === selectedId) ?? null : null;
   const selectedPeople = useMemo(
-    () => (selected && period ? summarizePeople(people, selected.team.id, spending, spendingHistory, personForecasts, context, period) : []),
+    () => (selected && period ? summarizePeople(people, selected.team.id, spending, spendingHistory, personForecasts, context, period, selected.forecast) : []),
     [selected, period, people, spending, spendingHistory, personForecasts, context],
   );
 
@@ -64,12 +68,14 @@ export default function OverviewPage() {
 
   return (
     <div className="min-w-0 space-y-6">
+      <ForecastPanel />
       <div {...enter(0)}>
         <Hero
           unit={unit} spent={spent} envelope={envelope} projected={projected}
           projectedTeamCount={withProjection.length} unavailableCount={unavailableCount} unavailableTeams={unavailableTeams} teamCount={teams.length}
           periodLabel={period?.label} periodRange={periodRange} asOf={asOf}
           hasPlaceholder={hasPlaceholder}
+          projectionCoverageNote={issuedCompany ? "Issued conditional quarter includes shared residuals. Missing inputs leave the company projection unavailable; current actuals do not rebase the issued forecast." : undefined}
           summaries={summaries}
         />
       </div>

@@ -45,6 +45,10 @@ def meta(
     if settings.droid_runner == "sdk":
         rows[3] = {**rows[3], "status": "real",
                    "detail": "Factory Droid SDK runner selected; runs fail with 503 if no key is configured"}
+    if settings.forecast_provider == "engine":
+        rows[2] = {**rows[2], "status": "simulated" if settings.forecast_demo else "real",
+                   "detail": "Numerical forecast engine with immutable weekly/manual publications; "
+                             + ("synthetic Northstar inputs" if settings.forecast_demo else "repository inputs; missing source coverage stays unknown")}
     if settings.forecast_provider == "unavailable":
         rows[2] = {**rows[2], "detail": "forecast provider in unavailable mode; no projections are returned"}
     return {

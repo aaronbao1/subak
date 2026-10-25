@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, SearchX } from "lucide-react";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,11 +53,12 @@ export function TeamDetail({ teamId }: { teamId: string }) {
   const unit = teamUnit(budget, records);
   const items = context.filter((c) => c.teamIds.includes(team.id));
   const period = budget?.period ?? forecast?.period ?? company?.currentPeriod;
-  const peopleSummaries = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period) : [];
+  const peopleSummaries = period ? summarizePeople(people, team.id, spending, spendingHistory, personForecasts, context, period, forecast) : [];
 
   return (
     <div className="space-y-8">
       <TeamHeader team={team} budget={budget} forecast={forecast} records={records} />
+      <ForecastPanel scopeType="team" scopeId={teamId} />
       <TeamSpendChart team={team} records={records} forecast={forecast} unit={unit} enterAt={CHART_AT} />
       <PeopleTable team={team} summaries={peopleSummaries} unit={unit} enterAt={PEOPLE_AT} />
       <ContextCards team={team} items={items} allItems={context} people={people} enterAt={CONTEXT_AT} />

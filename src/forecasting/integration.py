@@ -158,7 +158,8 @@ def run_demo(directory, *, fault=None):
     artifacts=ArtifactStore(directory/'forecasts.sqlite')
     context_scopes=('billing',)+tuple('context:'+event_id+':1' for event_id,_,_,_,_ in facts)
     context_id=artifacts.put('northstar','context_resolution',asdict(resolution),context_scopes)
-    scenario_id=artifacts.put('northstar','scenario',{'base_forecast':payload['artifact_id'],**asdict(scenario)},('billing',))
+    scenario_id=artifacts.put('northstar','scenario',{'base_forecast':payload['artifact_id'],**asdict(scenario)},('billing',),
+                              required_artifacts=(payload['artifact_id'],))
     notify('after_context')
     decisions={}
     for kind,amounts,addition in [('redistribution',('85000','50000','65000'),'0'),('addition',('95000','80000','75000'),'50000')]:

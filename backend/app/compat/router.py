@@ -113,10 +113,10 @@ def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
         return None
 
 
-def _people_by_team(session: Session) -> dict[str, list[str]]:
+def _people_by_team(session: Session, request: Request) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
-    for p in people_svc.list_people(session):
-        out.setdefault(p.team_id, []).append(p.id)
+    for p in get_people(request, session):
+        out.setdefault(p["teamId"], []).append(p["id"])
     return out
 
 
@@ -206,13 +206,15 @@ def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(ge
 
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
-def get_people(session: Session = Depends(get_session)):
+def get_people(request: Request, session: Session = Depends(get_session)):
     active = {t.id for t in _active_teams(session)}
-    return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
+    return [mappers.person(p) for p in people_svc.list_people(session)
+            if request.app.state.settings.forecast_demo or p.team_id in active]
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
 def get_spending(
+    request: Request,
     team_id: str | None = Query(default=None, alias="teamId"),
     date_from: date | None = Query(default=None, alias="from"),
     date_to: date | None = Query(default=None, alias="to"),
@@ -222,6 +224,15 @@ def get_spending(
     period = _period_or_none(session, clock)
     if period is None:
         return []
+    if request.app.state.settings.forecast_demo:
+        from app.forecasting.fixtures import northstar_spending_records
+        try:
+            rows = northstar_spending_records(request.app.state.forecast_service.current_snapshot())
+        except ValueError as exc:
+            raise DomainError("pricing_unavailable", 422, str(exc)) from exc
+        return [r for r in rows if (not team_id or r['teamId'] == team_id)
+                and (not date_from or r['date'] >= date_from.isoformat())
+                and (not date_to or r['date'] <= date_to.isoformat())]
     records: list[dict] = []
     offset = 0
     while True:
@@ -257,14 +268,14 @@ def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
-def get_forecasts(session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
+def get_forecasts(request: Request, session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
                   provider=Depends(get_forecast_provider)):
     period = _period_or_none(session, clock)
     if period is None:
         return []
     result = forecast_svc.forecast_for_period(session, provider, period, clock=clock)  # read only: no snapshot
     return mappers.forecasts(result, period_row=period, team_ids=forecast_svc.active_team_ids(session),
-                             now=clock.now(), people=_people_by_team(session))
+                             now=clock.now(), people=_people_by_team(session, request))
 
 
 @router.get("/context", response_model=list[S.ContextItem], **JSON_OPTS)
@@ -373,7 +384,10 @@ def post_message(
     user = threads.add_message(session, thread_id, "user", content, clock=clock, ids=ids)
     session.commit()
 
-    parsed = intent.parse(content, **_intent_context(session, request, clock))
+    parsed = (intent.Intent(read_as="Explain the exact published forecast", run={
+        "task_type": "answer_question", "instruction": content,
+        "params": {"forecast_context": body.forecast_context.model_dump(exclude_none=True)},
+    }) if body.forecast_context else intent.parse(content, **_intent_context(session, request, clock)))
     if parsed.ask is not None:
         reply = threads.add_message(session, thread_id, "assistant",
                                     f"**Read as:** {parsed.read_as}.\n\n{parsed.ask}", clock=clock, ids=ids)

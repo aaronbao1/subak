@@ -18,6 +18,8 @@
 from __future__ import annotations
 
 import threading
+from collections import Counter
+from copy import deepcopy
 from decimal import Decimal
 from typing import Any, Callable
 
@@ -64,6 +66,89 @@ def _short(value: Any, limit: int = 300) -> str:
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
+def _compact_forecast_receipt(receipt: dict, *, comparison: bool = False) -> dict:
+    """Keep the full receipt stored server-side and source/calc answers readable by SDK."""
+    result = dict(receipt)
+    if "runs" in result:
+        result["runs"] = [_compact_forecast_receipt(run, comparison=True) for run in result["runs"]]
+    if "snapshot" in result:
+        result["snapshot"] = {k:v for k,v in result["snapshot"].items()
+                              if k not in ("observations", "coverage", "evidence", "drivers", "repository_state",
+                                           "repository_excluded_records", "issued_targets", "truth_revisions",
+                                           "forecast_errors", "model_registry")}
+        excluded = receipt["snapshot"].get("repository_excluded_records")
+        if excluded is not None:
+            result["snapshot"]["repository_exclusion_summary"] = {
+                "count": len(excluded), "by_reason": dict(Counter(row.get("reason", "unknown") for row in excluded)),
+                "detail_note": "Full excluded records and provenance remain in the stored input snapshot.",
+            }
+        if "model_registry" in result:
+            result["snapshot"]["model_registry_ref"] = "/model_registry"
+        for index, calculation in enumerate(result.get("calculations", [])):
+            if ("source_revisions" in calculation and "source_revisions" in result["snapshot"]
+                    and calculation["source_revisions"] == result["snapshot"]["source_revisions"]):
+                result["snapshot"].pop("source_revisions", None)
+                result["snapshot"]["source_revisions_ref"] = f"/calculations/{index}/source_revisions"
+                break
+    # Preserve exact temporal omission effects once at the top level. A schedule
+    # shift can have zero quarter delta and still change the next week's work.
+    def summary_effect(effect):
+        return {k:v for k,v in effect.items() if k not in ("daily", "weekly")}
+    if "calculations" in result:
+        result["calculations"] = [summary_effect(c) for c in result["calculations"]]
+    if "views" in result:
+        result["views"] = [{k:([summary_effect(e) for e in v] if k == "driver_effects" else v)
+                            for k,v in view.items() if k not in ("cumulative", "daily")} for view in result["views"]]
+        for view in result["views"]:
+            view["queued_changes"] = [{k:v for k,v in change.items() if k in
+                                       ("id", "source_id", "source_revision", "kind", "scope", "status",
+                                        "reason", "publication_status", "publication_reason")}
+                                      for change in view.get("queued_changes", [])]
+        result["detail_note"] = ("Exact daily/weekly driver omission paths are in driver_effects. Full daily/cumulative "
+                                 "forecast paths, queued-source documents and input histories remain in the stored "
+                                 "immutable publication and snapshot. Queued source identities and reasons are retained here.")
+    if comparison:
+        # Comparing publications needs their corresponding quarter/weekly values,
+        # exact identities, assumptions and source effects. Full cumulative paths
+        # remain in the immutable publication and its dedicated explanation tool.
+        result.pop("snapshot", None)
+        result["views"] = [{k:([summary_effect(e) for e in v] if k == "driver_effects" else v)
+                            for k,v in view.items() if k not in ("cumulative","daily")}
+                           for view in result.get("views", [])]
+        for view in result["views"]:
+            qualifications = []
+            weeks = []
+            for point in view.get("weekly", []):
+                point = dict(point)
+                if isinstance(point.get("historical_error_interval"), dict):
+                    intervals = {}
+                    for level, interval in point["historical_error_interval"].items():
+                        interval = {k:v for k,v in interval.items() if k not in
+                                    ("stratum", "target_ids", "truth_revisions")}
+                        qualification = interval.pop("qualification", None)
+                        if qualification is not None:
+                            if qualification not in qualifications:
+                                qualifications.append(qualification)
+                            interval["qualification_index"] = qualifications.index(qualification)
+                        intervals[level] = interval
+                    point["historical_error_interval"] = intervals
+                weeks.append(point)
+            if "weekly" in view:
+                view["weekly"] = weeks
+            if qualifications:
+                view["interval_qualifications"] = qualifications
+        result["driver_effects"] = [{k:v for k,v in e.items() if k != "daily"}
+                                    for e in result.get("driver_effects", [])]
+        result["calculations"] = [{k:v for k,v in calculation.items() if k not in
+                                   ("daily", "weekly", "components", "source_revisions")}
+                                  for calculation in result.get("calculations", [])]
+        result.pop("model_registry", None)
+        result["detail_note"] = ("Daily paths, calibration strata/record identities, model registry, queued-source documents "
+                                 "and input histories are stored in each exact publication; use explain_forecast for one run. "
+                                 "Weekly interval qualification_index refers to the view's interval_qualifications.")
+    return result
+
+
 class BackendToolbox:
     def __init__(
         self,
@@ -75,8 +160,10 @@ class BackendToolbox:
         clock: Clock,
         ids: IdFactory,
         forecast_provider: Any,
+        forecast_service: Any = None,
         start_seq: int = 0,
         rebase_target: str | None = None,
+        forecast_context: dict | None = None,
     ) -> None:
         self._factory = session_factory
         self.run_id = run_id
@@ -85,13 +172,16 @@ class BackendToolbox:
         self._clock = clock
         self._ids = ids
         self._provider = forecast_provider
+        self._forecast_service = forecast_service
         self.rebase_target = rebase_target  # the only proposal rebase_proposal may touch (None: none)
+        self._forecast_context = deepcopy(forecast_context)
         self.actor = Actor(id=f"droid:{run_id}", role="droid_agent")
         self._lock = threading.Lock()
         self._event_seq = start_seq
         self._step_seq = 0
         self.signal_ids: list[str] = []
         self.proposal_ids: list[str] = []
+        self.forecast_receipts: list[dict] = []
         self.charts: list[dict] = []  # every chart spec actually built, attached to the run output
         self._writes = {"record_signal": 0, "draft_proposal": 0}  # draft_proposal also counts rebases
 
@@ -125,6 +215,42 @@ class BackendToolbox:
 
     # ---- step recording ----------------------------------------------------------------------
 
+    def _check_forecast_context(self, tool: str, args: dict) -> None:
+        """Structured forecast requests pin capabilities as well as prompting the model."""
+        context = self._forecast_context
+        if not context:
+            return
+        action_tools = {"explain": "explain_forecast", "compare": "compare_forecasts",
+                        "preview": "preview_forecast_scenario", "refresh": "request_forecast_refresh"}
+        expected_tool = action_tools[context.get("action", "explain")]
+        forecast_tools = set(action_tools.values()) | {"get_forecast"}
+        draft_tools = {definition.name for definition in TOOLS if definition.kind == "draft"}
+        current_forecast_chart = tool == "build_chart_spec" and args.get("kind") == "projection_vs_allocation"
+        if tool not in forecast_tools | draft_tools and not current_forecast_chart:
+            return
+        expected = {"scope_type": context.get("scope_type", "company"), "scope_id": context.get("scope_id")}
+        if expected_tool == "compare_forecasts" and tool == "explain_forecast":
+            # A comparison can drill into either pinned publication, never latest.
+            if (args.get("run_id") in (context["run_id"], context.get("compare_run_id"))
+                    and args.get("scope_type") == expected["scope_type"]
+                    and args.get("scope_id") == expected["scope_id"]
+                    and (context.get("driver_id") is None or args.get("driver_id") == context["driver_id"])):
+                return
+        if expected_tool == "request_forecast_refresh":
+            expected = {"idempotency_key": context.get("idempotency_key")}
+        elif expected_tool == "compare_forecasts":
+            expected["run_ids"] = [context["run_id"], context.get("compare_run_id")]
+        else:
+            expected["run_id"] = context["run_id"]
+            if expected_tool == "explain_forecast":
+                expected["driver_id"] = context.get("driver_id")
+            else:
+                expected["drivers"] = context.get("drivers", [])
+        if tool != expected_tool or args != expected:
+            raise DomainError("forecast_context_mismatch", 403,
+                              "The tool must preserve the requested forecast action, run, scope and assumptions",
+                              {"requested_action": context.get("action", "explain"), "allowed_tool": expected_tool})
+
     def _invoke(self, tool: str, args: dict[str, Any], fn: Callable[[Session], dict],
                 summarize: Callable[[dict], str]) -> dict:
         if self._step_seq >= MAX_TOOL_CALLS:
@@ -136,6 +262,7 @@ class BackendToolbox:
         self.emit("tool_call", {"step": seq, "tool": tool, "args": args})
         try:
             with transaction(self._factory) as s:
+                self._check_forecast_context(tool, args)
                 result = fn(s)
         except DomainError as exc:
             err = ToolError(tool, exc.code, exc.message, exc.details)
@@ -195,6 +322,42 @@ class BackendToolbox:
         return self._invoke("get_spend_summary", {}, fn,
                             lambda r: f"company total {r['company_total']} {r['unit']}, "
                                       f"coverage {r['coverage']['status']}")
+
+    def _forecast_operation(self, tool: str, args: dict, callback: Callable[[Any], dict]) -> dict:
+        def fn(_s: Session) -> dict:
+            if self._forecast_service is None:
+                raise DomainError("forecast_unavailable", 503, "Published forecast service is unavailable")
+            try:
+                result = callback(self._forecast_service)
+            except KeyError as exc:
+                raise DomainError("forecast_not_found", 404, "Requested immutable forecast, scope or driver was not found") from exc
+            except ValueError as exc:
+                raise DomainError("invalid_forecast_request", 422, str(exc)) from exc
+            # Full daily input history is available from stored snapshot; keep the
+            # in-process SDK response bounded so source/calc explanations survive.
+            return _compact_forecast_receipt(result)
+        receipt = self._invoke(tool, args, fn, lambda r: _short({k:r.get(k) for k in
+                            ("run_id", "id", "scenario_id", "status", "scope") if k in r}))
+        self.forecast_receipts.append({"tool":tool,"args":args,"receipt":receipt})
+        return receipt
+
+    def explain_forecast(self, run_id: str, scope_type: str = "company", scope_id: str | None = None,
+                         driver_id: str | None = None) -> dict:
+        args = {"run_id":run_id,"scope_type":scope_type,"scope_id":scope_id,"driver_id":driver_id}
+        return self._forecast_operation("explain_forecast", args, lambda svc: svc.explain(**args))
+
+    def compare_forecasts(self, run_ids: list[str], scope_type: str = "company", scope_id: str | None = None) -> dict:
+        args = {"run_ids":run_ids,"scope_type":scope_type,"scope_id":scope_id}
+        return self._forecast_operation("compare_forecasts", args, lambda svc: svc.compare(**args))
+
+    def preview_forecast_scenario(self, run_id: str, drivers: list[dict], scope_type: str = "company",
+                                  scope_id: str | None = None) -> dict:
+        args = {"run_id":run_id,"drivers":drivers,"scope_type":scope_type,"scope_id":scope_id}
+        return self._forecast_operation("preview_forecast_scenario", args, lambda svc: svc.scenario(**args))
+
+    def request_forecast_refresh(self, idempotency_key: str) -> dict:
+        args = {"idempotency_key":idempotency_key}
+        return self._forecast_operation("request_forecast_refresh", args, lambda svc: svc.refresh(**args))
 
     def get_budgets(self) -> dict:
         def fn(s: Session) -> dict:

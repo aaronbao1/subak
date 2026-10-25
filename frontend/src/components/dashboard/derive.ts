@@ -76,8 +76,15 @@ export function dayLabel(value: string | number, opts: { month?: boolean } = {})
 
 /** Projection days the forecast supplies for dates that are not complete yet (the partial day and later), in date order. */
 export function projectedDays(forecast: Forecast | undefined, completeDates: Set<string>): ForecastDailyPoint[] {
-  if (!forecast || forecast.status !== "available" || !forecast.daily?.length) return [];
-  return forecast.daily.filter((d) => !completeDates.has(d.date)).sort((a, b) => a.date.localeCompare(b.date));
+  if (!forecast?.daily?.length || forecast.status !== "available" && forecast.dailyCoverage !== "published_detail") return [];
+  // A missing quarter prefix can make the total unavailable while future days remain supported.
+  return forecast.daily.filter((d) => Number.isFinite(d.projected) && !completeDates.has(d.date)).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** A real projected value, excluding the copied last-actual anchor of a dashed line. */
+export function hasProjectedAmount(row: DailyRow, teamId: string): boolean {
+  const projected = row[projectedKey(teamId)], recorded = row[teamKey(teamId)];
+  return typeof projected === "number" && (typeof recorded !== "number" || projected !== recorded);
 }
 
 /** Days where any record is partial, and the latest day where every record is complete. */
@@ -134,17 +141,18 @@ export function summarizeTeams(
  * all teams side by side. Recorded amounts come from spending; projected amounts from each team's forecast.
  */
 export function buildDailyRows(teams: Team[], spending: SpendingRecord[], forecasts: Forecast[] = [], period?: Period): DailyRow[] {
-  const byDate = new Map<string, { partial: boolean; totals: Map<string, number> }>();
+  const byDate = new Map<string, { partial: boolean; totals: Map<string, number>; complete: Map<string, boolean> }>();
   for (const r of spending) {
-    const e = byDate.get(r.date) ?? { partial: false, totals: new Map() };
+    const e = byDate.get(r.date) ?? { partial: false, totals: new Map(), complete: new Map() };
     e.partial = e.partial || !r.complete;
     e.totals.set(r.teamId, (e.totals.get(r.teamId) ?? 0) + r.amount);
+    e.complete.set(r.teamId, (e.complete.get(r.teamId) ?? true) && r.complete);
     byDate.set(r.date, e);
   }
   const recordedDates = new Set(byDate.keys());
-  const completeDates = new Set([...byDate.entries()].filter(([, e]) => !e.partial).map(([d]) => d));
   const projected = new Map<string, Map<string, number>>();
   for (const t of teams) {
+    const completeDates = new Set([...byDate.entries()].filter(([, e]) => e.complete.get(t.id) === true).map(([d]) => d));
     for (const d of projectedDays(forecasts.find((f) => f.teamId === t.id), completeDates)) {
       const m = projected.get(d.date) ?? new Map<string, number>();
       m.set(t.id, d.projected);

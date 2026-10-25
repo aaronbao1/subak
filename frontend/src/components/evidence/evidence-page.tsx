@@ -16,6 +16,8 @@ import { ImpactByTeam } from "./impact-by-team";
 import { MacroWatch } from "./macro-watch";
 import { PeopleAffected } from "./people-affected";
 import { EvidenceSkeleton } from "./skeleton";
+import { ForecastPanel } from "@/components/forecast/forecast-panel";
+import { scopeView } from "@/components/dashboard/forecast-derive";
 
 const MACRO_WINDOW_DAYS = 14;
 
@@ -24,7 +26,7 @@ const MACRO_WINDOW_DAYS = 14;
  * into its own evidence; the filters write back to the URL with `replace` so the back button is not spammed.
  */
 export function EvidencePage() {
-  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, spending } = useAppStore();
+  const { loaded, company, teams, people, context, forecasts, personForecasts, budgets, spending, forecastBundle, forecastEvidence } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -48,6 +50,7 @@ export function EvidencePage() {
   const impacts = useMemo(() => teamImpacts(teams, rowsSansTeam, forecasts, budgets, spending, unit), [teams, rowsSansTeam, forecasts, budgets, spending, unit]);
   const buckets = useMemo(() => macroBuckets(rows, todayIso(), MACRO_WINDOW_DAYS), [rows]);
   const affected = useMemo(() => peopleAffected(filtered, teams), [filtered, teams]);
+  const issuedCompany = scopeView(forecastBundle, "company");
 
   if (!loaded) return <EvidenceSkeleton />;
 
@@ -63,10 +66,13 @@ export function EvidencePage() {
       </div>
 
       <div {...enter(1)}>
-        <ProjectionStrip totals={totals} />
+        {forecastBundle || forecastEvidence.length ? <ForecastPanel /> : null}
+        {!issuedCompany && <ProjectionStrip totals={totals} />}
       </div>
 
       <div {...enter(2)}>
+        <h2 className="mb-2 text-base font-medium">Company context</h2>
+        <p className="mb-4 text-xs text-muted-foreground">Linked plans, documents and messages. Published driver inclusion and paired omission effects are shown separately above; those effects are not additive adjustments.</p>
         <FilterRow filters={filters} teams={teams} onChange={setFilters} shown={filtered.length} total={rows.length} />
       </div>
 

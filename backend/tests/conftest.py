@@ -27,6 +27,8 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "BACKEND_ALLOW_RESET",
         "BACKEND_COMPAT",
         "FORECAST_PROVIDER",
+        "FORECAST_DEMO",
+        "FORECAST_WORKER",
         "DROID_RUNNER",
         "FACTORY_API_KEY",
         "DROID_CHAT_MODEL",

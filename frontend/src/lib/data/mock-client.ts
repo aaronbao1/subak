@@ -1,5 +1,6 @@
+import { syntheticForecastBundle } from "./mock-forecast";
 import type { DataClient, SpendingFilter } from "./client";
-import type { AllocationProposal, AssistantMessage, Budget, Decision } from "@/lib/contracts";
+import type { AllocationProposal, AssistantMessage, Budget, Decision, ForecastDriver, ForecastRefresh, ForecastQuestionContext } from "@/lib/contracts";
 import { northstar, generateCompany, DEFAULT_TEAM_COUNT, MAX_TEAMS, type Dataset } from "@/fixtures";
 
 const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
@@ -39,6 +40,27 @@ export class MockDataClient implements DataClient {
     Object.entries(this.fx.threads).map(([k, v]) => [k, structuredClone(v)]),
   );
 
+  private forecastRun = "synthetic-ui-run-1";
+  private refreshes = new Map<string, ForecastRefresh>();
+  async getForecastViews(filter: { scope_type?: string; scope_id?: string; run_id?: string } = {}) {
+    await wait();
+    const bundle = syntheticForecastBundle(this.fx, filter.run_id ?? this.forecastRun);
+    return { ...bundle, views: bundle.views.filter(v => (!filter.scope_type || v.scope.type === filter.scope_type) && (!filter.scope_id || v.scope.id === filter.scope_id)) };
+  }
+  async refreshForecast(key: string) {
+    await wait();
+    const prior = this.refreshes.get(key);
+    if (prior) return prior;
+    const job = { id: `synthetic-refresh-${this.refreshes.size+1}`, status: "completed", run_id: `synthetic-ui-run-${this.refreshes.size+2}` };
+    this.forecastRun = job.run_id;
+    this.refreshes.set(key, job);
+    return job;
+  }
+  async getForecastRefresh(id: string) { return [...this.refreshes.values()].find(j => j.id === id) ?? { id, status: "failed", error: "Unknown synthetic job" }; }
+  async getForecastExplanation(runId: string) { return { run_id: runId, qualification: "Synthetic UI fixture. No production calculation or calibration.", calculations: [] }; }
+  async previewForecastScenario(runId: string, drivers: ForecastDriver[]) { await wait(); return syntheticForecastBundle(this.fx, `${runId}:preview`, drivers); }
+  async getForecastScenario(id: string) { await wait(); return syntheticForecastBundle(this.fx,id); }
+  async getForecastEvidence() { return { items: this.fx.context.map(c => ({ id:c.id, source_id:c.sources[0]?.documentId, text:c.summary, drivers:[{id:c.id,title:c.title,status:"context_only",reason:"Legacy synthetic context has no validated numerical parameters.",citations:c.sources.map(source=>({source_id:source.documentId,excerpt:source.excerpt,title:source.title}))}] })) }; }
   async getCompany() { await wait(); return this.fx.company; }
   async getTeams() { await wait(); return this.fx.teams; }
   async getPeople() { await wait(); return this.fx.people; }
@@ -64,12 +86,16 @@ export class MockDataClient implements DataClient {
   async getDecisions() { await wait(); return this.decisions.map((d) => ({ ...d })); }
   async getThread(threadId: string) { await wait(); return [...(this.threads.get(threadId) ?? [])]; }
 
-  async sendMessage(threadId: string, content: string) {
+  async sendMessage(threadId: string, content: string, forecastContext?: ForecastQuestionContext) {
     await wait(600);
     const thread = this.threads.get(threadId) ?? [];
     const now = new Date().toISOString();
     const user: AssistantMessage = { id: newId("msg"), threadId, role: "user", content, createdAt: now };
     const scripted = this.fx.scriptedReply(content, { proposals: this.proposals, budgets: this.budgets, budgetVersion: this.budgetVersion });
+    if (forecastContext) {
+      scripted.message = { content: `This is a synthetic UI fixture for issued run **${forecastContext.run_id}**, ${forecastContext.scope_type} **${forecastContext.scope_id ?? "shared"}**${forecastContext.driver_id ? `, driver **${forecastContext.driver_id}**` : ""}. The interface uses a constant observed-rate illustration. Historical error intervals and source-derived numerical effects are unavailable in this mock. Connect the backend fixture pipeline for cited calculations and paired reruns.`, toolCalls: [{ name: "synthetic_forecast_explanation", summary: "Synthetic fixture only; no production forecast or calibration was executed." }] };
+      delete scripted.proposal;
+    }
     if (scripted.proposal) {
       // A revision replaces the proposal it revises; the older one is kept in history as "revised".
       if (scripted.proposal.revisesProposalId) {
