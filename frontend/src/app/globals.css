@@ -91,19 +91,20 @@
   --success: oklch(0.70 0.11 160);
   --warning: oklch(0.76 0.12 75);
 
-  /* Brand accent: one yellow-green, budgeted. Allowed on the single primary CTA per screen, mono eyebrow labels,
-     the active sidebar rule, the focus ring and selected-row washes. Never in body text, badges, icons at rest,
-     borders at rest, chart series or status colors. 13.7:1 on the card surface; 14.7:1 with brand-foreground on it. */
-  --brand: oklch(0.892 0.176 114.7);
-  --brand-hover: oklch(0.920 0.201 114.0);
-  --brand-foreground: oklch(0.146 0.006 69.2);
-  --brand-soft: oklch(0.892 0.176 114.7 / 12%);
+  /* Brand accent: one orchid (hue 315), budgeted. Allowed on the single primary CTA per screen, the active
+     tab rule, the focus ring and selected-row washes. Never in body text, badges, icons at rest, borders at
+     rest, chart series or status colors. Sits between chart-3 (300, darker) and chart-7 (345, darker) in hue
+     but well above both in lightness and chroma, so it never reads as a team. Dark ink on it: ~7:1. */
+  --brand: oklch(0.74 0.18 315);
+  --brand-hover: oklch(0.78 0.18 315);
+  --brand-foreground: oklch(0.16 0.03 315);
+  --brand-soft: oklch(0.74 0.18 315 / 14%);
 
   /* Lines and focus: 1px low-alpha borders everywhere, no resting shadows */
   --border: oklch(1 0 0 / 7%);
   --border-strong: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.892 0.176 114.7 / 55%);
+  --ring: oklch(0.74 0.18 315 / 55%);
 
   /* Charts (categorical, fixed order) */
   /* Categorical palette, 8 fixed slots in this order. Validated on the card surface (#131518): lightness band,
@@ -125,12 +126,12 @@
   /* Sidebar sits a half step below the page */
   --sidebar: oklch(0.15 0.006 260);
   --sidebar-foreground: oklch(0.95 0.005 260);
-  --sidebar-primary: oklch(0.892 0.176 114.7);
-  --sidebar-primary-foreground: oklch(0.146 0.006 69.2);
+  --sidebar-primary: oklch(0.74 0.18 315);
+  --sidebar-primary-foreground: oklch(0.16 0.03 315);
   --sidebar-accent: oklch(0.21 0.007 260);
   --sidebar-accent-foreground: oklch(0.95 0.005 260);
   --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.892 0.176 114.7 / 55%);
+  --sidebar-ring: oklch(0.74 0.18 315 / 55%);
 }
 
 @layer base {

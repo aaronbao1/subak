@@ -2,25 +2,13 @@
 import { Fragment, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileSearch, History, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import { AssistantDrawer } from "@/components/assistant/assistant-drawer";
-import { BrandMark } from "@/components/shell/brand-mark";
-
-const nav = [
-  { href: "/overview", label: "Overview", icon: LayoutDashboard },
-  { href: "/teams", label: "Teams", icon: Users },
-  { href: "/evidence", label: "Evidence", icon: FileSearch },
-  { href: "/decisions", label: "Decisions", icon: History },
-];
-
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { SECTIONS, SiteHeader } from "@/components/shell/site-header";
 
 type Crumb = { label: string; href?: string };
 
@@ -29,7 +17,7 @@ function useCrumbs(pathname: string): Crumb[] {
   const { teams, people } = useAppStore();
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 0) return [];
-  const root = nav.find((n) => n.href === `/${parts[0]}`);
+  const root = SECTIONS.find((n) => n.href === `/${parts[0]}`);
   if (!root) return [{ label: parts[0] }];
   const crumbs: Crumb[] = [{ label: root.label, href: root.href }];
   if (root.href === "/teams" && parts[1]) {
@@ -44,9 +32,8 @@ function useCrumbs(pathname: string): Crumb[] {
 }
 
 /**
- * Product chrome as one top bar: brand, the four sections as tabs with the brand rule under the active one,
- * then the unit and the assistant. A second slim row carries the breadcrumb only
- * when the route is deeper than a section, so the overview keeps its full height.
+ * Product chrome: the shared site header with the unit badge and the assistant in its action slot, a slim
+ * breadcrumb row only when the route is deeper than a section, the page, and the assistant drawer.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -65,43 +52,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const unitLabel = company ? ({ usd: "USD", tokens: "Tokens", credits: "Credits" } as const)[company.budgetUnit] : "…";
 
-  const tabs = (className: string) => (
-    <nav className={className} aria-label="Primary">
-      {nav.map(({ href, label, icon: Icon }) => {
-        const active = isActive(pathname, href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "group relative flex h-14 shrink-0 items-center gap-2 px-3 text-sm whitespace-nowrap text-muted-foreground transition-colors duration-300",
-              "hover:text-foreground focus-visible:ring-4 focus-visible:ring-ring focus-visible:outline-none",
-              active && "text-foreground",
-            )}
-          >
-            <Icon strokeWidth={1.5} className={cn("size-4 shrink-0 text-muted-foreground transition-colors duration-300 group-hover:text-foreground", active && "text-foreground")} />
-            {label}
-            {/* Active rule in the budgeted accent, sitting on the header's bottom border. */}
-            <span aria-hidden className={cn("absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-brand opacity-0 transition-opacity duration-300", active && "opacity-100")} />
-          </Link>
-        );
-      })}
-    </nav>
-  );
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex h-14 items-center gap-4 px-4 md:gap-6 md:px-6">
-          <Link href="/" aria-label="About Subak" className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-4 focus-visible:ring-ring">
-            <BrandMark />
-            <span className="hidden truncate text-[15px] font-medium text-foreground lg:block" title={company?.name}>Subak</span>
-          </Link>
-
-          {tabs("hidden h-14 items-center md:flex")}
-
-          <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+      <SiteHeader
+        actions={
+          <>
             <Tooltip>
               <TooltipTrigger
                 aria-label={`Unit: ${unitLabel}. Internal allocations in ${unitLabel}, not provider limits`}
@@ -122,14 +77,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <MessageSquare strokeWidth={1.5} className="size-4" /> Assistant
             </Button>
-          </div>
-        </div>
-
-        {/* Narrow screens: tabs scroll in their own row. */}
-        <div className="border-t border-border/70 md:hidden">
-          {tabs("flex items-center overflow-x-auto px-1")}
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {showCrumbs && (
         <nav aria-label="Breadcrumb" className="flex h-10 items-center gap-1.5 border-b border-border/70 px-4 text-sm text-muted-foreground md:px-6">
