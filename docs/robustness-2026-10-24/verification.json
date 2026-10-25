@@ -1,5 +1,5 @@
 {
-  "status": "code_verified_foundation_incomplete",
+  "status": "code_and_basic_foundation_benchmark_verified",
   "base_commit": "22b353eb378a9e6c89680989a26ba11c1dad3f61",
   "tests": {
     "command": "python3 -m pytest -q -p no:cacheprovider",
@@ -52,15 +52,33 @@
     }
   },
   "benchmark": {
-    "path": "artifacts/root-benchmark-7c2f23f.json",
+    "path": "docs/robustness-2026-10-24/results.json",
+    "raw_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
     "real_input_trace": true,
-    "foundation_executed": false,
-    "load_failure": "ModuleNotFoundError: No module named 'chronos'",
+    "foundation_executed": true,
+    "load_failure": null,
     "held_out_origins_per_horizon": 20,
     "horizons_native_hours": [
       1,
       4
-    ]
+    ],
+    "foundation_successes": 40,
+    "foundation_opportunities": 40,
+    "checkpoint": "amazon/chronos-bolt-tiny",
+    "checkpoint_revision": "a0e552de83495b5c28c14c71c374f3e33280b340",
+    "weights_sha256": {
+      "model.safetensors": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32"
+    },
+    "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+    "results_sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+    "runtime_evidence": "evidence/cloud-chronos/runtime-evidence.json",
+    "execution_summary": "evidence/cloud-chronos/execution-summary.json",
+    "session_stopped": true,
+    "generalization": "Limited public native-input-token point forecast benchmark; no enterprise calibration or causal validation.",
+    "independent_review_artifact": "evidence/cloud-benchmark-review.md",
+    "independent_review_status": "passed",
+    "independently_recomputed_records": 240,
+    "unchanged_nonfoundation_records_vs_local": 200
   },
   "source_sha256": {
     "src/forecasting/__init__.py": "dd2c7b8975e000138270e934ac248404bc7b4d28a88b83050bce2281f4a2a2bf",
@@ -123,5 +141,16 @@
     "passed": 42,
     "seconds": 0.75,
     "tool_chunk_id": "2f14df"
+  },
+  "historical_benchmark_before_cloud_run": {
+    "path": "artifacts/root-benchmark-7c2f23f.json",
+    "real_input_trace": true,
+    "foundation_executed": false,
+    "load_failure": "ModuleNotFoundError: No module named 'chronos'",
+    "held_out_origins_per_horizon": 20,
+    "horizons_native_hours": [
+      1,
+      4
+    ]
   }
 }

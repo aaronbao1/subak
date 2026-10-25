@@ -242,24 +242,28 @@
       "implemented_partial": 147,
       "architecture_mapped_residual": 79,
       "boundary_enforced_partial": 8,
-      "guard_tested_foundation_unexecuted": 9
+      "runtime_executed_narrow_benchmark": 9
     },
     "remaining_gaps": [
-      "Genuine pretrained checkpoint load/inference remains incomplete: missingchronos;40scheduledfoundationopportunities retain0success.",
-      "Every243case preserves its identification/data/scope residual;79records have architecture/rationale only rather than a direct case assertion. Scoped passes do not certify whole compound scenarios.",
-      "Enterprise calibration, causal effects, latent demand, real contract completeness and chosen-donor policy/proposal-impact certification remain outside executed evidence."
+      "All243cases preserve data/identification/scope residuals;79records have architecture/rationale only rather than a direct case assertion. Scoped passes do not certify whole compound scenarios.",
+      "One genuine model/public hourly stream with40dependent forecast opportunities cannot establish enterprise weekly/monthly dollar accuracy,calibrated breach risk,causal effects,latent demand or chosen-donor safety.",
+      "Historical online receipt/coverage completeness and public-trace pretraining contamination remain unknown;the capturedweightcheck has no second local reviewer weight copy/hash.",
+      "Broader models/datasets,prospective enterprise evaluation,private contract completeness and certified allocation policy/proposal-impact remain unexecuted."
     ],
     "verification_counts": {
       "passed_for_asserted_scope": 155,
       "not_directly_verified_for_this_case": 79,
-      "software_guard_passed_foundation_not_executed": 9
+      "captured_genuine_load_and_inference_independently_audited": 9
     },
     "completed_contributor_count": 20,
     "acquisition_contributor_count": 2,
     "cases_with_scoped_passing_assertion_or_artifact_qa": 164,
     "cases_with_architecture_rationale_only": 79,
     "whole_compound_scenarios_certified": 0,
-    "foundation_runtime_cases_unexecuted": 9
+    "foundation_runtime_cases_unexecuted": 0,
+    "foundation_runtime_cases_executed_narrowly": 9,
+    "foundation_forecast_successes": 40,
+    "foundation_forecast_opportunities": 40
   },
   "prior_ledger": {
     "path": "docs/implementation/edge-ledger.json",
@@ -5389,7 +5393,7 @@
             "scoped_rereview_run": "final-scoped-rereview"
           }
         ],
-        "remaining_gap": "This verifies provenance admission, not authenticity of entirely new connector bytes or successful genuine foundation inference. Public measured usage cannot establish invoice/enterprise truth.",
+        "remaining_gap": "Provenance-admission guards alone do not prove authenticity of entirely new connector bytes. Separate captured cloud evidence now establishes one genuine pretrained run; public measured usage still cannot establish invoice/enterprise truth.",
         "empirical_status": "not_established_by_fixture_tests",
         "whole_scenario_verified": false,
         "architecture_disposition": "shared_mechanism_required"
@@ -13213,7 +13217,7 @@
             "scoped_rereview_run": "final-scoped-rereview"
           }
         ],
-        "remaining_gap": "This verifies provenance admission, not authenticity of entirely new connector bytes or successful genuine foundation inference. Public measured usage cannot establish invoice/enterprise truth.",
+        "remaining_gap": "Provenance-admission guards alone do not prove authenticity of entirely new connector bytes. Separate captured cloud evidence now establishes one genuine pretrained run; public measured usage still cannot establish invoice/enterprise truth.",
         "empirical_status": "not_established_by_fixture_tests",
         "whole_scenario_verified": false,
         "architecture_disposition": "shared_mechanism_required"
@@ -17699,7 +17703,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "Real experiment remains one hourly public recorded-input stream. No employees/teams/invoice dollars/monthly enterprise result or successful foundation output is inferred.",
+        "remaining_gap": "Actual cloud execution now supplies40genuine point forecasts, while the experiment remains one hourly public recorded-input stream. No employees/teams, invoice dollars or monthly enterprise transfer is inferred.",
         "empirical_status": "not_established_by_fixture_tests",
         "whole_scenario_verified": false,
         "architecture_disposition": "shared_mechanism_required"
@@ -17818,7 +17822,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "These are software behavior fixtures and limited real benchmark denominator checks, not a genuine pretrained checkpoint run, new-tool calibration or prospective service usefulness.",
+        "remaining_gap": "Software denominator fixtures remain distinct from the separately captured40forecast pretrained run. New-tool calibration, prospective delivery usefulness and enterprise generalization remain unvalidated.",
         "empirical_status": "not_established_by_fixture_tests",
         "whole_scenario_verified": false,
         "architecture_disposition": "shared_mechanism_required"
@@ -18321,7 +18325,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "Verifies immutable procedure metadata and measured-timing separation with unit-test adapters. Does not measure actual model memory/CPU feasibility, installed transitive compatibility or pretrained predictive behavior.",
+        "remaining_gap": "Procedure identity/timing guards passed; captured cloud runtime separately demonstrates one pinned environment. That does not establish future hardware compatibility, enterprise calibration or safe model-policy promotion.",
         "empirical_status": "not_established_by_fixture_tests",
         "architecture_disposition": "shared_mechanism_required",
         "whole_scenario_verified": false
@@ -18542,7 +18546,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "These are software behavior fixtures and limited real benchmark denominator checks, not a genuine pretrained checkpoint run, new-tool calibration or prospective service usefulness.",
+        "remaining_gap": "Software denominator fixtures remain distinct from the separately captured40forecast pretrained run. New-tool calibration, prospective delivery usefulness and enterprise generalization remain unvalidated.",
         "empirical_status": "not_established_by_fixture_tests",
         "whole_scenario_verified": false,
         "architecture_disposition": "shared_mechanism_required"
@@ -18641,7 +18645,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "Real experiment remains one hourly public recorded-input stream. No employees/teams/invoice dollars/monthly enterprise result or successful foundation output is inferred.",
+        "remaining_gap": "Actual cloud execution now supplies40genuine point forecasts, while the experiment remains one hourly public recorded-input stream. No employees/teams, invoice dollars or monthly enterprise transfer is inferred.",
         "empirical_status": "not_established_by_fixture_tests",
         "architecture_disposition": "shared_mechanism_required",
         "whole_scenario_verified": false
@@ -18733,7 +18737,7 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "remaining_gap": "General arithmetic guards are verified, not actual Chronos outputs. Approved adapter source selects q0.5 marginal median and labels summed values point aggregates, not expected cumulative mean/median or calibrated foundation risk.",
+        "remaining_gap": "Executed Chronos outputs are explicitly summed marginal medians, not cumulative mean/median or calibrated joint risk. Shared arithmetic guards do not create those missing distributional capabilities.",
         "empirical_status": "not_established_by_fixture_tests",
         "architecture_disposition": "shared_mechanism_required",
         "whole_scenario_verified": false
@@ -20329,7 +20333,7 @@
             "asserted_scope": "Local byte hashes match pinned manifests;1462native-hour bins and exact input-primary/component token identities hold. This verifies local derived artifacts, not complete original capture or raw-transform reproduction."
           }
         ],
-        "remaining_gap": "Real experiment remains one hourly public recorded-input stream. No employees/teams/invoice dollars/monthly enterprise result or successful foundation output is inferred.",
+        "remaining_gap": "Actual cloud execution now supplies40genuine point forecasts, while the experiment remains one hourly public recorded-input stream. No employees/teams, invoice dollars or monthly enterprise transfer is inferred.",
         "empirical_status": "limited_real_recorded_input_workload_only",
         "architecture_disposition": "shared_mechanism_required",
         "source_acquisition_evidence": {
@@ -20755,8 +20759,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -20790,17 +20794,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "Unit-test adapters verify manifest/failure guard only; declared weight metadata is not independent proof of acquired bytes. Genuine Chronos dependency/weights/load/inference remain unexecuted.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "Successful captured official hash-bound acquisition/load is established. Weight bytes were not transferred for a second local reviewer hash; broader checkpoint/runtime combinations and enterprise forecasting remain unvalidated.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -20808,13 +20821,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -20860,8 +20887,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -20905,17 +20932,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "These are software behavior fixtures and limited real benchmark denominator checks, not a genuine pretrained checkpoint run, new-tool calibration or prospective service usefulness.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "Successful cloud inference now supersedes the preserved local missingchronos attempt. Failure admission/denominator guards remain software-tested; transport reliability and every future failure mode are not guaranteed.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -20923,13 +20959,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -20977,8 +21027,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21022,17 +21072,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "General arithmetic guards are verified, not actual Chronos outputs. Approved adapter source selects q0.5 marginal median and labels summed values point aggregates, not expected cumulative mean/median or calibrated foundation risk.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "Executed outputs retain q0.5per-bin marginal-median semantics and sum as a point aggregate. They do not establish expected cumulative mean, cumulative median or an additive explanation of enterprise spending.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21040,13 +21099,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21094,8 +21167,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21139,17 +21212,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "General arithmetic guards are verified, not actual Chronos outputs. Approved adapter source selects q0.5 marginal median and labels summed values point aggregates, not expected cumulative mean/median or calibrated foundation risk.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "Forty executed point forecasts do not identify cross-hour dependence from marginal quantiles. No cumulative foundation interval, breach probability or empirical joint-risk calibration is enabled.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21159,13 +21241,27 @@
         "testable_guard_obligation": "Keep foundation interface point-only; no sum of marginal quantiles becomes cumulative coverage/exceedance.",
         "conditional_remainder": "No actual foundation output yet; even successful marginal inference would not establish a calibrated joint cumulative law.",
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21213,8 +21309,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21248,17 +21344,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "No actual neural outputs were observed. The real adapter nonnegative projection/shape selection was source-reviewed, not inferred from dummy adapter tests.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "All40captured paths are finite/nonnegative and declared clipping is bound to the procedure. This does not show calibration after projection or identify the frequency/effect of negative raw neural predictions.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21266,13 +21371,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21318,8 +21437,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21363,17 +21482,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "Verifies immutable procedure metadata and measured-timing separation with unit-test adapters. Does not measure actual model memory/CPU feasibility, installed transitive compatibility or pretrained predictive behavior.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "Official revision/weight/config/adapter/runtime identities are captured and verified through mandatory adapter checks. No second local weight copy/hash or cross-accelerator determinism is established; replay observations/timings remain separate.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21381,13 +21509,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21431,8 +21573,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21476,17 +21618,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "Verifies immutable procedure metadata and measured-timing separation with unit-test adapters. Does not measure actual model memory/CPU feasibility, installed transitive compatibility or pretrained predictive behavior.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "The compactCPUfloat32model completed40forecasts with two threads in one authorized2vCPU/4GiBtemporary environment. Observed timing is not a production SLO or universal memory/throughput bound; session stopped and invoice cost was not queried.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21494,13 +21645,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21546,8 +21711,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21591,17 +21756,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "Real experiment remains one hourly public recorded-input stream. No employees/teams/invoice dollars/monthly enterprise result or successful foundation output is inferred.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "The run validates one historical1h/4hinput-token point comparison, not monthly enterprise dollar forecasts, real teams/invoices, prospective transfer or causal behavior. Coverage/receipt idealization and unknown public-trace pretraining contamination remain.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21611,13 +21785,27 @@
         "testable_guard_obligation": "Retain native input-token units, exact1h/4h target support, source identity and common chronological origins.",
         "conditional_remainder": "A successful one-stream historical comparison cannot establish monthly enterprise money accuracy, private ownership or prospective domain transfer.",
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21661,8 +21849,8 @@
           "T8"
         ],
         "scope_application": "Implement bounded identity/statistic/failure guards; successful genuine foundation inference is a separate unmet completion condition.",
-        "implementation_status": "guard_tested_foundation_unexecuted",
-        "verification_status": "software_guard_passed_foundation_not_executed",
+        "implementation_status": "runtime_executed_narrow_benchmark",
+        "verification_status": "captured_genuine_load_and_inference_independently_audited",
         "whole_scenario_verified": false,
         "code_evidence": [
           {
@@ -21696,17 +21884,26 @@
             "reverified_in": "root-final-519"
           }
         ],
-        "artifact_evidence": [],
-        "remaining_gap": "Unit-test adapters verify manifest/failure guard only; declared weight metadata is not independent proof of acquired bytes. Genuine Chronos dependency/weights/load/inference remain unexecuted.",
-        "empirical_status": "no_foundation_forecasting_measurement",
+        "artifact_evidence": [
+          {
+            "run_id": "cloud-chronos-execution",
+            "path": "docs/robustness-2026-10-24/results.json",
+            "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+            "asserted_scope": "40actual Chronos-Bolt Tiny forecasts succeeded under pinnedweight/config/runtime identity;40opportunities retained; per-bin marginal medians summed as point aggregates, not calibrated cumulative risk."
+          }
+        ],
+        "remaining_gap": "ActualPython3.11.17/Linux execution and package freeze establish the executed environment, including Chronos2.2.2/CPUtorch2.5.1. They do not guarantee future installation, different hardware or production dependency compatibility.",
+        "empirical_status": "limited_real_native_input_point_benchmark;no_enterprise_or_joint_risk_calibration",
         "architecture_disposition": "shared_bounded_runtime_guard_with_unexecuted_model",
         "runtime_gate": {
-          "weight_acquisition": "blocked_at_contribution_record",
-          "actual_weight_hash": "not_observed",
-          "model_load": "not_executed",
-          "prediction": "not_executed",
+          "weight_acquisition": "executed_with_mandatory_official_size_hash_and_full_config_checks",
+          "actual_weight_hash": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+          "model_load": "executed_genuine_chronos_pipeline",
+          "prediction": "executed40of40forecasts",
           "baseline_substitution": "prohibited",
-          "adapter_load_attempt": "executed_failure_missing_chronos"
+          "adapter_load_attempt": "successful_authorized_cloud_run;historical_local_failure_retained",
+          "session_status": "stopped",
+          "weight_verification_limit": "Captured mandatory hash-bound adapter execution; no second local reviewer copy/hash of weight bytes."
         },
         "source_investigation_evidence": {
           "report": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
@@ -21714,13 +21911,27 @@
           "claim_limit": "Preserve executed environment/acquisition-failure facts separately from implemented adapter guards and unexecuted model behavior."
         },
         "foundation_result_evidence": {
+          "run_id": "cloud-chronos-execution",
+          "review_run_id": "cloud-benchmark-independent-review",
+          "path": "docs/robustness-2026-10-24/results.json",
+          "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+          "raw_source_path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+          "successes": 40,
+          "opportunities": 40,
+          "successes_per_horizon": 20,
+          "opportunities_per_horizon": 20,
+          "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+          "claim_limit": "Actual genuine pretrained point forecasts on identical40preregistered opportunities;not40independententerprise samples."
+        },
+        "historical_local_foundation_result_evidence": {
           "path": "artifacts/root-benchmark-7c2f23f.json",
           "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
           "actual_failure": "ModuleNotFoundError: No module named 'chronos'",
           "successes_per_horizon": 0,
           "opportunities_per_horizon": 20,
           "claim_limit": "This is a failed local adapter-load attempt with real data opportunities, not successful checkpoint loading/inference."
-        }
+        },
+        "original_verification_is_historical_research_snapshot": true
       },
       "source_findings_path": "docs/robustness-2026-10-24/research/r_foundation_runtime.md",
       "source_record_fields": [
@@ -21842,13 +22053,13 @@
     },
     "root-final-519": {
       "report": "docs/robustness-2026-10-24/verification.json",
-      "report_sha256": "81299cf8ab0b8059d0213dcc293397bf7e3489980c9167703846f1b2fea26680",
+      "report_sha256": "658f7dbf148210d992d72f5940b85e0b8a95942a592bfb71831c2cd14482d9fa",
       "command": "python3 -m pytest -q -p no:cacheprovider",
       "result": "519 passed,0failed in9.03s;compileall/diffcheck exit0",
       "executor": "/root",
       "evidence_type": "independent_integrated_tests",
       "independent_integrated_verification": "passed_on_root_7c2f23f_source_hashes",
-      "claim_limit": "All named software tests passed; final scoped code rereview remains pending. No whole-scenario empirical calibration or successful foundation inference is established.",
+      "claim_limit": "519softwaretests passed on recorded source hashes;approved42-test scoped rereview is recorded separately. Software tests alone do not establish pretrained inference or empirical calibration;the separate captured cloud run supplies40actual foundation forecasts.",
       "tool_chunk_id": "7eb24d"
     },
     "final-fix-focused": {
@@ -21859,7 +22070,7 @@
       "executor": "/root/i_final_fix",
       "evidence_type": "worker_executed_targeted_tests",
       "independent_integrated_verification": "pending_root_run",
-      "claim_limit": "Implementer evidence; root separately ran519tests. Final scoped independent rereview remains pending; no enterprise/model-performance claim.",
+      "claim_limit": "Historical implementer evidence for four corrections,subsequently covered by root519tests and approved42-test independent scoped rereview. No enterprise calibration follows.",
       "current_assertions_reverified_by": "root-final-519"
     },
     "final-scoped-rereview": {
@@ -21872,6 +22083,40 @@
       "independent_integrated_verification": "approved_four_final_review_corrections",
       "claim_limit": "Independent42-test scoped rereview of the four fixes and supporting arithmetic; not another whole-system audit, no successful genuine foundation inference or enterprise calibration.",
       "tool_chunk_id": "2f14df"
+    },
+    "cloud-chronos-execution": {
+      "report": "docs/robustness-2026-10-24/evidence/cloud-chronos/execution-summary.json",
+      "report_sha256": "b02d74d6deb69a41bae764cc5ce23e8f1384727aee07213dfe3e0aaebc4b00fa",
+      "command": "Captured cloud install-and-benchmark command; exact execution command identifier retained in execution-summary.json. Reproduction CLI is documented in benchmark.md.",
+      "captured_command_id": "cmd_6e2d635afd0a410181acc8ee19a6",
+      "result": "40/40 genuine Chronos-Bolt Tiny forecasts;20/20at1h+20/20at4h;exit0;temporaryVMstopped.",
+      "executor": "root-authorized temporary cloud runtime",
+      "evidence_type": "executed_genuine_pretrained_public_trace_benchmark",
+      "independent_integrated_verification": "Approved by cloud-benchmark-independent-review",
+      "artifact_sha256": {
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/README.md": "8e30001427f708c27248752c602ec5d00fdab6f92ecd3d7d313f229ab5695337",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/benchmark.log": "abd4584d5e7ebb1559e656f84c2acefcbc5adc1dcc0e0f09c9000a818514c952",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/cloud-evidence.tar.gz": "618103ad71aab4826f76950b962564252e45fe8c2abe2c7929d8f023f055df97",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/execution-summary.json": "b02d74d6deb69a41bae764cc5ce23e8f1384727aee07213dfe3e0aaebc4b00fa",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/install.log": "950842acd54be239abb7187924c7d621d395bf45b18df2f16cc3aac33e586d8b",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/prior-local-results.json": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/requirements-executed.txt": "86400ee85939d257aef230d8f702032fd6f4b155983b683ceab6a94e8f205fff",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/results-chronos.json": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/runtime-evidence.json": "0f96eaf80b0cc66e95862b71556d3063a86d66bd06e6925f09537cf344d7c52f",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/stop-metadata.json": "ea5881fb6163eb1a0bd5e12635e1ae980f80397ccde0ff3d43fc697ebaaace62",
+        "docs/robustness-2026-10-24/evidence/cloud-chronos/transfer-manifest.json": "78d453842b4ded037916d7f3a2cda4a882371da51eb50582a02f78d97d0e5cb7"
+      },
+      "claim_limit": "One real historical native-input workload,40dependent forecast opportunities. Sum of marginal medians is a point aggregate; no calibrated joint risk, significance, enterprise/monthly monetary transfer or causal savings."
+    },
+    "cloud-benchmark-independent-review": {
+      "report": "docs/robustness-2026-10-24/evidence/cloud-benchmark-review.md",
+      "report_sha256": "ddb9ba41927858c52b8c9257056b9022ad64db31fb619bf71c23fb7967fc580f",
+      "command": "Independent standard-library audit of all240rows,metrics,slices,pairedcomparisons,source/runtime/transfer hashes and stopped-session evidence; no second model run.",
+      "result": "Approved;all240records audited;200nonfoundation rows unchanged except latency;11cloudsource hashes match;40finite successful foundation forecasts.",
+      "executor": "independent benchmark reviewer",
+      "evidence_type": "independent_executed_artifact_and_metric_audit",
+      "independent_integrated_verification": "passed_for_captured_experiment",
+      "claim_limit": "No independent second local weight-byte hash or model rerun. Captured execution uses mandatory size/hash/full-config checks; reviewer verifies hash-bound adapter, artifacts and arithmetic. No enterprise calibration."
     }
   },
   "implementation_status_definitions": {
@@ -21880,26 +22125,29 @@
     "boundary_enforced_partial": "Excluded external/deferred behavior is separated from required in-scope guards; only named tested guard assertions are established.",
     "guard_implemented_runtime_unverified": "A bounded adapter/interface guard is written or investigated, but genuine checkpoint acquisition/load/inference has not executed. This status is never a passing foundation-model result.",
     "architecture_mapped_residual": "Shared architecture/task defense and original rationale are documented; no directly mapped case-specific passing assertion is claimed.",
-    "guard_tested_foundation_unexecuted": "Software admission/identity/statistic guards passed scoped tests; actual genuine checkpoint loading/inference remains unexecuted and no model-performance pass is claimed."
+    "guard_tested_foundation_unexecuted": "Software admission/identity/statistic guards passed scoped tests; actual genuine checkpoint loading/inference remains unexecuted and no model-performance pass is claimed.",
+    "runtime_executed_narrow_benchmark": "Official hash-bound pretrained checkpoint/runtime completed40forecasts on preregistered native-input targets;captured artifacts/metrics independently audited. Whole adversarial scenarios and enterprise/joint-risk calibration remain unverified."
   },
   "mapping_freeze": {
-    "status": "frozen_code_scope_approved_foundation_incomplete",
+    "status": "frozen_code_ready_and_basic_foundation_run_verified",
     "code_commit": "7c2f23f6dc7c456d7bcdce1d983b1505bd81ed1c",
-    "instruction": "All243original case fields and source mappings frozen. Refresh only for new authorized code/model execution evidence."
+    "instruction": "No code changes or broad remapping. Original243records remain immutable;refresh only for later authorized execution/evidence changes."
   },
   "final_verification": {
     "path": "docs/robustness-2026-10-24/verification.json",
-    "sha256": "81299cf8ab0b8059d0213dcc293397bf7e3489980c9167703846f1b2fea26680",
+    "sha256": "658f7dbf148210d992d72f5940b85e0b8a95942a592bfb71831c2cd14482d9fa",
     "tests_passed": 519,
     "test_seconds": 9.03,
     "tool_chunk_id": "7eb24d",
     "compile_exit_code": 0,
     "diff_check_exit_code": 0,
-    "review_state": "Approved for code readiness within documented reference implementation scope after independent42-test scoped rereview. Genuine foundation comparison remains incomplete.",
+    "review_state": "Code readiness approved within documented reference scope; successful genuine40forecast cloud experiment independently audited.",
     "code_commit": "7c2f23f6dc7c456d7bcdce1d983b1505bd81ed1c",
-    "claim_limit": "519root tests and42independent scoped rereview tests passed on7c2f23f. No whole compound-scenario empirical calibration or successful genuine foundation inference is claimed.",
+    "claim_limit": "519root tests,42scoped code-rereview tests and one captured40forecast genuine pretrained benchmark are established. No whole compound-scenario empirical calibration,enterprise financial transfer,significance or causal savings claim follows.",
     "scoped_rereview_path": "docs/robustness-2026-10-24/evidence/final-rereview.md",
-    "scoped_rereview_tests": 42
+    "scoped_rereview_tests": 42,
+    "basic_foundation_requirement": "completed_for_one_genuine_model_on_real_public_input_trace",
+    "cloud_benchmark_review_path": "docs/robustness-2026-10-24/evidence/cloud-benchmark-review.md"
   },
   "root_demonstration_evidence": {
     "durable_record": "docs/robustness-2026-10-24/verification.json",
@@ -21911,6 +22159,46 @@
     "limit": "Synthetic fixture, not real forecast accuracy or monetary truth."
   },
   "current_benchmark_evidence": {
+    "path": "artifacts/cloud-chronos-20261024/results-chronos.json",
+    "sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+    "published_path": "docs/robustness-2026-10-24/results.json",
+    "published_sha256": "681ad015c23e9910f02a942248a34e830c2f8ef9771d215bd475f41c2cf86e2d",
+    "benchmark_document_sha256": "a051f6c7ebb9a3562a7fd0834c2d5504854ef46a95c57fb08387e069bc3e0d42",
+    "procedure_identity": "501d304bf55847edbca545499ff0ad0c03649634751cc07774b7006a87760877",
+    "observations": 1462,
+    "origins_per_horizon": 20,
+    "horizons_hours": [
+      1,
+      4
+    ],
+    "foundation_predictions": 40,
+    "foundation_opportunities": 40,
+    "foundation_load_failure": null,
+    "checkpoint": "amazon/chronos-bolt-tiny",
+    "checkpoint_revision": "a0e552de83495b5c28c14c71c374f3e33280b340",
+    "weights_sha256": {
+      "model.safetensors": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32"
+    },
+    "runtime_evidence_path": "docs/robustness-2026-10-24/evidence/cloud-chronos/runtime-evidence.json",
+    "independent_review_path": "docs/robustness-2026-10-24/evidence/cloud-benchmark-review.md",
+    "session_stopped": true,
+    "run_status": "genuine_pretrained_load_and_40inferences_completed;independently_audited",
+    "scope": "Single real native-input workload;dependent historical hourly point comparisons,not monetary/enterprise/calibratedrisk evidence.",
+    "descriptive_results": {
+      "1hour": {
+        "foundation_mae_tokens": 292074.44375,
+        "best_observed_baseline": "trailing_mean_16",
+        "best_observed_baseline_mae_tokens": 345308.5625
+      },
+      "4hours": {
+        "foundation_mae_tokens": 964212.115625,
+        "best_observed_baseline": "last_observation",
+        "best_observed_baseline_mae_tokens": 824088.75
+      }
+    },
+    "descriptive_result_limit": "Observed comparison only;no significance test,model-selection evidence or universal superiority."
+  },
+  "historical_benchmark_evidence_before_cloud": {
     "path": "artifacts/root-benchmark-7c2f23f.json",
     "sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
     "published_path": "docs/robustness-2026-10-24/results.json",
@@ -21926,6 +22214,9 @@
     "scope": "Genuine public request input-token baseline/joint comparison only; actual local adapter load failed.",
     "run_status": "benchmark_exit0_with_retained_foundation_unavailability",
     "published_sha256": "3a23cacaac48d2fc69c4c91e030ff6cc757a7729c0c561d606e729bde1394b74",
-    "benchmark_document_sha256": "be10c65c70985e925a4adfa9373d1df7ea1dba8d5246a1cdfb732f93c66ed50f"
-  }
+    "benchmark_document_sha256": "be10c65c70985e925a4adfa9373d1df7ea1dba8d5246a1cdfb732f93c66ed50f",
+    "published_historical_path": "docs/robustness-2026-10-24/evidence/cloud-chronos/prior-local-results.json",
+    "status": "historical_failed_local_adapter_attempt_superseded_by_cloud_execution"
+  },
+  "source_snapshot_policy": "All243original researcher fields/source_refs remain verbatim historical research snapshots,including earlier unexecuted/blocked verification text. Later integration status/evidence supersedes historical operational status without rewriting source assertions."
 }

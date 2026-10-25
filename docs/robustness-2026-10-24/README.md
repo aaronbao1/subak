@@ -48,13 +48,13 @@ PYTHONPATH=src python3 -m forecasting joint-demo --output-dir artifacts/example-
 
 Use a fresh output directory for each demo. Each example traverses acquisition, a coverage-qualified snapshot, one generator, two shared billing-period resets, exact allocation, risk summaries, storage and authorized retrieval. The hand-computed fixture is 20 future tokens and 26 USD under explicitly synthetic tariffs; it demonstrates mechanics only.
 
-## Real benchmark and current limit
+## Real benchmark and qualification
 
 The [benchmark report](benchmark.md) and [per-origin results](results.json) use genuine public BurstGPT request input tokens: 1,462 complete hourly bins from a release containing 1,429,737 requests. Input tokens are the primary target because eventual response lengths lack completion/availability timestamps. Empty released bins have an explicit idealized coverage assumption. There are no inferred employees, teams, invoices or enterprise calendar claims.
 
 The initial run used 20 frozen held-out origins for each of the one-hour and four-hour targets. The joint procedure slightly improved on last observation at one hour and performed worse at four hours. Trailing mean won at one hour; last observation won at four hours. These results support neither universal improvement nor enterprise calibration.
 
-**The genuine pretrained comparison is still pending.** A pinned Chronos-Bolt Tiny adapter, exact weight hash/configuration checks and installation manifest are prepared, but no pretrained weights have been loaded or inference executed in the current environment. Local networking and browser failures are recorded. A bounded temporary cloud run requires the pending user approval. The existing results retain foundation unavailability explicitly rather than substitute a model.
+**The genuine pretrained comparison completed.** Pinned Chronos-Bolt Tiny weights and configuration were verified and executed on CPU for all 40 frozen opportunities. One-hour MAE was 292,074 tokens, about 15.4% below the best simple baseline; four-hour MAE was 964,212 tokens, about 17.0% above last observation. It therefore works as a basic forecasting candidate on this trace without consistently beating simple baselines. Model provenance, runtime dependencies, per-origin predictions and the earlier local loader failure are retained in the [benchmark evidence](evidence/cloud-chronos/). The temporary sandbox was stopped after results were retrieved; no persistent snapshot was requested.
 
 Reproduce the local baseline/joint run:
 
