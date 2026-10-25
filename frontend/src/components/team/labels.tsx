@@ -99,13 +99,6 @@ export function Tag({ children, title, className }: { children: ReactNode; title
   );
 }
 
-export const PLACEHOLDER_TITLE = "Placeholder projection: a shared sample number, not the output of the forecasting service";
-
-/** Always shown where a `origin: "placeholder"` projection is cited. */
-export function PlaceholderBadge({ className }: { className?: string }) {
-  return <Tag title={PLACEHOLDER_TITLE} className={className}>Placeholder projection</Tag>;
-}
-
 /* ------------------------------------------------------------------ */
 /* Team status                                                         */
 /* ------------------------------------------------------------------ */

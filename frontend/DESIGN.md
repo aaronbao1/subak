@@ -26,7 +26,7 @@ Source spec: `/private/tmp/claude-501/-Users-erfanballew/08f08e85-80db-4705-b54b
 - **Charts (dataviz skill at `/private/tmp/claude-501/bundled-skills/2.1.306/d78aaa2fa86feb2b77b7d2c22ec7c066/dataviz`, read `references/marks-and-anatomy.md` and `references/anti-patterns.md`):** 2px lines, round joins; markers ≥8px (r≥4) with a 2px `var(--card)` ring; bars ≤24px wide, 4px rounded data-end, square at the baseline, 2px surface gap between stacked segments; horizontal hairline grid only, solid, `var(--border)`; no axis lines; axis text mono 11px muted; legend always present for ≥2 series as chips with a square 8px swatch; text never wears the series color; one y-axis.
 - **Motion:** 150ms (menus) and 300ms (color/opacity) only, plus at most one fade-up on enter. No parallax, no hover lift, no glow. Respect `prefers-reduced-motion` (already global).
 - **Chrome is quiet:** sentence case everywhere; uppercase only in `.eyebrow`. Icons `size-4 text-muted-foreground` stroke 1.5. No colored headers, no gradient bars, no icon backgrounds.
-- **Copy:** sentence case, 4–6 word two-clause headlines, no exclamation marks, no Title Case. Product rules in `CLAUDE.md` still apply (add ≠ redistribute, units explicit, provenance visible, missing data shown, placeholder tagged).
+- **Copy:** sentence case, 4–6 word two-clause headlines, no exclamation marks, no Title Case. Product rules in `CLAUDE.md` still apply (add ≠ redistribute, units explicit, provenance visible, missing data shown).
 
 ## Motion (added Oct 24, evening)
 One vocabulary, in `src/components/shared/motion.ts` and `globals.css`. No motion library.

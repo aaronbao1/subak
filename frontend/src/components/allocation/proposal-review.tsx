@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { fmtDate, fmtDateTime, PlaceholderBadge } from "@/components/team/labels";
+import { fmtDate, fmtDateTime } from "@/components/team/labels";
 import { Delta, EnvelopeLine, KindBadge, kindLabel, ProposalStatusBadge, teamColor, teamName } from "./proposal-bits";
 
 interface Props {
@@ -76,7 +76,6 @@ function ReviewBody({ proposalId, onClose }: Props) {
 
   const spentFor = (teamId: string) => spending.filter((r) => r.teamId === teamId).reduce((s, r) => s + r.amount, 0);
   const reviewed = (teamId: string) => proposal?.forecastsReviewed?.find((f) => f.teamId === teamId);
-  const anyPlaceholder = proposal?.forecastsReviewed?.some((f) => f.origin === "placeholder") ?? false;
   const closed = phase.kind === "applied" || phase.kind === "rejected";
 
   return (
@@ -177,13 +176,6 @@ function ReviewBody({ proposalId, onClose }: Props) {
                 </table>
               </div>
             </div>
-
-            {anyPlaceholder && (
-              <p className="-mt-2 flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
-                <PlaceholderBadge className="shrink-0" />
-                Projections reviewed here are shared placeholder numbers, not the output of the forecasting service.
-              </p>
-            )}
 
             <section className="space-y-1.5">
               <h3 className="eyebrow">Why</h3>

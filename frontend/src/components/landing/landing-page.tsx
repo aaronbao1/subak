@@ -106,7 +106,6 @@ export function LandingPage() {
             <div className="overflow-hidden rounded-xl border border-border bg-card text-left">
               <div className="flex h-10 items-center justify-between border-b border-border px-4">
                 <span className="eyebrow">Overview</span>
-                <span className="text-xs text-muted-foreground">Demo data</span>
               </div>
               <HeroMock />
             </div>
@@ -159,7 +158,7 @@ export function LandingPage() {
           <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center md:py-20">
             <h2 className="mx-auto max-w-[760px] text-[34px] leading-[1.05] md:text-5xl">{HEADLINE}</h2>
             <p className="mx-auto mt-4 max-w-[480px] text-[15px] text-muted-foreground md:text-base">
-              Open the demo company: one period, a shared allotment, and an assistant ready to propose a change.
+              Open the dashboard: one period, a shared allotment, and an assistant ready to propose a change.
             </p>
             <div className="mt-8 flex justify-center">
               <Link href="/overview" className={cta("brand", "hero")}>
@@ -177,7 +176,7 @@ export function LandingPage() {
               <BrandMark />
               <span className="text-sm font-medium">AI Spend Planner</span>
             </div>
-            <p className="mt-3 leading-[1.5]">Demo data. Planning records, not provider limits or purchases.</p>
+            <p className="mt-3 leading-[1.5]">Planning records, not provider limits or purchases.</p>
           </div>
           <nav aria-label="Footer" className="flex flex-col gap-2.5">
             {FOOTER_LINKS.map((l) => (

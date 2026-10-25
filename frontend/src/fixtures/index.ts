@@ -143,7 +143,7 @@ function personForecasts(teamId: string, projected: number, low: number, high: n
       basis: "full_period", kind: "forecast", origin: "placeholder",
       projected: pr[j], low: lo[j], high: hi[j], daily,
       assumptions: [note[x.signal], "Weekend usage at about a third of a weekday"],
-      limitations: ["Shared placeholder projection", `${monthDay(asOf)} data is partial`],
+      limitations: ["Not the output of a selected model", `${monthDay(asOf)} data is partial`],
       generatedAt: `${asOf}T09:00:00Z`,
     };
   });
@@ -156,7 +156,7 @@ export const forecasts: Forecast[] = [
     projected: 85_000, low: 76_000, high: 96_000,
     daily: daily("research", 85_000, 76_000, 96_000),
     assumptions: [`Approved Q4 Research Plan: nightly evaluation runs continue every day this week, including the weekend (since ${monthDay(planStart)})`, "Provider pricing unchanged"],
-    limitations: ["Shared placeholder projection, not the output of a selected model", `${monthDay(asOf)} data is partial`],
+    limitations: ["Not the output of a selected model", `${monthDay(asOf)} data is partial`],
     generatedAt: `${asOf}T09:00:00Z`,
   },
   {
@@ -165,7 +165,7 @@ export const forecasts: Forecast[] = [
     projected: 50_000, low: 44_000, high: 58_000,
     daily: daily("product", 50_000, 44_000, 58_000),
     assumptions: ["v4 launch moved to next quarter; near-term feature work reduced", "Weekend usage at about a third of a weekday"],
-    limitations: ["Shared placeholder projection", "Cursor overage is an estimate until the invoice arrives"],
+    limitations: ["Not the output of a selected model", "Cursor overage is an estimate until the invoice arrives"],
     generatedAt: `${asOf}T09:00:00Z`,
   },
   {
@@ -174,7 +174,7 @@ export const forecasts: Forecast[] = [
     projected: 65_000, low: 60_000, high: 71_000,
     daily: daily("engineering", 65_000, 60_000, 71_000),
     assumptions: ["Observability migration continues at the current pace", "Weekend usage at about a third of a weekday"],
-    limitations: ["Shared placeholder projection"],
+    limitations: ["Not the output of a selected model"],
     generatedAt: `${asOf}T09:00:00Z`,
   },
   ...personForecasts("research", 85_000, 76_000, 96_000),

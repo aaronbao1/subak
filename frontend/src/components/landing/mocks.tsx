@@ -263,7 +263,7 @@ const RECEIPT_ROWS: ReadonlyArray<{ term: string; value: ReactNode; num?: boolea
       </>
     ),
   },
-  { term: "Who", value: "FP&A, demo user" },
+  { term: "Who", value: "Erin Walsh, FP&A" },
 ];
 
 /** A decision receipt: the kind of proposal, what moved, the projection reviewed, and who applied it. */

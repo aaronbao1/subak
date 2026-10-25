@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageTitle } from "@/components/shared/stat-tile";
-import { fmtDateTime, PlaceholderBadge } from "@/components/team/labels";
+import { fmtDateTime } from "@/components/team/labels";
 import { AllocationLines, decisionTotals, Delta, KindBadge, kindLabel, ProposalStatusBadge, teamName } from "./proposal-bits";
 import { ProposalReview } from "./proposal-review";
 
@@ -126,7 +126,6 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
   const applied = d.action === "applied";
   const { before, after } = decisionTotals(d);
   const changed = d.lines.filter((l) => l.after !== l.before);
-  const placeholder = d.forecastsReviewed?.some((f) => f.origin === "placeholder");
 
   return (
     <article className="space-y-3 px-5 py-4">
@@ -194,16 +193,13 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="eyebrow">Projections reviewed at the time</span>
-                  {placeholder && <PlaceholderBadge />}
                 </div>
                 <ul className="divide-y divide-border text-sm">
                   {d.forecastsReviewed.map((f) => (
                     <li key={f.teamId} className="flex h-10 items-center justify-between gap-3">
                       <span>{teamName(teams, f.teamId)}</span>
                       <span className="inline-flex items-center gap-2 text-muted-foreground">
-                        <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : f.unavailableReason ?? "Unavailable"}</span>
-                        {f.origin === "placeholder" && <PlaceholderBadge />}
-                      </span>
+                        <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : f.unavailableReason ?? "Unavailable"}</span>                      </span>
                     </li>
                   ))}
                 </ul>
