@@ -319,6 +319,104 @@ def _lex(code: str) -> tuple[str, list[str], list[tuple[int, int, bool]]]:
     return "".join(out), strings, brackets
 
 
+# The droid CLI (0.249) lets a Script call start with directives and carry input blocks:
+#   // @script: {"startInBackground": true}
+#   // @input: rationale <<'EOF'
+#   ...raw text, read by the program as the string `inputs.rationale`...
+#   EOF
+# Input blocks may also sit between program lines. `split_script_call` ports the CLI's own splitter
+# line for line, so the gate checks exactly the program the CLI will run and treats input bodies as
+# the data they are. Any divergence must make the gate stricter, never looser.
+_JS_WHITESPACE = "\t\n\v\f\r              " \
+                 "    　﻿"
+_DIRECTIVE = re.compile(r"//\s*@(?:script|input)", re.I)
+_CONTROL = re.compile(r"// @script: ([\s\S]*)")
+_INPUT_OPENER = re.compile(r"// @input: ([A-Za-z_$][\w$]*) <<'([A-Za-z_$][\w$]*)'", re.ASCII)
+_ALLOWED_CONTROL = {"startInBackground": bool}
+
+
+def _js_trim_start(s: str) -> str:
+    return s.lstrip(_JS_WHITESPACE)
+
+
+def split_script_call(text: str) -> tuple[str, dict[str, str], dict[str, Any] | None]:
+    """(program, inputs, control) as the droid CLI splits a Script call; raises _Refused where it errors."""
+    n = text.split("\n")
+    inputs: dict[str, str] = {}
+    tags: dict[str, int] = {}
+    control: dict[str, Any] | None = None
+    a = o = 0
+    while o < len(n):
+        d = _js_trim_start(n[o])
+        if d == "":
+            o += 1
+            continue
+        if not _DIRECTIVE.match(d):
+            break
+        p = o + 1
+        cm = _CONTROL.fullmatch(d)
+        if cm:
+            if control is not None:
+                raise _Refused("second control comment")
+            try:
+                control = json.loads(cm.group(1))
+            except ValueError:
+                raise _Refused("control comment must be a JSON object") from None
+            if not isinstance(control, dict):
+                raise _Refused("control comment must be a JSON object")
+            o += 1
+            a = o
+            continue
+        om = _INPUT_OPENER.fullmatch(d)
+        if not om:
+            raise _Refused("malformed script directive")
+        name, tag = om.groups()
+        if name in inputs:
+            raise _Refused("duplicate input name")
+        i = o + 1
+        while i < len(n) and n[i] != tag:
+            i += 1
+        if i == len(n):
+            raise _Refused("input block has no closing tag line")
+        inputs[name] = "\n".join(n[o + 1:i])
+        tags.setdefault(tag, p)
+        o = i + 1
+        a = o
+    s = n[a:]
+    d = 0
+    while d < len(s):
+        om = _INPUT_OPENER.fullmatch(_js_trim_start(s[d]))
+        if not om:
+            d += 1
+            continue
+        name, tag = om.groups()
+        m = d + 1
+        while m < len(s) and s[m] != tag and not _INPUT_OPENER.fullmatch(_js_trim_start(s[m])):
+            m += 1
+        if m == len(s):
+            d += 1
+            continue
+        if s[m] != tag:
+            raise _Refused("input block has no closing tag line before the next opener")
+        if name in inputs:
+            raise _Refused("duplicate input name")
+        inputs[name] = "\n".join(s[d + 1:m])
+        tags.setdefault(tag, a + d + 1)
+        for k in range(d, m + 1):
+            s[k] = ""
+        d = m + 1
+    if any(line in tags for line in s):
+        raise _Refused("program line equals an input block tag")
+    return "\n".join(s), inputs, control
+
+
+def _names_forbidden(value: str) -> str | None:
+    name = _decode_js_escapes(value).strip()
+    if name == "tools" or _FORBIDDEN.fullmatch(name) or _FORBIDDEN_CODE.fullmatch(name):
+        return name
+    return None
+
+
 def check_script(code: Any) -> tuple[bool, str]:
     """Static allowlist for a code-mode Script. Conservative: anything unrecognised is refused.
 
@@ -336,9 +434,17 @@ def check_script(code: Any) -> tuple[bool, str]:
     if len(code) > MAX_SCRIPT_CHARS:
         return False, f"script longer than {MAX_SCRIPT_CHARS} characters"
     try:
+        code, inputs, control = split_script_call(code)
         stripped, strings, brackets = _lex(code)
     except _Refused as exc:
         return False, f"script refused: {exc}"
+    if control is not None and any(k not in _ALLOWED_CONTROL or not isinstance(v, _ALLOWED_CONTROL[k])
+                                   for k, v in control.items()):
+        return False, "script control comment may only set startInBackground"
+    for value in inputs.values():
+        bad_name = _names_forbidden(value)
+        if bad_name:
+            return False, f"script input names a forbidden identifier {bad_name!r}"
     # Identifier and escape checks run on code only: string and comment contents are data, so a
     # rationale may say "process" or cite `research-eval-plan`. Escapes outside strings stay refused.
     if "\\" in stripped or _ESCAPE.search(stripped):
@@ -350,9 +456,9 @@ def check_script(code: Any) -> tuple[bool, str]:
     # A string that *is* a dangerous name could still be used as a key (`{"__proto__": ...}`) or passed
     # to an accessor, so refuse those, after decoding escapes that could spell one.
     for s in strings:
-        name = _decode_js_escapes(s).strip()
-        if name == "tools" or _FORBIDDEN.fullmatch(name) or _FORBIDDEN_CODE.fullmatch(name):
-            return False, f"script uses a string that names a forbidden identifier {name!r}"
+        bad_name = _names_forbidden(s)
+        if bad_name:
+            return False, f"script uses a string that names a forbidden identifier {bad_name!r}"
     for start, end, member in brackets:
         computed_key = member or stripped[end + 1:].lstrip()[:1] in (":", "(")
         if not computed_key:

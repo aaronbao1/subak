@@ -400,6 +400,48 @@ def test_gate_refuses_strings_that_name_forbidden_identifiers(code):
     assert decide_permission(_raw(_script(code)))[0] == "cancel"
 
 
+LIVE_TRANSFER_SCRIPT = (
+    "// @input: rationale <<'EOF'\n"
+    "Action type: transfer, prioritizing research. Propose USD 25000.00 from product to research.\n"
+    "research-eval-plan v1: \"This plan expands model-evaluation work\"; research's sweeps start now.\n"
+    "EOF\n"
+    "const b = JSON.parse(await tools.northstar.get_budgets({}));\n"
+    "text(await tools.northstar.draft_proposal({proposal: {action_type: 'transfer', base_version: b.state_version,\n"
+    "  lines: [{from_team: 'product', to_team: 'research', amount: '25000.00'}], rationale: inputs.rationale}}));"
+)
+
+
+@pytest.mark.parametrize("code", [
+    # the live transfer refusal: droid's input-block syntax carries raw multi-line text as data
+    LIVE_TRANSFER_SCRIPT,
+    "// @script: {\"startInBackground\": true}\n// @input: note <<'EOF'\nit's \"quoted\" and says tools.Execute()\nEOF\ntext(inputs.note)",
+    "\n  // @input: a <<'A'\nx'\nA\n// @input: b <<'B'\ny\"\nB\ntext(inputs.a + inputs.b)",
+    # an input block between program lines (the CLI extracts these too)
+    "const r = 1;\n// @input: q <<'Q'\nresearch's quote\nQ\ntext(inputs.q)",
+])
+def test_gate_allows_droid_script_input_blocks(code):
+    assert check_script(code)[0], check_script(code)
+    assert decide_permission(_raw(_script(code)))[0] == "proceed_once"
+
+
+@pytest.mark.parametrize("code", [
+    "// @input: x <<'EOF'\nno closing tag\ntext(1)",                       # the CLI would error
+    "// @input bad <<'EOF'\nx\nEOF\ntext(1)",                              # malformed directive
+    "// @script: {\"startInBackground\": true}\n// @script: {}\ntext(1)",  # second control comment
+    "// @script: {\"cwd\": \"/\"}\ntext(1)",                              # unknown control key
+    "// @script: [1]\ntext(1)",
+    "// @input: x <<'EOF'\na\nEOF\n// @input: x <<'F'\nb\nF\ntext(1)",      # duplicate input name
+    "// @input: x <<'EOF'\na\nEOF\nEOF",                                   # program line equals a tag
+    "// @input: x <<'EOF'\nconstructor\nEOF\ntext(o[inputs.x])",           # input that names a forbidden id
+    # whitespace JS does not trim must not hide code: the CLI runs these body lines as code
+    "\x1c// @input: x <<'E'\ntools.Execute({command: 'ls'})\nE",
+    "\x1c// @input: x <<'E'\nthis.tools.Execute({})\nE\ntext(1)",
+])
+def test_gate_refuses_malformed_or_hiding_script_directives(code):
+    assert not check_script(code)[0], code
+    assert decide_permission(_raw(_script(code)))[0] == "cancel"
+
+
 @pytest.mark.parametrize("ctype", ["edit", "exec", "create", "apply_patch", "ask_user", "sandbox_violation"])
 def test_gate_never_allows_dangerous_confirmation_types(ctype):
     assert decide_permission(_raw(_script("text(await tools.northstar.get_budgets({}))", ctype)))[0] == "cancel"
