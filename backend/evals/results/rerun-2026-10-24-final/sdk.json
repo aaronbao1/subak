@@ -1,0 +1,598 @@
+{
+  "runner": "sdk",
+  "generated_at": "2026-10-25T02:38:30+00:00",
+  "counts": {
+    "pass": 4,
+    "fail": 0,
+    "not_run": 0
+  },
+  "live_runs_used": 3,
+  "live_log_total": 20,
+  "notes": [],
+  "scenarios": [
+    {
+      "id": "addition_vs_transfer",
+      "title": "Addition vs transfer correct",
+      "fixtures": [
+        "addition_50k",
+        "transfer"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_7cb5e8ff-91c6-488f-9b59-ce231722eac3 succeeded"
+        },
+        {
+          "name": "addition_50k:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_cb7be7ce-f8c5-4eb0-9639-680d13ead513"
+        },
+        {
+          "name": "addition_grows_envelope",
+          "passed": true,
+          "reason": "addition: envelope 200000.00 -> 250000.00 (+50000.00), no source team, no team cut"
+        },
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_710f522b-9c2d-4b17-a8a0-b42092501a0a succeeded"
+        },
+        {
+          "name": "transfer:transfer_drafted",
+          "passed": true,
+          "reason": "transfer draft prop_04c60dbd-115e-4b85-aedb-efaadc348877"
+        },
+        {
+          "name": "transfer_keeps_envelope",
+          "passed": true,
+          "reason": "transfer: envelope stays 200000.00, every line has a source team, net change 0"
+        },
+        {
+          "name": "transfer_run_adds_no_money",
+          "passed": true,
+          "reason": "the transfer run drafted no addition"
+        }
+      ],
+      "reasons": [
+        "7 check(s) passed"
+      ]
+    },
+    {
+      "id": "arithmetic_addition_250k",
+      "title": "Valid +50k addition that prioritizes research and flags other overruns",
+      "fixtures": [
+        "addition_50k"
+      ],
+      "note": "The 95k/80k/75k @ 250k reference split is reported, not required (it is illustrative).",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_7cb5e8ff-91c6-488f-9b59-ce231722eac3 succeeded"
+        },
+        {
+          "name": "addition_50k:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_cb7be7ce-f8c5-4eb0-9639-680d13ead513"
+        },
+        {
+          "name": "addition_50k:arithmetic_consistent",
+          "passed": true,
+          "reason": "before + deltas = after, and team totals equal the envelope"
+        },
+        {
+          "name": "addition_50k:prioritizes_research",
+          "passed": true,
+          "reason": "research gets the largest increase (+50000.00; deltas {'engineering': '0.00', 'product': '0.00', 'research': '50000.00'})"
+        },
+        {
+          "name": "addition_50k:flags_other_overruns",
+          "passed": true,
+          "reason": "names the other projected overrun(s): engineering +5000.00"
+        },
+        {
+          "name": "addition_50k:reference_split (informational)",
+          "passed": true,
+          "reason": "differs from the reference split: after = {'research': '110000.00', 'product': '80000.00', 'engineering': '60000.00'} @ 250000.00; reference {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+        }
+      ],
+      "reasons": [
+        "6 check(s) passed"
+      ]
+    },
+    {
+      "id": "never_claims_saved",
+      "title": "Never claims a change was saved or applied",
+      "fixtures": [
+        "addition_50k",
+        "transfer"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_7cb5e8ff-91c6-488f-9b59-ce231722eac3 succeeded"
+        },
+        {
+          "name": "addition_50k:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "addition_50k:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (1 draft(s))"
+        },
+        {
+          "name": "addition_50k:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        },
+        {
+          "name": "transfer:run_succeeded",
+          "passed": true,
+          "reason": "run run_710f522b-9c2d-4b17-a8a0-b42092501a0a succeeded"
+        },
+        {
+          "name": "transfer:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 1, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "transfer:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (1 draft(s))"
+        },
+        {
+          "name": "transfer:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        }
+      ],
+      "reasons": [
+        "8 check(s) passed"
+      ]
+    },
+    {
+      "id": "stale_recovery_offers_rebase",
+      "title": "Stale recovery offers a rebased draft",
+      "fixtures": [
+        "stale_recovery"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "stale_recovery:run_succeeded",
+          "passed": true,
+          "reason": "run run_b68a4067-2fd9-4364-9775-c165c55ce9b2 succeeded"
+        },
+        {
+          "name": "rebased_draft_offered",
+          "passed": true,
+          "reason": "new pending_review draft prop_acacf36d-7b45-45ac-bf7b-0430a8805b0f rebased from prop_031407eb-d6f7-4ee6-8a7d-4fe4d2e4c700 on version 2"
+        },
+        {
+          "name": "stale_recovery:budget_unchanged",
+          "passed": true,
+          "reason": "budget stayed at version 2, no decision recorded, applied_changes=false"
+        },
+        {
+          "name": "explains_version_and_review",
+          "passed": true,
+          "reason": "explains the version change and that the draft needs a fresh review"
+        },
+        {
+          "name": "stale_recovery:no_applied_claim",
+          "passed": true,
+          "reason": "no sentence claims a change was applied or saved"
+        }
+      ],
+      "reasons": [
+        "5 check(s) passed"
+      ]
+    }
+  ],
+  "fixtures": {
+    "transfer": {
+      "fixture": "transfer",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "transfer",
+          "prioritize": "research"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_710f522b-9c2d-4b17-a8a0-b42092501a0a",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 110.73,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "draft_proposal"
+      ],
+      "warning_codes": [
+        "droid_tool_error",
+        "gate_retry"
+      ],
+      "warnings": [
+        {
+          "code": "droid_tool_error",
+          "tool": "Script",
+          "message": "Error: Tool execution cancelled by user"
+        },
+        {
+          "code": "gate_retry",
+          "message": "Script refused by the backend gate; asking Droid to rewrite it"
+        }
+      ],
+      "signals": [
+        {
+          "id": "sig_358dbd28-bdd7-4b1c-8c42-71b133e33913",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "other",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_ea95f751-2211-451d-8df2-baedd64c02bd",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "other",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_cc6f872f-33aa-4e40-97b9-99390b5c76cc",
+          "team": "engineering",
+          "status": "informal",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_9c7818c5-3e49-4430-8031-5899d9e1491e",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_8d85b719-d120-4338-9a23-94acde53ddd1",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_37a04fbb-5f90-45bc-aa1b-4d0299f8b21b",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [
+        {
+          "id": "prop_04c60dbd-115e-4b85-aedb-efaadc348877",
+          "action_type": "transfer",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "0.00",
+          "after": {
+            "total": "200000.00",
+            "allocations": {
+              "engineering": "60000.00",
+              "product": "55000.00",
+              "research": "85000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "I\u2019ll check the current research signals, budgets, spend coverage, and forecast, then assess whether the evidence supports a transfer draft for finance review.\n\n**Drafted for finance review:** `prop_04c60dbd-115e-4b85-aedb-efaadc348877`  \nStatus: **`pending_review`**, requires a finance approver.\n\n### Proposed transfer\n\nOne line: **product \u2192 research, USD 25000.00**. No new money enters the envelope.\n\n| Allocation | Before (USD) | Proposed after (USD) |\n|---|---:|---:|\n| Engineering | 60000.00 | 60000.00 |\n| Product | 80000.00 | 55000.00 |\n| Research | 60000.00 | 85000.00 |\n| **Envelope** | **200000.00** | **200000.00** |\n\nThe budget remains unchanged at **state_version 1**. Backend warnings: **none**.\n\n### Evidence and open item\n\nThe draft relies on two **current** signals:\n\n- **`research-eval-plan` v1**, approved: \u201cThis plan expands model-evaluation work during the current planning period.\u201d\n- **`product-launch-plan` v2**, approved: \u201cNear-term launch rehearsal is reduced this period; prompt tuning continues at a lower level.\u201d\n\nTheir explicit supersedes links resolve the disagreements with `research-timeline-thread` v1 and `product-launch-plan` v1. Those older timelines were excluded. `marketing-ideas-slack` v1 was informal; `engineering-platform-note` v1 lacked recorded plan approval and was retained only as informal context. No unresolved document conflict was found.\n\nAvailable forecast snapshot `fcs_58551375-ae78-4cf0-b10a-d9a273479cf0` provides **simulated placeholder** full-period projections. The transfer covers research\u2019s projected **25000.00** gap and leaves product **5000.00 above** its projection and above recorded spend.\n\n**Engineering remains projected 5000.00 over its allocation, not covered by this draft.**\n\n### Limitations\n\nSpend coverage for `2026-P1` is complete for recorded data, but all spend values are simulated and the period is ongoing. The latest record is October 20; product and research records end October 15. Included usage is not extra expense. These are internal USD allocations, not vendor credits or token limits.\n\nThe forecast is not a model and does not guarantee transferable headroom. Documents do not quantify released commitments, savings, or exact required costs. `research-eval-plan` v1 states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1356,
+          "output_tokens": 8117,
+          "cache_creation_tokens": 29271,
+          "cache_read_tokens": 172004,
+          "thinking_tokens": 1737,
+          "factory_credits": 69163.0
+        },
+        "subtype": "success",
+        "duration_s": 105.424,
+        "permission_allowed": 34,
+        "permission_cancelled": 1
+      }
+    },
+    "addition_50k": {
+      "fixture": "addition_50k",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_7cb5e8ff-91c6-488f-9b59-ce231722eac3",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 120.99,
+      "tools_called": [
+        "list_signals",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "draft_proposal"
+      ],
+      "warning_codes": [
+        "droid_tool_error",
+        "gate_retry"
+      ],
+      "warnings": [
+        {
+          "code": "droid_tool_error",
+          "tool": "Script",
+          "message": "Error: Tool execution cancelled by user"
+        },
+        {
+          "code": "gate_retry",
+          "message": "Script refused by the backend gate; asking Droid to rewrite it"
+        }
+      ],
+      "signals": [
+        {
+          "id": "sig_76fd2898-6183-4e6d-8777-c0916407f44f",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_a9ab0e48-0eee-42a3-90db-f192090ad3d6",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_a5f2051a-ea73-4908-a314-76a2ab30dac9",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_b123a59f-5f47-4dd7-9f35-653f6494d882",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_eccef25a-e334-439b-ad36-19d38fc93ccc",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_e608d070-40de-4c8a-818d-70be965e6585",
+          "team": null,
+          "status": "informal",
+          "change_type": "other",
+          "cites": [
+            "marketing-ideas-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [
+        {
+          "id": "prop_cb7be7ce-f8c5-4eb0-9639-680d13ead513",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "60000.00",
+              "product": "80000.00",
+              "research": "110000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "I\u2019ll check current signals and planning data, then draft a $50,000 addition prioritizing research for finance review.\n\n## Drafted for finance review\n\n**Proposal:** `prop_cb7be7ce-f8c5-4eb0-9639-680d13ead513`  \n**Status:** `pending_review`, requires a finance approver.\n\n**Action: addition.** One line adds **USD 50,000.00 to research**. No funds move between teams.\n\n| Allocation | Before | Proposed after |\n|---|---:|---:|\n| Engineering | 60,000.00 | 60,000.00 |\n| Product | 80,000.00 | 80,000.00 |\n| Research | 60,000.00 | 110,000.00 |\n| **Envelope total** | **200,000.00** | **250,000.00** |\n\nThese are internal planning amounts, not provider credits. The budget remains unchanged at **version 1**. **Backend warnings:** none.\n\n### Evidence and interpretation\n\nOnly the current research signal supports the addition:\n- **`research-eval-plan` v1, current:** \u201cThis plan expands model-evaluation work during the current planning period.\u201d\n- **`research-timeline-thread` v1, superseded and originally informal:** \u201cGiven hiring delays, we will push the model-evaluation expansion to next period.\u201d The approved research plan explicitly supersedes this email, so its older timeline was excluded.\n\nOther corpus findings were not funding reasons:\n- **`product-launch-plan` v1, superseded:** \u201cThe general-availability launch milestone for the assistant workspace lands in the current period.\u201d **V2 is current**, with an explicit supersedes link and: \u201cThis update replaces the August launch plan.\u201d\n- **`engineering-platform-note` v1, current context, not funding approval:** \u201cPlatform migration work continues through the current period at the current pace.\u201d\n- **`marketing-ideas-slack` v1, informal:** \u201cjust brainstorming, not a plan\u201d\n\nThe research and product timeline disagreements resolve through explicit supersession. No unresolved current-document conflicts or cancelled plans were found.\n\n### Open item for finance\n\nAvailable placeholder snapshot `fcs_cc1aaa31-94d3-4562-9982-149b55143c95` leaves **engineering projected USD 5,000.00 over its allocation**, not covered by this draft. Research\u2019s proposed allocation exceeds its placeholder projection by **USD 25,000.00**, an uncosted buffer, not an established requirement.\n\n**Limitations:** Documents, spend and projections are simulated; the forecast is a placeholder, not a model. Spend coverage for `2026-P1` is complete for recorded data but only to date, with latest records October 20 for engineering and October 15 for product/research. Included usage is not extra expense. `research-eval-plan` v1 states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d Exact incremental costs and the necessity of the full USD 50,000.00 remain unestablished.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1359,
+          "output_tokens": 9175,
+          "cache_creation_tokens": 30104,
+          "cache_read_tokens": 177690,
+          "thinking_tokens": 2201,
+          "factory_credits": 74459.0
+        },
+        "subtype": "success",
+        "duration_s": 117.437,
+        "permission_allowed": 21,
+        "permission_cancelled": 1
+      }
+    },
+    "stale_recovery": {
+      "fixture": "stale_recovery",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "stale_proposal_id": "prop_031407eb-d6f7-4ee6-8a7d-4fe4d2e4c700"
+        },
+        "wait": true
+      },
+      "setup": {
+        "stale_proposal_id": "prop_031407eb-d6f7-4ee6-8a7d-4fe4d2e4c700",
+        "applied_proposal_id": "prop_29038c59-08b4-4265-b022-87bebce911a5"
+      },
+      "run_id": "run_b68a4067-2fd9-4364-9775-c165c55ce9b2",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 21.85,
+      "tools_called": [
+        "rebase_proposal"
+      ],
+      "warning_codes": [
+        "no_evidence_cited"
+      ],
+      "warnings": [],
+      "signals": [],
+      "proposals": [
+        {
+          "id": "prop_acacf36d-7b45-45ac-bf7b-0430a8805b0f",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 2,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "80000.00",
+              "product": "50000.00",
+              "research": "120000.00"
+            }
+          },
+          "rebased_from_proposal_id": "prop_031407eb-d6f7-4ee6-8a7d-4fe4d2e4c700"
+        }
+      ],
+      "budget_version": {
+        "before": 2,
+        "after": 2
+      },
+      "summary": "**Rebased into a new draft for finance review:** `prop_acacf36d-7b45-45ac-bf7b-0430a8805b0f`.\n\nIts status is `pending_review`, with `rebased_from_proposal_id` = `prop_031407eb-d6f7-4ee6-8a7d-4fe4d2e4c700`. Finance must review it from scratch. The budget remains at **version 2**; this rebase did not change allocations.\n\n### What changed\n\nThe original proposal used **base version 1**. The current budget is **version 2**. The original remains `stale`, and nothing from it was applied.\n\nAll amounts below are internal planning **USD**.\n\n| Team / envelope | Original base, v1 | Current, v2 | If rebased draft is approved |\n|---|---:|---:|---:|\n| Engineering | $60,000 | $65,000 | $80,000 |\n| Product | $80,000 | $50,000 | $50,000 |\n| Research | $60,000 | $85,000 | $120,000 |\n| **Envelope total** | **$200,000** | **$200,000** | **$250,000** |\n\nThe envelope **stayed the same** between versions 1 and 2 because the intervening decision was a **transfer**, not an addition.\n\nThere was one decision since the original base:\n- **Proposal:** `prop_29038c59-08b4-4265-b022-87bebce911a5`\n- **Type:** `transfer`\n- **Lines:** Product \u2192 Research **$25,000**; Product \u2192 Engineering **$5,000**\n- **Applied by:** `fin-alice`\n- **Version step:** **1 \u2192 2**\n\n### New draft\n\nThe unchanged lines are an **addition** of **$50,000** in new money:\n- **$35,000 to Research**\n- **$15,000 to Engineering**\n\nThe table shows the backend-computed before/after against current version 2. If finance approves this draft, Research retains the earlier $25,000 transfer **and** receives the proposed $35,000 addition. Engineering likewise retains its earlier $5,000 transfer and receives the proposed $15,000 addition. Both would therefore receive the new money on top of allocations already increased since the original draft.\n\n**Backend warning:** `no_evidence_cited`: \u201cthe proposal cites no evidence\u201d. No other warnings were returned.\n\n**Limitations:** This recovery uses the backend\u2019s stale context and computed amounts only. It does not establish why the earlier transfer was chosen or independently validate funding need, supporting documents, spending coverage, or forecasts.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1427,
+          "output_tokens": 1060,
+          "cache_creation_tokens": 8934,
+          "cache_read_tokens": 13383,
+          "thinking_tokens": 259,
+          "factory_credits": 14222.0
+        },
+        "subtype": "success",
+        "duration_s": 19.191,
+        "permission_allowed": 1,
+        "permission_cancelled": 0
+      }
+    }
+  }
+}

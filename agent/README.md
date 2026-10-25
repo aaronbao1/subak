@@ -64,7 +64,9 @@ reported by Factory:
   Across the 41 permission requests of these five product runs (33 + 3 + 3 + 1 + 1 in the run table)
   the gate made no false refusal and nothing outside `northstar` was requested. That claim covers the
   product runs only; the eval runs below had two cancellations that could not be examined.
-- **Current live score: 8 pass, 2 fail, 1 not run** of 11 scenarios (latest result per scenario; the
+- **Current live score: 11 pass, 0 fail, 0 not run** of 11 scenarios (latest live result per scenario,
+  runs 18-20 on 2026-10-24 evening; two of them recovered from a gate refusal through the retry turn).
+  Before runs 18-20: 8 pass, 2 fail, 1 not run (latest result per scenario; the
   arithmetic scenarios now require prioritizing research and flagging other overruns, not an exact split).
   Before that change: 7 pass, 3 fail, 1 not run, after three reruns on the evening
   of 2026-10-24 (`../backend/evals/README.md`, "Live reruns"): `forecast_unavailable_warns` now passes,

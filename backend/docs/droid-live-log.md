@@ -139,12 +139,27 @@ saved data (`../evals/results/rescore-2026-10-24/rescored.json`):
   never says engineering stays 5000.00 over. Its rationale was not saved, so this is scored on the
   summary only.
 
-**Current live score: 8 pass, 2 fail, 1 not run** (latest result per scenario, across runs on different
+Score after the offline re-score: 8 pass, 2 fail, 1 not run (latest result per scenario, across runs on different
 code versions). Fails: `arithmetic_addition_250k` (does not flag engineering) and
 `addition_vs_transfer` (its transfer half is from the morning run, which ended without a draft; not
 re-run since the fixes because it needs both fixtures in one eval run). Not run: `stale_recovery`
 (verified live earlier). `propose_allocation.md` now tells Droid to name other teams' remaining
 overruns; that line is not yet exercised live.
+
+**Final live reruns, runs 18-20 (`../evals/results/rerun-2026-10-24-final/`; cap raised to 20 with approval).**
+All four scenarios passed: `arithmetic_addition_250k`, `addition_vs_transfer`, `never_claims_saved`,
+`stale_recovery_offers_rebase`.
+
+| Run | Fixture | Result | Gate | factory_credits |
+|---|---|---|---|---:|
+| 18 | addition_50k | +50000.00 all to research (110k / 80k / 60k @ 250k), pending review; flagged "Engineering stays projected 5000.00 over its allocation; not covered by this draft." | 1 cancel (`obj[variable]`), recovered by the gate-retry turn | 74,459 |
+| 19 | transfer | 25000.00 product -> research (85k / 55k / 60k @ 200k), pending review; flagged "engineering's uncovered 5000.00" | 1 cancel, recovered by the gate-retry turn | 69,163 |
+| 20 | stale_recovery | approval of B refused as stale after A applied; Droid rebased B onto v2 as a new pending draft (120k / 50k / 80k @ 250k) and explained the version change | none | 14,222 |
+
+**Current live score: 11 pass, 0 fail, 0 not run.** This is the latest live result per scenario, from
+runs on different code versions: the interpret and question scenarios come from the morning runs; the
+proposal, forecast and stale scenarios from runs 15-20 after the gate fixes. `arithmetic_transfer_200k`
+is from run 17 (re-scored) and run 19's transfer draft meets the same checks. Live runs used: 20.
 
 ## What the live runs showed that the fake could not
 
