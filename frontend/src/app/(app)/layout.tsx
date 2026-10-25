@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 
-/** Product routes: the shared top header, the page, and the assistant drawer. The marketing landing lives outside this group. */
+/** Product routes: sidebar shell plus the assistant drawer. The marketing landing lives outside this group. */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={null}>
