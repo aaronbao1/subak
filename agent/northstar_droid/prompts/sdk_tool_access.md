@@ -16,8 +16,12 @@ How to reach the northstar tools in this session:
   - Look items up with `list.find((a) => a.team === "research")` or a `for (const a of list)` loop,
     never `byTeam[team]`. Fixed keys are fine: `r.items`, `r["items"]`, `r.items[0]`.
   - Use string methods (`split`, `includes`, `startsWith`, `replaceAll(",", "")`), never `/regex/`.
-  - Do not name variables `top`, `self`, `parent`, `global`, `window`, `document`, `location` or
-    `class`; use names such as `topTeam` or `doc`.
+  - Do not name variables `top`, `self`, `parent`, `global`, `window`, `document`, `location`,
+    `frames`, `opener`, `navigator` or `class`; use names such as `topTeam`, `doc` or `periods`.
+  - Do not start a statement with `[` right after a closing `}}`; assign the array first
+    (`const teams = ["research", "product"]; teams.forEach(...)`).
+  - Long or multi-line text (a rationale, a quote) can go in an input block before the program:
+    `// @input: rationale <<'EOF'` ... `EOF`, then read it as `inputs.rationale`.
   - Do the arithmetic in one Script, then call `draft_proposal` with the finished numbers.
 - A refused call returns `{{"error": {{"code", "message", "details"}}}}`. For `invalid_arguments`, fix the
   arguments named in `details.errors` and call again once instead of giving up.

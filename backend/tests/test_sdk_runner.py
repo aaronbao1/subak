@@ -383,14 +383,52 @@ def test_gate_allows_forbidden_words_inside_strings_and_comments(code):
 
 
 @pytest.mark.parametrize("code", [
-    # a string that *is* a dangerous name stays refused, including when spelled with escapes
+    # red-team round 2 false refusals (all benign, all plausible for the finance tasks)
+    "const b = JSON.parse(await tools.northstar.get_budgets({}));\n"
+    "text(await tools.northstar.draft_proposal({base_version: b.state_version, action_type: 'addition',"
+    " envelope_increase: '35000.00', lines: [{to_team: 'research', amount: '35000.00'}], rationale: 'x',"
+    " evidence_refs: [{kind: 'signal', id: 'sig_1'}, {kind: 'document', id: 'research-eval-plan', version: 1}]}))",
+    "const refs = []; text(refs.filter((x) => x.kind !== 'document').length)",
+    "const from = 'infra', to = 'research'; text(`${from} with ${to}`)",
+    "text(['Funds move', 'this', 'quarter'].join(' '))",
+    "text(await tools.northstar.search_corpus({query: 'eval'}))",
+    "const reasons = ['process', 'headcount', 'import', 'global']; text(reasons.join(','))",
+    "const rows = [{label: 'AI tools', value: 1}, {label: 'tools', value: 2}]; text(JSON.stringify(rows))",
+    "text(JSON.stringify({requested_by: 'self', role: 'caller'.length, section: 'opener', who: 'navigator'}))",
+    "const n = 2; text(`retrying after fixing ${n} arguments`)",
+    "const quotes = {'research-eval-plan': 'q'}; text(quotes['research-eval-plan'])",
+    "const r = JSON.parse(await tools.northstar.get_spend_summary({}));\n"
+    "for (const [team, amt] of Object.entries(r.by_team || {})) { text(team + ': ' + amt); }",
+    "const r = {teams: [1, 2]}; const [first, second] = r.teams; text(first + second)",
+    "const x = 1, y = 2; text(String(Math.max(...[x, y])))",
+    "let a = 1; text(a)",
+    "const k = 'tools'",
+    "const a = 'research', b = 'sales', flag = true; const pair = flag ? [a, b] : [b, a]; text(pair.join(' -> '))",
+    "text(JSON.stringify({role: 'caller'}))",
+])
+def test_gate_allows_red_team_false_refusals(code):
+    assert check_script(code)[0], check_script(code)
+    assert decide_permission(_raw(_script(code)))[0] == "proceed_once"
+
+
+@pytest.mark.parametrize("code", [
+    # a string that *is* a dangerous property name stays refused, including when spelled with escapes
     "const o = {'__proto__': text}",
     "const o = {\"constructor\": 1}",
-    "const k = 'tools'",
     "const k = '\\u0063onstructor'",
     "const k = 'c\\x6fnstructor'",
+    "const k = 'pr\\157totype'",
     "const k = 'ev\\141l'",
+    "const k = 'to\\u006fls'",
     "text(o[\"c\\x6fnstructor\"])",
+    # computed keys are still checked against every forbidden name, as whole keys
+    "text(o['tools'])",
+    "text(o['eval'])",
+    "text(o['document'])",
+    # an object literal's computed key is still checked, after `{` or `,`
+    "const k = 'x'; const o = {a: 1, [k]: 2}",
+    "const k = 'x'; const o = { /* c */ [k]: 2}",
+    "const k = 'x'; const o = {[k]() { return 1 }}",
     # dangerous code inside a template expression is still code
     "text(`${eval('1')}`)",
     "text(`${process.env}`)",

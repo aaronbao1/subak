@@ -139,6 +139,7 @@ _LINE_TERMINATORS = "\n\r  "
 _EXPRESSION_KEYWORDS = frozenset({"return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw",
                                   "case", "do", "else", "yield", "await", "extends"})
 _PAREN_KEYWORDS = frozenset({"if", "while", "for", "with"})
+_DECLARATION_KEYWORDS = frozenset({"const", "let", "var"})
 
 
 class _Refused(Exception):
@@ -167,17 +168,17 @@ def _is_ident_char(c: str) -> bool:
     return c.isalnum() or c in "_$"
 
 
-def _lex(code: str) -> tuple[str, list[str], list[tuple[int, int, bool]]]:
+def _lex(code: str) -> tuple[str, list[str], list[tuple[int, int, bool, bool]]]:
     """A small JS lexer, enough to separate code from string text. Returns (code with every string /
     template chunk replaced by a `"N"` placeholder and comments blanked, the raw string contents, and every
-    `[...]` as (start, end, is_member_access) in the returned code). Anything it cannot classify for sure
+    `[...]` as (start, end, is_member_access, in_object_key_position) in the returned code). Anything it cannot classify for sure
     (regular-expression literals, HTML-like comments, unbalanced brackets, unterminated literals) refuses
     the script: being wrong about where a string ends could hide code from the checks."""
     out: list[str] = []
     length = 0
     strings: list[str] = []
     brackets: list[tuple[int, int, bool]] = []
-    open_brackets: list[tuple[int, bool]] = []
+    open_brackets: list[tuple[int, bool, bool]] = []
     braces: list[str] = []  # "block" for `{`, "template" for `${`
     parens: list[bool] = []  # True when the `(` follows if / while / for / with
     prev: tuple[str, str] = ("punct", "")  # (kind, value) of the last significant token
@@ -303,14 +304,19 @@ def _lex(code: str) -> tuple[str, list[str], list[tuple[int, int, bool]]]:
                 i += 1
                 continue
         elif ch == "[":
-            member = (prev[0] in ("str", "num", "prop") or prev[1] in (")", "]", "}", ".")
-                      or (prev[0] == "word" and prev[1] not in _EXPRESSION_KEYWORDS))
-            open_brackets.append((length, member))
+            # `...[a, b]` (spread) and `const [a, b] =` / `for (const [k, v] of ...)` (destructuring) are
+            # array patterns, never member access; anything unsure stays member access and is checked.
+            spread = code[max(0, i - 3):i] == "..."
+            member = not spread and (prev[0] in ("str", "num", "prop") or prev[1] in (")", "]", "}", ".")
+                                     or (prev[0] == "word" and prev[1] not in _EXPRESSION_KEYWORDS
+                                         and prev[1] not in _DECLARATION_KEYWORDS))
+            # only right after `{` or `,` can `[k]` be an object literal's computed key (`{[k]: v}`)
+            open_brackets.append((length, member, prev[0] == "punct" and prev[1] in ("{", ",")))
         elif ch == "]":
             if not open_brackets:
                 raise _Refused("unbalanced brackets")
-            start, member = open_brackets.pop()
-            brackets.append((start, length, member))
+            start, member, key_position = open_brackets.pop()
+            brackets.append((start, length, member, key_position))
         emit(ch)
         prev = ("punct", ch)
         i += 1
@@ -410,11 +416,27 @@ def split_script_call(text: str) -> tuple[str, dict[str, str], dict[str, Any] | 
     return "\n".join(s), inputs, control
 
 
+# Names that are dangerous as *property keys* (prototype and function internals). A string value is
+# inert data unless it becomes a key, so plain strings are checked only against these; computed keys
+# (`obj["..."]`) are checked against every forbidden name.
+_PROPERTY_DANGER = frozenset({"constructor", "prototype", "__proto__", "__defineGetter__", "__defineSetter__",
+                              "__lookupGetter__", "__lookupSetter__"})
+
+
 def _names_forbidden(value: str) -> str | None:
     name = _decode_js_escapes(value).strip()
-    if name == "tools" or _FORBIDDEN.fullmatch(name) or _FORBIDDEN_CODE.fullmatch(name):
+    if name == "tools" or name in _PROPERTY_DANGER or _FORBIDDEN.fullmatch(name) or _FORBIDDEN_CODE.fullmatch(name):
         return name
     return None
+
+
+def _names_dangerous_property(value: str) -> str | None:
+    """Plain strings: only dangerous property names. A string that uses escapes to spell any forbidden
+    name (`'to\\x6fls'`) is refused too: no benign script disguises a name that way."""
+    name = _decode_js_escapes(value).strip()
+    if name in _PROPERTY_DANGER:
+        return name
+    return _names_forbidden(value) if "\\" in value else None
 
 
 def check_script(code: Any) -> tuple[bool, str]:
@@ -442,9 +464,9 @@ def check_script(code: Any) -> tuple[bool, str]:
                                    for k, v in control.items()):
         return False, "script control comment may only set startInBackground"
     for value in inputs.values():
-        bad_name = _names_forbidden(value)
+        bad_name = _names_dangerous_property(value)
         if bad_name:
-            return False, f"script input names a forbidden identifier {bad_name!r}"
+            return False, f"script input names a forbidden property {bad_name!r}"
     # Identifier and escape checks run on code only: string and comment contents are data, so a
     # rationale may say "process" or cite `research-eval-plan`. Escapes outside strings stay refused.
     if "\\" in stripped or _ESCAPE.search(stripped):
@@ -453,20 +475,19 @@ def check_script(code: Any) -> tuple[bool, str]:
         bad = pattern.search(stripped)
         if bad:
             return False, f"script uses forbidden identifier {bad.group(1)!r}"
-    # A string that *is* a dangerous name could still be used as a key (`{"__proto__": ...}`) or passed
-    # to an accessor, so refuse those, after decoding escapes that could spell one.
+    # A string that *is* a dangerous property name could still become a key (`{"__proto__": ...}`), so
+    # refuse those, after decoding escapes that could spell one. Other words in strings are data.
     for s in strings:
-        bad_name = _names_forbidden(s)
+        bad_name = _names_dangerous_property(s)
         if bad_name:
-            return False, f"script uses a string that names a forbidden identifier {bad_name!r}"
-    for start, end, member in brackets:
-        computed_key = member or stripped[end + 1:].lstrip()[:1] in (":", "(")
+            return False, f"script uses a string that names a forbidden property {bad_name!r}"
+    for start, end, member, key_position in brackets:
+        computed_key = member or (key_position and stripped[end + 1:].lstrip()[:1] in (":", "("))
         if not computed_key:
             continue
         m = _SAFE_INDEX.fullmatch(stripped[start + 1:end])
         key = strings[int(m.group(1))] if m and m.group(1) is not None else None
-        if m is None or (key is not None and (not _SAFE_KEY.fullmatch(key) or _FORBIDDEN.search(key)
-                                              or _FORBIDDEN_CODE.search(key) or _TOOLS_REF.search(key))):
+        if m is None or (key is not None and (not _SAFE_KEY.fullmatch(key) or _names_forbidden(key))):
             return False, "script uses computed member access (only a number or a plain string key is allowed)"
     for ref in _TOOLS_REF.finditer(stripped):
         m = _ALLOWED_TOOLS_REF.match(stripped, ref.start())
