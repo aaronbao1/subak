@@ -3,6 +3,7 @@ import { ArrowLeftRight, FileSearch, Receipt } from "lucide-react";
 import { BrandMark } from "@/components/shell/brand-mark";
 import { TopBar } from "./top-bar";
 import { FeatureSection } from "./feature-section";
+import { MediaSlot } from "./media-slot";
 import { KineticDots } from "./kinetic-dots";
 import { HeroMock, ReceiptMock, TeamListMock } from "./mocks";
 import { container, cta } from "./cta";
@@ -17,7 +18,7 @@ const FEATURES = [
     heading: "One number for the company",
     body: "Spent, projected and allotted on one bar.",
     href: "/overview",
-    mediaSrc: "/media/overview.mp4",
+    mediaSrc: "/media/overview.webm",
     mediaAlt: "Overview: company spend against total allocation",
     mediaSide: "right",
     placeholder: <HeroMock compact />,
@@ -28,7 +29,7 @@ const FEATURES = [
     heading: "Click a team, see the breakdown",
     body: "Open a team to see its costs and its people.",
     href: "/teams",
-    mediaSrc: "/media/team-breakdown.mp4",
+    mediaSrc: "/media/team-breakdown.webm",
     mediaAlt: "Team breakdown: cost components, provenance, people",
     mediaSide: "left",
     placeholder: <TeamListMock />,
@@ -39,7 +40,7 @@ const FEATURES = [
     heading: "Reallocate with receipts",
     body: "Review a proposal, apply it, keep the receipt.",
     href: "/decisions",
-    mediaSrc: "/media/reallocate.mp4",
+    mediaSrc: "/media/reallocate.webm",
     mediaAlt: "Reallocate: proposal review, apply, and the decision log",
     mediaSide: "right",
     placeholder: <ReceiptMock />,
@@ -82,13 +83,18 @@ export function LandingPage() {
             </Link>
           </div>
 
-          {/* Product frame: a static mock of the overview hero, cropped by a fade into the page. */}
+          {/* Product frame: a live recording of the overview (the static mock shows until it loads), cropped by a fade into the page. */}
           <div className="relative mx-auto mt-10 max-w-[1050px] md:mt-14">
             <div className="overflow-hidden rounded-xl border border-border bg-card text-left">
               <div className="flex h-10 items-center justify-between border-b border-border px-4">
                 <span className="eyebrow">Overview</span>
               </div>
-              <HeroMock />
+              <MediaSlot
+                src="/media/hero.webm"
+                alt="Overview: the daily spend chart panned back through nine weeks of history"
+                placeholder={<HeroMock />}
+                className="rounded-none border-0"
+              />
             </div>
             <div
               aria-hidden
