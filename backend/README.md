@@ -197,16 +197,25 @@ cd backend && PYTHONPATH=../src:.:../agent BACKEND_DB_PATH=data/uber.db .venv/bi
   over the row; Northstar is the default when neither exists.
 - **Forecasts** (default `FORECAST_PROVIDER=engine`). The numerical engine from the repo-root
   `src/forecasting` package (install and `PYTHONPATH` as in Setup) publishes immutable runs; read paths
-  never recompute. No load step publishes: the worker queues the current week's job on its first poll
-  after startup, or request one by hand and poll it:
+  never recompute. No load step publishes. The worker queues the current week's job on its first poll
+  after startup, but that job's information cutoff is the start of the week (Monday 00:00 UTC), before
+  a freshly loaded import became available, so it publishes zero recorded spend. Request a refresh by
+  hand after loading and poll it (about 100 s on the default dataset):
 
   ```bash
   curl -X POST http://127.0.0.1:8787/api/forecast-refreshes -H 'Idempotency-Key: uber-1'
   curl http://127.0.0.1:8787/api/forecast-refreshes/<id>
   ```
 
-  Repository usage carries no exposure or complete pricing pool, so team totals can stay qualified and
-  `/compat/api/forecasts` can report a team as unavailable; that is the honest result, not a bug.
+  The published run then carries recorded Q4 spend per company, team and person (person views sum to
+  the team, teams to the company, and both match `/compat/api/spending`). Repository usage carries no
+  exposure, source-day coverage or complete pricing pool, so the future component and the quarter
+  total stay unavailable and `/compat/api/forecasts` reports every team and person as `unavailable`
+  ("Some full-quarter amounts are incomplete or unavailable."). That is the engine's honest result, not
+  a bug. Projected numbers for this dataset come from the standalone numerical CLI instead (see
+  [`../datagen/README.md`](../datagen/README.md#forecasting)), which the backend does not read.
+  `GET /compat/api/forecast-views` returns every repository observation under `current_actuals`
+  (~525 MB of JSON, ~50 MB gzipped, ~55 s on the default dataset).
   Startup captures all current repository rows for the forecast store, which takes longer on ~331k rows.
   Details: [`../docs/implementation/forecast-integration-runbook.md`](../docs/implementation/forecast-integration-runbook.md).
 - **Live interpretation of the corpus** (`python -m app.interpret`). Selects the period-relevant
