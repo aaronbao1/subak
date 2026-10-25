@@ -26,7 +26,11 @@ backend/.venv/bin/pip install -e "backend[dev]"
 
 ```bash
 cd backend
-.venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded)
+.venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded),
+                                      # then interpret the corpus once with the stand-in (signals: droid_fake)
+.venv/bin/python -m app.seed --no-signals     # seed without context signals
+.venv/bin/python -m app.seed --live-signals   # interpret with the real Droid instead (needs the DROID_RUNNER=sdk
+                                      # requirements; exits 2 before touching the DB if any is missing)
 .venv/bin/python -m app.seed --check-planted   # verify the planted-error pack against seed/answer_key.md
 .venv/bin/python -m app.main          # serves http://127.0.0.1:8787
 .venv/bin/python -m app.demo          # walk the demo journey against the running server (3 Droid runs)
@@ -62,7 +66,8 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model) or `unavailable` |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
-| `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos |
+| `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
+| `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos (reseeds and reruns the stand-in interpretation) |
 | `BACKEND_COMPAT` | on | `0` unmounts the frontend compat layer under `/compat/api` (see below) |
 
 No credentials are stored in this repo or requested by the backend. The Factory SDK reads its own

@@ -216,10 +216,11 @@ for the period, so `complete:false` gets applied to every row of a partial team,
 **G5. Context fields we do not store.** The backend has no `title`, no `confidence`, and no effect
 direction for a `timing_shift`. Compat derives the first two and documents the rules. A timing shift
 is sent as `unknown`, not `decrease`. Adding nullable `title` and `expected_effect` columns to
-`context_signals` and the Droid `record_signal` tool would be the honest fix. **Signals are not seeded.**
-`/api/context` stays empty until an `interpret_corpus` run happens. The fix is a
-`python -m app.seed --with-signals` option that runs the fake runner once. A GET must not trigger a
-run, because that writes data and spends credits under the SDK runner.
+`context_signals` and the Droid `record_signal` tool would be the honest fix. **Signals are seeded
+(resolved):** `python -m app.seed` now runs the stand-in interpretation once on a fresh seed (an audited
+`interpret_corpus` run; signals labeled `droid_fake`), `--live-signals` uses the real Droid instead
+(no fallback) and `--no-signals` skips it. A GET still never triggers a run, because that writes data
+and spends credits under the SDK runner.
 
 **G6. Forecast range.** There is no low/high and no scenario kind. The placeholder provider is labeled
 `origin:"placeholder"`. Each team gets its own `Forecast` even though the backend produces one result.
@@ -390,15 +391,18 @@ unmounts the router; CORS preflight from `localhost:3000` works.
 4. **Daily series (G4).** The seed is 8 lump records on 4 dates. Completeness is per team, so a
    partial team marks all of its days partial.
 5. **Context fields (G5).** `title` and `confidence` are derived (rules in §2 #6), and a timing shift
-   comes through as `expectedEffect: "unknown"`, not `"decrease"`. Signals exist only after a chat
-   that interprets the documents (or any proposal request, which interprets first). There is no
-   seed option yet.
+   comes through as `expectedEffect: "unknown"`, not `"decrease"`. `python -m app.seed` records the
+   stand-in signals on a fresh seed, so context cards show on first load (`--no-signals` to skip,
+   `--live-signals` for the real Droid).
 6. **No low/high range (G6).** Forecasts have no range, so the UI's band stays empty.
 7. **Identity (G9).** One browser acts as both analyst and approver, so separation of duties in the
    dashboard is nominal. Real per-user identity needs the UI to send `X-Actor-*` (or real auth).
 8. **Chat latency (G12).** Under `DROID_RUNNER=sdk` a reply can take up to `DROID_TIMEOUT_S` (120 s).
    The drawer shows nothing until then. Streaming (`/api/agent/runs/{id}/events`) is available, but
-   the frontend contract has no streaming path.
+   the frontend contract has no streaming path. Mitigations on the backend side:
+   `DROID_CHAT_MODEL` / `DROID_CHAT_REASONING_EFFORT` (chat tasks only) and proposals that reuse the
+   current signals recorded at seed time. An optional activity feed the frontend could adopt is
+   described in [`frontend-streaming-note.md`](frontend-streaming-note.md) (no frontend file changed).
 9. **`failed` / `pending` proposal statuses** are never sent. The backend validates when the proposal
    is drafted and applies synchronously.
 10. **Port (G14).** Use `http://localhost:8787/compat`, not `:8000`.
