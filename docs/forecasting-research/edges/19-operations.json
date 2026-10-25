@@ -1,0 +1,122 @@
+[
+  {
+    "id": "19-E01",
+    "family": "bitemporal replay and delayed correction",
+    "scenario": "A provider correction backdates September usage; a team mapping is also corrected after the October forecast origin. A source received before origin is not transformed into a usable feature until afterward.",
+    "mechanism": "Event-time-only joins select corrected charge and mapping unavailable at the forecast origin, improving retrospective scores and rewriting an earlier explanation.",
+    "detection": "Compare event-time-only versus availability-bounded reads of the same fixed origin; inspect each selected revision availability timestamp.",
+    "response": "Pin observation and mapping versions through a manifest; distinguish corrected-current views from as-of-known replay and record evaluation-truth version separately.",
+    "test_assertion": "Proposed test: an October 3 replay still sees the original September record/mapping after an October 10 correction; current corrected views change; an imported source with unknown prior availability cannot claim faithful October 3 replay. A feature whose processing finishes after origin is excluded despite earlier raw receipt.",
+    "residual_limit": "True historical availability may not exist in supplied exports; a simulated timestamp cannot repair that gap.",
+    "owner": "Backend ingestion + forecasting evaluation",
+    "requirement_source": "Master plan evidence/history and source preservation; Feast PIT documentation 19-S01."
+  },
+  {
+    "id": "19-E02",
+    "family": "atomic replacement imports and snapshot coherence",
+    "scenario": "A cumulative billing export replaces a period in multiple parts while a context update arrives; the importer crashes after part one.",
+    "mechanism": "Append or immediate per-part visibility mixes generations, double counts bills, or drops missing records; independent table reads mix source/mapping versions.",
+    "detection": "Generation manifest completeness, expected-part count/checksum, source control totals and snapshot-level validation.",
+    "response": "Stage all required parts; publish one complete manifest transactionally; leave the previous valid snapshot active and report freshness.",
+    "test_assertion": "Proposed test: crashes before and after activation yield either exactly the old or exactly the new complete snapshot, never their union or a partial period; identical replay adds no spending.",
+    "residual_limit": "A complete vendor manifest may itself contain incorrect or later-revised data; completeness is not financial truth.",
+    "owner": "Backend ingestion",
+    "requirement_source": "Backend acceptance repeat import/no double spending; connector 03 replacement semantics; Iceberg publication pattern 19-S02."
+  },
+  {
+    "id": "19-E03",
+    "family": "calendar and precision boundary",
+    "scenario": "A month-end forecast spans a daylight-saving transition, while micro-cost line items and a negative credit share a source date.",
+    "mechanism": "UTC/local date mixing shifts period membership; treating every local day as 24 hours changes exposure; per-row cent rounding loses small charges; unconditional nonnegative clipping erases credits.",
+    "detection": "Explicit calendar interval/zone checks, raw precision controls and category-specific signed-amount validation.",
+    "response": "Use UTC instants plus calendar zone and half-open boundaries; retain precise decimal amounts; handle credits under the target contract.",
+    "test_assertion": "Proposed test: offsets distinguishing repeated local instants produce distinct timestamps, each boundary event appears once, decimal aggregation reconciles before display rounding, and credits remain in their declared component.",
+    "residual_limit": "Date-only or offset-free sources may require quarantine/uncertainty rather than precise placement.",
+    "owner": "Backend financial normalization + forecasting target owner",
+    "requirement_source": "Master plan unit/period/coverage meaning; PostgreSQL numeric/time documentation 19-S03/04."
+  },
+  {
+    "id": "19-E04",
+    "family": "budget approval retry with concurrent edit",
+    "scenario": "Finance approves an addition, backend commits but response is lost; another user edits budgets before the first request retries.",
+    "mechanism": "Separate dedup storage, reused tokens or automatic rebase creates duplicate funds or changes what was approved.",
+    "detection": "Transactionally retained tenant/actor/request key, canonical request hash, proposal version and saved receipt.",
+    "response": "Return the already committed receipt for the identical retry; reject changed parameters; reject new stale-version approval and require renewed finance review.",
+    "test_assertion": "Proposed test: double-click, delayed retry and injected post-commit response loss produce one mutation and one receipt; a distinct stale proposal never rebases itself; same key with a different amount is rejected.",
+    "residual_limit": "Authentication/authorization correctness and idempotency-record retention must also be maintained; exactly-once effects are scoped to backend mutation, not universal network delivery.",
+    "owner": "Backend budgets + frontend receipt flow + Factory tools",
+    "requirement_source": "Master/backend/frontend explicit apply-once/stale review requirements; AWS idempotency 19-S07."
+  },
+  {
+    "id": "19-E05",
+    "family": "model alias and semantic migration mismatch",
+    "scenario": "Champion alias changes between two team predictions while a feature migration changes cost basis from gross to net.",
+    "mechanism": "One result batch combines model versions or applies old weights to semantically different features despite identical numeric schemas.",
+    "detection": "Artifact digest and target/feature-version compatibility checks at job start and result publication.",
+    "response": "Resolve/pin artifact once per run; prohibit unsupported contract combinations; shadow new generation then atomically promote compatible bundle.",
+    "test_assertion": "Proposed test: alias reassignment mid-run cannot alter remaining team outputs; an incompatible gross/net change fails before publication; rollback restores a compatible model-feature-target bundle.",
+    "residual_limit": "Digest equality does not guarantee deterministic GPU results; retained outputs and numerical tolerance are still required.",
+    "owner": "Forecasting runtime + backend artifact registry",
+    "requirement_source": "Master plan consistent forecast assumptions and shared outputs; MLflow alias semantics 19-S08."
+  },
+  {
+    "id": "19-E06",
+    "family": "resource failure and misleading fallback",
+    "scenario": "Context extraction times out and a model job exhausts memory while finance opens measured spending and applies a reviewed budget transfer.",
+    "mechanism": "Shared process/resource pool blocks authoritative paths; catch-all fallback converts unavailable forecasts into zero or substitutes another financial target.",
+    "detection": "Resource quotas, job heartbeats, timeout reason, per-target freshness/status and foreground latency telemetry.",
+    "response": "Bound/isolate job resources; keep observed-spend/budget paths available; use only compatible validated fallback with visible lineage or return unavailable.",
+    "test_assertion": "Proposed test: injected worker crash cannot corrupt budgets or block reads beyond declared SLO; fallback retains target/basis/period and reason; an old month forecast never silently reanchors to the current month; incomplete team results cannot masquerade as a complete company total.",
+    "residual_limit": "A shared database/object-store outage remains a common dependency requiring recovery strategy.",
+    "owner": "Backend operations + forecasting + frontend status",
+    "requirement_source": "All workstream plans require unavailable forecasts not to prevent measured-spend/finance use."
+  },
+  {
+    "id": "19-E07",
+    "family": "tenant and permission-revocation leakage",
+    "scenario": "Two tenants use the same team ID; a cached summary from a formerly accessible document survives ACL revocation.",
+    "mechanism": "Cache/artifact/job keys omit tenant or permission scope; database RLS uses a bypass role; old citations expose revoked source content.",
+    "detection": "Adversarial cross-tenant fixture, runtime-role query tests and retrieval/render ACL checks tied to revision lineage.",
+    "response": "Scope keys and capabilities end-to-end; invalidate derived caches; redact inaccessible citations and block unauthorized artifact reads.",
+    "test_assertion": "Proposed test: same team/model/run labels in two tenants never share content/results; runtime role cannot read the other tenant; after revocation neither source text nor cached derived summary is returned to that principal. Historical availability cannot override current access denial, and requested-but-hidden fields retain permission-limited state.",
+    "residual_limit": "Previously viewed/exported content cannot be technically recalled; authorized aggregation policies require separate decisions.",
+    "owner": "Backend authorization + Factory retrieval + artifact storage",
+    "requirement_source": "Master/Factory backend authorization ownership; PostgreSQL RLS exceptions 19-S05."
+  },
+  {
+    "id": "19-E08",
+    "family": "semantic prompt injection into financial context",
+    "scenario": "A retrieved planning document contains a plausible forged approved project expansion and instructions to ignore a lower-cost plan, with embedded budget-transfer commands.",
+    "mechanism": "LLM promotes source instructions into authority, or extracts a false but well-formed signal that alters forecasting without any obvious tool exploit.",
+    "detection": "Source-authority/status checks, quoted evidence, conflict/supersession review, signal-policy validation and audit of tool calls.",
+    "response": "Treat retrieval as data; do not grant source content approval authority; quarantine conflicting/unsupported signals; require normal finance apply path.",
+    "test_assertion": "Proposed test: embedded commands never mutate budgets or expand capabilities; extraction confidence does not become event probability; a cited-but-unsupported approval is flagged; a legitimate approved plan still remains usable as evidence.",
+    "residual_limit": "A sophisticated authorized insider can supply misleading real documents; schema/LLM checks are not truth guarantees.",
+    "owner": "Factory semantic ingestion + forecasting signal gate + backend mutations",
+    "requirement_source": "Factory interpretation versus numerical forecasting boundary and explicit finance approval; OWASP 19-S09."
+  },
+  {
+    "id": "19-E09",
+    "family": "retention erasure versus historical reproducibility",
+    "scenario": "A person/document is removed under policy after its contents generated embeddings, features, a model and a saved finance receipt.",
+    "mechanism": "Only the source row is deleted while immutable snapshots, prompt logs, caches or artifacts retain sensitive content; alternatively the system claims a replay that is no longer possible.",
+    "detection": "Lineage inventory/reachability scan and access checks across raw, extracted, cached, training and model storage.",
+    "response": "Tombstone access immediately; purge/rebuild affected material according to policy; retain only permitted receipt metadata and mark evidence unavailable.",
+    "test_assertion": "Proposed test: revocation blocks all dependent artifacts before asynchronous purge; lineage traversal identifies affected snapshots/models; historical receipt never pretends deleted evidence is retrievable; backup restoration reapplies tombstones.",
+    "residual_limit": "Exact legal requirements, backups and whether model retraining is necessary depend on organization/jurisdiction/model; research does not resolve those duties.",
+    "owner": "Backend data governance + forecasting registry + operations",
+    "requirement_source": "Context access is an architectural assumption; proposed operational privacy boundary preserving explainability honestly."
+  },
+  {
+    "id": "19-E10",
+    "family": "retry storm cost and stale managed output",
+    "scenario": "A managed forecast job is rate-limited during a monthly refresh, identical frontend requests enqueue duplicate jobs, and a late result arrives after a target/schema migration.",
+    "mechanism": "Unbounded retries/training searches inflate spend and queue age; callback publishes an obsolete artifact to the current target.",
+    "detection": "Per-tenant refresh cost ledger, queue/concurrency bounds, request coalescing, job generation and contract identity checks.",
+    "response": "Bound retries and trials, coalesce same manifest/target requests, reject obsolete publication, expose deadline/freshness and compatible baseline state.",
+    "test_assertion": "Proposed test: a throttled burst remains within configured retry/concurrency/cost bounds; one logical snapshot/target creates one active run; late old-contract output cannot replace the new active result.",
+    "residual_limit": "Vendor billing may lag; a hard local work cap does not guarantee an exact final invoice cap.",
+    "owner": "Forecasting operations + backend scheduler",
+    "requirement_source": "Proposed deployment/cost gate; managed-service mode/availability evidence 19-S11/12."
+  }
+]

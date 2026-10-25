@@ -1,0 +1,110 @@
+[
+  {
+    "id": "13-S01",
+    "title": "Context is Key: A Benchmark for Forecasting with Essential Textual Information",
+    "url": "https://arxiv.org/html/2410.18959v4",
+    "authors_or_org": "Andrew Robert Williams, Arjun Ashok, Étienne Marcotte, Valentina Zantedeschi, Jithendaraa Subramanian, Roland Riachi, James Requeima, Alexandre Lacoste, Irina Rish, Nicolas Chapados, Alexandre Drouin",
+    "published_or_version": "arXiv:2410.18959v4, 2025-06-05; first submitted 2024-10-24; ICML 2025",
+    "accessed": "2026-10-24",
+    "kind": "primary research paper / benchmark",
+    "supported_claim": "Crafted essential context benefits several strong direct-prompt forecasters; large contextual numerical failures remain. Context-region-weighted scoring and clipping require care when transferring results.",
+    "limitations": "Not enterprise AI spending; contextual relevance is constructed, not retrieved from a noisy company corpus; does not establish execution probabilities.",
+    "license_status": "Article displays arXiv perpetual non-exclusive license; benchmark/code licenses not verified."
+  },
+  {
+    "id": "13-S02",
+    "title": "Rethinking Multimodal Time-Series Forecasting Evaluation",
+    "url": "https://arxiv.org/html/2607.06973v1",
+    "authors_or_org": "Haoxin Liu, Yichen Zhou, Rajat Sen, B. Aditya Prakash, Abhimanyu Das",
+    "published_or_version": "arXiv:2607.06973v1, 2026-07-08; ICML 2026",
+    "accessed": "2026-10-24",
+    "kind": "primary research paper / TimesX benchmark",
+    "supported_claim": "Real-world TimesX changes CiK method rankings; tested code revisions underperform components and simple averaging wins. It distinguishes announcement/occurrence dates and uses post-cutoff evaluation.",
+    "limitations": "Public real-world series are not enterprise AI spend. Daily/weekly focus. Numerical-aware event selection needs separate deployment reproducibility assessment; paper leakage controls do not certify private product data.",
+    "license_status": "Article displays CC BY 4.0; code and component dataset reuse licenses unverified."
+  },
+  {
+    "id": "13-S03",
+    "title": "GIFT-Eval-CTX: A Benchmark For Contextual Forecasting Model Evaluation",
+    "url": "https://arxiv.org/html/2610.17794v1",
+    "authors_or_org": "Xu Liu, Hanshu Yan, Taha Aksu, Quang Pham, Zhongzheng Qiao, Jun Hao Liew, Silvio Savarese, Doyen Sahoo, Junnan Li; Salesforce AI Research",
+    "published_or_version": "arXiv:2610.17794v1, 2026-10-13",
+    "accessed": "2026-10-24",
+    "kind": "primary research preprint / benchmark",
+    "supported_claim": "Structured effects derived from realized future improve numerical realization; explicitly excludes extraction/validation of raw-source future information; code editing can suppress local dynamics.",
+    "limitations": "Oracle-like future effects and difficulty filtering; not an as-of extraction or enterprise forecasting demonstration; recent preprint.",
+    "license_status": "Article displays CC BY 4.0; underlying datasets/code not independently license-checked."
+  },
+  {
+    "id": "13-S04",
+    "title": "Time-MMD: Multi-Domain Multimodal Dataset for Time Series Analysis",
+    "url": "https://arxiv.org/html/2406.08627v4",
+    "authors_or_org": "Haoxin Liu, Shangqing Xu, Zhiyuan Zhao, Lingkai Kong, Harshavardhan Kamarthi, Aditya B. Sasanur, Megha Sharma, Jiaming Cui, Qingsong Wen, Chao Zhang, B. Aditya Prakash",
+    "published_or_version": "arXiv:2406.08627v4, 2025-01-24; first submitted 2024-06-12; NeurIPS 2024 Datasets and Benchmarks",
+    "accessed": "2026-10-24",
+    "kind": "primary research paper / multimodal dataset",
+    "supported_claim": "Multimodal features can help; prefix integration can hurt; embeddings and smaller text backbones deserve comparison rather than assuming LLM scale benefits.",
+    "limitations": "Nine public domains; different task and collection process from private enterprise communications. Reported contamination protections are model/version dependent.",
+    "license_status": "Article displays CC BY 4.0; Appendix V states dataset ODC-By v1.0. Underlying source rights and code licenses require separate inspection."
+  },
+  {
+    "id": "13-S05",
+    "title": "Are Language Models Actually Useful for Time Series Forecasting?",
+    "url": "https://arxiv.org/abs/2406.16964v2",
+    "authors_or_org": "Mingtian Tan, Mike A. Merrill, Vinayak Gupta, Tim Althoff, Thomas Hartvigsen",
+    "published_or_version": "arXiv:2406.16964v2, 2024-10-26; first submitted 2024-06-22; NeurIPS 2024 Spotlight",
+    "accessed": "2026-10-24",
+    "kind": "primary research paper / ablation study",
+    "supported_claim": "Removing or replacing language-model components in three investigated forecasting architectures did not reduce accuracy and often improved it.",
+    "limitations": "Numerical architecture ablation does not prove genuinely new textual context is useless; results limited to evaluated methods/data.",
+    "license_status": "Reuse license unverified; no code or data imported."
+  },
+  {
+    "id": "13-S06",
+    "title": "Effective forecasting and judgmental adjustments: An empirical evaluation and strategies for improvement in supply-chain planning",
+    "url": "https://researchportal.bath.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/",
+    "authors_or_org": "Robert Fildes, Paul Goodwin, Michael Lawrence, Konstantinos Nikolopoulos",
+    "published_or_version": "International Journal of Forecasting 25(1):3–23, January 2009; DOI 10.1016/j.ijforecast.2008.11.010",
+    "accessed": "2026-10-24",
+    "kind": "primary empirical research; author institution record/abstract",
+    "supported_claim": "Across over 60000 forecasts from four supply-chain firms, judgment improved averages in three firms; small adjustments often harmed accuracy and upward revisions helped less often.",
+    "limitations": "Institutional abstract inspected, not full paper. Supply-chain demand does not determine AI-spend thresholds or bias patterns.",
+    "license_status": "Reuse license unverified; bibliographic record/abstract used for research attribution only."
+  },
+  {
+    "id": "13-S07",
+    "title": "Lost in the Middle: How Language Models Use Long Contexts",
+    "url": "https://arxiv.org/abs/2307.03172v3",
+    "authors_or_org": "Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua, Fabio Petroni, Percy Liang",
+    "published_or_version": "arXiv:2307.03172v3, 2023-11-20; first submitted 2023-07-06; TACL accepted 2023 per arXiv",
+    "accessed": "2026-10-24",
+    "kind": "primary empirical research paper",
+    "supported_claim": "Tested language models show sensitivity to relevant information position in multi-document QA and key-value retrieval, even with long context windows.",
+    "limitations": "Older model population and retrieval tasks; not a failure-rate estimate for current Factory models or enterprise event extraction.",
+    "license_status": "Article reuse license unverified; author repository displays MIT but no repository material imported."
+  },
+  {
+    "id": "13-S08",
+    "title": "Can LLMs Express Their Uncertainty? An Empirical Evaluation of Confidence Elicitation in LLMs",
+    "url": "https://arxiv.org/abs/2306.13063v2",
+    "authors_or_org": "Miao Xiong, Zhiyuan Hu, Xinyang Lu, Yifei Li, Jie Fu, Junxian He, Bryan Hooi",
+    "published_or_version": "arXiv:2306.13063v2, 2024-03-17; first submitted 2023-06-22; ICLR 2024",
+    "accessed": "2026-10-24",
+    "kind": "primary empirical research paper",
+    "supported_claim": "Verbalized confidence can be overconfident; tested confidence techniques do not consistently dominate and struggle on challenging tasks.",
+    "limitations": "Confidence in answers is distinct from event realization or spending distributions. Does not evaluate current enterprise models.",
+    "license_status": "Reuse license unverified; no code or data imported."
+  },
+  {
+    "id": "13-S09",
+    "title": "Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection",
+    "url": "https://arxiv.org/abs/2302.12173v2",
+    "authors_or_org": "Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten Holz, Mario Fritz",
+    "published_or_version": "arXiv:2302.12173v2, 2023-05-05; first submitted 2023-02-23",
+    "accessed": "2026-10-24",
+    "kind": "primary security research paper",
+    "supported_claim": "Instructions placed in retrieved data can manipulate LLM-integrated application behavior and API calls; source content is not action authority.",
+    "limitations": "Demonstrates a threat class on evaluated systems, not current product exploit frequency or complete mitigations.",
+    "license_status": "Reuse license unverified; no attack code imported."
+  }
+]

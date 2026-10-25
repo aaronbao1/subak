@@ -1,0 +1,122 @@
+[
+  {
+    "id": "11-E01",
+    "family": "Point-functional mismatch",
+    "scenario": "The default MAE-trained neural forecast is displayed as expected spend and used to total a heavy-tailed research workload.",
+    "mechanism": "Conditional median is mislabeled as mean; adding medians compounds underestimation under skew and price variation.",
+    "detection": "Artifact metadata records target transform, loss, point functional and aggregation operation; compare mean and median on a known skewed fixture.",
+    "response": "Expose median separately, train a mean-appropriate objective or derive means from a validated distribution; aggregate the intended functional.",
+    "test_assertion": "Proposed: loading an MAE-only artifact cannot populate an expected_spend_mean field; aggregation rejects unlabeled point functionals.",
+    "residual_limit": "Finite-sample estimates may still be biased even with correct objective.",
+    "owner": "Forecasting numerical model and forecast-contract owners",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 7; 11-S15 through 11-S18"
+  },
+  {
+    "id": "11-E02",
+    "family": "Context availability leakage",
+    "scenario": "An approved evaluation plan was superseded after a historical forecast origin; backtests use the final cancellation or realized staffing.",
+    "mechanism": "Future knowledge leaks through plan features, normalization or overwritten document states, inflating apparent contextual gains.",
+    "detection": "As-of provenance join checks recorded_at and effective_at independently; replay features from immutable earlier snapshots.",
+    "response": "Build vintage-aware features and scenarios; train only on facts and plan versions available at origin.",
+    "test_assertion": "Proposed: adding a document recorded after the origin leaves that origin feature snapshot and forecast unchanged.",
+    "residual_limit": "Historically complete document vintages may be unavailable, limiting retrospective causal claims.",
+    "owner": "Backend provenance and forecasting feature owners",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 6; transcripts/internal-team-discussion.txt contextual rolling-forecast discussion"
+  },
+  {
+    "id": "11-E03",
+    "family": "Unsupported neural covariate interface",
+    "scenario": "A context-aware NHITS model is replaced by PatchTST because its generic signature also exposes exogenous arguments.",
+    "mechanism": "Architecture metadata or signature inspection falsely implies features are consumed; explanation claims context sensitivity for a history-only model.",
+    "detection": "Pinned capability matrix plus synthetic perturbation test and consumed-feature report.",
+    "response": "Reject incompatible artifact/input combinations; require an explicit supported model variant or omit contextual numerical claims.",
+    "test_assertion": "Proposed: requested future-plan features with NeuralForecast v3.3.0 PatchTST produce a capability error before forecast publication.",
+    "residual_limit": "Feature acceptance does not prove useful influence or generalization.",
+    "owner": "Forecasting adapter and explanation owners",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 6 and 7; 11-S13, 11-S17"
+  },
+  {
+    "id": "11-E04",
+    "family": "Missingness and cold-start padding",
+    "scenario": "A new project begins during a provider-reporting outage; padded zeros and outage gaps dominate short training windows.",
+    "mechanism": "Model interprets unobserved usage as inactivity and learns an artificially gentle ramp, narrowing uncertainty.",
+    "detection": "Separate valid-zero, absent, delayed, padded and not-yet-existing masks; inspect observed fractions by window.",
+    "response": "Exclude or specially model low-coverage windows; preserve unavailable state or use a calibrated cold-start baseline.",
+    "test_assertion": "Proposed: replacing an observed zero with an absent-record marker changes coverage and eligibility; absent data never counts as confirmed zero.",
+    "residual_limit": "Missing-not-at-random behavior can persist despite masks; launch timing may remain unknown.",
+    "owner": "Backend coverage and forecasting data owners",
+    "requirement_source": "docs/backend-plan.md acceptance checks; docs/ai-spend-master-plan.md section 7"
+  },
+  {
+    "id": "11-E05",
+    "family": "Identity drift and negative transfer",
+    "scenario": "Research personnel move to engineering while a shared API project changes model provider; a pooled model retains stable team-ID embeddings.",
+    "mechanism": "Ownership and price/usage regime change simultaneously; stale identity patterns contaminate both teams and historical comparability.",
+    "detection": "Version ownership mappings, channel vocabularies, provider/model mix and regime-change indicators; compare residuals around change dates.",
+    "response": "Use explicit stable workload definitions or segmented histories, mark unknown categories and compare grouped/local fallback fits.",
+    "test_assertion": "Proposed: a remapping event never silently rewrites an earlier forecast vintage; model records which attribution basis generated its targets.",
+    "residual_limit": "Historical behavioral continuity may not be identifiable; sparse new regimes limit retraining.",
+    "owner": "Backend attribution and forecasting model owners",
+    "requirement_source": "docs/ai-spend-master-plan.md section 2; transcripts/mentor-discussion.txt headcount and adoption discussion"
+  },
+  {
+    "id": "11-E06",
+    "family": "Joint-risk collapse",
+    "scenario": "Research and engineering join one evaluation campaign; separately sampled DeepAR team paths are summed for company exceedance risk.",
+    "mechanism": "Independent cross-team samples erase shared campaign uncertainty even though each team time path is temporally coherent.",
+    "detection": "Scenario-dependence audit and aggregate coverage by shared-event periods; compare independent versus shared-event simulation.",
+    "response": "Use empirically supported joint dependence or explicit shared scenario draws; label remaining independence assumptions.",
+    "test_assertion": "Proposed: a shared on/off campaign fixture retains company-level covariance and cannot be reduced to an independent sum without a declared assumption.",
+    "residual_limit": "Rare common shocks cannot be calibrated from little history.",
+    "owner": "Forecasting probabilistic aggregation owner",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 3 and 7; 11-S01"
+  },
+  {
+    "id": "11-E07",
+    "family": "Horizon and sign inconsistency",
+    "scenario": "Independent cumulative heads predict 7/14/30-day totals and month remainder; a net-charge refund occurs near month-end.",
+    "mechanism": "Unconstrained heads cross; day-count masks mismatch; a blanket nondecreasing constraint incorrectly suppresses legitimate negative adjustments.",
+    "detection": "Check target support, exact interval endpoints, calendar timezone and aggregation identities separately for usage versus net charges.",
+    "response": "Apply cumulative consistency rules only to compatible nonnegative targets; represent refunds separately or use signed-charge semantics.",
+    "test_assertion": "Proposed: 28/29/30/31-day month fixtures include only requested dates; nonnegative-use totals are ordered, while valid signed refunds are retained.",
+    "residual_limit": "Statistical quantiles across nested totals need coherent modeling beyond posthoc clipping.",
+    "owner": "Forecasting target-contract owner",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 2 and 7"
+  },
+  {
+    "id": "11-E08",
+    "family": "Budget-feedback confusion",
+    "scenario": "Finance increases a team allocation after an overspend forecast, and next refresh treats the new allocation as an enforceable usage cap.",
+    "mechanism": "An endogenous decision variable is learned as a causal spending constraint despite budgets having no provider-enforcement effect.",
+    "detection": "Feature audit distinguishes internal decisions, actual provider limits and observed usage; replay budget-only changes.",
+    "response": "Exclude unsupported budget effects from unconditional consumption forecasts or represent them as explicit behavioral scenarios with evidence.",
+    "test_assertion": "Proposed: changing only an internal allocation cannot imply a provider cap or truncate predicted consumption through an undocumented rule.",
+    "residual_limit": "Budgets can influence human behavior; estimating that effect requires appropriate data and design.",
+    "owner": "Forecasting feature and internal-budget owners",
+    "requirement_source": "docs/ai-spend-master-plan.md sections 1 and 6; no provider execution controls"
+  },
+  {
+    "id": "11-E09",
+    "family": "Likelihood and financial-unit mismatch",
+    "scenario": "A negative-binomial count model is trained on USD cents, then an otherwise equivalent export switches to dollars and includes credits.",
+    "mechanism": "Treating monetary denomination as natural count changes the observation model; negative refunds violate support.",
+    "detection": "Artifact target-unit/support validation; currency-scale conversion fixtures; residual and probability-support inspection.",
+    "response": "Use a justified continuous or compound monetary model, or forecast genuine counts and apply an explicit valuation layer.",
+    "test_assertion": "Proposed: negative-binomial adapter rejects signed monetary targets absent an explicitly approved generative transformation; currency conversion preserves target semantics.",
+    "residual_limit": "Appropriate likelihood family and tail behavior still require empirical checking.",
+    "owner": "Forecasting target and valuation owners",
+    "requirement_source": "docs/ai-spend-master-plan.md section 2; 11-S01"
+  },
+  {
+    "id": "11-E10",
+    "family": "Serving capacity and stale fallback",
+    "scenario": "A model upgrade adds iTransformer future-feature tokens while panel granularity expands and DeepAR sample count also rises for tail estimates.",
+    "mechanism": "Cross-variable attention memory and recursive sampling time exceed the refresh budget; stale outputs look current or retries retrain inside a user request.",
+    "detection": "Measure peak memory, sample count, panel dimensions, feature-token count, cutoff age and deadline failures.",
+    "response": "Bound forecasting job resources; precompute immutable artifacts; preserve last result with its true cutoff or return a validated fallback/unavailable state.",
+    "test_assertion": "Proposed: forced deadline/OOM failure cannot publish a forecast with the current cutoff unless a current result was actually produced; measured spending stays usable.",
+    "residual_limit": "Tail precision and latency tradeoffs require hardware measurements; no cost benchmark was run here.",
+    "owner": "Forecasting serving and frontend freshness owners",
+    "requirement_source": "docs/frontend-plan.md unavailable-forecast requirements; 11-S01, 11-S18"
+  }
+]

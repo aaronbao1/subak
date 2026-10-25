@@ -1,0 +1,11 @@
+{
+  "base": "53e06ce",
+  "python": "3.9.6",
+  "files": {
+    "src/forecasting/contracts.py": "acb9b0fa103c5caffbcf7f80dc16863f6320aa9adf46654e1a8ce9e792236124",
+    "src/forecasting/joint.py": "7bce4d18fb226a569e7e67be1a7cde9f2794302894dff75c7980bcca1bb80350",
+    "src/forecasting/joint_service.py": "0ed33b03798da6d51d85c500abdd980fe3b3011b6d03e3ee75be5b570c94b35b",
+    "src/forecasting/state.py": "73de39db1e5b17c8c9bee12da05c5b88a57810baa9db34e0d0ed1286d4d3575b",
+    "tests/test_final_review_regressions.py": "9c45ba550523b53f6f88fbbb23367f76b7e3f104cd154b3111d605aced508ff9"
+  }
+}

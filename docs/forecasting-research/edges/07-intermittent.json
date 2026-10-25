@@ -1,0 +1,110 @@
+[
+  {
+    "id": "07-E01",
+    "family": "missing versus genuine zeros",
+    "scenario": "Two otherwise identical five-day zero-looking feeds: one is fully covered; the other lost a pagination page or expired authorization while returning an empty/partial response.",
+    "mechanism": "Automatic zero filling pushes TSB occurrence probability downward and falsely signals project deactivation.",
+    "detection": "Require effective source scope, expected exposure, exhausted pagination and an event-time coverage watermark; retain missing/partial states.",
+    "response": "Only complete observed zeros enter the occurrence likelihood; missing days receive no zero measurement update. Recompute historical state after legitimate late records.",
+    "test_assertion": "For a TSB fixture with p0=.8 and beta=.2, five true observed zeros yield p=.262144. Five missing observations must not execute these five Bernoulli-zero updates; zero_observation_count remains 0, and the simple gated TSB state remains .8. Partial page replay must restore the same state as the complete original import.",
+    "residual_limit": "A provider may falsely claim completeness; independent billing reconciliation or revised snapshots may be needed.",
+    "owner": "backend ingestion and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §§2,4,5,7; docs/backend-plan.md acceptance checks; docs/frontend-plan.md acceptance checks"
+  },
+  {
+    "id": "07-E02",
+    "family": "economic zero versus activity zero",
+    "scenario": "A team performs 20 tasks entirely inside an included allowance while another exposed team performs no tasks. Both have zero incremental paid charges.",
+    "mechanism": "Dollar-zero indicator is used as an activity indicator, predicting no tasks or applying the allowance twice.",
+    "detection": "Separate task/token observation, billable-charge component, included allowance and fixed subscription records.",
+    "response": "Model activity and paid-variable-cost occurrence on their respective targets; apply allowance state when transforming usage to cost.",
+    "test_assertion": "Both variable-charge observations may equal 0, but the first team has task_count=20 and activity_indicator=1 while the second has task_count=0 and activity_indicator=0. Fixed subscription charge is added once; forecasted excess beyond remaining allowance is not forced to zero.",
+    "residual_limit": "Incomplete contract terms can prevent a supported paid-cost transformation even when usage is complete.",
+    "owner": "financial normalization and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §2; docs/backend-plan.md major features"
+  },
+  {
+    "id": "07-E03",
+    "family": "frequency-severity dependence and future leakage",
+    "scenario": "Equal-probability workload regimes have (N=1, average task cost=$10) and (N=10, average task cost=$100), with count unknown at forecast origin.",
+    "mechanism": "Multiplying mean count 5.5 by an unweighted mean positive-cell severity 55 yields $302.50 rather than the true $505; feeding realized future N hides the error.",
+    "detection": "Audit severity weighting and conditional mean formula; compare count-conditioned and independent models using only origin-available inputs.",
+    "response": "Integrate conditional severity over forecast/simulated counts and task mix; retain dependence in cumulative samples.",
+    "test_assertion": "An analytic fixture with those probabilities must return E[S]=$505 and support {$10,$1000}. It must reject realized future N as an origin feature. A separate event-weighted pooled severity estimate is allowed to reproduce this unconditional mean but must not be claimed to reproduce the dependent distribution or a changed regime mixture.",
+    "residual_limit": "Sparse data and shared latent project types may prevent stable estimation of dependence.",
+    "owner": "forecasting and evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md §7; original internal-team-discussion task/project granularity motivation"
+  },
+  {
+    "id": "07-E04",
+    "family": "net zero caused by adjustment",
+    "scenario": "A $100 gross run and a $100 refund post in the same displayed period; a later refund posts across the month boundary.",
+    "mechanism": "Net zero is treated as no activity, or negative net spend is clipped to satisfy gamma/Tweedie support.",
+    "detection": "Keep charge and signed adjustment line items with service and posting timestamps and explicit target basis.",
+    "response": "Forecast gross usage-linked cost and adjustments separately, then derive net samples on the selected financial basis.",
+    "test_assertion": "First period gross_cost=100, adjustment=-100, net_cost=0, task_count=1. Gamma/Tweedie training input contains the supported gross component, not a silently clipped net series. Cross-month refund changes only the month determined by the requested posting/service basis and remains traceable to the original charge.",
+    "residual_limit": "Some credits lack service-period linkage; an explicit unknown allocation may remain.",
+    "owner": "financial ingestion and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §§2,4,5,7; docs/backend-plan.md acceptance checks; docs/frontend-plan.md acceptance checks"
+  },
+  {
+    "id": "07-E05",
+    "family": "pause, deactivation and delayed charges",
+    "scenario": "A project pauses for ten observed days, changes provider key, resumes, and receives a late charge for work before the pause.",
+    "mechanism": "An absorbing death model suppresses resumed activity; late charges become evidence of a new burst; a shared key falsely establishes individual inactivity.",
+    "detection": "Effective-dated project/key mappings, known pause/resume evidence, event and arrival timestamps, separate observed scope.",
+    "response": "Treat pause and termination distinctly; evaluate reversible state models against TSB. Reconcile late-incurred charges without assigning them to future task arrivals.",
+    "test_assertion": "A documented resume restores eligibility for future activity. The late charge increases the earlier incurred bucket under incurred basis, not the resumed task count. Shared-key zero observations cannot set any individual to finished.",
+    "residual_limit": "Undocumented pauses and migrations remain statistically confounded with deactivation or missingness.",
+    "owner": "context evidence, identity mapping and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §§2,4,7; docs/factory-agent-plan.md evidence/uncertainty boundary"
+  },
+  {
+    "id": "07-E06",
+    "family": "right censoring and survivor selection",
+    "scenario": "Many short cheap tasks are complete while one long task has already accrued $500 and is still active at the forecast origin.",
+    "mechanism": "Completed-task-only training excludes expensive long work; total lifetime-cost prediction is then added to already accrued cost or treated as completed severity.",
+    "detection": "Task status, elapsed duration, prefix costs, censoring time and completion reason are first-class fields.",
+    "response": "Separate accrued cost, conditional future continuation and new arrivals; keep open tasks in a censor-aware design.",
+    "test_assertion": "The open task is flagged right-censored, never assigned final_cost=500 merely because the snapshot ends, and never discarded without an explicit limitation. Lifetime gross-cost draws cannot be below accrued $500. A month forecast adds only costs in that month and only the continuation portion beyond observed incurred amounts.",
+    "residual_limit": "Survival treatment alone cannot identify the remaining cost process; future cap/cancellation changes may require scenarios.",
+    "owner": "session modeling and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §§2,4,7; docs/backend-plan.md repeated cumulative telemetry check"
+  },
+  {
+    "id": "07-E07",
+    "family": "aggregation alignment and partial buckets",
+    "scenario": "A seven-day aggregate straddles a forecast origin and a calendar-month boundary, with a partial connector window inside the historical bucket.",
+    "mechanism": "ADIDA/IMAPA treats a partial sum as a complete lower-spend bucket, leaks post-origin observations or evenly allocates an explicitly dated burst across months.",
+    "detection": "Each bucket records exact timezone-aware start/end, coverage and as-of membership; disaggregation weights are fold-local.",
+    "response": "Exclude or explicitly model partial buckets; fit levels using information available by origin; allocate scenario events by their stated dates.",
+    "test_assertion": "No training bucket contains event or revision information unavailable at origin. The sum of daily disaggregation equals its parent total, but the month remainder includes only dates in that month. A dated scenario event after month end contributes zero to this month even if its enclosing weekly bucket overlaps.",
+    "residual_limit": "Without reliable event timing, uniform disaggregation is an assumption and intra-bucket tail risk remains unresolved.",
+    "owner": "forecasting temporal aggregation and evaluation",
+    "requirement_source": "docs/ai-spend-master-plan.md §§2,7; shared forecast period handoff"
+  },
+  {
+    "id": "07-E08",
+    "family": "sparse medians, upper-tail loss and clipping",
+    "scenario": "Daily gross spend is 0 with probability .9 and $1,000 with probability .1; rare expensive observations are later removed as outliers.",
+    "mechanism": "Daily zero medians are summed to represent expected horizon costs; clipping suppresses the very budget-overrun events being forecast.",
+    "detection": "Check target functional labels, retained gross ledger, concentration diagnostics and change logs for training transforms.",
+    "response": "Report means/medians/quantiles distinctly; derive cumulative distributions; evaluate rare legitimate bursts and disclose any target transformation.",
+    "test_assertion": "Analytic independent-day fixture gives daily mean100, median0; seven-day mean700, median1000 and P(any spend)=1-.9^7. A mean-labeled zero forecast fails. Removing valid $1,000 outcomes must change an explicit dataset/transform version and cannot preserve a claim of calibration on the original target.",
+    "residual_limit": "No finite observed sample establishes a reliable extreme quantile under arbitrary future bursts.",
+    "owner": "uncertainty, evaluation and data governance",
+    "requirement_source": "docs/ai-spend-master-plan.md §§7, evidence standards; docs/frontend-plan.md clear observed/estimated/forecast state"
+  },
+  {
+    "id": "07-E09",
+    "family": "task redefinition, retry cost and apparent heavy tails",
+    "scenario": "A new harness splits one human task into ten subtask records while retries incur real extra calls; an externally imposed cap also truncates some runs.",
+    "mechanism": "Task frequency jumps mechanically, severity per task falls, retry cost is either deduplicated away or counted twice, and capped costs are mistaken for uncensored potential demand.",
+    "detection": "Version task definitions; preserve parent task, request/call identifiers, retry reason, deduplication key and cap/completion reason.",
+    "response": "Evaluate stable human-task and request-level representations; deduplicate repeated reports rather than distinct billable attempts; label cap-conditional targets.",
+    "test_assertion": "Renaming/splitting task records alone preserves gross total and parent-level count; distinct billable retries add cost once each. A cap-terminated run is not ordinary right-censoring of observed under-cap spending, and its observed final cost cannot be labeled uncapped desired spend. Model performance is stratified across instrumentation versions.",
+    "residual_limit": "Without parent identifiers or retry billing metadata, historical task comparability can be unrecoverable.",
+    "owner": "telemetry/session normalization and forecasting",
+    "requirement_source": "docs/ai-spend-master-plan.md §§1,2,4; docs/backend-plan.md cumulative telemetry and source-meaning checks"
+  }
+]

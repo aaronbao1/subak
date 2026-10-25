@@ -1,0 +1,122 @@
+[
+  {
+    "id": "01-E01",
+    "family": "internal-budget semantics and authority",
+    "scenario": "Finance says 50,000 more credits while the assistant also sees a product-to-research redistribution suggestion in an older document.",
+    "mechanism": "Ambiguous unit and operation type silently turn one instruction into both a funding addition and a transfer, or treat vendor credits as dollars.",
+    "detection": "Require typed unit and add-versus-transfer proposal semantics; compare reviewed before/after envelope and allocations with the current saved state.",
+    "response": "Prepare a concrete interpretation grounded in the authorized finance instruction; leave ambiguous unit/operation unresolved rather than apply a mixed operation; require the normal finance review.",
+    "test_assertion": "With the shared USD fixture, a pure redistribution leaves the company envelope at 200000 and an authorized addition changes it to 250000; no vendor balance changes; each decision applies once.",
+    "residual_limit": "The system cannot infer a real vendor-credit conversion or finance preference not supplied.",
+    "owner": "Backend + Factory + frontend",
+    "requirement_source": "01-R03/R04/R07/R18/R19; docs/ai-spend-master-plan.md:46–71,132; internal transcript line 6: I have $50K more creds"
+  },
+  {
+    "id": "01-E02",
+    "family": "incurred-versus-future boundary",
+    "scenario": "A September service charge arrives in December while a December full-period forecast is refreshed.",
+    "mechanism": "Posting date is mistaken for service date; late-incurred September spend is added to December demand or September expense is counted twice after reconciliation.",
+    "detection": "Compare service/activity interval, report-availability timestamp, revision lineage and financial target basis; identify already represented estimated charges.",
+    "response": "Revise the correct incurred-period record with explicit lineage; preserve the earlier as-of forecast; keep invoice/cash forecasts distinct if those are separately requested.",
+    "test_assertion": "The late invoice does not increase December future-continuation usage solely because it arrived in December; replacing an estimate with a reported charge changes the incurred target by the reconciliation delta, not the full charge twice.",
+    "residual_limit": "If service period or charge linkage is unknown, precise reconciliation may be unsupported; this product is not a general ledger.",
+    "owner": "Backend financial data + forecasting",
+    "requirement_source": "01-R07/R09/R15/R20/R25; mentor transcript lines 18–26; docs/forecasting-plan.md:66,78"
+  },
+  {
+    "id": "01-E03",
+    "family": "context conflict and authority",
+    "scenario": "An informal email dated after an approved research plan proposes cancelling the evaluation push, while an older superseded correspondence thread is also retrieved.",
+    "mechanism": "Recency-only retrieval promotes an unapproved suggestion into the current plan; a fluent summary hides three distinct authority states.",
+    "detection": "Retain document dates, approval/state, explicit supersession links, passage citations and affected periods; flag unresolved conflict rather than merge.",
+    "response": "Explain the approved plan and later unconfirmed proposal separately; offer a conditional cancellation scenario if supported, without silently revising the base forecast.",
+    "test_assertion": "Latest timestamp alone does not make the email an approved cancellation; source status and unresolved conflict remain visible, and a scenario is labeled conditional.",
+    "residual_limit": "Missing approval records or ambiguous organizational authority can require an unavailable context conclusion.",
+    "owner": "Factory + backend context + forecasting",
+    "requirement_source": "01-R10/R12/R13/R14; docs/ai-spend-master-plan.md:59–64,169–171; docs/factory-agent-plan.md:66"
+  },
+  {
+    "id": "01-E04",
+    "family": "time-varying ownership and adoption",
+    "scenario": "A developer moves from product to research, changes region, and adopts a new model while continuing to use a shared provider project.",
+    "mechanism": "Current team mapping backfills historical usage, region boundaries move events between days, and the resulting artificial team jump is learned as an adoption effect.",
+    "detection": "Require ownership effective intervals, event timezone/bucket basis, provider identity linkage and mapping uncertainty; reconcile company totals independently of team attribution.",
+    "response": "Preserve historical attribution as supported; quarantine unknown ownership into an explicit unallocated bucket; compare adoption evidence on stable ownership/time definitions.",
+    "test_assertion": "Changing current membership does not rewrite earlier team totals without an explicit versioned restatement, and company spend is conserved across known/unallocated owners.",
+    "residual_limit": "Shared credentials without reliable actor linkage may prevent individual or team conclusions even when company totals are known.",
+    "owner": "Backend identity + forecasting",
+    "requirement_source": "01-R05/R08/R09/R25/R27; mentor transcript lines 54,62–64,103; docs/backend-plan.md:56"
+  },
+  {
+    "id": "01-E05",
+    "family": "price decline with workload expansion",
+    "scenario": "A cheaper model is adopted and a new agent mode simultaneously increases parallel child runs and output volume.",
+    "mechanism": "The forecast treats a lower unit price as lower spend while activity, token mix and fan-out grow; a new price schedule is applied retroactively.",
+    "detection": "Version commercial schedules and model/adoption states; compare volume, mix, session/child activity and effective costs before and after adoption.",
+    "response": "Separate price-only counterfactual from observed continuation and workload-change scenarios; qualify unsupported behavior forecasts.",
+    "test_assertion": "A price-only scenario changes price with usage held fixed; increased fan-out is not silently set to zero, and historical observations retain their applicable price basis.",
+    "residual_limit": "Unannounced behavior changes remain unpredictable; cheaper price does not determine task demand or completion quality.",
+    "owner": "Forecasting + pricing/usage ingestion",
+    "requirement_source": "01-R06/R07/R13/R26/R28; mentor transcript lines 102–115; internal transcript line 6: number of, like, agents that you spawn"
+  },
+  {
+    "id": "01-E06",
+    "family": "regional calendar with missing telemetry",
+    "scenario": "A regional holiday lowers observed activity while the connector for another region fails during the same week; finance sees product headroom.",
+    "mechanism": "True non-working days and missing ingestion both appear as zero, leading to a false low forecast and an apparently safe budget removal.",
+    "detection": "Keep coverage/ingestion state separate from observed zero; use region/calendar information only where reliable; expose regional completeness in the team aggregate.",
+    "response": "Retain the missing-data limitation, narrow or withhold the affected prediction, and prevent the explanation from equating apparent headroom with removable funds.",
+    "test_assertion": "Dropping a connector batch cannot create confirmed zero spend or an unqualified safe-to-remove allocation recommendation; observed spending and budgets remain readable.",
+    "residual_limit": "Unknown calendars and unscheduled work weaken expected-activity assumptions even with complete ingestion.",
+    "owner": "Backend coverage + forecasting + finance UI",
+    "requirement_source": "01-R09/R16/R17; mentor transcript lines 62–64; internal transcript line 6: all the holidays that might fall"
+  },
+  {
+    "id": "01-E07",
+    "family": "review-time evidence versioning",
+    "scenario": "Finance opens a proposal, a refreshed forecast arrives, and another reviewer changes the product allocation before the first reviewer clicks apply.",
+    "mechanism": "The assistant substitutes the newest forecast into an old explanation or applies a proposal against obsolete budget state.",
+    "detection": "Bind the proposal to reviewed forecast/evidence IDs and allocation version; compare current saved budget version before application.",
+    "response": "Keep the original reviewed record; mark the proposal stale and regenerate/review against current state; report success only after confirmation.",
+    "test_assertion": "An old proposal cannot apply against the changed allocation without renewed review, and its history still points to the forecast and sources originally shown.",
+    "residual_limit": "The latest valid forecast can itself remain uncertain; freshness does not imply truth.",
+    "owner": "Backend decisions + frontend + Factory",
+    "requirement_source": "01-R18/R19/R20; docs/frontend-plan.md:68,85; docs/forecasting-plan.md:84"
+  },
+  {
+    "id": "01-E08",
+    "family": "staff exit with unfinished initiated agents",
+    "scenario": "An employee leaves the company, but the employee-initiated evaluation sessions and child jobs continue after account removal.",
+    "mechanism": "A headcount-based forecast sets their activity to zero; missing account identity or finished parent session drops still-running child cost.",
+    "detection": "Compare staffing changes with active/unfinished run state, child-parent lineage and provider activity; distinguish closed user account from closed work.",
+    "response": "Represent authorized residual work with explicit team/unallocated ownership and completion uncertainty; do not infer external termination from an internal allocation change.",
+    "test_assertion": "Removing the person from current headcount does not erase observed child costs or assert that sessions stopped; future residual work is included only under a documented supported model/scenario.",
+    "residual_limit": "No provider runtime controls are supplied, and absent run state may make remaining work unforecastable.",
+    "owner": "Backend session identity + forecasting",
+    "requirement_source": "01-R03/R05/R08/R28; internal transcript line 6: four sessions running; mentor transcript lines 54,74–82"
+  },
+  {
+    "id": "01-E09",
+    "family": "plan deferral versus sunk and committed cost",
+    "scenario": "A product milestone moves to next month after evaluation jobs have already incurred charges and a fixed tool subscription remains payable.",
+    "mechanism": "The contextual delay is translated into a multiplier over the entire period, deleting incurred usage and fixed obligations along with uncertain future work.",
+    "detection": "Separate observed/incurred amounts, remaining future continuation, fixed obligations and effective project-change time; inspect which workload the plan actually defers.",
+    "response": "Apply any supported adjustment only to the appropriate future component or explicit scenario; retain known incurred amounts and separately displayed fixed commitments.",
+    "test_assertion": "Deferring the milestone cannot reduce already-recorded incurred expense or cancel fixed fees without independent evidence; no automatic token multiplier is invented from the document.",
+    "residual_limit": "The fraction of future workload actually deferred may be unknown; narrative relevance alone cannot quantify it.",
+    "owner": "Forecasting + Factory + financial target contracts",
+    "requirement_source": "01-R06/R12/R13/R15; docs/ai-spend-master-plan.md:59–64; docs/forecasting-plan.md:38,66"
+  },
+  {
+    "id": "01-E10",
+    "family": "forecast unavailability and demo honesty",
+    "scenario": "Research appears to be overspending, but its real history fails coverage checks while the synthetic Northstar forecast is available in the same demo environment.",
+    "mechanism": "The assistant substitutes an illustrative forecast or numeric zero for the unavailable real result to finish the allocation story.",
+    "detection": "Carry availability, provenance, source population, target basis and synthetic/real labels through retrieval and all handoffs; disallow cross-population substitution.",
+    "response": "Explain the unsupported forecast, retain measured spending and current budgets, and allow finance to review an explicitly assumption-based proposal if supported without asserting numerical certainty.",
+    "test_assertion": "Real forecast failure does not return the Northstar value or zero; simulation labels survive the UI and saved explanation; no accuracy or savings claim is produced from the fixture.",
+    "residual_limit": "The resulting decision may rely more heavily on finance judgment until adequate history is available.",
+    "owner": "Forecasting + Factory + frontend + backend",
+    "requirement_source": "01-R14/R16/R23/R24/R30; docs/ai-spend-master-plan.md:55,210,297–305; mentor transcript lines 34–38"
+  }
+]

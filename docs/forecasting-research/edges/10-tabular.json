@@ -1,0 +1,122 @@
+[
+  {
+    "id": "10-E01",
+    "family": "overlapping_labels",
+    "scenario": "A 30-day cumulative label starts before the fold origin but ends after it; billing also settles late.",
+    "mechanism": "Future outcomes enter training despite chronological origin sorting.",
+    "detection": "Assert target_end <= fold_origin and label_available_at <= fold_origin.",
+    "response": "Purge labels by exact maturity; preserve as-of feature snapshots.",
+    "test_assertion": "Injected overlapping and late-finalized labels are excluded; later revisions cannot change the original fold snapshot.",
+    "residual_limit": "Maturity can sharply reduce recent eligible data.",
+    "owner": "Forecast data/evaluation",
+    "requirement_source": "Master plan §2 evidence distinction; backend coverage handoff; mentor lines 35–40 representativeness"
+  },
+  {
+    "id": "10-E02",
+    "family": "temporal_identity",
+    "scenario": "Employee moves teams after origin; current mapping rewrites earlier team history and encodings.",
+    "mechanism": "Future organizational knowledge changes labels, exposure and identity statistics.",
+    "detection": "Check effective/known-at mapping intervals and snapshot hashes.",
+    "response": "Use historical attribution contract; label restated-history evaluation separately.",
+    "test_assertion": "Mapping known only after T leaves all as-of-T features unchanged; restated reporting remains separate.",
+    "residual_limit": "Ambiguity can require unallocated series or unavailable forecast.",
+    "owner": "Backend attribution + forecast features",
+    "requirement_source": "Master plan §2 explicit mapping; mentor line 54 headcount"
+  },
+  {
+    "id": "10-E03",
+    "family": "category_cold_start",
+    "scenario": "New team and new model appear during a collector gap; unseen categories route as missing.",
+    "mechanism": "A finite prediction hides unsupported identity and incomplete coverage.",
+    "detection": "Track unseen categories, history length and independent completeness.",
+    "response": "Use eligible metadata/exposure fallback and distinct cold-start/incomplete states.",
+    "test_assertion": "Unseen ID with complete collection is marked cold-start; with incomplete collection it cannot silently return ordinary-confidence output.",
+    "residual_limit": "No fallback recovers unknown adoption volume.",
+    "owner": "Forecast serving + coverage",
+    "requirement_source": "Master plan §§2–3 provenance/availability; mentor lines 46–49 adoption"
+  },
+  {
+    "id": "10-E04",
+    "family": "zero_missing_semantics",
+    "scenario": "Sparse matrix conversion omits true zero usage while zero_as_missing configuration changes.",
+    "mechanism": "Observed inactivity becomes missingness or vice versa and shifts routes.",
+    "detection": "Version matrix representation/missing policy and compare dense/sparse equivalence.",
+    "response": "Keep explicit coverage flags and consistent zero semantics across fit/serve.",
+    "test_assertion": "Complete equivalent dense/sparse rows produce equivalent features/predictions; collector-missing rows remain distinct from zero.",
+    "residual_limit": "Native NaN handling cannot fix upstream semantics.",
+    "owner": "Feature pipeline",
+    "requirement_source": "Master plan §2 completeness and usage evidence"
+  },
+  {
+    "id": "10-E05",
+    "family": "scale_imbalance",
+    "scenario": "Research spending grows 100x while small teams have near-zero historical scale.",
+    "mechanism": "Squared loss ignores small teams; inverse-scale weighting lets tiny denominators dominate.",
+    "detection": "Report company-weighted/team-balanced metrics and scale/weight distributions.",
+    "response": "Compare raw and origin-normalized loss with declared floor/cap and slice gates.",
+    "test_assertion": "Zero histories yield finite weights; huge-team addition cannot remove small-team evaluation; slice-gate failure rejects candidate.",
+    "residual_limit": "Finance must choose priorities; no universal weighting optimum.",
+    "owner": "Forecast evaluation",
+    "requirement_source": "Master plan §§1,3 company/team comparisons; mentor company heterogeneity"
+  },
+  {
+    "id": "10-E06",
+    "family": "objective_support",
+    "scenario": "Reported variable cost contains negative refunds and enormous token counts mislabeled as currency.",
+    "mechanism": "Tweedie/Poisson support fails, mixed units distort fitting, large labels overflow.",
+    "detection": "Enforce target category/unit/nonnegative/finite domains.",
+    "response": "Separate adjustments and units; reversible scaling; fail invalid fits.",
+    "test_assertion": "Negative refund/unit mismatch fails before fit; large valid rescaled target yields finite original-unit output or explicit unavailable state.",
+    "residual_limit": "Separate adjustment forecast still needs policy.",
+    "owner": "Financial contract + model adapter",
+    "requirement_source": "Master plan §2 usage/estimated/reported cost distinction"
+  },
+  {
+    "id": "10-E07",
+    "family": "quantile_aggregation",
+    "scenario": "Daily P90 values are summed into month P90 while project bursts correlate days.",
+    "mechanism": "Marginal quantiles do not add; independent samples omit burst dependence.",
+    "detection": "Tag marginal/direct-cumulative/joint-scenario output construction.",
+    "response": "Fit cumulative quantiles or validated joint scenarios and score aggregates.",
+    "test_assertion": "Aggregation rejects sum of marginal quantiles as calibrated month quantile; correlated synthetic fixture verifies construction distinction only.",
+    "residual_limit": "Cumulative marginal quantiles do not solve cross-team joint risk.",
+    "owner": "Forecast uncertainty + aggregation",
+    "requirement_source": "Master plan §3 uncertainty handoff; mentor requested error rate"
+  },
+  {
+    "id": "10-E08",
+    "family": "recursive_leakage",
+    "scenario": "Backtest supplies actual held-out lag values but serving supplies predicted lags.",
+    "mechanism": "Teacher forcing understates multistep errors.",
+    "detection": "Instrument recursive-feature lineage.",
+    "response": "Replay serving recursion using origin data and prior forecasts/simulations.",
+    "test_assertion": "Replacing held-out actual lag values cannot change an earlier issued forecast; only known future calendar inputs are permitted.",
+    "residual_limit": "Correct recursion still accumulates error.",
+    "owner": "Forecast backtesting/serving",
+    "requirement_source": "Master plan forecast assumptions; transcript backtesting ambition"
+  },
+  {
+    "id": "10-E09",
+    "family": "explanation_policy",
+    "scenario": "Historical low allocations correlate with lower workload; assistant treats SHAP as causal savings.",
+    "mechanism": "Predictive association is mistaken for intervention effect.",
+    "detection": "Separate prediction-explanation and causal/scenario result types; track budget-feature use.",
+    "response": "State association; require explicit workload scenario or causal evidence for intervention estimate.",
+    "test_assertion": "Importance/SHAP fields cannot become claimed causal savings or authorization to change allocations.",
+    "residual_limit": "Behavioral feedback remains unobserved.",
+    "owner": "Factory reasoning + forecasting",
+    "requirement_source": "Master plan §§1,3 internal allocation/approval; frontend proposal distinction"
+  },
+  {
+    "id": "10-E10",
+    "family": "horizon_calendar_consistency",
+    "scenario": "Short February changes remainder horizon; independently fitted S7/S14/S30 cross.",
+    "mechanism": "Fixed-30-day shortcut or inconsistent heads misstates planning period.",
+    "detection": "Check local-calendar boundaries, h=0, quantile order and cumulative monotonicity for nonnegative targets.",
+    "response": "Use explicit start/end; evaluate coherence postprocessing separately.",
+    "test_assertion": "At local month end remainder is zero; declared coherence holds or output is flagged, including leap-day fixture.",
+    "residual_limit": "Postprocessing can harm calibration; negative-net targets are exempt from nonnegative monotonicity.",
+    "owner": "Target builder + frontend",
+    "requirement_source": "Master plan §§2–3 period/unit handoff; mentor line 49 horizon utility"
+  }
+]

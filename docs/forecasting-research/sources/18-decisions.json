@@ -1,0 +1,122 @@
+[
+  {
+    "id": "18-S01",
+    "title": "Making and Evaluating Point Forecasts",
+    "url": "https://arxiv.org/abs/0912.0902v2",
+    "authors_or_org": "Tilmann Gneiting",
+    "published_or_version": "arXiv v2, 2010-03-07; first submitted 2009-12-04; journal JASA 2011",
+    "kind": "Primary methods paper",
+    "supported_claim": "Point forecast evaluation must match the intended statistical functional or loss; different point targets answer different questions.",
+    "limitations": "General decision-theoretic forecast evaluation; no enterprise AI-spend or finance-user validation. This note does not rely on the historical claim about standalone conditional value at risk.",
+    "license_status": "Verified arXiv non-exclusive distribution license via linked license page; no broad derivative/content-reuse license inferred.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S02",
+    "title": "Smart Predict, then Optimize",
+    "url": "https://arxiv.org/abs/1710.08005v5",
+    "authors_or_org": "Adam N. Elmachtoub; Paul Grigas",
+    "published_or_version": "arXiv v5, 2020-11-19; first submitted 2017-10-22",
+    "kind": "Primary methods paper",
+    "supported_claim": "Decision-induced loss can differ from prediction error; SPO+ is a surrogate using known downstream optimization structure.",
+    "limitations": "Requires specified objective and constraints; experiments on shortest paths and portfolio optimization do not validate internal AI-budget usefulness. No mandatory optimizer is proposed.",
+    "license_status": "Verified arXiv non-exclusive distribution license via linked license page; source code reuse license was not investigated.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S03",
+    "title": "Performative Prediction",
+    "url": "https://proceedings.mlr.press/v119/perdomo20a.html",
+    "authors_or_org": "Juan Perdomo; Tijana Zrnic; Celestine Mendler-Dünner; Moritz Hardt",
+    "published_or_version": "ICML 2020; PMLR 119:7599–7609; July 13–18, 2020",
+    "kind": "Primary methods paper",
+    "supported_claim": "Predictions used for decisions can influence their target distribution; performative stability and retraining convergence require conditions.",
+    "limitations": "Abstract/method scope verified; does not establish actual feedback strength in this product or imply unconditional convergence of retraining.",
+    "license_status": "PMLR page states copyright authors and PMLR; exact paper reuse license unverified.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S04",
+    "title": "Adaptive Data-Driven Inventory Control with Censored Demand Based on Kaplan-Meier Estimator",
+    "url": "https://pubsonline.informs.org/doi/10.1287/opre.1100.0906",
+    "authors_or_org": "Woonghee Tim Huh; Retsef Levi; Paat Rusmevichientong; James B. Orlin",
+    "published_or_version": "Published online 2011-07-12; Operations Research 59(4):929–941; author manuscript https://faculty.marshall.usc.edu/Paat-Rusmevichientong/psfiles/km-myopic.pdf also inspected",
+    "kind": "Primary methods paper and author manuscript",
+    "supported_claim": "Sales can censor demand; adaptive observation and ordering decisions interact. Underlying demand IID and discrete-demand guarantee scope were checked in manuscript sections 2 and 5.",
+    "limitations": "Inventory assumptions are not established for AI spending. Internal allocations are not proven caps, and continuous/nonstationary enterprise claims do not inherit this theorem.",
+    "license_status": "Publisher states Copyright 2011 INFORMS; manuscript reuse permission unverified.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S05",
+    "title": "Effective forecasting and judgmental adjustments: An empirical evaluation and strategies for improvement in supply-chain planning",
+    "url": "https://researchportal.bath.ac.uk/en/publications/effective-forecasting-and-judgmental-adjustments-an-empirical-eva/",
+    "authors_or_org": "Robert Fildes; Paul Goodwin; Michael Lawrence; Konstantinos Nikolopoulos",
+    "published_or_version": "January 2009; International Journal of Forecasting 25(1):3–23; DOI 10.1016/j.ijforecast.2008.11.010",
+    "kind": "Primary empirical paper abstract on author institutional portal",
+    "supported_claim": "More than 60000 forecasts from four supply-chain companies: average improvement in three companies; small and upward adjustments often less effective.",
+    "limitations": "Observational supply-chain setting, not enterprise AI finance. Only portal abstract and bibliographic record inspected; no claim of full-text audit.",
+    "license_status": "Reuse license unverified; institutional access does not imply permission to redistribute the article.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S06",
+    "title": "Causal Inference: What If",
+    "url": "https://content.sph.harvard.edu/wwwhsph/sites/1268/2024/04/hernanrobins_WhatIf_26apr24.pdf",
+    "authors_or_org": "Miguel A. Hernán; James M. Robins",
+    "published_or_version": "2020 book citation; pinned indexed PDF edition 2024-04-26. Author page accessed 2026-10-24 points to 2026-08-19 PDF; newer PDF exceeded tool size limit.",
+    "kind": "Primary author textbook / indexed official PDF",
+    "supported_claim": "Observational causal identification requires assumptions including consistency, exchangeability and positivity, with additional measurement/model conditions for fitted analyses.",
+    "limitations": "Relevant passages checked through official PDF search-index extracts; direct pinned PDF fetch timed out. Author page https://miguelhernan.org/whatifbook inspected; latest edition was not read. Epidemiological examples do not validate finance causal effects.",
+    "license_status": "Author offers free download; reuse license unverified. Free access is not assumed to grant redistribution rights.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S07",
+    "title": "A General, Analytic Method for Generating Robust Strategies and Narrative Scenarios",
+    "url": "https://pubsonline.informs.org/doi/10.1287/mnsc.1050.0472",
+    "authors_or_org": "Robert J. Lempert; David G. Groves; Steven W. Popper; Steve C. Bankes",
+    "published_or_version": "Published online 2006-04-01; Management Science 52(4):514–528",
+    "kind": "Primary methods/application paper",
+    "supported_claim": "RDM iterates candidate strategies, vulnerable futures and tradeoffs to support robustness and narrative scenario discovery.",
+    "limitations": "Publisher abstract and metadata inspected; pollution-control application. Product scenario matrices are proposed adaptations, not validated RDM implementation or probability estimates.",
+    "license_status": "Publisher states Copyright 2006 INFORMS; reuse license unverified.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S08",
+    "title": "Information Value Theory",
+    "url": "https://ieeexplore.ieee.org/document/4082064/",
+    "authors_or_org": "Ronald A. Howard",
+    "published_or_version": "1966-08-31; IEEE Transactions on Systems Science and Cybernetics 2(1):22–26; DOI 10.1109/TSSC.1966.300074",
+    "kind": "Primary decision-theory paper",
+    "supported_claim": "Value of information depends on decision consequences, and joint information values need not add.",
+    "limitations": "Publisher search-index abstract and metadata verified; direct page returned browser challenge. Product EVPI formula is an analytical illustration requiring specified loss, probabilities and feasible actions; no company ROI measured.",
+    "license_status": "IEEE reuse permission unverified; no article text redistribution proposed.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S09",
+    "title": "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity",
+    "url": "https://arxiv.org/abs/2507.09089v2",
+    "authors_or_org": "Joel Becker; Nate Rush; Elizabeth Barnes; David Rein",
+    "published_or_version": "arXiv v2, 2025-07-25; first submitted 2025-07-12",
+    "kind": "Primary randomized empirical study preprint",
+    "supported_claim": "RCT: 16 experienced developers, 246 tasks, early-2025 AI tools; observed completion time differed from subjective expectations and increased in this setting.",
+    "limitations": "Mature open-source repositories and historical tools; not representative enterprise ROI or a current general productivity multiplier. Study-specific external-validity and experimental-artifact concerns retained.",
+    "license_status": "Verified arXiv linked license CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. Dataset/code license not verified.",
+    "accessed": "2026-10-24"
+  },
+  {
+    "id": "18-S10",
+    "title": "We are Changing our Developer Productivity Experiment Design",
+    "url": "https://metr.org/blog/2026-02-24-uplift-update/",
+    "authors_or_org": "Joel Becker; Nate Rush; Tom Cunningham; David Rein; Khalid Mahamud; METR",
+    "published_or_version": "2026-02-24",
+    "kind": "Primary research update",
+    "supported_claim": "Follow-up reports selection, noncompletion, task/quality differences and concurrent-agent time attribution as limitations; authors judge current productivity estimates unreliable.",
+    "limitations": "Researcher account of a changing study, not a general causal estimate for enterprises. Used for measurement design, not a claim that AI currently slows or accelerates all workers.",
+    "license_status": "Page footer states Copyright 2026 METR, all rights reserved; linked datasets not downloaded and license not verified.",
+    "accessed": "2026-10-24"
+  }
+]

@@ -1,0 +1,110 @@
+{
+  "dataset_id": "burstgpt-first-two-months-hourly-native",
+  "dataset_title": "BurstGPT: A Real-World Workload Dataset to Optimize LLM Serving Systems",
+  "source_repository": "https://github.com/HPMLL/BurstGPT",
+  "source_revision": "d895a53bb7b8ec137d0d2fe203b335835a78c10a",
+  "source_path": "data/BurstGPT_1.csv",
+  "source_blob_sha1": "f95dd2c84454b067fdd0973858c55ecfe31bdad7",
+  "source_url": "https://raw.githubusercontent.com/HPMLL/BurstGPT/d895a53bb7b8ec137d0d2fe203b335835a78c10a/data/BurstGPT_1.csv",
+  "acquisition_method": "Connected GitHub github_fetch_blob returns authoritative UTF-8 content by Git blob SHA; full content processed programmatically without model transcription.",
+  "acquired_date_utc": "2026-10-24",
+  "raw_sha256": "46fc9480ef0b748ecb2b51d512ff08c196b031782cbe6f78e28044d768e86d5a",
+  "raw_bytes": 50853373,
+  "raw_retained_locally": false,
+  "raw_retention_note": "Full raw CSV was fetched into tool orchestration memory and aggregated directly; remote immutable source blob + SHA256 retained. Reacquire via GitHub blob or ordinary public download and run prepare_burstgpt.py to reproduce.",
+  "license": "CC-BY-4.0",
+  "license_url": "https://github.com/HPMLL/BurstGPT/blob/d895a53bb7b8ec137d0d2fe203b335835a78c10a/LICENSE",
+  "attribution": "Yuxin Wang et al., BurstGPT: A Real-World Workload Dataset to Optimize LLM Serving Systems, KDD 2025, DOI 10.1145/3711896.3737413.",
+  "paper_url": "https://doi.org/10.1145/3711896.3737413",
+  "native_time_unit": "seconds from local first-day midnight; absolute date/timezone not supplied in CSV",
+  "timestamp_semantics": "Request submission, not completion or billing time",
+  "native_bin_seconds": 3600,
+  "canonical_path": "burstgpt_hourly_tokens.csv",
+  "canonical_sha256": "e1c6a70ace64a8265982e6843248e0cce6113f20c6179ecd0e1624176ea6b888",
+  "components_path": "burstgpt_hourly_components.csv",
+  "components_sha256": "7c131661210b089b58b092550473a4941939fb683abfa8f0806af8c904e9c79f",
+  "transformation": "All source rows retained for parsing and full-source QA; input+output sums grouped by floor(timestamp/3600). Canonical target total_tokens across all models/logtypes. Exclude first and last bins containing trace bounds; keep complete interior [3600,5266800). Fill 36 empty interior bins zero under observed-release coverage assumption. No scaling, resampling, detrending, currency conversion, fabricated team/user assignment or shifted calendar dates.",
+  "evidence_class": "real_public_token_usage_trace",
+  "target_semantics": "Ultimately recorded request input+output tokens assigned to submission-time bin; serving workload proxy, not financial spending",
+  "coverage_assumption": "IDEALIZED: trace release is treated as observed request stream throughout interior span; no per-bin provider completeness/outage metadata supplied. Empty bins describe no recorded requests, not verified no real demand.",
+  "availability_assumption": "IDEALIZED: preceding bins treated as observed at origin. Raw data has no collection/receipt/maturity or completion timestamps; eventually recorded output length can include requests still in flight at origin. Historical online information availability cannot be established.",
+  "privacy_identity": "No users, teams, projects, accounts, organizations or sessions in actual source CSV. Model+Log Type cohorts are workload cohorts only. Newer README mentions Session ID and Elapsed time but those columns are absent from immutable /data asset used here.",
+  "unsupported_fields": [
+    "cache tokens",
+    "cached-input fraction",
+    "reasoning tokens",
+    "user identity",
+    "team attribution",
+    "invoice costs",
+    "historical prices",
+    "company plans",
+    "budget decisions",
+    "provider enforcement",
+    "completion timestamps",
+    "data receipt/maturity timestamps"
+  ],
+  "failure_handling": "25,443 rows with zero response tokens retained; authors identify these as failures, which may still involve input usage and do not establish billing treatment.",
+  "seasonality_prior": "Pinned README labels daily and weekly periodicity figures; fixed 24-bin daily seasonal-naive comparator may be declared before final evaluation, without choosing lag on final outcomes.",
+  "limitations": [
+    "One anonymized Azure-backed workload stream; not representative enterprise team spend or prospective accuracy.",
+    "Single fixed hindsight export cannot validate the production bitemporal ingestion gates.",
+    "Hourly horizons are1hour/4hours; do not relabel bins as days or claim weekly/monthly planning performance.",
+    "No provider-reported monetary target or actual model deployment version; coarse ChatGPT/GPT-4 names cannot establish historical tariff.",
+    "Pretrained model may have trained on public historical trace; contamination cannot be ruled out without model training provenance."
+  ],
+  "summary": {
+    "raw_chars": 50853373,
+    "header": [
+      "Timestamp",
+      "Model",
+      "Request tokens",
+      "Response tokens",
+      "Total tokens",
+      "Log Type"
+    ],
+    "row_count": 1429737,
+    "min_timestamp_seconds": 5,
+    "max_timestamp_seconds": 5269973,
+    "invalid_rows": 0,
+    "zero_response_rows": 25443,
+    "token_identity_mismatches": 0,
+    "source_nonmonotone_transitions": 0,
+    "sums": {
+      "input_tokens": 872984237,
+      "output_tokens": 176278813,
+      "total_tokens": 1049263050
+    },
+    "groups": {
+      "ChatGPT|Conversation log": {
+        "rows": 103111,
+        "input_tokens": 70858197,
+        "output_tokens": 25649939,
+        "total_tokens": 96508136
+      },
+      "GPT-4|Conversation log": {
+        "rows": 51108,
+        "input_tokens": 40000422,
+        "output_tokens": 12957188,
+        "total_tokens": 52957610
+      },
+      "GPT-4|API log": {
+        "rows": 168520,
+        "input_tokens": 102136622,
+        "output_tokens": 34122696,
+        "total_tokens": 136259318
+      },
+      "ChatGPT|API log": {
+        "rows": 1106998,
+        "input_tokens": 659988996,
+        "output_tokens": 103548990,
+        "total_tokens": 763537986
+      }
+    },
+    "bin_seconds": 3600,
+    "start_inclusive_seconds": 3600,
+    "end_exclusive_seconds": 5266800,
+    "bin_count": 1462,
+    "empty_bins": 36,
+    "canonical_chars": 21066
+  }
+}

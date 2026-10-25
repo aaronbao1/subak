@@ -1,82 +1,64 @@
 # Forecasting plan
 
-Intermediate high-level plan dated October 23, 2026. This establishes the workstream’s purpose, research responsibilities, handoffs, stages, and evidence expectations. It is not a final architecture or a selected forecasting approach. Ownership is role-based. Model, baseline, horizon, refresh cadence, algorithms, uncertainty construction, and the numerical use of company context remain TBD under the forecasting lead’s research.
+Updated October 24, 2026 after a fresh twenty-agent research investigation. This outline replaces the previous forecasting research recommendations. The [research dossier](forecasting-research/README.md) contains twenty specialist tracks, 288 annotated source records, 206 proposed failure cases, an architecture decision and a fresh-context implementation handoff. No enterprise forecasting experiment has run.
 
-**Product context and purpose**
+## Purpose and product boundary
 
-Build a finance workspace for an enterprise software company’s internal finance/FP&A team to understand expected AI spending and coordinate internal budgets across teams. This is the AI-spend planning and coordination subset of FP&A. Spending history, projections, company context, and an active Factory assistant support the same finance decision.
+Provide defensible estimates of enterprise AI spending for the company/team finance workspace in the [master plan](ai-spend-master-plan.md). Help finance understand expected needs and compare internal allocation options. Forecasting does not choose business priorities, authorize transfers, move provider credits, purchase compute, enforce usage limits or prove apparent headroom is safe to remove.
 
-Forecasting contributes an evidence-based view of expected spending and its limitations. It helps finance assess whether research may need additional allocation while product may have headroom. It does not choose finance’s priorities, authorize a transfer, or establish that an apparently unused budget is safe to remove. Finance makes the decision; backend validation and persistence govern its application.
+Human teams and human-initiated coding-agent activity are the primary research population. Individual usage, sessions, projects and model effects may be useful internal predictors without requiring personal budgets or employee-facing interfaces. Autonomous swarms, recursive budget delegation, provider enforcement, separate team/personal portals and outbound notifications remain deferred.
 
-The product records internal allocations. It does not move provider credits, buy compute, enforce account limits, or stop external agents. Company and team views are the first scope. Personal attribution, separate team-facing interfaces, swarm budgeting, and outbound notifications remain parked. Predicting unannounced model releases or industry-wide adoption shifts is outside the product claim.
+## Architecture chosen for implementation
 
-**Shared Northstar example**
+Use versioned usage/billing and enterprise evidence → historical snapshots and quality/identity gates → competing numerical methods → explicit scenarios and coherent aggregation → immutable finance outputs. The [architecture decision](forecasting-research/architecture-recommendation.md) defines alternatives, component contracts, boundaries and tests that could overturn the recommended choices.
 
-Use the fictional Northstar Software company, with research, product, and engineering teams. For this example only, values are USD for one common planning period. Finance’s phrase “50,000 more credits” means a $50,000 increase to this fictional internal envelope. It does not establish a vendor-credit conversion or settle the product’s internal budget unit.
+The first monetary target is covered-source incurred variable charges where those labels are reconstructible; otherwise narrow explicitly to supported usage, priced-estimate or billed-period targets. Separate recorded incurred, late-incurred estimates, future continuation and fixed obligations. Shared allowances and retroactive repricing require complete contract state. A token valuation is not automatically a paid expense.
 
-| Team | Current allocation | Recorded spending so far | Illustrative full-period projection |
-|---|---:|---:|---:|
-| Research | $60,000 | $45,000 | $85,000 |
-| Product | $80,000 | $20,000 | $50,000 |
-| Engineering | $60,000 | $30,000 | $65,000 |
-| Company total | $200,000 | $95,000 | $200,000 |
+Implement a modular numerical package and thin service/CLI boundary, with simple aggregate baselines and serious local, pooled and tabular challengers. The researched method families also include intermittent/compound demand, hierarchical/cross-temporal reconciliation, neural/foundation models, context methods, adaptive regimes and session processes. Admit richer methods based on data, deployment and comparative evidence; a research taxonomy is not a requirement to deploy every model.
 
-Every number is synthetic. The projections are shared placeholders, not selected-model results or accuracy evidence. Their period is intentionally unnamed; the fixture does not settle the forecasting horizon.
+Compare direct team/company, local individual sums, pooled individual sums, aggregate models with individual-derived features and reconciled forecasts. Crossed people/projects/tools do not form a permanent team tree. Preserve effective and knowledge-time mappings, shared/unattributed costs and company-total conservation.
 
-The context collection contains an approved research plan expanding model evaluations, a product milestone deferred into the following period, older research correspondence explicitly superseded by the approved plan, and an engineering note describing continuing work. These facts should inform finance’s understanding. They do not establish a numerical token multiplier or prescribe how context affects a forecast.
+Initial experimental periods are 7-, 14-, and 30-calendar-day cumulative totals and remaining calendar month. Daily/weekly observation grain, forecast horizon, state refresh, parameter refit and finance reporting cadence are separate configuration choices. No universal training window or numerical winner has been established.
 
-Two independent illustrative outcomes start from the original allocations. A redistribution moves $25,000 from product to research and $5,000 from product to engineering, producing $85,000/$50,000/$65,000 within the existing $200,000 envelope. Alternatively, finance authorizes $50,000 more and prioritizes research; adding $35,000 to research and $15,000 to engineering produces $95,000/$80,000/$75,000 within a $250,000 envelope. Neither distribution is a required optimization policy. Changing allocations does not itself prove that expected usage changes.
+Mean, median, quantile, interval, event probability and joint path outputs are distinct capabilities. Quantiles do not add; nonlinear recursive point paths are not automatically expected means; interval calibration does not establish arbitrary breach probabilities. Validate the actual final cumulative target after pricing/reconciliation and preserve shared shocks where distributions are claimed.
 
-**Research scope and major considerations**
+## Enterprise context and agent activity
 
-The first responsibility is to establish what a useful, supportable projection means for this finance workflow and available data. Forecasting is the first research priority because its feasibility is uncertain. That priority does not require the other workstreams to wait: shared example outputs let them progress independently.
+Context ingestion remains core. Factory supplies source-backed event revisions identifying intention, approval, execution, timing, affected entities, conflicts and supersession. Forecasting controls numerical eligibility. Store useful evidence and expose explanations/scenarios even if context does not improve numeric predictions. Test human-verified as-of events separately from extraction, retrieval, embeddings, direct LLM forecasts and revisions.
 
-Clarify what quantity is being projected and what history supports it. Token volume, calculated monetary estimates, provider-reported costs, and internal budget amounts have different meanings. A real token history without verified prices or charges supports a usage exercise, not automatically a monetary forecast. Coding-tool seat fees, included usage, additional billable usage, and direct API charges must remain distinguishable; included usage cannot become an extra expense on top of a subscription fee.
+Human-initiated sessions enter first through eligible activity features, with arrivals/conditional severity and active-prefix continuation as challengers. Daily analytics counts are not a live continuation feed. Preserve session/run/attempt identities, within-period increments, censoring and field-level availability; avoid parent/child and active/new overlap. Price, workload, cache/model mix, organizational mapping and source coverage changes require different responses.
 
-Assess coverage before interpreting patterns. Missing or delayed records, repeated cumulative counters, duplicate imports, inconsistent team mapping, shared accounts, and corrected charges can change the apparent history. The backend owns acquisition and cleaning responsibilities; forecasting should identify which limitations make a projection unsupported rather than quietly treating a gap as zero. Changes in prices, tools, staffing, projects, and organizational ownership are research considerations whose treatment remains open.
+## Handoffs and responsibility
 
-Company context is core evidence available to this workstream. Factory interprets plans, project documents, research notes, and correspondence across engineering, product, marketing, and research. It supplies cited statements about what is planned or changing, the affected team, applicable timing, and uncertainty. The forecasting lead decides whether that information is suitable for numerical use and how to investigate its value. A documented plan, a completed event, an informal suggestion, and an assistant interpretation must remain distinguishable.
-
-Company- or team-specific forecasting assistance by Droid remains a candidate research direction. It may help prepare inputs or configure specialized work, but its necessity, authority, evaluation, and approach remain undecided. The core integration must not depend on that exploration succeeding. This plan does not select a model-building agent or an automatic model-selection process.
-
-**Shared inputs, outputs, and ownership**
-
-| Handoff | Plain agreement |
+| Owner | Responsibility and boundary |
 |---|---|
-| Backend to forecasting | Team-level spending history and current observations, with periods, units, origins, cost basis, and completeness; identify real versus simulated information |
-| Factory through backend to forecasting | Relevant company-context statements with dates, affected teams/projects, source evidence, and uncertainty |
-| Finance/Factory to forecasting | A supported projection or scenario request, with explicit assumptions where applicable; unsupported requests may return a limitation |
-| Forecasting to frontend and Factory | The projected quantity and team, target period, available assumptions and limitations, and any supported uncertainty or unavailable state |
-| Forecasting to backend | Results and sufficient context to preserve and retrieve the projection used in an analysis or finance decision |
+| Backend | Authoritative source acquisition, coverage, financial arithmetic, identity/contracts, stored inputs/results, budgets and validated decision transactions |
+| Forecasting | Numerical estimates, scenarios, model eligibility, uncertainty, evaluation and stated limitations |
+| Factory | Semantic interpretation, evidence retrieval, explanations and concrete proposals through available capabilities; meaningful real SDK work inside the product |
+| Frontend | Clear periods/units/coverage/status, inspection and review, confirmed saved state and receipt |
+| Finance | Priorities, explicit allocation approval and policy/tolerance choices |
 
-Backend owns authoritative spending records, internal budgets, arithmetic, and saved decisions. Forecasting owns numerical projections and their research justification. Factory owns semantic interpretation, finance explanations, and proposals using available capabilities. Frontend owns understandable presentation and interaction. None should invent another component’s results.
+Inputs specify target, history, source coverage, temporal ownership, commercial terms and context available at cutoff. Requests specify scope/period/full-versus-remainder, statistic and scenario assumptions. Outputs carry quantity/unit/period/cutoff, component meaning, supported uncertainty, coverage/limitations and immutable result ID, with input/context/mapping/pricing/model/config/code versions.
 
-Distinguish a full-period total from remaining expected spending so the dashboard does not add incurred spending twice. Consumers receive the period and meaning from the result rather than hard-code a horizon. Preserve the difference between a forecast and a conditional scenario supplied with assumptions. These are shared meanings, not detailed schemas or a decision about forecasting methods.
+Saved finance decisions reference the exact forecasts and evidence reviewed. A changed bill or plan can stale a proposal even if its budget version is unchanged. Backend validates current authority and state, applies once and confirms persistence. Unavailable forecasts leave recorded spending, evidence inspection and manual budget review usable.
 
-**Staged deliverables**
+## Implementation and evaluation stages
 
-1. **Establish the research boundary.** Identify the finance decision, candidate real data, supported cost/usage scope, attribution limits, and unresolved choices. Agree with backend on what can actually be supplied. Deliver a compact feasibility statement and matching example outputs, including an unavailable result.
-2. **Assess available evidence.** Examine the authorized real sample and document its coverage and limitations. Identify which research decisions can be supported and which require more evidence. Methods, baseline, horizon, and cadence are selected later by the forecasting lead rather than assumed here.
-3. **Produce an intermediate research result.** Supply an inspectable projection or an explicit explanation that the available data does not support one. Record what the result represents, its assumptions, and the scope of any evaluation. Share findings that change other workstreams’ next actions.
-4. **Connect the finance journey.** Let frontend and Factory consume the supplied results alongside spending and cited context. Demonstrate that the research/product comparison and allocation review preserve units, periods, uncertainty, and unavailable states. Replace placeholders only when a real component produces the result.
-5. **Prepare defensible evidence.** Summarize what was measured, what remains simulated, observed limitations, and the next research decisions. Keep the live finance demonstration working even if the real benchmark remains incomplete.
+1. Complete target/source contracts, immutable snapshots and core arithmetic/identity/availability fault tests.
+2. Build executable baseline and challenger registry, exact-period serving, coherent totals and saved result retrieval.
+3. Build chronological evaluation and selection/calibration with label-maturity queues, all-request denominators and cost measurement.
+4. Connect explicit scenarios and Factory/backend/frontend contracts; verify the complete finance journey and failures.
+5. Add data-supported pooling, context, session or advanced-model capabilities through the same gates, documenting unsupported cases honestly.
+6. Run real-data evaluation and prospective shadow forecasts when sufficient authorized data and elapsed outcomes exist; retain a validated fallback and rollback.
 
-**Honest evaluation and acceptance**
+The [evaluation protocol](forecasting-research/evaluation-protocol.md) separates development, calibration and untouched final assessment; tests warm/cold/transfer/new-tool populations; compares strong baselines and independently recorded manager forecasts; and evaluates the whole adaptive selection procedure. Company-held-out claims require independent companies. Pending costly labels and unavailable requests cannot disappear from denominators.
 
-Maintain separate evidence for prediction, integration, and workflow usefulness. A limited real-data benchmark can support a correspondingly limited claim about the available population and period. Evaluation methodology, comparison baseline, metrics, and success criteria remain research decisions. Any comparison must state what information was available when the prediction was made; later company plans or corrected records cannot silently become earlier knowledge.
+Promotion is capability-specific. Valid team forecasts do not validate a donor-selection policy. A forecast-driven proposal needs compatible full budget coverage and evaluation on its actual selected donor/recipient population. Statistical accuracy, software correctness, workflow usefulness and causal savings are separate evidence categories. Synthetic fixtures do not establish real forecast accuracy or savings.
 
-The local feasibility observation that 39 of 40 sampled Codex session files contained timestamped usage records establishes a possible real usage source. It does not establish representative enterprise history, reliable team attribution, or paid monetary cost. An authorized provider history or public real trace may offer another bounded sample. Access, usable history, and permissions remain to be confirmed before making a benchmark commitment.
+## Shared acceptance and next goal
 
-Northstar demonstrates the finance workflow and consistent handoffs. Planted incomplete data or conflicting documents can exercise product behavior. Synthetic outcomes cannot establish real forecast accuracy, and fixture projections must remain labeled until replaced. Do not invent accuracy, confidence, or savings claims to complete the pitch.
+Northstar remains the synthetic example in the master/backend/Factory/frontend plans. The independent redistribution alternative yields $85k/$50k/$65k within $200k; the independent additional-funding alternative yields $95k/$80k/$75k within $250k. These are accounting and workflow fixtures, not optimized allocations or trained projections. Preserve source/period/unit semantics, rejected and stale proposals, duplicate apply and confirmed receipts.
 
-Completion checks are meaningful at these boundaries: consumers can distinguish tokens, reported cost, estimates, forecasts, and scenarios; every projection has an understandable target period; company-context claims remain traceable; missing data does not appear as zero; unsupported requests return a useful limitation; and an unavailable forecast leaves measured spending and budget review usable. The saved finance explanation must refer to the projection actually reviewed rather than silently substitute a later result.
+The [acceptance map](forecasting-research/acceptance-matrix.md) links 30 requirements to fault suites and later test evidence. The [206-case register](forecasting-research/edge-case-register.md) specifies detection, response, assertion, owner and residual limitations. Every implemented capability must have actual verification; unsupported capabilities must fail clearly.
 
-**Priorities, open decisions, and hackathon delivery**
-
-Preserve a clear research question, honest evidence, usable handoffs, and the connected finance journey. Cut unsupported breadth, extra cost sources, and speculative forecasting-agent capabilities before overstating results. A finding that the evidence is insufficient or does not demonstrate improvement is a valid research result and must be presented plainly.
-
-Open choices include the available real dataset, supported target quantity and cost categories, horizon, refresh cadence, baseline, models, algorithms, evaluation, uncertainty, and numerical use of contextual signals. Internal budget units and exact shared examples require coordination with other owners. This intermediate plan leaves those choices open for subsequent research.
-
-Cal Hacks 13.0 runs October 23–25, 2026, with roughly 36 hours to build. Hyphenate seeks a narrow finance role with accountable decisions, messy-source handling, and a memorable catch or explanation. Provide code, a live demo, a video opening with the key moment, a one-line role statement, and a clear real/simulated distinction; judges may supply another scenario. Factory requires meaningful TypeScript or Python Droid SDK use inside the running product and a README explanation of that contribution. Forecasting complements its context interpretation and finance assistance without requiring Droid to implement the numerical method. Microsoft emphasizes a complete useful customer workflow, measurable value, responsible design, and a production path; the supplied descriptions do not mandate Azure or a Microsoft model.
-
-Teams have one to four registered members, with teammates listed on Devpost; projects must begin during the event and participants must comply with the MLH Code of Conduct. Submission is Sunday, October 25, at 9:00 AM Pacific. Prepare for the 10:30 AM–12:30 PM in-person judging window with the full team present and a concise live pitch. Confirm final submission details; unspecified video length, repository visibility, and track-stacking rules remain unestablished.
+The fresh-context, isolated-worktree implementation now supplies the supported core, actual numerical candidates/evaluator, durable source and result stores, scenarios and consumer reference workflows. Start with the [runnable implementation](../README.md), [executed software verification](implementation/verification.md), and [capability/requirement ledger](implementation/requirements-and-capabilities.md). The [implementation handoff](forecasting-research/implementation-handoff.md) and [research verification record](forecasting-research/verification.md) remain provenance for the earlier research-only checkpoint. Representative enterprise validation, prospective outcomes, live provider/Factory integration and production deployment remain evidence-blocked; fixture passes do not establish those gates.

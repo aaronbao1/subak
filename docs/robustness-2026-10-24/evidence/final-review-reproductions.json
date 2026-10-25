@@ -1,0 +1,76 @@
+{
+  "multi_axis_actuals": {
+    "expected_team_recorded": "300",
+    "actual_entities": {
+      "228058cc3b94d96b53da0be55ad69c470844a7d3a77e3c584dd236d5f194584c": {
+        "daily": null,
+        "future": null,
+        "recorded": "180"
+      },
+      "51805841f0557b8a6aab1c522ad7364b6f73815ea83823a3845359073fa5639f": {
+        "daily": null,
+        "future": null,
+        "recorded": "120"
+      },
+      "team:a": {
+        "daily": {
+          "2026-09-30": "5",
+          "2026-10-01": "5",
+          "2026-10-02": "5",
+          "2026-10-03": "5"
+        },
+        "future": "20",
+        "recorded": "0"
+      }
+    },
+    "company_mean": "320"
+  },
+  "ambient_decimal": {
+    "default": {
+      "usage": {
+        "mean": "20",
+        "threshold": "19.99",
+        "exceedance_probability": 1.0,
+        "expected_excess": "0.01"
+      },
+      "monetary": {
+        "mean": "23",
+        "threshold": "22.99",
+        "exceedance_probability": 1.0,
+        "expected_excess": "0.01"
+      }
+    },
+    "precision_3": {
+      "usage": {
+        "mean": "20",
+        "threshold": "19.99",
+        "exceedance_probability": 1.0,
+        "expected_excess": "0"
+      },
+      "monetary": {
+        "mean": "23",
+        "threshold": "22.99",
+        "exceedance_probability": 1.0,
+        "expected_excess": "0"
+      }
+    }
+  },
+  "ambient_rounding": {
+    "ROUND_DOWN": "0.66666666666666666666666666666666666666666666666666",
+    "ROUND_UP": "0.66666666666666666666666666666666666666666666666667"
+  },
+  "structural_entity_bound": {
+    "configured_max_entities": 2,
+    "generated_entities": [
+      "x",
+      "y",
+      "z"
+    ]
+  },
+  "structural_work_bound": "Accepted through all pre-generation checks: 1e9 paths * 3 days * 10000 roots. Sentinel stopped before allocation.",
+  "derived_overflow_isolation": {
+    "raised": "ContractError",
+    "message": "nonfinite derived total",
+    "actuals_response_returned": false
+  }
+}

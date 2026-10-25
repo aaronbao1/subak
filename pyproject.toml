@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evidence-forecasting"
+version = "0.1.0"
+description = "Versioned, evidence-bound enterprise cost forecasting reference implementation"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+models = ["numpy==1.26.4", "scipy==1.13.1", "scikit-learn==1.6.1", "joblib==1.5.3", "threadpoolctl==3.6.0"]
+test = ["pytest==8.4.2"]
+
+[project.scripts]
+forecasting = "forecasting.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"

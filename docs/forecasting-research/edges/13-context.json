@@ -1,0 +1,122 @@
+[
+  {
+    "id": "13-E01",
+    "family": "context_as_of_and_supersession",
+    "scenario": "A research expansion was approved before the origin, postponed afterward, and the latest document has overwritten the old revision.",
+    "mechanism": "A current summary retroactively removes the old plan from a historical backtest or leaks the later postponement.",
+    "detection": "Audit source-version availability and assertion system-time intervals against origin; check snapshot hashes.",
+    "response": "Replay only eligible versions; retain separate current corrected view and original forecast record; flag unavailable historical versions.",
+    "test_assertion": "At the earlier origin the forecast sees the approved expansion and not the later postponement; after the change it sees both provenance and the supersession.",
+    "residual_limit": "Sources without version history cannot support an honest historical deployed-system replay.",
+    "owner": "Backend context ingestion; Factory assertions; forecasting evaluation",
+    "requirement_source": "Master plan §2 superseding research example and §4 versioned context; Factory context boundary"
+  },
+  {
+    "id": "13-E02",
+    "family": "approval_execution_and_date_uncertainty",
+    "scenario": "An approved evaluation push says next sprint, while staffing approval is pending and the sprint calendar changed after publication.",
+    "mechanism": "Approval is converted to certain execution on a falsely precise current-calendar date.",
+    "detection": "Check separate approval/execution states, dependency claims, relative-date reference version and date precision.",
+    "response": "Preserve unresolved interval and dependency; expose delayed/on-time scenarios unless empirically calibrated execution model exists.",
+    "test_assertion": "Approval alone never sets executed=true or event_probability=1; changing today’s calendar does not alter old resolved dates.",
+    "residual_limit": "Even correct approval and calendar evidence cannot establish future completion.",
+    "owner": "Factory extraction; forecasting scenarios",
+    "requirement_source": "Factory distinguishes approved plans, informal suggestions and cancelled projects; master §2"
+  },
+  {
+    "id": "13-E03",
+    "family": "duplicate_evidence_and_shared_capacity",
+    "scenario": "The same research launch is forwarded into three team channels, each with a different project alias, while all use the same evaluation staff.",
+    "mechanism": "Duplicates become independent events/corroboration and additive work exceeding shared capacity.",
+    "detection": "Track quoted-parent IDs, semantic event aliases and overlapping staff/workload dependencies.",
+    "response": "Canonicalize one event with multiple references and affected teams; preserve capacity-coupled scenarios; retain truly independent evidence.",
+    "test_assertion": "Adding forwarded copies leaves event count, execution weight and total incremental scenario unchanged; independent distinct projects remain distinct.",
+    "residual_limit": "Undocumented shared-resource constraints may remain unknown.",
+    "owner": "Backend provenance; Factory entity resolution; forecasting effects",
+    "requirement_source": "Master team/project context; transcript firm-wide communications hypothesis"
+  },
+  {
+    "id": "13-E04",
+    "family": "partial_supersession_and_authority",
+    "scenario": "A newer informal message delays a product launch but an approved plan retains the research-evaluation schedule in the same document.",
+    "mechanism": "Latest-wins resolution erases all prior fields or treats informal discussion as authoritative cancellation.",
+    "detection": "Compare supersession claim scope, author authority, modality and explicit references; surface conflicting evidence.",
+    "response": "Supersede only supported fields; retain unresolved alternatives for remaining dates and claims.",
+    "test_assertion": "Launch timing changes only when supported; unrelated evaluation facts survive; recency alone cannot set approved status.",
+    "residual_limit": "Authority may be genuinely unclear and require review.",
+    "owner": "Factory interpretation; backend ledger",
+    "requirement_source": "Master approved/newer superseding example and Factory conflicting-date requirement"
+  },
+  {
+    "id": "13-E05",
+    "family": "context_double_count_and_price_basis",
+    "scenario": "An evaluation push has already raised observed tokens; a plan also announces a cheaper model migration with uncertain contract applicability.",
+    "mechanism": "Forecast adds the entire planned workload again and assumes public pricing applies to all tokens.",
+    "detection": "Compare event onset with observed baseline window; separate usage effect, model mix, effective contract price and reported charges.",
+    "response": "Estimate only incremental effects conditional on existing history; carry price alternatives separately and preserve unknown contract basis.",
+    "test_assertion": "Replaying the same event after observed execution does not apply a second full uplift; price scenario never rewrites measured usage.",
+    "residual_limit": "No causal counterfactual is observable for a single event; effects may remain scenario-only.",
+    "owner": "Forecasting; pricing contract; Factory provenance",
+    "requirement_source": "Master §2 usage/cost distinction and context is not a token multiplier"
+  },
+  {
+    "id": "13-E06",
+    "family": "retrieval_cancellation_and_access",
+    "scenario": "A cancellation in a restricted attachment is omitted while many accessible expansion messages rank highly; access is later revoked.",
+    "mechanism": "Top-k retrieval manufactures one-sided support; stale cached summaries disclose now-ineligible text.",
+    "detection": "Evaluate decisive cancellation recall, version-chain/attachment expansion and permission-filtered cache dependency invalidation.",
+    "response": "Represent coverage gaps; check authorization on evidence use and display; do not treat inaccessible evidence as absence of cancellation.",
+    "test_assertion": "An authorized replay retrieves the decisive cancellation despite distractors; revoked evidence and derivatives are not exposed to unauthorized users.",
+    "residual_limit": "Authorization boundaries can prevent full truth; forecasts must express limited context coverage.",
+    "owner": "Backend authorization/retrieval; Factory context",
+    "requirement_source": "Backend authorization ownership; master evidence inspection and uncertainty"
+  },
+  {
+    "id": "13-E07",
+    "family": "prompt_injection_and_fake_approval",
+    "scenario": "A project document embeds instructions to ignore prior constraints, invent high-confidence costs and apply a budget transfer, alongside legitimate plan text.",
+    "mechanism": "Retrieved evidence is promoted to instructions or action approval.",
+    "detection": "Adversarial documents; action audit tracing user authorization separately from document content; compare extracted claims with spans.",
+    "response": "Treat document commands as data; schema-restrict extraction and scope tools; backend requires finance authorization independently.",
+    "test_assertion": "Document can be quoted or flagged but cannot change permissions, suppress uncertainty or create/apply a budget mutation.",
+    "residual_limit": "Text-only mitigations cannot certify complete prompt-injection resistance.",
+    "owner": "Factory runtime; backend action authorization",
+    "requirement_source": "Factory scoped tools and finance review; master internal allocation boundary"
+  },
+  {
+    "id": "13-E08",
+    "family": "oracle_and_parametric_knowledge_leakage",
+    "scenario": "Historical documents are eligible by date, but today’s retriever selects them after viewing the target spike and the LLM remembers a public launch outcome.",
+    "mechanism": "As-of content filtering hides selection lookahead and knowledge contamination.",
+    "detection": "Freeze retrieval queries before outcomes; compare prospective private holdouts, model-cutoff cohorts, identity/date sensitivity and oracle labels.",
+    "response": "Keep realized-future effects in explicitly diagnostic oracle lane; prohibit live browsing in replay; log full retrieval/model snapshot.",
+    "test_assertion": "Ordinary forecast features and selection never read post-origin outcomes; oracle results cannot be reported as deployable accuracy.",
+    "residual_limit": "Unknown pretraining content prevents definitive contamination certification from dates alone.",
+    "owner": "Forecasting evaluation; Factory retrieval",
+    "requirement_source": "Mentor representative-data/backtesting concerns; research brief as-of requirement"
+  },
+  {
+    "id": "13-E09",
+    "family": "confidence_semantics_and_correlated_events",
+    "scenario": "Factory assigns 0.95 confidence to an accurate approved-plan extraction; forecast treats it as execution probability and sums event P90 costs across a shared delayed platform migration.",
+    "mechanism": "Different probability meanings are conflated and dependent marginal quantiles are added.",
+    "detection": "Typed confidence fields with calibration provenance; inspect joint dependency scenarios and distribution aggregation.",
+    "response": "Keep extraction quality distinct; use calibrated execution models or unweighted named scenarios; aggregate joint sample paths when supported.",
+    "test_assertion": "Extraction confidence cannot enter execution probability without an explicit validated mapping; aggregate P90 is computed from joint totals, never sum of marginal P90s.",
+    "residual_limit": "Small event samples may not support calibrated joint probabilities.",
+    "owner": "Forecasting uncertainty; Factory signal schema",
+    "requirement_source": "Master uncertainty; research brief generated confidence and quantile constraints"
+  },
+  {
+    "id": "13-E10",
+    "family": "documentation_shift_and_false_semantic_lift",
+    "scenario": "A team starts posting detailed weekly plans during an AI-adoption rollout; a model learns message counts and current team names, then is deployed on a quieter team after reorganization.",
+    "mechanism": "Text availability, adoption trend and entity identity confound learned embedding/event effects.",
+    "detection": "Time/company/project holdouts; matched shuffled-text and document-volume ablations; effective-dated team mappings; missing-context indicators.",
+    "response": "Retain numeric/calendar/staffing comparator; require semantic value beyond communication volume; use context-coverage state and fallback.",
+    "test_assertion": "Semantic model claims are rejected if gains persist with shuffled content alone; old events keep historical attribution after team renaming.",
+    "residual_limit": "Observational data may not identify causal event effects even when predictive lift is real.",
+    "owner": "Forecasting evaluation; backend identity history; Factory extraction",
+    "requirement_source": "Transcript team/individual and firm-wide data hypothesis; master team attribution and coverage"
+  }
+]

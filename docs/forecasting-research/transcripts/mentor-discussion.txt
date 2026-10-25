@@ -1,0 +1,167 @@
+Meeting Title: Token spend forecasting ideas
+Date: Oct 23
+Meeting participants: Erfan Kaden Ballew
+
+Transcript:
+Speaker A: Are you with hyphenate, bro? 
+Speaker B: I'm not gonna lie. 
+Speaker A: Can we talk to you about our project and hear what your thoughts are? No worries. I can get you a charge if you need. Got you got. 
+Speaker B: What's your name? 
+Speaker A: Heck, yeah. Nice to meet you. Airfon. Airfon. You guys have been swarmed, huh? Everybody's coming to talk to you about the tracks and stuff. 
+Speaker C: There you go. 
+Speaker A: Well, you might want to attach it to the brick because I think it'll charge significantly faster. No, yeah, there you go. 
+Speaker D: Yeah, 
+Speaker A: Straight from the source. You work out of SF or. Wow. Nice. She flew all the way down here. That's awesome. Beautiful. All right, so let's talk to us about our idea. So at our core, what we're looking at is helping FP and A teams with accruals and projecting token spend. We realize that like a lot of companies, for example, Uber being a great use case, they blew like their whole 12 month projection of tokens in four months. So clearly there's like some mismatch of. Yeah, it's projecting how much people will spend. So there's the actuals and then there's like your projections. 
+Speaker C: Right. 
+Speaker A: And I think with the FP and a, those entire core is like reconciling that. Right. So if we have a better process of correctly projecting how much people will spend, we have a more complete like, forecasting of what it will be. And then there's less of that job of having to do like the not only going back, but also going back and saying, what are the differences? But it's also a better projection so that managers know how much they're allowed to spend and just makes that process a little bit easier for them. 
+Speaker B: There are some tools available to track token spend. The biggest problem is as new models come out, as firms increase the pace of adoption and innovation, the rate of token spend, especially on a team basis, as they're doing different things, it's going to change dramatically. Right. And so the goal is that, let's say you have like 100,000 credits, right. Allocated for the token. Yeah. 
+Speaker D: Okay, so suppose like I'm Hai Finance and I use a law firm, right? And this law firm does my immigration. And suppose they do my immigration for an employee in the month of September, but they don't send me the bill until December. 
+Speaker C: Right. 
+Speaker D: Well, because the bill or because the service was done in September, I have 
+Speaker A: To write the like, accounts payable. 
+Speaker D: Exactly. I have to update the relevant tables to like, you know, yeah, our accounts payable table, accounts table, etc, in the month of September. This gets difficult because in the month of September they would not have sent us the bill. They may have sent it and they will send it in December. And there's all these like, different, like education that you can enumerate. Like, you know, some companies like in India, they have like gst, which is like sales tax for some stuff they 
+Speaker B: Will like 
+Speaker D: Crew like for an amount of that is the bill plus the sales tax. And for some other items like for food, they want to get reimbursed. And so they, or they don't want to get reimbursed, but for office items like computers, they, they do want to get reimbursed. 
+Speaker C: Correct. 
+Speaker D: And so they will crew different amounts based on like, are they going to add the GST or not at the gst. And so like, it's not so much like you could think about like projection in one sense, but more just like at the end of September, we, we check like, okay, did we get the bill? If so, we update the relevant tables with that exact amount. And if not, we need to estimate what this bill would have been. Yeah, yeah, it's not, it's not exactly like at the start of the year we need to expect what the bill for like some think of September would be. It's more just like, no, once like September comes and we have a service in September, we wait until the end of the month, we see, oh, did we get a bill? No. Let me just make up a number for what it could have been. 
+Speaker B: Like what we were thinking is when we saw the track description, it was like you pick like some company, right, and you automate some aspect of their financing. 
+Speaker D: Right? 
+Speaker B: So we're thinking specifically for like tech companies, big tech, like Frontier Labs, automating the part of the finance team that has to like, budget for token spending and manage financing. And specifically we want to build like forecasting models. Like combine a lot of time series and like macro forecasting methods to try and predict like both on an individual like suite or researcher basis and then on a team basis. Like not super, super granularly but like maybe like on a every few days or week or month level what like the token spend might look like and then like what the error rate would be. And then like this may prove how good the content. 
+Speaker A: You're talking specifically for this hackathon. 
+Speaker C: Or just like, okay, it's not going 
+Speaker D: To like perfectly mint, like, look, I'd be really impressed by you guys if you had like a really, really good model. 
+Speaker B: Right? 
+Speaker D: It's like hard for me to like actually filter for how good your model is because you're going to be back testing out on data that doesn't represent the complexities that we're going deal with. 
+Speaker B: What would be like something that you 
+Speaker D: Would take as like a robust enough evidence, at least like proven concept? A lot of stuff. I mean it's like, I mean couldn't 
+Speaker B: We technically, I mean I don't know 
+Speaker D: If we could stumb out, find some past companies financial data, use that as actual like companies have different like the data within companies is different. Like what if you need to, what if you find out that you need to build different models for different companies, right? Yeah, like seasonality. 
+Speaker B: Yeah, like what we were thinking is 
+Speaker D: Like, like what if you build like 
+Speaker B: An agent that for those like seeing a company's entire data that's part of building a specific model for that's like, 
+Speaker D: That's what we're thinking about doing. 
+Speaker B: It's like you can't exactly customize like different types of models like like on a company agnostic basis. So part of like the plan was like you have a agent be able to like ingest all the communications and planning. So like let's say we know this suite team has this like amount of work allocated in this project on these timelines and then we can kind of like guesstimate the token things and like it will be pretty coarse, like I can't lie but like it's better than whatever like the no forecasting that's out there right now. 
+Speaker D: I'll be impressed for this project if you guys can like think of like all the various edge cases that can happen and then like come up with like a really good 
+Speaker B: Like like edge cases. Like yeah, like I'm wondering like the 
+Speaker D: Happy cat, the happy tap and like simple here like okay, like I don't know like get a three month trailing average and then add some offer and then like okay, this is the investment. Like there can be like a lot of different education, right? Like who would have predicted like Jeff like three months ago, right? 
+Speaker B: Yeah. 
+Speaker D: Who's going to predict if like some amount of like token spent in these companies is not going to be like there's a sizable percentage going to be taken up by Jeff for example. We should adopt Jeff quickly because there's no internal process at Uber. They have a lot of stuff, right, 
+Speaker B: Like adopting. I think the goal as well is like since it's a hackathon and we can't like be all this thing, we want to like find specific use cases where it's like usable and like I think like obviously predicting token spend like across everything like very, very accurately is like pretty hard. But like that's why we kind of want to find a unit of time that's like useful as well. Like maybe we don't even predict on a three month scale this is going to be this because we generally don't know what's happening on even a two month scale. One month, like on a three, four day, one week scale, like it could be pretty useless I think. And then like the other part of that is like we want to build like a more usable interface for the finance team to reallocate like, like token, like budget across different teams. 
+Speaker D: Right. 
+Speaker B: Say like, you know, I have 100,000 baseline. I like can like forecast. It doesn't have to be like super accurate, but I can forecast like very obviously team A is like going to double what they're supposed to have and team B is going to like fall under and I dynamically reality that like tell them with like agents and then like be able to do that through natural language like with the, through the interface. 
+Speaker D: Right. 
+Speaker B: For the, for the financing. 
+Speaker A: But head count is all things that are tracked. Like that's a very digestible number. Like we plan on basing that off of like individual user count and we can easily propagate into like even like so this person would have a different user count than this person. And as headcounts go through like each person is named in each company on like who their team is. So it's very easy to like accrue those numbers. 
+Speaker B: Like just because like we do need a company that's like pre centralized, pre like. 
+Speaker D: So how about you guys subset yourself to the distribution of customers that we 
+Speaker B: Get in your world? 
+Speaker D: Right? 
+Speaker B: Yeah, that's what we were thinking. Because also that they're probably like tech enterprises are like the subset of customers that would be most likely to have 
+Speaker D: Token spend as a big issue as well. 
+Speaker B: The other part of the idea is 
+Speaker D: Developers are in different regions. There's different like token. 
+Speaker C: Yeah. 
+Speaker A: I feel like for individual user it wouldn't be a problem even if they're in India or you know, China. 
+Speaker B: What's your opinion on like how robust should it be versus like how much rubber? Just like, because it is like 36 hours. 
+Speaker D: Right. Well I'm gonna, I'm not gonna index as much on the demo itself. This is like a research disk problem. And so I'm just gonna like index on how thought out this is. Like if you like literally thought like everywhere could go wrong. Yeah, designer robustness. I'm like. Because it's like a thinking thing. Like there's less of like an actual like project. Like sure, the private space is like there. But like actually we made like the bottom like a lot of construction. I'm doing more index for like the really high quality thinking that needs to go into this. 
+Speaker B: Yeah, we were thinking it's more of a combo too because like it's like for the FPNA and finance team, it's like the interface is really important, right? Yeah, it's like they're not really able to access the token spend. Like if it's very technical as well is like this particular barrier there. The other like more like moonshotty like case that we're thinking of is like I feel like enterprises are probably going to start adopting like more like whereas like agent storms previously are like very like very quickly. Like in these formalized policies, right. Where you have like orchestra agent that delegates sub agents. It's like a very like strict like organizational structure. Like like you're like okay, I have project, but I think it's gonna get dropped more widely. You have these like flat structures of base forms and then they figure out organization. Yeah, exactly. Right. They figure out like organization themselves and they have communication. 
+Speaker D: Right. 
+Speaker B: And so the other idea is right now like even token spend, self reg. Like agents are really, really bad at their own token spend. And then also like eventually when you have these agent forms running like as autonomous games, you just give them like high level direction and you have to do like long horizon task and goals. 
+Speaker D: Right. 
+Speaker B: They also need some way to like budget their own token spend and allocate to sub agents and then also like allocate like, like, like budget among each other. Right. 
+Speaker D: So we're fig. 
+Speaker B: We're thinking about figuring out the risking like infrastructure and like setting up infrastructure to track for them as well. Like probably has to be like somewhat rudimentary because it's like a pretty involved problem. But we were thinking about this as 
+Speaker D: Like some feature as well and asked for like okay, how long will it take me to like execute this project? 
+Speaker B: Yeah, like right now when it comes 
+Speaker D: Up with the numbers like coming up with like what like one month or something. Because it's like how human data it's using and then like seeing what humans are successfully like a lot of stuff doesn't have like a sense of time, right? 
+Speaker B: Yeah. 
+Speaker D: Itself predict if it can do a task in one hour or not. 
+Speaker B: Oh like not, not forecasting like completion side. It's just like 
+Speaker D: If it can't forecast how much time. How can it like tokens is equivalent or like one to one with like how much computing. 
+Speaker B: Individual usage. Yeah. So like this is like a considerably harder problem. So what we're thinking for this is less on the forecasting aspect because like I think it might carry over somewhat. Very, very like drawn. Right. More on like okay, the FPA managers or the finance team is already going to have this interface to manage the token and compute span of like human team. Just give it like a like another T that lets it like manage like agent and have the agent be able to request more kind of like that. That makes sense. I don't know if that's like it's more like trying to abstract this interface and like this like general tokens type stuff into a way that the final. 
+Speaker D: Expects it to be finished about 100% for some reason like the agent just does something wrong. 
+Speaker B: Yeah. So like figuring out. 
+Speaker D: Maybe just having like the high level, 
+Speaker B: You know, you have like the agents want to communicate themselves. And like being able to cut it off. 
+Speaker D: You don't have to introduce like okay, how would she have eval this and everything? Would you have like offline evals or like online evals here as well? Like, like yeah, how you going to health prime your agent on these like evals? How do you come up with the data for this? Right. 
+Speaker B: Yeah, yeah. Wait, wait, are you saying evals efficacy of forecasting the like token spend of the agencies? 
+Speaker D: Like how performant is that? 
+Speaker B: Yeah, we were thinking like, like, like, like way, way more high level. I can't lie. Like I don't think we can get very granular with this because I don't think the capabilities are there. It's not like we can release a recent. 
+Speaker D: Yeah, I think anyone will be able to like you know, come up with 
+Speaker B: Like the idea of a solution here, 
+Speaker D: But then like actually coming up with like a really well thought out like implemented something like obviously I'm not expecting something to be implemented but more just 
+Speaker B: Like, like even the architecture. 
+Speaker D: Deeply about the architecture. 
+Speaker B: Yeah, like a lot harder. Like a lot more unsolved. 
+Speaker D: Not like unsolved. It's just like a really unbounded space. So it's like difficult to define. 
+Speaker B: Like I think so we're gonna start with the other half of like forecasting like human T spent and then also. Yeah, yeah, yeah. Oh, you don't, you don't think it's worth doing. 
+Speaker D: I just think these are too many big problems on their own. 
+Speaker B: Yeah. 
+Speaker D: And I think it's easier like I'd be more impressed if you solve one problem really, really high quality and then you two. 
+Speaker B: Yeah, I get your point. Like, we're thinking like, because it's like fundamentally the same concept. If we can like, like this is like a area that's expanding and like it's like so fun like six months out from like being like implemented. So like if you still just have like the very like abstract version of like, okay, you can gently manage and like let them communicate. 
+Speaker D: Codex Ultra introduced the H, right? Like with your forecast, like, okay, forget earlier that you said you'll sub to your podcasting model type week out. Yeah, it's like, okay, you do more conditioning there. The less useful the model becomes, right? Like in a perfect world we just have it forecast like 10 years out. That's amazing, right? Like you're now decreasing the usefulness of it. It's like, look, if you didn't do that, like would you have predicted that like Codex will come out with Ultra and this ultra mode will use like various sub agents. How do you like predict like what the next model price table? 
+Speaker B: We're not trying to do that. I think like, so one idea that we had is that we can like this is like pretty like poor skill. But like what we can do is we can look at like the distribution of like model intelligences that people are using like on a developer by developer basis. Like using like Haiku equivalent, Sonic equivalent focus and table. You look at the distribution and you can kind of like see how that's changing. Like, and then once it changes, like there's like a paradigm shift. You can also like, or when a new model releases, you just put the updated like cost metrics. Right? And like obviously like we can't predict new model releases and new capabilities, but like this will give you like I think within a week or within like two weeks as people catch up, like drop the new models features. 
+Speaker D: It'll like give you a good skill stable, mostly comp to 90% the performance of Fable. But like cheaper prices. 
+Speaker B: Right? 
+Speaker D: Will your forecasting model like count for if Uber is going to start using the. The cheaper hoping for alternative. 
+Speaker B: Like again like as you like pointed out, like, enterprises are also the subset of enterprises that we're targeting which is like big tech or like substantial. Like very, very like 
+Speaker D: Or like something like Uber as well. 
+Speaker B: But like cross company adoption is like my point is cost. Company adoption is like there's some delay which will let us like have some new way to like, like adopt adapt models. 
+Speaker D: Right? But what if like some change Whether like msl like at Facebook. 
+Speaker B: Yeah. Yeah. 
+Speaker D: You're not gonna like forecast. Yeah, I guess you hear what they said. 
+Speaker B: I'm not, I feel like I'm not that concerned with like open source models becoming the norm. Cuz like I don't think as far as I know enterprise big like big enterprises haven't like switched that often just because they know new model is going to release like on like either end. I mean like the goal for us isn't to like predict like the landscape of model ship. 
+Speaker D: It's just like predicting to do localized. 
+Speaker B: We don't want to do like one, two, three months out. We want to do like localized like optimize their like allocation of resources. It's like we're not trying to predict like the updated landscape of like model releases and like how like you know the entire company is going to change. We're just like trying to like figure out token spend like as like as soon as like a new like team like adopts like a new like set of models. Like like we're doing it based on paradigm shifts. Paradigm shifts don't happen like that that often. Yeah. Yeah. But there's like a pace of adoption. 
+Speaker D: Yeah. 
+Speaker B: Still. Right. That's like gives us like a few 
+Speaker D: Weeks a little bit. A few weeks is good enough to 
+Speaker B: Have enough data to like you know, locally optimized value at least. I don't know one of the CEO 
+Speaker D: Of a company switches and they start reducing a lot of like various. 
+Speaker B: Yeah. You're like really think these are like edge cases that we all have to like consider though. Because like obviously like the main case 
+Speaker D: Seems a lot more trivial to me. Like I'd only be deeply impressed if 
+Speaker B: You like in the architecture. I think we like we have some ideas on how to start. I think these are like good like things for us to consider too. 
+Speaker D: Like one of those like question is like you're familiar with like a normal distribution, like a multi normal distribution. There's just like a lot of distributions that you're going to have to model directly for every single parameter within a model. 
+Speaker B: But like as you say yourself there's too much like paradigm disruption now. So like can you really trust like hill climbing? Yeah, like that's why we're like honestly think like obviously like we've gone down from like three month on like pretty paradigm shifting. I'd be surprised if like 
+Speaker D: A few 
+Speaker B: Weeks all the enterprises are too swapped. The bulk of like Google's new teams are not going to be able like adapt. Yeah. I think like what we're trying to build that this actually is like a starting point. Like I think I agree that we have to account for education because education 
+Speaker D: Are inherent in this problem. 
+Speaker B: But 
+Speaker D: Why should we call it history? 
+Speaker B: Yeah. 
+Speaker D: Yeah. 
+Speaker B: Yep. But like I still think it's probably like no matter what if we account for like a good portion of those guest cases. Like no matter what the outline is, it's like it's still valuable on a one month scale, you know, and like one month is like 
+Speaker D: Constrain the prologue however you want. 
+Speaker B: Yeah. Do you think we should just avoid doing. 
+Speaker C: Wait? 
+Speaker A: I think clearly if we could actually have the case where we know like how much tokenization is and we can actually forecast it perfectly, that's great. 
+Speaker C: Clearly. 
+Speaker A: I think my question to you is, do you think that's even like possible? Like do you realistically think. Do you think it's possible? Sure. You think our core idea is good? No, I get what you're saying. 
+Speaker B: Focus on. Because I think we can like do like a pretty good job just like. Again, like a course like. Very high level management is still better than like. 
+Speaker C: Okay, yeah, 
+Speaker B: So we'll see. I guess like full budget. 
+Speaker C: All right. 
+Speaker D: What are your. Any. 
+Speaker B: Any like. 
+Speaker D: Any other advice? 
+Speaker B: It's like. 
+Speaker D: Yeah, so it's like if you came to me, you're like, okay, I'll do a really good option pricing model. Like sure, 
+Speaker C: Yeah. 
+Speaker D: Even then it won't be perfect. But like prove to me like you like thought out. It can be very defensive if I r something you the same want to depend. 
+Speaker C: Okay. 
+Speaker D: Make sure to constrain your problem because like if you don't constrain yourself to enterprise, then I'm going to give you. 
+Speaker B: Yeah, yeah, yeah. 
+Speaker D: Okay. 
+Speaker B: Like make that explicit. 
+Speaker D: Yeah, like you have to define the problem that you're solving. Right. 
+Speaker C: A couple of them. Okay, got it. 
+Speaker A: Thank you, Abdul. 
+Speaker C: Really appreciate it. Great, great to meet you. I'm sure he'll be fine without it. Okay, sounds good. All right, thank you, my man. Yeah, it's his phone. I don't know why. Yeah, no, I don't know why. I don't think so. You would see the light on. Where did he go? He was just around here. I don't know why he put him up. Dude. Wait, I won't. Like, he is. 
+Speaker A: He's a very. 
+Speaker C: He is. He. Wait, there's Ethan. 
+Speaker A: Ethan. 
+Speaker C: He judges differently than any hackathon judge I've ever seen though. What's up, bro? Really? No. Bunny heaven. Oh, oh. Sigma Kappa. Is that actually what. Yeah, we were behind you yeah, we're going back, like, now. Yeah, we gotta go quick, though. Jim closed at 10. Not the gym, close at 10. Everyone. Are. Are these recording? Oh, wait, the light's not on, surely. 
+Speaker B: Oh, 
+Speaker C: Wait. 
+Speaker A: He judges differently than any. 
+

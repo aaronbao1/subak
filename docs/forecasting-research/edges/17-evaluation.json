@@ -1,0 +1,122 @@
+[
+  {
+    "id": "17-E01",
+    "family": "evaluation-time-travel",
+    "scenario": "A retroactively dated research cancellation and corrected provider bill arrive after the forecast origin, but a current-state backtest uses both.",
+    "mechanism": "Event date is mistaken for availability date; revised context and charges make history appear easier than deployment.",
+    "detection": "Compare input manifest against immutable ingestion/publication/version availability; perturb later revisions and compare the earlier snapshot hash.",
+    "response": "Replay only versions visible at the origin; retain later outcomes solely in the versioned label store.",
+    "test_assertion": "Proposed test: adding a later document or bill revision leaves every earlier forecast input snapshot and issued result unchanged while updating only eligible label vintages.",
+    "residual_limit": "Historical snapshots absent from the source cannot be recovered faithfully; mark replay eligibility unknown rather than reconstruct certainty.",
+    "owner": "Evaluation harness and ingestion",
+    "requirement_source": "Master plan spending/context evidence; backend distinct versions; internal transcript rolling backtests"
+  },
+  {
+    "id": "17-E02",
+    "family": "evaluation-label-maturity",
+    "scenario": "High-spend teams have longer invoice delays, so only quiet teams have settled labels when a candidate is scored.",
+    "mechanism": "Complete-case scoring selects easy cases and implicitly converts pending labels into non-events.",
+    "detection": "Scheduled-origin ledger reconciles mature, pending, disputed and missing labels; compare origin-known spend/coverage across label states.",
+    "response": "Publish maturity coverage and delay strata, wait for declared settlement or report restricted support; keep residual revision sensitivity.",
+    "test_assertion": "Proposed test: delaying high-spend labels reduces reported label coverage without changing pending labels to zero or claiming full-population superiority.",
+    "residual_limit": "Unknown outcomes prevent a definitive full-population accuracy estimate; weighting cannot identify missing-not-at-random labels without additional assumptions.",
+    "owner": "Evaluation and financial reconciliation",
+    "requirement_source": "Master plan coverage and unavailable states; backend incomplete data acceptance checks"
+  },
+  {
+    "id": "17-E03",
+    "family": "evaluation-overlap-dependence",
+    "scenario": "Daily 30-day forecasts for many teams all capture the same company-wide evaluation burst, creating thousands of apparently independent successes.",
+    "mechanism": "Overlapping target windows, shared horizon outcomes and common company shocks collapse effective independent support.",
+    "detection": "Report distinct companies, settled periods, non-overlapping blocks and episodes alongside raw rows; inspect loss-difference dependence.",
+    "response": "Use paired company/time-block uncertainty with block sensitivity and per-company results; qualify unsupported population inference.",
+    "test_assertion": "Proposed test: duplicating teams or shifting overlapping origins cannot increase distinct company/event support or produce an iid-row confidence claim.",
+    "residual_limit": "Few independent companies or events can leave uncertainty large even with extensive time series.",
+    "owner": "Evaluation statistics",
+    "requirement_source": "Master plan company/team scope and no invented accuracy claims"
+  },
+  {
+    "id": "17-E04",
+    "family": "evaluation-cross-tenant-leakage",
+    "scenario": "An unseen company is a rebranded subsidiary of a training tenant, and its workload also appears under a shared API project.",
+    "mechanism": "Entity identifiers differ while underlying labels/documents are duplicated, defeating a nominal leave-company-out split.",
+    "detection": "Split-lineage audit of export hashes, provider-account lineage, organizational relationships and document duplication under authorized access.",
+    "response": "Group dependent entities before population splitting; quarantine ambiguous provenance from cold-company claims.",
+    "test_assertion": "Proposed test: aliases and shared workload exports must remain in one split group, with no held-out-derived fitted features in training.",
+    "residual_limit": "Undisclosed commercial relationships or foundation-model pretraining exposure may remain unknown.",
+    "owner": "Evaluation, tenant data governance and pooling",
+    "requirement_source": "Master plan explicit attribution and company evidence; authorized pooling constraint"
+  },
+  {
+    "id": "17-E05",
+    "family": "evaluation-selector-overfit",
+    "scenario": "A configuration agent repeatedly reads final-window scores, changes prompts and weights, and reports only its best seed after many costly failed trials.",
+    "mechanism": "Adaptive test reuse, hidden search budget and seed selection turn final evaluation into tuning.",
+    "detection": "Evaluation-access logs, immutable candidate/search manifests, full trial ledger and seed registry.",
+    "response": "Restrict search to development; evaluate the complete locked selector once on final data, account for all costs and require a new final window after redesign.",
+    "test_assertion": "Proposed test: an attempted final-label read during search is denied or marks the evaluation contaminated; all failed trials remain in cost accounting.",
+    "residual_limit": "Human researchers can also adapt to remembered final summaries; technical access controls alone do not repair organizational test reuse.",
+    "owner": "Evaluation and adaptive model-selection service",
+    "requirement_source": "Factory forecasting setup is research-dependent; no universal architecture claim"
+  },
+  {
+    "id": "17-E06",
+    "family": "evaluation-manager-target-mismatch",
+    "scenario": "A manager's annual budget request in internal credits is treated as a monthly expected-dollar forecast, then corrected downward using later revised actuals.",
+    "mechanism": "Target/function/unit mismatch and unavailable labels create a spurious personal overforecast-bias finding.",
+    "detection": "Require forecast purpose, unit conversion, target interval, point functional, original timestamp and settled-pair availability before comparison.",
+    "response": "Exclude incomparable entries from predictive bias estimation while retaining audit evidence; compare only matched forecasts and shrink weak corrections.",
+    "test_assertion": "Proposed test: a budget request cannot enter manager MAE/bias evaluation without an explicit predictive-target mapping; future revisions cannot train earlier corrections.",
+    "residual_limit": "Even comparable forecasts may reflect changed incentives or selective submission; predictive evidence is not a personnel assessment.",
+    "owner": "Evaluation and manager-forecast ingestion",
+    "requirement_source": "Internal transcript manager historical-bias idea; master plan unit distinctions and internal allocation semantics"
+  },
+  {
+    "id": "17-E07",
+    "family": "evaluation-warning-label-drift",
+    "scenario": "A warning prompts finance to add internal funds, after which the benchmark relabels the original warning as a false alarm because the revised budget was not breached.",
+    "mechanism": "Post-forecast budget changes alter the target event and confound warning evaluation with decisions.",
+    "detection": "Compare breach labels against budget version captured in each origin manifest; trace later funding decisions separately.",
+    "response": "Score the original threshold event; evaluate decision outcomes in a separate versioned policy analysis without asserting provider-spend savings.",
+    "test_assertion": "Proposed test: increasing the later envelope does not change the origin-specific event label or erase the first-warning lead time.",
+    "residual_limit": "If decisions change actual usage behavior, causal no-intervention outcomes remain unobserved and need a separate design.",
+    "owner": "Evaluation, warning policy and budget ledger",
+    "requirement_source": "Master plan additions versus reallocations; frontend saved budget state and explicit finance decisions"
+  },
+  {
+    "id": "17-E08",
+    "family": "evaluation-abstention-gaming",
+    "scenario": "The candidate returns no forecast during provider outages and expensive bursts, while the baseline forecasts every scheduled case.",
+    "mechanism": "Conditional accuracy is compared on different denominators; missing/late outputs disappear and the candidate wins by refusing difficult cases.",
+    "detection": "Reconcile outputs with the immutable schedule and deadline; publish reason-coded availability and shared-case/full-service scores.",
+    "response": "Evaluate registered fallback and review/delay costs on all scheduled cases; retain conditional accuracy as a separate diagnostic.",
+    "test_assertion": "Proposed test: removing the worst predictions cannot improve an all-case service score without an explicitly charged abstention/fallback consequence.",
+    "residual_limit": "Actual review and delay costs must be elicited; without them report a frontier rather than a single utility winner.",
+    "owner": "Evaluation and forecast API availability policy",
+    "requirement_source": "Frontend unavailable forecasts remain visible; Factory remains useful without forecast; backend incomplete data"
+  },
+  {
+    "id": "17-E09",
+    "family": "evaluation-aggregate-calibration",
+    "scenario": "Daily team intervals appear calibrated, but their quantiles are summed into a company monthly interval while teams share a model-launch shock.",
+    "mechanism": "Marginal calibration and quantile arithmetic fail to preserve joint dependence or aggregate uncertainty.",
+    "detection": "Independently score realized cumulative and company targets; compare aggregation construction with joint sample/path contracts.",
+    "response": "Construct coherent aggregate distributions or calibrate aggregate targets directly; restrict unsupported aggregate-probability claims.",
+    "test_assertion": "Proposed test: a correlated-shock fixture invalidates naive quantile sums and requires separate cumulative/company scoring before interval promotion.",
+    "residual_limit": "Synthetic correlated shocks test mechanics, not the real frequency or severity of joint enterprise shocks.",
+    "owner": "Evaluation, probabilistic forecasting and reconciliation",
+    "requirement_source": "Master plan company/team comparison and supported uncertainty semantics"
+  },
+  {
+    "id": "17-E10",
+    "family": "evaluation-cohort-survivorship",
+    "scenario": "The final panel contains only currently active teams; dissolved research teams and canceled projects with large overruns were removed by today's team map.",
+    "mechanism": "Current organizational membership selects historical evaluation cohorts and rewrites ownership after outcomes are known.",
+    "detection": "Compare origin-scoped cohort membership and historical mappings with current entity records; audit removed/dissolved entities and mapping revisions.",
+    "response": "Keep every historically eligible scheduled scope under a declared historical or restated attribution convention, and report both when meaningful.",
+    "test_assertion": "Proposed test: deleting or renaming a current team cannot remove its earlier eligible forecasts/outcomes from the historical scorecard.",
+    "residual_limit": "Unavailable historical mappings may permit company-level evaluation while leaving team-level claims unsupported.",
+    "owner": "Evaluation and organizational mapping ingestion",
+    "requirement_source": "Master plan explicit team attribution, history, and evidence preservation"
+  }
+]

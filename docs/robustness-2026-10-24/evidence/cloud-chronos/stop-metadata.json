@@ -1,0 +1,20 @@
+{
+  "source_artifact": "artifacts/cloud-chronos-20261024/stop-result.json",
+  "source_sha256": "402df7431627e99e338453b2a7adc275c995788eb05f17aed5c9928140ef4d37",
+  "status": "stopped",
+  "persistent": false,
+  "vcpus": 2,
+  "memory_mb": 4096,
+  "region": "iad1",
+  "architecture": "amd64",
+  "image": "vercel/sandbox/universal@sha256:3190aee7b741f9912c41c03f28a102f56e5ee8591f2696a06ef811cf901df949",
+  "timeout_ms": 900000,
+  "duration_ms": 248359,
+  "active_cpu_duration_ms": 32431,
+  "network_transfer": {
+    "ingress": 346630646,
+    "egress": 478967
+  },
+  "started_at_epoch_ms": 1792888733000,
+  "stopped_at_epoch_ms": 1792888981359
+}

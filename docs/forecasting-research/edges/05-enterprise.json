@@ -1,0 +1,122 @@
+[
+  {
+    "id": "05-E01",
+    "family": "temporal_identity_transfer",
+    "scenario": "A worker transfers effective Friday; HR enters a correction the following Tuesday, after a Monday forecast, while a provider alias changes.",
+    "mechanism": "Joining present department or latest alias to historic usage moves cost and leaks a later correction into the forecast replay.",
+    "detection": "Compare membership valid-time and known-time boundaries; flag identity claims lacking evidence and overlapping active mappings.",
+    "response": "Retain both versions, resolve native IDs through dated identity assertions, freeze original forecast attribution, and expose a separately labeled restatement.",
+    "test_assertion": "Monday replay excludes the Tuesday correction; a current restatement may change team allocation while same-basis company total stays constant.",
+    "residual_limit": "Without source publication history, pre-connection knowledge cannot be reconstructed reliably.",
+    "owner": "Backend identity/history; forecasting feature assembly",
+    "requirement_source": "Master plan backend explicit mappings and source dates; mentor discussion lines 52\u201354 headcount premise."
+  },
+  {
+    "id": "05-E02",
+    "family": "leave_supersession_access",
+    "scenario": "An approved leave is later cancelled while integration permissions shrink, and a pending request is edited into a new ID.",
+    "mechanism": "An empty successful response is read as no leave; a stale original plus replacement can also double absence. Disappearing rows need not emit tombstones.",
+    "detection": "Track principal/scope changes, status/replacement IDs and visibility coverage; reconcile snapshots rather than treating cursor silence as completeness.",
+    "response": "Represent availability as unknown when coverage cannot be verified; use overlapping updates and current-state reconciliation without erasing old knowledge states.",
+    "test_assertion": "Permission loss cannot turn all affected employee days into certified full availability; a superseded request and replacement contribute at most one applicable absence interval.",
+    "residual_limit": "Reconciliation cannot always distinguish deletion from revoked visibility without independent access evidence.",
+    "owner": "HRIS connector; feature eligibility",
+    "requirement_source": "Master plan missing remains missing and context dates; 05-S03."
+  },
+  {
+    "id": "05-E03",
+    "family": "eligibility_charge_continuation",
+    "scenario": "An employee leaves, their seat has pending cancellation at cycle end, and a job they initiated keeps executing under a service account.",
+    "mechanism": "Headcount-based forecast sets all usage and fees to zero on termination, or counts ongoing job use as a new human seat.",
+    "detection": "Compare employment, entitlement, fee schedule, execution account and initiating run independently.",
+    "response": "Keep employed, enabled, billed and active exposure separate; continue known job/contract components using their own evidence and expiry.",
+    "test_assertion": "Termination does not erase fixed fees or already-running observed usage; employee absence is not used as evidence that service execution is impossible.",
+    "residual_limit": "Future job continuation and cancellation behavior remain uncertain without run-level telemetry and contract terms.",
+    "owner": "Ingestion identity/entitlement; forecasting components",
+    "requirement_source": "Master plan distinguishes subscriptions and usage; human-initiated agents in current research brief; 05-S08."
+  },
+  {
+    "id": "05-E04",
+    "family": "suppression_many_to_many_reorg",
+    "scenario": "A five-seat provider team loses a member, becomes suppressed, and remaining people belong to two teams while a rolling activity report is joined to current membership.",
+    "mechanism": "Suppression looks like activity cessation; many-to-many join duplicates activity; current membership reallocates the whole history.",
+    "detection": "Persist suppression rule and report-day grain; compute unmatched usage and join expansion; compare additive finance reconciliation separately from overlapping adoption analytics.",
+    "response": "Join compatible daily grains, retain unmatched amounts, and require an explicit finance allocation policy rather than summing overlapping team analytics.",
+    "test_assertion": "Crossing a source disclosure threshold does not create a certified zero; sum of allocated plus unallocated charges equals the source company total without double attribution.",
+    "residual_limit": "Suppressed source membership may be unrecoverable without an independent authorized membership source.",
+    "owner": "Provider connector; identity allocation; forecasting",
+    "requirement_source": "Master plan explicit team mapping, completeness and correct totals; 05-S07."
+  },
+  {
+    "id": "05-E05",
+    "family": "project_plan_state_leakage",
+    "scenario": "A project deadline moves after a forecast, its tasks are reparented across teams, and issue permissions hide some cancelled work.",
+    "mechanism": "Current due dates and assignees replace the as-known plan; incomplete issue scope is misread as reduced workload.",
+    "detection": "Require versioned milestones, issue-change coverage and project/issue access manifest; identify state fields newer than the forecast origin.",
+    "response": "Use known plan versions with stated approval/status and dated beneficiary links; disable affected work-mix features when scope completeness is unknown.",
+    "test_assertion": "Replay retains the deadline and project ownership known at origin; hidden issues create a coverage limitation rather than zero planned work.",
+    "residual_limit": "Even perfectly reconstructed issue states need not measure actual AI work intensity.",
+    "owner": "Project connector; Factory context; forecasting",
+    "requirement_source": "Master plan changed/superseded plan demo and no invented token multiplier; 05-S04."
+  },
+  {
+    "id": "05-E06",
+    "family": "procurement_revision_double_count",
+    "scenario": "A PO changes without a supplier-version increment, invoice-total is omitted by configuration, and the associated prepaid entitlement is already reflected in usage.",
+    "mechanism": "Version-only dedup misses the revision; missing invoice amount becomes zero; PO, invoice and included usage are summed as separate expenses.",
+    "detection": "Compare update time/internal revision and source payload hash; track requested/returned fields and links between contract, PO, invoice and entitlement.",
+    "response": "Model distinct procurement, obligation, usage and charge records; use an explicit monetary target basis and reconciliation, keeping unsupported invoice/contract facts unknown.",
+    "test_assertion": "A changed internal revision is retained even if supplier version is unchanged; omitted invoice-total is never zero-filled; matched included usage is not an extra charge.",
+    "residual_limit": "PO metadata cannot settle contract liability or accrual/cash timing without the executed terms.",
+    "owner": "Procurement ingestion; billing normalization",
+    "requirement_source": "Master plan subscription/included-use distinctions and internal planning scope; 05-S09."
+  },
+  {
+    "id": "05-E07",
+    "family": "calendar_resync_recurrence_timezone",
+    "scenario": "A recurring event exception is cancelled around a daylight-saving transition; ACL changes invalidate sync and a refresh replaces the cache.",
+    "mechanism": "Sparse cancellation is dropped, recurrence is expanded twice, or full-sync cleanup erases the evidence used by old forecasts.",
+    "detection": "Track recurring parent plus original occurrence key, source timezone, tombstones, snapshot generation and sync completion.",
+    "response": "Resynchronize the materialized cache while preserving immutable observation history; re-expand recurrence with source timezone and cancellation semantics.",
+    "test_assertion": "Exactly one applicable occurrence remains per recurrence key; cancelled exception contributes no planned event; old forecast evidence remains reproducible after resync.",
+    "residual_limit": "Events deleted before initial acquisition and unpublished revisions cannot be recovered from current calendars.",
+    "owner": "Calendar connector; evidence history",
+    "requirement_source": "Master plan preserve distinct context versions and source dates; 05-S10 and 05-S11."
+  },
+  {
+    "id": "05-E08",
+    "family": "shared_account_responsibility",
+    "scenario": "A product employee starts an agent under engineering credentials for research, billed centrally; that key also serves unrelated jobs.",
+    "mechanism": "One account-to-team map conflates initiator, executor, beneficiary and payer, assigning all spend to engineering or duplicating it across four views.",
+    "detection": "Record role-specific provenance; compare request/run project evidence to credential ownership; identify mixed-beneficiary shared accounts.",
+    "response": "Retain all roles; use approved allocation weights only for the finance view, with an unallocated bucket when evidence cannot support a split.",
+    "test_assertion": "Changing the executor label alone cannot rewrite beneficiary allocation; company amount is preserved and unknown beneficiary does not create an individual spending observation.",
+    "residual_limit": "Shared-account aggregate logs may make individual or project attribution fundamentally unidentifiable.",
+    "owner": "Identity and charge allocation; backend",
+    "requirement_source": "Master plan provider projects/workspaces/shared keys do not establish ownership; current research brief human-initiated agents."
+  },
+  {
+    "id": "05-E09",
+    "family": "cold_start_observation_boundary",
+    "scenario": "A newly connected subsidiary brings experienced employees and backfilled usage; recycled emails collide with former staff and a team is labeled newly hired.",
+    "mechanism": "First observation is mistaken for hire date, alias matching merges identities, and rich retroactive history is treated as available before installation.",
+    "detection": "Separate employment start, tool enablement, source-first-observed and identity-resolved times; require stable source IDs and provenance for matches.",
+    "response": "Classify connection cold start separately from true entrant; quarantine ambiguous alias links and label reconstructed history explicitly.",
+    "test_assertion": "Connecting old employees today does not increment confirmed new-hire counts; a recycled email does not merge two native identities; replay cannot use a backfill before its eligible knowledge time.",
+    "residual_limit": "Retrospective operational evaluation before installation requires independently evidenced source availability assumptions.",
+    "owner": "Connector onboarding; identity; evaluation",
+    "requirement_source": "Master plan source coverage and honest real-data limitations; mentor headcount premise; 05-S01 and 05-S12."
+  },
+  {
+    "id": "05-E10",
+    "family": "budget_feedback_future_approval",
+    "scenario": "Finance raises a budget after seeing a spending surge and forecast; training uses the revised budget as if known at the earlier origin, while a planned purchase is mistaken for approval.",
+    "mechanism": "Future decision leaks target information; policy response is learned as exogenous demand; context ingestion accidentally changes financial state.",
+    "detection": "Require decision timestamps, versions, status and authorizing receipt; audit predictor knowledge times against original forecast inputs.",
+    "response": "Keep budget history and proposal states separate; use origin-known budget only in an evaluated optional predictor/scenario; save changes exclusively through authorized backend review.",
+    "test_assertion": "Earlier replay cannot access later approved budget; proposal or procurement draft never mutates allocation; unchanged source spending yields unchanged actual totals after a budget edit.",
+    "residual_limit": "Budget-spend association may remain confounded by managerial information and unenforced policies.",
+    "owner": "Budget backend; forecasting evaluation; Factory",
+    "requirement_source": "Master plan finance reviews concrete allocations; budgets differ from actuals and forecast; no provider enforcement."
+  }
+]
