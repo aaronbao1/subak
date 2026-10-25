@@ -2,10 +2,13 @@ Prepare an allocation proposal for finance review.
 
 Request parameters: {params}
 
-1. `list_signals` (status `current`). If there is no current signal for the prioritized team,
-   interpret the corpus first (see the interpretation steps). Rely only on `current` signals; a
-   `superseded`, `informal`, `conflicting` or `cancelled` signal may be mentioned as context but is
-   never the reason to move money.
+1. Start from the signals already on file. The backend has read `list_signals` (status `current`)
+   for this run; when it found any, they are listed below with their ids and cited quotes. If a
+   current signal covers the prioritized team, reuse it: cite it by id in `evidence_refs` and do not
+   call `search_corpus` or `read_document` unless a signal you need is missing. Only when no current
+   signal covers the prioritized team, interpret the corpus first (see the interpretation steps).
+   Rely only on `current` signals; a `superseded`, `informal`, `conflicting` or `cancelled` signal
+   may be mentioned as context but is never the reason to move money.
 2. `get_budgets` (note `state_version`), `get_spend_summary` (note coverage), `get_forecast` (note the
    snapshot id and its availability).
 3. Choose the action type the request asks for (`mode`) and keep it pure. Never mix them; if both

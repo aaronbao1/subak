@@ -55,6 +55,13 @@ FORECAST_AVAILABILITY = ("available", "partial", "unavailable")
 AGENT_TASK_TYPES = ("interpret_corpus", "propose_allocation", "answer_question")
 RUNNER_KINDS = ("fake", "sdk")
 AGENT_RUN_STATUSES = ("running", "succeeded", "failed", "unavailable")
+# Where a person works / where a document came from (frontend `Integration`).
+INTEGRATIONS = ("slack", "asana", "monday", "email", "document")
+PERSON_ID_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}$"
+# Who a context signal is about (frontend `ContextItem.scope`) and why usage moves (frontend `SignalKind`).
+SIGNAL_SCOPES = ("person", "team", "company")
+SIGNAL_KINDS = ("project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office",
+                "onboarding", "steady")
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -117,6 +124,30 @@ class Team(Base):
     __table_args__ = (CheckConstraint("id <> 'unattributed'", name="no_unattributed_row"),)
 
 
+class Person(Base):
+    """A fictional (or imported) individual on a team. Spend is attributed to a person only through a
+    known directory entry (email), never from an export alone (frontend-integration-design §2.2)."""
+
+    __tablename__ = "people"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # slug, e.g. research-ava-chen
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str | None] = mapped_column(String(200))
+    email: Mapped[str | None] = mapped_column(String(320), unique=True)  # stored lowercase
+    primary_tool: Mapped[str | None] = mapped_column(String(100))
+    integrations: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("id <> 'unattributed'", name="no_unattributed_person"),
+        CheckConstraint("email IS NULL OR email = lower(email)", name="email_lowercase"),
+        Index("ix_people_team", "team_id"),
+    )
+
+
 class TeamMapping(_IdMixin, Base):
     __tablename__ = "team_mappings"
 
@@ -172,6 +203,8 @@ class UsageRecord(_IdMixin, Base):
     source_record_key: Mapped[str] = mapped_column(String(500), nullable=False)
     source_account: Mapped[str | None] = mapped_column(String(200))
     team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id"))
+    # Set only when the export's user_email matches an active person on the mapped team.
+    person_id: Mapped[str | None] = mapped_column(ForeignKey("people.id"))
     period_id: Mapped[str] = mapped_column(ForeignKey("planning_periods.id"), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     provider: Mapped[str | None] = mapped_column(String(100))
@@ -210,6 +243,7 @@ class UsageRecord(_IdMixin, Base):
             name="non_negative_token_deltas",
         ),
         Index("ix_usage_records_team_period", "team_id", "period_id"),
+        Index("ix_usage_records_team_person_period", "team_id", "person_id", "period_id"),
         Index("ix_usage_records_stream", "source_kind", "stream_key", "occurred_at"),
     )
 
@@ -382,6 +416,10 @@ class CorpusDocument(_IdMixin, Base):
     team_tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     project_tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     author: Mapped[str | None] = mapped_column(String(200))
+    # Where the document came from (slack/asana/monday/email/document); NULL falls back to `origin`.
+    integration: Mapped[str | None] = mapped_column(String(16))
+    # People the document is about (ids in `people`), checked at ingest.
+    person_tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     supersedes_document_id: Mapped[str | None] = mapped_column(ForeignKey("corpus_documents.id"))
@@ -394,6 +432,7 @@ class CorpusDocument(_IdMixin, Base):
         CheckConstraint(_in("origin", DOC_ORIGINS), name="origin"),
         CheckConstraint(_in("doc_type", DOC_TYPES), name="doc_type"),
         CheckConstraint(_in("plan_status", PLAN_STATUSES), name="plan_status"),
+        CheckConstraint("integration IS NULL OR " + _in("integration", INTEGRATIONS), name="integration"),
         CheckConstraint("supersedes_document_id IS NULL OR supersedes_document_id <> id", name="no_self_supersede"),
     )
 
@@ -402,6 +441,11 @@ class ContextSignal(_IdMixin, Base):
     __tablename__ = "context_signals"
 
     team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id"))
+    # person: one or more named people on one team; team: a team plan; company: every team (team NULL).
+    scope: Mapped[str] = mapped_column(String(16), default="team", server_default="team", nullable=False)
+    person_ids: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    signal_kind: Mapped[str | None] = mapped_column(String(32))
+    title: Mapped[str | None] = mapped_column(String(120))
     project: Mapped[str | None] = mapped_column(String(200))
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     change_type: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -422,6 +466,9 @@ class ContextSignal(_IdMixin, Base):
         CheckConstraint(_in("status", SIGNAL_STATUSES), name="status"),
         CheckConstraint(_in("produced_by", SIGNAL_PRODUCERS), name="produced_by"),
         CheckConstraint("length(trim(uncertainty)) > 0", name="uncertainty_required"),
+        CheckConstraint(_in("scope", SIGNAL_SCOPES), name="scope"),
+        CheckConstraint("scope <> 'company' OR team_id IS NULL", name="company_scope_has_no_team"),
+        CheckConstraint("signal_kind IS NULL OR " + _in("signal_kind", SIGNAL_KINDS), name="signal_kind"),
     )
 
 

@@ -33,8 +33,9 @@ def test_included_usage_excluded_from_spend_but_shown_as_notional(seeded, client
     assert inc["notional_value"] == "3000.00" and research["included_usage_notional"] == "3000.00"
     assert research["recorded_spend"] == "45000.00"  # 5k fee + 40k API, notional 3k not added
     records = client.get("/api/spend/records", params={"team": "research", "cost_category": "included_usage"}).json()
-    assert records["total"] == 1
-    assert records["items"][0]["counts_toward_spend"] is False and records["items"][0]["amount"] is None
+    assert records["total"] == 20  # one team-level row per day, Oct 1-20
+    assert all(i["counts_toward_spend"] is False and i["amount"] is None and i["person"] is None
+               for i in records["items"])
 
 
 def test_breakdown_by_cost_category_and_value_kind(seeded, client):
@@ -96,9 +97,9 @@ def test_records_filters_validate_and_paginate(seeded, client):
     assert r.status_code == 422
     assert {x["code"] for x in r.json()["error"]["details"]["reasons"]} == {"unknown_value_kind", "unknown_cost_category"}
     page = client.get("/api/spend/records", params={"limit": 3, "offset": 0}).json()
-    rest = client.get("/api/spend/records", params={"limit": 100, "offset": 3}).json()
-    assert page["total"] == rest["total"] == 8
-    assert len(page["items"]) == 3 and len(rest["items"]) == 5
+    rest = client.get("/api/spend/records", params={"limit": 1000, "offset": 3}).json()
+    assert page["total"] == rest["total"] == 616
+    assert len(page["items"]) == 3 and len(rest["items"]) == 613
     assert not {i["id"] for i in page["items"]} & {i["id"] for i in rest["items"]}
     assert client.get("/api/spend/records", params={"limit": 0}).status_code == 422
 

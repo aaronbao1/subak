@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import Team, TeamMapping, UsageRecord
+from app.db.models import Person, Team, TeamMapping, UsageRecord
 
 
 class MappingResolver:
@@ -50,8 +50,11 @@ def list_mappings(session: Session) -> list[TeamMapping]:
 
 
 def reresolve_records(session: Session, source_kind: str, source_account: str) -> int:
-    """Re-attribute every record of one source account after a mapping change. Returns how many changed."""
+    """Re-attribute every record of one source account after a mapping change. Returns how many changed.
+
+    A record keeps its person only if that person is on the new team; otherwise it becomes team-level."""
     resolver = MappingResolver(session, source_kind)
+    person_team: dict[str, str] = {}
     changed = 0
     records = session.scalars(
         select(UsageRecord).where(
@@ -62,6 +65,12 @@ def reresolve_records(session: Session, source_kind: str, source_account: str) -
         team = resolver.resolve(rec.source_account, rec.occurred_at)
         if team != rec.team_id:
             rec.team_id = team
+            if rec.person_id is not None:
+                if rec.person_id not in person_team:
+                    person = session.get(Person, rec.person_id)
+                    person_team[rec.person_id] = person.team_id if person else ""
+                if team is None or person_team[rec.person_id] != team:
+                    rec.person_id = None
             changed += 1
     return changed
 

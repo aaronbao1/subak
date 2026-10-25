@@ -6,6 +6,7 @@
     "path": "/api/forecasts"
   },
   "response": {
+    "as_of": null,
     "availability": "unavailable",
     "basis": "full_period_total",
     "generated_at": "2026-10-24T12:01:00Z",
@@ -15,6 +16,7 @@
       "product",
       "research"
     ],
+    "person_projections": [],
     "projections": [],
     "provider": "placeholder",
     "reason": "forecast provider not connected",

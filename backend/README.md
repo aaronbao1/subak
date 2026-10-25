@@ -4,6 +4,7 @@ FastAPI + SQLite backend for the Northstar AI-spend planning workspace.
 
 - **Start here:** [`docs/morning-runbook.md`](docs/morning-runbook.md). It covers running with the real
   Droid, the demo journey, evals, pointing the frontend at `/compat`, and the 60-second judge explanation.
+  To run with the UI, see [Run the backend with the frontend](#run-the-backend-with-the-frontend).
 - Droid integration (tools, bounds, live results): [`../agent/README.md`](../agent/README.md)
 - Design: [`docs/design.md`](docs/design.md). Droid SDK notes: [`docs/droid-sdk-notes.md`](docs/droid-sdk-notes.md).
   Live Droid runs: [`docs/droid-live-log.md`](docs/droid-live-log.md). Evals: [`evals/README.md`](evals/README.md).
@@ -26,7 +27,11 @@ backend/.venv/bin/pip install -e "backend[dev]"
 
 ```bash
 cd backend
-.venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded)
+.venv/bin/python -m app.seed          # seed the Northstar example into BACKEND_DB_PATH (no-op if seeded),
+                                      # then interpret the corpus once with the stand-in (signals: droid_fake)
+.venv/bin/python -m app.seed --no-signals     # seed without context signals
+.venv/bin/python -m app.seed --live-signals   # interpret with the real Droid instead (needs the DROID_RUNNER=sdk
+                                      # requirements; exits 2 before touching the DB if any is missing)
 .venv/bin/python -m app.seed --check-planted   # verify the planted-error pack against seed/answer_key.md
 .venv/bin/python -m app.main          # serves http://127.0.0.1:8787
 .venv/bin/python -m app.demo          # walk the demo journey against the running server (3 Droid runs)
@@ -37,7 +42,8 @@ cd backend
 Health check: `curl http://127.0.0.1:8787/health` (also `/api/health`).
 
 There are no migrations: tables are created on startup. After pulling a schema change, delete
-`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`.
+`backend/data/app.db` (or your `BACKEND_DB_PATH`) and re-run `python -m app.seed`. Startup and
+`python -m app.seed` refuse an outdated file with a message naming the missing columns.
 
 ## Test
 
@@ -61,8 +67,10 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `FORECAST_PROVIDER` | `placeholder` | `placeholder` (shared Northstar projections, not a model) or `unavailable` |
 | `DROID_RUNNER` | `fake` | `fake` (deterministic, no credentials) or `sdk` (requires a Factory key in the environment; no silent fallback) |
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
-| `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos |
+| `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
+| `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos (reseeds and reruns the stand-in interpretation) |
 | `BACKEND_COMPAT` | on | `0` unmounts the frontend compat layer under `/compat/api` (see below) |
+| `NEXT_PUBLIC_API_URL` (frontend, in `frontend/.env.local`) | unset (mock data) | `http://localhost:8787/compat` points the UI at this backend |
 
 No credentials are stored in this repo or requested by the backend. The Factory SDK reads its own
 key from the environment only when `DROID_RUNNER=sdk`.
@@ -99,7 +107,8 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 | Route | Returns |
 |---|---|
 | `GET /api/meta` | period, unit, runner/provider modes, real-vs-simulated labels |
-| `GET /api/spend/summary`, `GET /api/spend/records` | team/company spend by cost category and value kind, coverage, drill-down |
+| `GET /api/spend/summary`, `GET /api/spend/records` | team/company spend by cost category and value kind, coverage, drill-down (records carry `person`; filter `?person=`) |
+| `GET /api/people`, `GET /api/people/{id}` | people directory (`?team=`); spend is attributed to a person only via a known email on the mapped team |
 | `GET /api/coverage` | completeness per team, unattributed bucket, contributing batches |
 | `GET /api/budget`, `GET /api/budget/history` | current allocations + version, immutable snapshots |
 | `GET /api/forecasts`, `POST /api/forecasts/snapshots` | ForecastProvider result (200 even when unavailable), citable snapshot |
@@ -115,14 +124,50 @@ example responses are in [`contract/fixtures/`](contract/fixtures/) (see
 Regenerate the contract after any schema or seed change:
 `.venv/bin/python -m app.contract.export` (`--check` to verify; `tests/test_contract.py` enforces it).
 
+## Run the backend with the frontend
+
+The Next.js app in `../frontend/` uses its in-memory mock unless `NEXT_PUBLIC_API_URL` is set. With it
+set, its `HttpDataClient` talks to this backend's compat layer with no frontend code changes.
+
+```bash
+# terminal 1: backend (from backend/)
+rm -f data/app.db                         # only after pulling a schema change
+.venv/bin/python -m app.seed              # 15 people, daily per-person spend, 13 documents,
+                                          # then 12 context signals by the stand-in (droid_fake)
+.venv/bin/python -m app.main              # http://127.0.0.1:8787
+
+# terminal 2: frontend (from the repo root)
+echo 'NEXT_PUBLIC_API_URL=http://localhost:8787/compat' > frontend/.env.local
+cd frontend && npm install && npm run dev # http://localhost:3000
+```
+
+- Check: `curl -s http://127.0.0.1:8787/compat/api/company` and `.../compat/api/people`.
+- The UI loads 10 GETs at once and renders nothing if any of them fails. On a seeded DB all return 200.
+  On an unseeded DB only `/company` fails, with 503 "The database is not seeded yet; run
+  `python -m app.seed`."
+- Seed flags: default = stand-in signals so context cards show on first load; `--no-signals` = no
+  signals (cards stay empty until a chat asks "what changed in the documents?"); `--live-signals` = the
+  real Droid interprets the corpus (needs the `DROID_RUNNER=sdk` requirements; refuses before touching
+  the DB if they are missing, never falls back to the stand-in). Signals are only interpreted on a fresh
+  seed; delete the DB or use `POST /api/admin/reset` (`BACKEND_ALLOW_RESET=1`) to redo it.
+- `DROID_RUNNER=fake` (default): chat replies are deterministic and instant, need no credentials, and
+  end with a "Simulated: ..." line. `DROID_RUNNER=sdk`: chat runs the real Factory Droid with the key from
+  your environment. A reply waits for the whole run (one synchronous POST; up to `DROID_TIMEOUT_S`).
+  For a faster demo set `DROID_CHAT_REASONING_EFFORT=low` (and optionally `DROID_CHAT_MODEL`); proposals
+  reuse the signals recorded at seed time instead of re-reading the corpus.
+- Apply and Reject/Dismiss act as the demo approver `dashboard-approver` (shown as "Finance approver
+  (demo)"); chat runs as `dashboard-analyst`, so self-approval is still blocked. Dismissing a stale
+  proposal records a rejected decision and leaves budgets unchanged.
+
 ## Frontend compat layer
 
-The Next.js app's `HttpDataClient` works against this backend with no frontend changes:
-`NEXT_PUBLIC_API_URL=http://localhost:8787/compat`. `app/compat/` serves its 15 paths under
-`/compat/api/*` in the exact TypeScript shapes (camelCase, money as numbers, errors as
+`app/compat/` serves the app's 16 paths (including `GET /api/people`) under `/compat/api/*` in the
+exact TypeScript shapes of `frontend/src/lib/contracts/index.ts` (camelCase, money as numbers, person
+and company context, per-person spend and forecasts with daily points, errors as
 `{"error": "<plain English>"}`) by translating the services above; decisions still go through the real
-decision service. Not part of `openapi.json`. Mapping, gaps and open questions:
-[`docs/frontend-alignment.md`](docs/frontend-alignment.md).
+decision service. Not part of `openapi.json`. Mapping, closed and remaining gaps:
+[`docs/frontend-alignment.md`](docs/frontend-alignment.md). Build details:
+[`docs/frontend-integration-design.md`](docs/frontend-integration-design.md).
 
 ## Droid agent runs
 
@@ -166,7 +211,8 @@ judge feedback, and how it is handled or why it is out of scope, is listed in
 
 | Component | Status |
 |---|---|
-| Northstar spend, budgets, corpus | simulated (`value_kind=simulated`, `is_simulated=true`) |
+| Northstar spend, budgets, corpus, people | simulated (`value_kind=simulated`, `is_simulated=true`); 15 fictional people with `@northstar.example` emails |
+| Per-person projections | proportional split of the team placeholder by spend to date, not a person-level model |
 | Codex session parser | real format; real samples import as `measured` tokens, `unpriced_usage` unless priced |
 | Projections | placeholder, not a model; `unavailable` mode available |
 | Droid | `FakeDroidRunner` (deterministic) by default; `DROID_RUNNER=sdk` runs real Factory Droid (live-verified 2026-10-24); `runner_kind` always reported |

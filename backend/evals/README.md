@@ -12,7 +12,9 @@ cd backend
 ```
 
 - Each fixture runs on its own fresh, seeded SQLite file through the real app in-process. Scenarios that
-  read the same fixture share one run, so 11 scenarios cost 6 runs.
+  read the same fixture share one run, so 13 scenarios cost 7 fixtures (8 Droid runs: the
+  `addition_50k_after_interpret` setup starts its own `interpret_corpus` run, which the live cap counts and
+  logs as a `setup run` line).
 - `--runner sdk` uses the backend's `SdkDroidRunner` unchanged. That means the scoped `northstar` tools
   only (`restrict_tools` allowlist, checked at startup), an empty temp cwd, built-in skills disabled, and
   the permission gate that cancels edit/exec/create. Droid has no apply or decide tool.
@@ -22,6 +24,23 @@ cd backend
   reported `not_run`. They never fall back to the fake runner. Order: `fixtures.LIVE_PRIORITY`.
 - Output: `results/<runner>.json` and `results/<runner>.md`. The exit status is 1 if any scenario failed.
 - Harness tests: `tests/test_evals.py`. They use the fake runner and local stub runners only, never Factory.
+
+## People-aware scenarios (frontend integration, 2026-10-24)
+
+The corpus grew from 6 to 13 documents (six person-tagged Asana / Slack / monday.com items and one
+company-wide Slack announcement), and signals gained `scope`, `person_ids` and `signal_kind`. Each run
+context now also has `people` (read from `GET /api/people`). Two scenarios cover this; the full pass
+rules are in [`answer_key.md`](answer_key.md).
+
+| Scenario | Fixture | Checks |
+|---|---|---|
+| `person_signals_cited` | `interpret` | one `current` person-scope signal per person document, with `person_ids` equal to the document's `person_tags`, the person's team, and the expected `signal_kind` (Leila Novak `project_deferred`, Omar Haddad `model_change`, Theo Brandt `out_of_office`, Sofia Reyes `project_accelerated`, Hana Sato `onboarding`, Felix Weber `tool_change`); every `person_ids` entry is a real person on the signal's team; exactly one company-scope `model_change` signal with team null and no people; no team-scope signal names people; no person or company summary adds a `$` or `%` figure that is not in its quotes |
+| `propose_reuses_signals` | `addition_50k_after_interpret` (new; its setup starts one `interpret_corpus` run) | the propose run makes no `search_corpus` / `read_document` call, its signal `evidence_refs` all exist and are `current`, and the draft is `pending_review` |
+
+The existing team scenarios check specific documents and teams rather than signal counts, so the new
+person and company signals pass through them unchanged. Fake runner: 13 / 13 pass. These two scenarios
+have **not** been run live (no live Droid runs in this pass); before a live run, note that
+`addition_50k_after_interpret` costs 2 runs against the cap and is last in `LIVE_PRIORITY`.
 
 ## Live reruns, 2026-10-24 evening (`results/rerun-2026-10-24*/`)
 

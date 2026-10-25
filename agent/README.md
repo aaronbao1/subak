@@ -17,9 +17,9 @@ or a chat message in the Next.js app through `/compat/api/threads/{id}/messages`
 | An approval refused as stale (409 `stale_proposal`) | `propose_allocation` + `stale_proposal_id` | re-drafts the same lines on the current budget and explains what moved it |
 | Any other question, optionally with a chart | `answer_question` | read-only answer with backend-built Vega-Lite chart specs |
 
-**Which tools, and why read + draft only.** Ten tools, all served by the backend's own service layer
-under role `droid_agent`: seven read tools (`search_corpus`, `read_document`, `get_spend_summary`,
-`get_budgets`, `get_forecast`, `list_signals`, `build_chart_spec`) and three draft tools
+**Which tools, and why read + draft only.** Eleven tools, all served by the backend's own service layer
+under role `droid_agent`: eight read tools (`search_corpus`, `read_document`, `get_spend_summary`,
+`get_budgets`, `get_forecast`, `list_signals`, `list_people`, `build_chart_spec`) and three draft tools
 (`record_signal`, `draft_proposal`, `rebase_proposal`). Moving money between teams is a finance
 decision, so the authority to decide stays with a person. Droid's job is the slow part: reading
 everything, connecting facts across documents, and doing arithmetic the backend can check. There is
@@ -111,11 +111,14 @@ when `DROID_RUNNER=sdk`; tests get it via `pythonpath = [".", "../agent"]`.
 ## Tools (read + draft only)
 
 `search_corpus`, `read_document`, `get_spend_summary`, `get_budgets`, `get_forecast` (persists a
-citable snapshot), `list_signals`, `build_chart_spec` (read-only Vega-Lite v5 spec from backend data:
+citable snapshot), `list_signals`, `list_people` (the people directory: ids, teams, names, roles and
+primary tools, used to turn a named person into `person_ids`), `build_chart_spec` (read-only Vega-Lite v5 spec from backend data:
 spend vs allocation, projection vs allocation, spend by cost category, budget history; labeled with
 value kinds and simulated data; persists nothing; specs the toolbox built are attached to the run as
 `output.charts[]`), `record_signal` (backend verifies every quote verbatim against the
-stored document version), `draft_proposal` (backend computes before/after, validates arithmetic,
+stored document version; `scope` person / team / company, `person_ids`, `signal_kind` and `title`,
+with person ids checked against the directory and all on one team, and company signals carrying no
+team), `draft_proposal` (backend computes before/after, validates arithmetic,
 rejects a stale `base_version`; result is `pending_review`), `rebase_proposal` (stale-proposal
 recovery: re-drafts a stale proposal's same lines on the current budget as a NEW `pending_review`
 proposal through the same service as `POST /api/proposals/{id}/rebase`; returns `stale_context`,

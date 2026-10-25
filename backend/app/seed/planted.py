@@ -1,8 +1,8 @@
 """Planted-error pack for the Northstar seed (all values simulated).
 
 The files live in `backend/seed/planted/` and the expected outcomes in `backend/seed/answer_key.md`.
-They are NOT part of the default seed: the default seed keeps the shared 45k/20k/30k = 95k table and the
-six-document corpus that the contract fixtures are built from.
+They are NOT part of the default seed: the default seed keeps the shared 45k/20k/30k = 95k table (616
+daily records) and the 13-document corpus that the contract fixtures are built from.
 
 - `load_planted(session, ...)` adds the data traps to an already-seeded database (four imports and two
   extra corpus documents). Every step goes through the normal services, so loading twice adds nothing.
@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.config import BACKEND_ROOT, Settings
 from app.core.clock import Clock, IdFactory
 from app.schemas.documents import DocumentIn
+from app.seed import daily_spend
 from app.services import corpus as corpus_svc
 from app.services import imports as import_svc
 
@@ -40,6 +41,8 @@ OUTDATED_PROPOSAL_FILE = "05_outdated_proposal.json"
 CODEX_ACCOUNT = "codex-research-laptops"
 UNMAPPED_ACCOUNT = "proj-fable-eval-sandbox"
 PLANTED_ACTOR = "seed-planted"
+# The re-export (P1b) repeats every record of the generated daily seed export.
+EXPECTED_SEED_RECORDS = len(daily_spend.rows())
 
 
 @dataclass(frozen=True)
@@ -157,7 +160,7 @@ def _scenario(client) -> list[Check]:
     r = _upload(client, PLANTED_IMPORTS[1])
     b = r.json()
     add("P1b", "re-export with a new hash dedupes per record key",
-        {"http": 201, "records_added": 0, "skipped_duplicates": 8, "spend_added": "0.00"},
+        {"http": 201, "records_added": 0, "skipped_duplicates": EXPECTED_SEED_RECORDS, "spend_added": "0.00"},
         {"http": r.status_code, "records_added": b["record_count"],
          "skipped_duplicates": b["skipped_duplicate_records"], "spend_added": b["spend_added"]})
     s = client.get("/api/spend/summary").json()
@@ -215,11 +218,13 @@ def _scenario(client) -> list[Check]:
     key_by_id = {d["id"]: d["doc_key"] for d in items}
     run = client.post("/api/agent/runs", headers=ANALYST, json={"task_type": "interpret_corpus"}).json()
     sigs = client.get("/api/signals").json()["items"]
-    research_current = [s for s in sigs if s["team"] == "research" and s["status"] == "current"]
+    # Team-scope only: person signals (Leila, Omar, Theo) cite their own documents (frontend-integration §5.4).
+    research_current = [s for s in sigs if s["team"] == "research" and s["status"] == "current"
+                        and s.get("scope", "team") == "team"]
     not_interpreted = sorted(key_by_id.get(w.get("document_id"), "?") for w in (run.get("output") or {}).get("warnings", [])
                              if w["code"] == "document_not_interpreted")
     add("P4", "approved plan wins over older thread and informal restatement",
-        {"documents": 8, "slack_plan_status": "informal", "thread_superseded_by": "research-eval-plan",
+        {"documents": 15, "slack_plan_status": "informal", "thread_superseded_by": "research-eval-plan",
          "research_current_cites": ["research-eval-plan"], "thread_signal": "superseded",
          "not_interpreted_by_fake_runner": ["ap-late-invoice-email", "research-standup-slack"]},
         {"documents": len(items), "slack_plan_status": docs["research-standup-slack"]["plan_status"],

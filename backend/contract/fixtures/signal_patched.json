@@ -32,16 +32,20 @@
         "version": 1
       }
     ],
-    "created_at": "2026-10-24T12:25:00Z",
+    "created_at": "2026-10-24T12:27:00Z",
     "id": "sig_000005",
     "needs_review": false,
+    "person_ids": [],
     "produced_by": "finance",
     "project": "campaigns",
+    "scope": "team",
+    "signal_kind": null,
     "status": "informal",
     "summary": "Marketing brainstorm about generated demo videos; no budget or approval.",
     "superseded_by_signal_id": null,
     "supersedes_signal_ids": [],
     "team": null,
+    "title": null,
     "uncertainty": "brainstorm only; finance reviewed it, still no plan or budget"
   },
   "scenario": "main",

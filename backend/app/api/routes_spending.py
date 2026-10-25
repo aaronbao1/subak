@@ -32,6 +32,7 @@ def spend_records(
     value_kind: str | None = Query(default=None),
     cost_category: str | None = Query(default=None),
     batch: str | None = Query(default=None),
+    person: str | None = Query(default=None, description="person id; team-level records have none"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=500, ge=1, le=svc.MAX_RECORD_PAGE),
     session: Session = Depends(get_session),
@@ -39,4 +40,4 @@ def spend_records(
 ):
     p = coverage_svc.resolve_period(session, period, clock.now())
     return svc.list_records(session, p, team=team, value_kind=value_kind, cost_category=cost_category,
-                            batch=batch, offset=offset, limit=limit)
+                            batch=batch, person=person, offset=offset, limit=limit)

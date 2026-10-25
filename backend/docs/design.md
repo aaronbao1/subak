@@ -297,8 +297,10 @@ Decision algorithm (`services/decisions.py::decide`), in one transaction:
    authors of every proposal in the revise/rebase lineage plus the `initiated_by` of any Droid run that
    drafted or reused one of them.
    (A requester may still reject its own proposal; that changes no allocation.)
-4. Proposal status must be `pending_review` else 409 `proposal_not_pending`.
-5. Reject: write decision, status `rejected`, budget untouched.
+4. Proposal status must be `pending_review` else 409 `proposal_not_pending`. A reject may also retire a
+   `stale` proposal (the dashboard's Dismiss); `revised`, `applied` and `rejected` stay 409.
+5. Reject: write decision (`from_version` = current version, `to_version` null), status `rejected`,
+   budget, version and snapshots untouched. A dismissed stale proposal can no longer be rebased.
 6. Approve: `UPDATE budget_envelopes SET state_version = base+1 ... WHERE id=? AND state_version = base_version`;
    0 rows -> mark proposal `stale` only if it is still `pending_review` (a concurrent approver that already
    applied it yields 409 `proposal_not_pending`), write `decision_events(stale_rejected)`, 409 `stale_proposal`.

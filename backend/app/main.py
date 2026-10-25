@@ -13,7 +13,7 @@ from app.config import Settings
 from app.core.clock import Clock, IdFactory, SystemClock, UuidIdFactory
 from app.core.errors import install_error_handlers
 from app.core.openapi import install_openapi
-from app.db.base import create_all, make_engine, make_session_factory
+from app.db.base import check_schema, create_all, make_engine, make_session_factory
 from app.providers.forecast import ForecastProvider, provider_from_settings
 
 
@@ -29,6 +29,7 @@ def create_app(
 
     engine = make_engine(settings.db_path)
     create_all(engine)
+    check_schema(engine)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -75,6 +76,7 @@ def create_app(
         routes_forecasts,
         routes_imports,
         routes_meta,
+        routes_people,
         routes_proposals,
         routes_signals,
         routes_spending,
@@ -84,6 +86,7 @@ def create_app(
     for module in (
         routes_meta,
         routes_teams,
+        routes_people,
         routes_imports,
         routes_spending,
         routes_budget,

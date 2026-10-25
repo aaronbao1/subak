@@ -7,8 +7,10 @@ the same scoped toolbox the SDK runner gets, so every claim it makes is verified
 - interpret_corpus: lists and reads the corpus; detects supersession from the stored supersedes chain
   and checks the conflicting timelines in the text (older thread "next period" vs approved plan "this
   period"); records cited signals (research expansion current, old research thread superseded, product
-  timing shift, engineering continuation, marketing idea informal). Every quote is located verbatim in
-  the stored content first; an expected passage that is missing is reported, never invented.
+  timing shift, engineering continuation, marketing idea informal), six person-scope signals (person ids
+  from `list_people`, kept only when the person is on the team and named in the text) and one
+  company-scope model change. Every quote is located verbatim in the stored content first; an expected
+  passage that is missing is reported, never invented.
 - propose_allocation: reads budgets, spend, forecast (snapshot) and current signals (interpreting the
   corpus first if no current signal exists) and drafts outcome B (addition, prioritize research) or
   outcome A (transfer). The proposal stays `pending_review`; the runner never reports it as saved.
@@ -38,6 +40,8 @@ PLAYBOOK: dict[str, dict[str, Any]] = {
                    "This plan supersedes the earlier email thread that proposed pushing the expansion to next period."],
         "uncertainty_quote": "Exact token volumes are not yet known; they depend on how many model updates ship.",
         "team": "research", "project": "model-evaluation", "change_type": "expansion",
+        "scope": "team", "signal_kind": "project_accelerated",
+        "title": "Research model-evaluation expansion moves into the current period",
         "summary": "Approved research plan (2026-10-08) expands model-evaluation work in the current planning "
                    "period; larger evaluation sweeps start this period instead of next.",
         "uncertainty": "Plan is approved but exact token volumes are not yet known and depend on how many model "
@@ -47,6 +51,8 @@ PLAYBOOK: dict[str, dict[str, Any]] = {
         "quotes": ["we will push the model-evaluation expansion to next period.",
                    "Nothing here is approved yet; we will confirm in the formal plan."],
         "team": "research", "project": "model-evaluation", "change_type": "timing_shift",
+        "scope": "team", "signal_kind": "project_deferred",
+        "title": "Older thread: research expansion pushed to next period",
         "summary": "Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed "
                    "to next period; this timeline is no longer the current plan.",
         "uncertainty": "Informal correspondence, never approved; kept only as history of the earlier timeline.",
@@ -56,6 +62,8 @@ PLAYBOOK: dict[str, dict[str, Any]] = {
                    "Near-term launch rehearsal is reduced this period; prompt tuning continues at a lower level."],
         "older_quotes": ["The general-availability launch milestone for the assistant workspace lands in the current period."],
         "team": "product", "project": "workspace-launch", "change_type": "timing_shift",
+        "scope": "team", "signal_kind": "project_deferred",
+        "title": "Product GA launch moves to the following period",
         "summary": "Product launch update (2026-10-14) moves the GA milestone to the following period, reducing "
                    "near-term launch rehearsal compared with the August plan (which had launch this period).",
         "uncertainty": "Timing depends on customer pilot feedback; lower near-term work is not by itself an "
@@ -64,6 +72,8 @@ PLAYBOOK: dict[str, dict[str, Any]] = {
     "engineering-platform-note": {
         "quotes": ["Platform migration work continues through the current period at the current pace."],
         "team": "engineering", "project": "platform", "change_type": "continuation",
+        "scope": "team", "signal_kind": "steady",
+        "title": "Engineering platform migration continues at the current pace",
         "summary": "Engineering platform migration continues through the current period at the current pace; "
                    "seats stay flat.",
         "uncertainty": "A management note, not a budget plan; overage is expected to track the migration backlog.",
@@ -71,10 +81,104 @@ PLAYBOOK: dict[str, dict[str, Any]] = {
     "marketing-ideas-slack": {
         "quotes": ["no budget or approval for it yet though", "just brainstorming, not a plan"],
         "team": None, "project": "campaigns", "change_type": "other",
+        "scope": "team", "signal_kind": None, "title": "Marketing idea: personalized AI demo videos",
         "summary": "Marketing Slack brainstorm about personalized AI demo videos; an idea, not a plan.",
         "uncertainty": "Informal suggestion with no budget or approval; marketing is not a budgeted team here.",
     },
+    # Person-scope documents (frontend-integration-design §5.1/§5.2): person_ids come from the document's
+    # person_tags, kept only when the person is on `team` and named in the text.
+    "research-harness-asana": {
+        "quotes": ["Leila, please stay on the design doc longer and hold the harness build until the design "
+                   "review signs off on 2026-11-03.",
+                   "I will pause the implementation branch and keep my API runs to the design spikes."],
+        "team": "research", "project": "model-evaluation", "change_type": "reduction",
+        "scope": "person", "signal_kind": "project_deferred",
+        "title": "Leila Novak's harness build deferred to Nov 3",
+        "summary": "Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the "
+                   "eval-harness build until the design review on 2026-11-03; Leila is pausing the "
+                   "implementation branch.",
+        "uncertainty": "The task does not say how much API usage the design spikes use, or whether the design "
+                       "review will sign off on 2026-11-03.",
+    },
+    "research-model-switch-slack": {
+        "quotes": ["from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller "
+                   "model tier.",
+                   "just the cheaper tier for everything except the final comparison runs."],
+        "team": "research", "project": "model-evaluation", "change_type": "reduction",
+        "scope": "person", "signal_kind": "model_change",
+        "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+        "summary": "Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to "
+                   "the smaller, cheaper model tier, except the final comparison runs.",
+        "uncertainty": "The thread gives no prices or token volumes for either tier, and does not say how many "
+                       "final comparison runs stay on the large model.",
+    },
+    "research-availability-monday": {
+        "quotes": ["Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away."],
+        "team": "research", "project": None, "change_type": "reduction",
+        "scope": "person", "signal_kind": "out_of_office",
+        "title": "Theo Brandt out of office Oct 26-30",
+        "summary": "Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs "
+                   "scheduled while away.",
+        "uncertainty": "The board does not say whether teammates pick up his runs while he is away, or what "
+                       "his usual daily usage is.",
+    },
+    "engineering-cutover-monday": {
+        "quotes": ["the cutover regression suite now starts 2026-10-22 instead of mid-November.",
+                   "Sofia Reyes will run the full regression suite with Claude Code daily until the cutover "
+                   "completes."],
+        "team": "engineering", "project": "platform", "change_type": "expansion",
+        "scope": "person", "signal_kind": "project_accelerated",
+        "title": "Sofia Reyes's cutover regression runs start Oct 22",
+        "summary": "Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November "
+                   "(monday.com); Sofia Reyes runs it daily with Claude Code until cutover.",
+        "uncertainty": "The item does not say when the cutover completes or how much usage a daily suite "
+                       "takes. The engineering platform note (2026-10-12) says the migration continues at the "
+                       "current pace; this item moves one person's work earlier and does not say that the team "
+                       "total changes.",
+    },
+    "engineering-welcome-slack": {
+        "quotes": ["Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are "
+                   "active from 2026-10-13."],
+        "team": "engineering", "project": "platform", "change_type": "expansion",
+        "scope": "person", "signal_kind": "onboarding",
+        "title": "Hana Sato joined the platform team",
+        "summary": "Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are "
+                   "active from that date.",
+        "uncertainty": "The message does not say how much she will use the seat or the API key while ramping up.",
+    },
+    "product-tool-switch-slack": {
+        "quotes": ["From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API "
+                   "directly.",
+                   "it will show up as API usage instead of seat overage."],
+        "team": "product", "project": "workspace-launch", "change_type": "continuation",
+        "scope": "person", "signal_kind": "tool_change",
+        "title": "Felix Weber moving tuning scripts to the OpenAI API",
+        "summary": "Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from "
+                   "his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of "
+                   "seat overage.",
+        "uncertainty": "The thread does not compare API prices with seat overage, so whether the cost goes up or "
+                       "down is not known.",
+    },
+    # Company-scope announcement: no team, no people; it applies to every team.
+    "company-model-announcement-slack": {
+        "quotes": ["Starting 2026-11-02, every team's default model moves to the new mid-tier model that "
+                   "platform approved this week.",
+                   "the net effect on each team's bill is not known yet."],
+        "team": None, "project": None, "change_type": "other",
+        "scope": "company", "signal_kind": "model_change",
+        "title": "Company-wide default model change from Nov 2",
+        "summary": "From 2026-11-02 every team's default model moves to a new mid-tier model (Slack "
+                   "#announcements); per-token prices are lower but long-context runs use more tokens, and the "
+                   "net effect is not known.",
+        "uncertainty": "The announcement gives no prices or volumes and says the net effect on each team's bill "
+                       "is not known yet.",
+    },
 }
+
+TEAM_KEYS = ("research-eval-plan", "product-launch-plan", "engineering-platform-note", "marketing-ideas-slack")
+PERSON_KEYS = ("research-harness-asana", "research-model-switch-slack", "research-availability-monday",
+               "engineering-cutover-monday", "engineering-welcome-slack", "product-tool-switch-slack")
+COMPANY_KEYS = ("company-model-announcement-slack",)
 
 _NEXT = re.compile(r"\bnext period\b", re.IGNORECASE)
 _THIS = re.compile(r"\b(this period|current period|current planning period)\b", re.IGNORECASE)
@@ -146,7 +250,8 @@ class FakeDroidRunner:
             sig = self._signal(tools, thread, PLAYBOOK["research-timeline-thread"], status=status, warnings=warnings)
             if sig:
                 recorded["research-timeline-thread"] = sig
-        for key in ("research-eval-plan", "product-launch-plan", "engineering-platform-note", "marketing-ideas-slack"):
+        people = tools.list_people()["items"]
+        for key in TEAM_KEYS + PERSON_KEYS + COMPANY_KEYS:
             doc = current_by_key.get(key)
             if doc is None:
                 warnings.append({"code": "expected_document_missing", "message": f"no current document {key!r}"})
@@ -167,8 +272,17 @@ class FakeDroidRunner:
                 prior = recorded["research-timeline-thread"]
                 if prior["superseded_by_signal_id"] is None:
                     supersedes_signal = prior["id"]
+            person_ids: list[str] = []
+            if rules["scope"] == "person":
+                person_ids = _confirmed_people(doc, rules["team"], people, tools, warnings)
+                if not person_ids:
+                    warnings.append({"code": "person_signal_skipped", "document_id": doc["id"],
+                                     "message": f"no tagged person on {rules['team']} is named in {doc['doc_key']} "
+                                                f"v{doc['version']}; no person signal recorded (never guessed)"})
+                    tools.emit("warning", warnings[-1])
+                    continue
             sig = self._signal(tools, doc, rules, status=status, warnings=warnings, older_doc=older_doc,
-                               supersedes_signal_id=supersedes_signal)
+                               supersedes_signal_id=supersedes_signal, person_ids=person_ids)
             if sig:
                 recorded[key] = sig
 
@@ -185,7 +299,8 @@ class FakeDroidRunner:
         return {"summary": summary, "findings": findings, "warnings": warnings, "signals": recorded}
 
     def _signal(self, tools: AgentToolbox, doc: dict, rules: dict, *, status: str, warnings: list,
-                older_doc: dict | None = None, supersedes_signal_id: str | None = None) -> dict | None:
+                older_doc: dict | None = None, supersedes_signal_id: str | None = None,
+                person_ids: list[str] | None = None) -> dict | None:
         citations = []
         for quote in rules["quotes"] + ([rules["uncertainty_quote"]] if rules.get("uncertainty_quote") else []):
             c = _cite(doc, quote)
@@ -211,6 +326,8 @@ class FakeDroidRunner:
             "change_type": rules["change_type"], "status": status, "uncertainty": rules["uncertainty"],
             "applies_from": doc.get("effective_from"), "applies_to": doc.get("effective_to"),
             "citations": [{k: c[k] for k in ("document_id", "quote", "char_start", "char_end")} for c in citations],
+            "scope": rules.get("scope", "team"), "person_ids": list(person_ids or []),
+            "signal_kind": rules.get("signal_kind"), "title": rules.get("title"),
         }
         if supersedes_signal_id:
             body["supersedes_signal_id"] = supersedes_signal_id
@@ -220,7 +337,9 @@ class FakeDroidRunner:
             warnings.append({"code": exc.code, "message": f"signal for {doc['doc_key']} refused: {exc.message}"})
             tools.emit("warning", warnings[-1])
             return None
-        tools.emit("signal_recorded", {"signal_id": sig["id"], "team": sig["team"], "status": sig["status"],
+        tools.emit("signal_recorded", {"signal_id": sig["id"], "team": sig["team"], "scope": sig["scope"],
+                                       "person_ids": sig["person_ids"], "signal_kind": sig["signal_kind"],
+                                       "status": sig["status"],
                                        "change_type": sig["change_type"], "summary": sig["summary"],
                                        "citations": len(sig["citations"]),
                                        "already_recorded": sig.get("already_recorded", False),
@@ -430,8 +549,11 @@ class FakeDroidRunner:
             return (f"{r['team']}: allocation {r['allocation']}, recorded {r['recorded_spend']}{flag}, "
                     f"projected {proj_txt}")
 
+        latest = max((str(t.get("last_record_at"))[:10] for t in spend["teams"] if t.get("last_record_at")),
+                     default=None)
+        through = f" (latest record dated {latest})" if latest else ""
         parts = [f"Period {period['id']} ({period['starts_on']} to {period['ends_on']}), {unit}; recorded spend "
-                 f"is to date as of {spend['as_of']}.", "; ".join(team_text(r) for r in rows) + "."]
+                 f"is to date as of {spend['as_of']}{through}.", "; ".join(team_text(r) for r in rows) + "."]
         if cov["status"] != "complete":
             msg = f"Spend coverage is {cov['status']}: the recorded figures may be incomplete"
             if unattributed["record_count"]:
@@ -503,6 +625,24 @@ def _changes_text(ctx: dict) -> str:
 def _err_details(exc: ToolError) -> dict:
     return {k: v for k, v in exc.as_dict().items() if k != "details"} | {
         "details": {k: v for k, v in exc.details.items() if k != "stale_context"}}
+
+
+def _confirmed_people(doc: dict, team: str, people: list[dict], tools: AgentToolbox, warnings: list) -> list[str]:
+    """The document's person tags that are on `team` AND named in its text; every dropped tag is reported."""
+    by_id = {p["id"]: p for p in people}
+    kept: list[str] = []
+    for pid in doc.get("person_tags") or []:
+        person = by_id.get(pid)
+        if person is not None and person["team"] == team and person["name"] in doc["content"]:
+            kept.append(pid)
+            continue
+        why = ("not in the people directory" if person is None else
+               f"on team {person['team']}, not {team}" if person["team"] != team else
+               f"{person['name']} is not named in the text")
+        warnings.append({"code": "person_not_confirmed", "document_id": doc["id"], "person_id": pid,
+                         "message": f"{doc['doc_key']} v{doc['version']} tags {pid!r}, but {why}; left out"})
+        tools.emit("warning", warnings[-1])
+    return kept
 
 
 def _ref(d: dict) -> dict:

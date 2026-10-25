@@ -77,7 +77,7 @@ def test_with_planted_cli_is_idempotent_and_shows_incomplete_coverage(tmp_path, 
             s = client.get("/api/spend/summary").json()
             assert s["attributed_total"] == "95000.00" and s["company_total"] == "96800.00"
             assert s["unattributed"]["recorded_spend"] == "1800.00" and s["coverage"]["status"] == "partial"
-            assert len(client.get("/api/documents").json()["items"]) == 8
+            assert len(client.get("/api/documents").json()["items"]) == 15
             budget = client.get("/api/budget").json()
             assert budget["state_version"] == 1 and budget["envelope_total"] == "200000.00"
             assert client.get("/api/proposals").json() == []  # the pack never drafts or decides by itself

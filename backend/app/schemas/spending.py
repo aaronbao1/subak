@@ -68,6 +68,8 @@ class SpendRecordOut(OutModel):
     source_record_key: str
     source_account: str | None
     team: str  # team id or "unattributed"
+    # Person id when the record's user_email matched an active person on that team; None = team-level.
+    person: str | None = None
     period: str
     occurred_at: datetime
     provider: str | None

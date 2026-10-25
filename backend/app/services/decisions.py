@@ -51,6 +51,8 @@ from app.services import proposals as proposal_svc
 
 APPROVER_ROLE = "finance_approver"
 MAX_IDEMPOTENCY_KEY = 200
+# Statuses a rejection may retire (frontend-integration-design §6). `stale` is the dashboard's Dismiss.
+REJECTABLE_STATUSES = ("pending_review", "stale")
 
 
 def fingerprint(proposal_id: str, outcome: str, rationale: str, actor_id: str) -> str:
@@ -155,7 +157,10 @@ def decide(
                               + (" (you started the Droid run that drafted this proposal)" if via_run else ""),
                               {"actor_id": actor.id, "requester": p.created_by_actor, "via_agent_run": via_run})
 
-    if p.status != "pending_review":
+    # Reject also retires a stale proposal (the dashboard's Dismiss); it writes no allocation, so the
+    # stale lock does not apply to it. Approve stays pending_review-only.
+    allowed = REJECTABLE_STATUSES if body.outcome == "reject" else ("pending_review",)
+    if p.status not in allowed:
         raise _not_pending(session, p)
 
     env = budget_svc.require_envelope(session, p.period_id)
@@ -168,7 +173,7 @@ def decide(
                 idempotency_key=key, request_fingerprint=fp, from_version=env.state_version, to_version=None,
                 before=budget_svc.current_figures(env), after=None, decided_at=now, created_at=now,
             )
-            if not proposal_svc.claim_status(session, p, "rejected", from_statuses=("pending_review",), now=now):
+            if not proposal_svc.claim_status(session, p, "rejected", from_statuses=REJECTABLE_STATUSES, now=now):
                 raise _Moved()
             session.add(decision)
             session.commit()

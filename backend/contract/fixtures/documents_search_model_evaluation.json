@@ -10,7 +10,7 @@
     }
   },
   "response": {
-    "count": 2,
+    "count": 4,
     "filters": {
       "doc_type": null,
       "include_superseded": true,
@@ -28,6 +28,7 @@
         "effective_from": "2026-10-01",
         "effective_to": "2026-12-31",
         "id": "doc_000003",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "matches": [
@@ -47,6 +48,7 @@
           }
         ],
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "model-evaluation"
@@ -74,6 +76,7 @@
         "effective_from": null,
         "effective_to": null,
         "id": "doc_000002",
+        "integration": null,
         "is_current": false,
         "is_simulated": true,
         "matches": [
@@ -93,6 +96,7 @@
           }
         ],
         "origin": "email_export",
+        "person_tags": [],
         "plan_status": "informal",
         "project_tags": [
           "model-evaluation"
@@ -109,6 +113,66 @@
           "research"
         ],
         "title": "Re: model-evaluation timeline",
+        "version": 1
+      },
+      {
+        "author": "Omar Haddad",
+        "authored_at": "2026-10-16T00:00:00Z",
+        "content_hash": "f76d2c30df5b3ecd2825d47596aa408adb673ed74ee1972703b0b97aa1031e53",
+        "doc_key": "research-model-switch-slack",
+        "doc_type": "correspondence",
+        "effective_from": "2026-10-19",
+        "effective_to": null,
+        "id": "doc_000008",
+        "integration": "slack",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "slack_export",
+        "person_tags": [
+          "research-omar-haddad"
+        ],
+        "plan_status": "n/a",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 2,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "Slack #research-evals: moving sweeps to a smaller model tier",
+        "version": 1
+      },
+      {
+        "author": "Ava Chen (Research lead)",
+        "authored_at": "2026-10-14T00:00:00Z",
+        "content_hash": "6696b2d2006b0f68966485edf8f83c94a8274fa5145a7f776a16a230ed84a9f1",
+        "doc_key": "research-harness-asana",
+        "doc_type": "update",
+        "effective_from": "2026-10-14",
+        "effective_to": "2026-11-03",
+        "id": "doc_000007",
+        "integration": "asana",
+        "is_current": true,
+        "is_simulated": true,
+        "matches": [],
+        "origin": "seed",
+        "person_tags": [
+          "research-leila-novak"
+        ],
+        "plan_status": "approved",
+        "project_tags": [
+          "model-evaluation"
+        ],
+        "score": 2,
+        "superseded_by": null,
+        "supersedes": null,
+        "team_tags": [
+          "research"
+        ],
+        "title": "Asana: Eval harness v2 - implementation",
         "version": 1
       }
     ],

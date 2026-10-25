@@ -37,6 +37,7 @@ from app.schemas.documents import DocumentDetail, DocumentIngestResult, Document
 from app.schemas.forecasts import ForecastResult, ForecastSnapshotOut
 from app.schemas.imports import CoverageReport, ImportResult, TeamMappingOut, TeamMappingUpsertResult, TeamOut
 from app.schemas.meta import MetaOut, Overview
+from app.schemas.people import PersonOut
 from app.schemas.proposals import ProposalOut
 from app.schemas.signals import ContextSignalOut, SignalList
 from app.schemas.spending import SpendRecordList, SpendSummary
@@ -64,7 +65,7 @@ OUTCOME_B_LINES = [
 # (`components.schemas.<name>`); `<name>[]` is a JSON array of that component; `NoContent` is an empty
 # 204 body. `ErrorBody` is used for every error case.
 SCHEMAS: dict[str, Any] = {
-    "MetaOut": MetaOut, "TeamOut[]": list[TeamOut], "TeamMappingOut[]": list[TeamMappingOut],
+    "MetaOut": MetaOut, "TeamOut[]": list[TeamOut], "PersonOut[]": list[PersonOut], "TeamMappingOut[]": list[TeamMappingOut],
     "TeamMappingUpsertResult": TeamMappingUpsertResult,
     "BudgetState": BudgetState, "BudgetHistory": BudgetHistory, "SpendSummary": SpendSummary,
     "SpendRecordList": SpendRecordList, "CoverageReport": CoverageReport, "ImportResult": ImportResult,
@@ -182,6 +183,8 @@ def scenario_main(r: Recorder) -> None:
     r.call("meta", "GET", "/api/meta", schema="MetaOut", expect=200,
            description="modes and real-vs-simulated labels")
     r.call("teams", "GET", "/api/teams", schema="TeamOut[]", expect=200, description="three Northstar teams")
+    r.call("people", "GET", "/api/people", schema="PersonOut[]", expect=200,
+           description="fifteen fictional people (6 research / 4 product / 5 engineering), simulated")
     r.call("team_mappings", "GET", "/api/team-mappings", schema="TeamMappingOut[]", expect=200,
            description="explicit source account -> team mappings")
     r.call("budget_state_initial", "GET", "/api/budget", schema="BudgetState", expect=200,
@@ -190,9 +193,14 @@ def scenario_main(r: Recorder) -> None:
            description="recorded spend 45k/20k/30k = 95k; included usage notional only; coverage complete")
     r.call("coverage", "GET", "/api/coverage", schema="CoverageReport", expect=200,
            description="coverage per team and company for the seeded data")
-    r.call("spend_records_research", "GET", "/api/spend/records", params={"team": "research"},
+    r.call("spend_records_research", "GET", "/api/spend/records", params={"team": "research", "limit": 8},
            schema="SpendRecordList", expect=200,
-           description="research drill-down incl. included_usage with counts_toward_spend=false")
+           description="research drill-down (first 8 of 260 daily records): per-person rows carry `person`; "
+                       "team-level included_usage has person null and counts_toward_spend=false")
+    r.call("spend_records_person", "GET", "/api/spend/records",
+           params={"person": "research-omar-haddad", "cost_category": "direct_api", "limit": 20},
+           schema="SpendRecordList", expect=200,
+           description="one person's daily API spend Oct 1-20 (usage halves from Oct 19)")
     r.call("forecast_available", "GET", "/api/forecasts", schema="ForecastResult", expect=200,
            description="placeholder projections 85k/50k/65k, full_period_total, simulated (not a model)")
     snap = r.call("forecast_snapshot", "POST", "/api/forecasts/snapshots", headers=DROID,
@@ -201,7 +209,7 @@ def scenario_main(r: Recorder) -> None:
     r.call("overview", "GET", "/api/overview", schema="Overview", expect=200,
            description="spend + budget + forecast combined, per-team comparison")
     r.call("documents", "GET", "/api/documents", schema="DocumentList", expect=200,
-           description="six seeded documents with supersedes links and is_current")
+           description="13 seeded documents with supersedes links, is_current, integration and person_tags")
     r.call("documents_search_model_evaluation", "GET", "/api/documents",
            params={"q": "model-evaluation", "include_superseded": "true"}, schema="DocumentList", expect=200,
            description="keyword search with exact match offsets; superseded thread still listed, marked")
@@ -261,8 +269,39 @@ def scenario_main(r: Recorder) -> None:
         "uncertainty": "brainstorm only, explicitly not a plan",
         "citations": [{"document_id": mkt_id, "quote": "fun idea, no budget or approval for it yet though"}],
     })
+    omar_doc = _doc_id(r, "research-model-switch-slack")
+    announce_doc = _doc_id(r, "company-model-announcement-slack")
+    r.call("signal_person_created", "POST", "/api/signals", headers=DROID, schema="ContextSignalOut", expect=201,
+           description="person-scope signal: team derived from the person, signal_kind model_change", json_body={
+        "scope": "person", "person_ids": ["research-omar-haddad"], "signal_kind": "model_change",
+        "title": "Omar Haddad moving eval sweeps to a cheaper model tier", "project": "model-evaluation",
+        "change_type": "reduction", "status": "current", "applies_from": "2026-10-19",
+        "summary": "Omar Haddad moves his nightly eval sweeps to the smaller model tier from 2026-10-19.",
+        "uncertainty": "no prices or token volumes for either tier",
+        "citations": [{"document_id": omar_doc,
+                       "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model "
+                                "to the smaller model tier."}],
+    })
+    r.call("signal_company_created", "POST", "/api/signals", headers=DROID, schema="ContextSignalOut", expect=201,
+           description="company-scope signal: no team, no people; applies to every team", json_body={
+        "scope": "company", "signal_kind": "model_change", "title": "Company-wide default model change from Nov 2",
+        "change_type": "other", "status": "current", "applies_from": "2026-11-02",
+        "summary": "Every team's default model moves to a new mid-tier model from 2026-11-02.",
+        "uncertainty": "the net effect on each team's bill is not known",
+        "citations": [{"document_id": announce_doc,
+                       "quote": "the net effect on each team's bill is not known yet."}],
+    })
+    r.call("error_signal_scope", "POST", "/api/signals", headers=DROID, schema="ErrorBody", expect=422,
+           description="scope rules: every person in a person signal must be on one team (person_team_mismatch)",
+           json_body={
+        "scope": "person", "person_ids": ["research-omar-haddad", "product-felix-weber"], "team": "research",
+        "change_type": "other", "status": "current", "summary": "Two people on two teams.",
+        "uncertainty": "invalid on purpose",
+        "citations": [{"document_id": omar_doc, "quote": "just the cheaper tier for everything except the final "
+                                                         "comparison runs."}],
+    })
     r.call("signals", "GET", "/api/signals", schema="SignalList", expect=200,
-           description="current / superseded / informal signals with citation currency")
+           description="team / person / company signals (current, superseded, informal) with citation currency")
     r.call("signal_detail_product", "GET", f"/api/signals/{product['id']}", schema="ContextSignalOut", expect=200,
            description="product timing shift citing v2 (current) and v1 (superseded)")
     r.call("error_citation_not_found", "POST", "/api/signals", headers=DROID, schema="ErrorBody", expect=422,

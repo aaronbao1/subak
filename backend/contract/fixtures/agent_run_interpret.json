@@ -58,7 +58,7 @@
         "data": {
           "is_error": false,
           "step": 1,
-          "summary": "6 document(s)",
+          "summary": "13 document(s)",
           "tool": "search_corpus"
         },
         "seq": 4,
@@ -169,7 +169,7 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "args": {
-            "document_id": "doc_000005"
+            "document_id": "doc_000011"
           },
           "step": 6,
           "tool": "read_document"
@@ -183,7 +183,7 @@
         "data": {
           "is_error": false,
           "step": 6,
-          "summary": "product-launch-plan v2 (approved, current)",
+          "summary": "engineering-welcome-slack v1 (n/a, current)",
           "tool": "read_document"
         },
         "seq": 14,
@@ -194,7 +194,7 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "args": {
-            "document_id": "doc_000006"
+            "document_id": "doc_000005"
           },
           "step": 7,
           "tool": "read_document"
@@ -208,10 +208,185 @@
         "data": {
           "is_error": false,
           "step": 7,
-          "summary": "marketing-ideas-slack v1 (informal, current)",
+          "summary": "product-launch-plan v2 (approved, current)",
           "tool": "read_document"
         },
         "seq": 16,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000007"
+          },
+          "step": 8,
+          "tool": "read_document"
+        },
+        "seq": 17,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 8,
+          "summary": "research-harness-asana v1 (approved, current)",
+          "tool": "read_document"
+        },
+        "seq": 18,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000006"
+          },
+          "step": 9,
+          "tool": "read_document"
+        },
+        "seq": 19,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 9,
+          "summary": "marketing-ideas-slack v1 (informal, current)",
+          "tool": "read_document"
+        },
+        "seq": 20,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000008"
+          },
+          "step": 10,
+          "tool": "read_document"
+        },
+        "seq": 21,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 10,
+          "summary": "research-model-switch-slack v1 (n/a, current)",
+          "tool": "read_document"
+        },
+        "seq": 22,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000009"
+          },
+          "step": 11,
+          "tool": "read_document"
+        },
+        "seq": 23,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 11,
+          "summary": "research-availability-monday v1 (n/a, current)",
+          "tool": "read_document"
+        },
+        "seq": 24,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000010"
+          },
+          "step": 12,
+          "tool": "read_document"
+        },
+        "seq": 25,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 12,
+          "summary": "engineering-cutover-monday v1 (approved, current)",
+          "tool": "read_document"
+        },
+        "seq": 26,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000012"
+          },
+          "step": 13,
+          "tool": "read_document"
+        },
+        "seq": 27,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 13,
+          "summary": "product-tool-switch-slack v1 (n/a, current)",
+          "tool": "read_document"
+        },
+        "seq": 28,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "document_id": "doc_000013"
+          },
+          "step": 14,
+          "tool": "read_document"
+        },
+        "seq": 29,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 14,
+          "summary": "company-model-announcement-slack v1 (n/a, current)",
+          "tool": "read_document"
+        },
+        "seq": 30,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -238,7 +413,7 @@
             "version": 1
           }
         },
-        "seq": 17,
+        "seq": 31,
         "source": "fake_runner",
         "type": "supersession_detected"
       },
@@ -265,7 +440,7 @@
             "version": 1
           }
         },
-        "seq": 18,
+        "seq": 32,
         "source": "fake_runner",
         "type": "supersession_detected"
       },
@@ -293,7 +468,7 @@
           "resolution": "the newer approved document explicitly supersedes the older one; the older timeline is kept as history and is not treated as current",
           "topic": "model-evaluation"
         },
-        "seq": 19,
+        "seq": 33,
         "source": "fake_runner",
         "type": "conflict_detected"
       },
@@ -307,7 +482,7 @@
           "quote": "we will push the model-evaluation expansion to next period.",
           "version": 1
         },
-        "seq": 20,
+        "seq": 34,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -321,7 +496,7 @@
           "quote": "Nothing here is approved yet; we will confirm in the formal plan.",
           "version": 1
         },
-        "seq": 21,
+        "seq": 35,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -347,17 +522,21 @@
                   "quote": "Nothing here is approved yet; we will confirm in the formal plan."
                 }
               ],
+              "person_ids": [],
               "project": "model-evaluation",
+              "scope": "team",
+              "signal_kind": "project_deferred",
               "status": "superseded",
               "summary": "Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan.",
               "team": "research",
+              "title": "Older thread: research expansion pushed to next period",
               "uncertainty": "Informal correspondence, never approved; kept only as history of the earlier timeline."
             }
           },
-          "step": 8,
+          "step": 15,
           "tool": "record_signal"
         },
-        "seq": 22,
+        "seq": 36,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -365,11 +544,11 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "is_error": false,
-          "step": 8,
+          "step": 15,
           "summary": "signal sig_000001 (superseded)",
           "tool": "record_signal"
         },
-        "seq": 23,
+        "seq": 37,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -379,15 +558,43 @@
           "already_recorded": false,
           "change_type": "timing_shift",
           "citations": 2,
+          "person_ids": [],
+          "scope": "team",
           "signal_id": "sig_000001",
+          "signal_kind": "project_deferred",
           "status": "superseded",
           "summary": "Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan.",
           "supersedes_signal_ids": [],
           "team": "research"
         },
-        "seq": 24,
+        "seq": 38,
         "source": "fake_runner",
         "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "team": null
+          },
+          "step": 16,
+          "tool": "list_people"
+        },
+        "seq": 39,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 16,
+          "summary": "15 person(s)",
+          "tool": "list_people"
+        },
+        "seq": 40,
+        "source": "fake_runner",
+        "type": "tool_result"
       },
       {
         "at": "2026-10-24T12:01:00Z",
@@ -399,7 +606,7 @@
           "quote": "This plan expands model-evaluation work during the current planning period.",
           "version": 1
         },
-        "seq": 25,
+        "seq": 41,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -413,7 +620,7 @@
           "quote": "This plan supersedes the earlier email thread that proposed pushing the expansion to next period.",
           "version": 1
         },
-        "seq": 26,
+        "seq": 42,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -427,7 +634,7 @@
           "quote": "Exact token volumes are not yet known; they depend on how many model updates ship.",
           "version": 1
         },
-        "seq": 27,
+        "seq": 43,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -459,18 +666,22 @@
                   "quote": "Exact token volumes are not yet known; they depend on how many model updates ship."
                 }
               ],
+              "person_ids": [],
               "project": "model-evaluation",
+              "scope": "team",
+              "signal_kind": "project_accelerated",
               "status": "current",
               "summary": "Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next.",
               "supersedes_signal_id": "sig_000001",
               "team": "research",
+              "title": "Research model-evaluation expansion moves into the current period",
               "uncertainty": "Plan is approved but exact token volumes are not yet known and depend on how many model updates ship; the plan does not justify a specific cost multiplier."
             }
           },
-          "step": 9,
+          "step": 17,
           "tool": "record_signal"
         },
-        "seq": 28,
+        "seq": 44,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -478,11 +689,11 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "is_error": false,
-          "step": 9,
+          "step": 17,
           "summary": "signal sig_000002 (current)",
           "tool": "record_signal"
         },
-        "seq": 29,
+        "seq": 45,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -492,7 +703,10 @@
           "already_recorded": false,
           "change_type": "expansion",
           "citations": 3,
+          "person_ids": [],
+          "scope": "team",
           "signal_id": "sig_000002",
+          "signal_kind": "project_accelerated",
           "status": "current",
           "summary": "Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next.",
           "supersedes_signal_ids": [
@@ -500,7 +714,7 @@
           ],
           "team": "research"
         },
-        "seq": 30,
+        "seq": 46,
         "source": "fake_runner",
         "type": "signal_recorded"
       },
@@ -514,7 +728,7 @@
           "quote": "The general-availability launch milestone moves to the following period after customer pilot\nfeedback.",
           "version": 2
         },
-        "seq": 31,
+        "seq": 47,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -528,7 +742,7 @@
           "quote": "Near-term launch rehearsal is reduced this period; prompt tuning continues at a lower level.",
           "version": 2
         },
-        "seq": 32,
+        "seq": 48,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -542,7 +756,7 @@
           "quote": "The general-availability launch milestone for the assistant workspace lands in the current period.",
           "version": 1
         },
-        "seq": 33,
+        "seq": 49,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -574,17 +788,21 @@
                   "quote": "The general-availability launch milestone for the assistant workspace lands in the current period."
                 }
               ],
+              "person_ids": [],
               "project": "workspace-launch",
+              "scope": "team",
+              "signal_kind": "project_deferred",
               "status": "current",
               "summary": "Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period).",
               "team": "product",
+              "title": "Product GA launch moves to the following period",
               "uncertainty": "Timing depends on customer pilot feedback; lower near-term work is not by itself an authorization to take product's allocation."
             }
           },
-          "step": 10,
+          "step": 18,
           "tool": "record_signal"
         },
-        "seq": 34,
+        "seq": 50,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -592,11 +810,11 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "is_error": false,
-          "step": 10,
+          "step": 18,
           "summary": "signal sig_000003 (current)",
           "tool": "record_signal"
         },
-        "seq": 35,
+        "seq": 51,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -606,13 +824,16 @@
           "already_recorded": false,
           "change_type": "timing_shift",
           "citations": 3,
+          "person_ids": [],
+          "scope": "team",
           "signal_id": "sig_000003",
+          "signal_kind": "project_deferred",
           "status": "current",
           "summary": "Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period).",
           "supersedes_signal_ids": [],
           "team": "product"
         },
-        "seq": 36,
+        "seq": 52,
         "source": "fake_runner",
         "type": "signal_recorded"
       },
@@ -626,7 +847,7 @@
           "quote": "Platform migration work continues through the current period at the current pace.",
           "version": 1
         },
-        "seq": 37,
+        "seq": 53,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -646,17 +867,21 @@
                   "quote": "Platform migration work continues through the current period at the current pace."
                 }
               ],
+              "person_ids": [],
               "project": "platform",
+              "scope": "team",
+              "signal_kind": "steady",
               "status": "current",
               "summary": "Engineering platform migration continues through the current period at the current pace; seats stay flat.",
               "team": "engineering",
+              "title": "Engineering platform migration continues at the current pace",
               "uncertainty": "A management note, not a budget plan; overage is expected to track the migration backlog."
             }
           },
-          "step": 11,
+          "step": 19,
           "tool": "record_signal"
         },
-        "seq": 38,
+        "seq": 54,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -664,11 +889,11 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "is_error": false,
-          "step": 11,
+          "step": 19,
           "summary": "signal sig_000004 (current)",
           "tool": "record_signal"
         },
-        "seq": 39,
+        "seq": 55,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -678,13 +903,16 @@
           "already_recorded": false,
           "change_type": "continuation",
           "citations": 1,
+          "person_ids": [],
+          "scope": "team",
           "signal_id": "sig_000004",
+          "signal_kind": "steady",
           "status": "current",
           "summary": "Engineering platform migration continues through the current period at the current pace; seats stay flat.",
           "supersedes_signal_ids": [],
           "team": "engineering"
         },
-        "seq": 40,
+        "seq": 56,
         "source": "fake_runner",
         "type": "signal_recorded"
       },
@@ -698,7 +926,7 @@
           "quote": "no budget or approval for it yet though",
           "version": 1
         },
-        "seq": 41,
+        "seq": 57,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -712,7 +940,7 @@
           "quote": "just brainstorming, not a plan",
           "version": 1
         },
-        "seq": 42,
+        "seq": 58,
         "source": "fake_runner",
         "type": "evidence_found"
       },
@@ -738,17 +966,21 @@
                   "quote": "just brainstorming, not a plan"
                 }
               ],
+              "person_ids": [],
               "project": "campaigns",
+              "scope": "team",
+              "signal_kind": null,
               "status": "informal",
               "summary": "Marketing Slack brainstorm about personalized AI demo videos; an idea, not a plan.",
               "team": null,
+              "title": "Marketing idea: personalized AI demo videos",
               "uncertainty": "Informal suggestion with no budget or approval; marketing is not a budgeted team here."
             }
           },
-          "step": 12,
+          "step": 20,
           "tool": "record_signal"
         },
-        "seq": 43,
+        "seq": 59,
         "source": "fake_runner",
         "type": "tool_call"
       },
@@ -756,11 +988,11 @@
         "at": "2026-10-24T12:01:00Z",
         "data": {
           "is_error": false,
-          "step": 12,
+          "step": 20,
           "summary": "signal sig_000005 (informal)",
           "tool": "record_signal"
         },
-        "seq": 44,
+        "seq": 60,
         "source": "fake_runner",
         "type": "tool_result"
       },
@@ -770,22 +1002,702 @@
           "already_recorded": false,
           "change_type": "other",
           "citations": 2,
+          "person_ids": [],
+          "scope": "team",
           "signal_id": "sig_000005",
+          "signal_kind": null,
           "status": "informal",
           "summary": "Marketing Slack brainstorm about personalized AI demo videos; an idea, not a plan.",
           "supersedes_signal_ids": [],
           "team": null
         },
-        "seq": 45,
+        "seq": 61,
         "source": "fake_runner",
         "type": "signal_recorded"
       },
       {
         "at": "2026-10-24T12:01:00Z",
         "data": {
-          "text": "Read 6 documents; recorded 5 cited signals (3 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal)."
+          "char_end": 274,
+          "char_start": 155,
+          "doc_key": "research-harness-asana",
+          "document_id": "doc_000007",
+          "quote": "Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03.",
+          "version": 1
         },
-        "seq": 46,
+        "seq": 62,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 394,
+          "char_start": 313,
+          "doc_key": "research-harness-asana",
+          "document_id": "doc_000007",
+          "quote": "I will pause the implementation branch and keep my API runs to the design spikes.",
+          "version": 1
+        },
+        "seq": 63,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-14",
+              "applies_to": "2026-11-03",
+              "change_type": "reduction",
+              "citations": [
+                {
+                  "char_end": 274,
+                  "char_start": 155,
+                  "document_id": "doc_000007",
+                  "quote": "Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03."
+                },
+                {
+                  "char_end": 394,
+                  "char_start": 313,
+                  "document_id": "doc_000007",
+                  "quote": "I will pause the implementation branch and keep my API runs to the design spikes."
+                }
+              ],
+              "person_ids": [
+                "research-leila-novak"
+              ],
+              "project": "model-evaluation",
+              "scope": "person",
+              "signal_kind": "project_deferred",
+              "status": "current",
+              "summary": "Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch.",
+              "team": "research",
+              "title": "Leila Novak's harness build deferred to Nov 3",
+              "uncertainty": "The task does not say how much API usage the design spikes use, or whether the design review will sign off on 2026-11-03."
+            }
+          },
+          "step": 21,
+          "tool": "record_signal"
+        },
+        "seq": 64,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 21,
+          "summary": "signal sig_000006 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 65,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "reduction",
+          "citations": 2,
+          "person_ids": [
+            "research-leila-novak"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000006",
+          "signal_kind": "project_deferred",
+          "status": "current",
+          "summary": "Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch.",
+          "supersedes_signal_ids": [],
+          "team": "research"
+        },
+        "seq": 66,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 196,
+          "char_start": 91,
+          "doc_key": "research-model-switch-slack",
+          "document_id": "doc_000008",
+          "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.",
+          "version": 1
+        },
+        "seq": 67,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 343,
+          "char_start": 273,
+          "doc_key": "research-model-switch-slack",
+          "document_id": "doc_000008",
+          "quote": "just the cheaper tier for everything except the final comparison runs.",
+          "version": 1
+        },
+        "seq": 68,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-19",
+              "applies_to": null,
+              "change_type": "reduction",
+              "citations": [
+                {
+                  "char_end": 196,
+                  "char_start": 91,
+                  "document_id": "doc_000008",
+                  "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier."
+                },
+                {
+                  "char_end": 343,
+                  "char_start": 273,
+                  "document_id": "doc_000008",
+                  "quote": "just the cheaper tier for everything except the final comparison runs."
+                }
+              ],
+              "person_ids": [
+                "research-omar-haddad"
+              ],
+              "project": "model-evaluation",
+              "scope": "person",
+              "signal_kind": "model_change",
+              "status": "current",
+              "summary": "Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs.",
+              "team": "research",
+              "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+              "uncertainty": "The thread gives no prices or token volumes for either tier, and does not say how many final comparison runs stay on the large model."
+            }
+          },
+          "step": 22,
+          "tool": "record_signal"
+        },
+        "seq": 69,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 22,
+          "summary": "signal sig_000007 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 70,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "reduction",
+          "citations": 2,
+          "person_ids": [
+            "research-omar-haddad"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000007",
+          "signal_kind": "model_change",
+          "status": "current",
+          "summary": "Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs.",
+          "supersedes_signal_ids": [],
+          "team": "research"
+        },
+        "seq": 71,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 349,
+          "char_start": 270,
+          "doc_key": "research-availability-monday",
+          "document_id": "doc_000009",
+          "quote": "Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away.",
+          "version": 1
+        },
+        "seq": 72,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-26",
+              "applies_to": "2026-10-30",
+              "change_type": "reduction",
+              "citations": [
+                {
+                  "char_end": 349,
+                  "char_start": 270,
+                  "document_id": "doc_000009",
+                  "quote": "Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away."
+                }
+              ],
+              "person_ids": [
+                "research-theo-brandt"
+              ],
+              "project": null,
+              "scope": "person",
+              "signal_kind": "out_of_office",
+              "status": "current",
+              "summary": "Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away.",
+              "team": "research",
+              "title": "Theo Brandt out of office Oct 26-30",
+              "uncertainty": "The board does not say whether teammates pick up his runs while he is away, or what his usual daily usage is."
+            }
+          },
+          "step": 23,
+          "tool": "record_signal"
+        },
+        "seq": 73,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 23,
+          "summary": "signal sig_000008 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 74,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "reduction",
+          "citations": 1,
+          "person_ids": [
+            "research-theo-brandt"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000008",
+          "signal_kind": "out_of_office",
+          "status": "current",
+          "summary": "Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away.",
+          "supersedes_signal_ids": [],
+          "team": "research"
+        },
+        "seq": 75,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 260,
+          "char_start": 185,
+          "doc_key": "engineering-cutover-monday",
+          "document_id": "doc_000010",
+          "quote": "the cutover regression suite now starts 2026-10-22 instead of mid-November.",
+          "version": 1
+        },
+        "seq": 76,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 359,
+          "char_start": 261,
+          "doc_key": "engineering-cutover-monday",
+          "document_id": "doc_000010",
+          "quote": "Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes.",
+          "version": 1
+        },
+        "seq": 77,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-22",
+              "applies_to": null,
+              "change_type": "expansion",
+              "citations": [
+                {
+                  "char_end": 260,
+                  "char_start": 185,
+                  "document_id": "doc_000010",
+                  "quote": "the cutover regression suite now starts 2026-10-22 instead of mid-November."
+                },
+                {
+                  "char_end": 359,
+                  "char_start": 261,
+                  "document_id": "doc_000010",
+                  "quote": "Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes."
+                }
+              ],
+              "person_ids": [
+                "engineering-sofia-reyes"
+              ],
+              "project": "platform",
+              "scope": "person",
+              "signal_kind": "project_accelerated",
+              "status": "current",
+              "summary": "Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover.",
+              "team": "engineering",
+              "title": "Sofia Reyes's cutover regression runs start Oct 22",
+              "uncertainty": "The item does not say when the cutover completes or how much usage a daily suite takes. The engineering platform note (2026-10-12) says the migration continues at the current pace; this item moves one person's work earlier and does not say that the team total changes."
+            }
+          },
+          "step": 24,
+          "tool": "record_signal"
+        },
+        "seq": 78,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 24,
+          "summary": "signal sig_000009 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 79,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "expansion",
+          "citations": 2,
+          "person_ids": [
+            "engineering-sofia-reyes"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000009",
+          "signal_kind": "project_accelerated",
+          "status": "current",
+          "summary": "Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover.",
+          "supersedes_signal_ids": [],
+          "team": "engineering"
+        },
+        "seq": 80,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 192,
+          "char_start": 77,
+          "doc_key": "engineering-welcome-slack",
+          "document_id": "doc_000011",
+          "quote": "Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13.",
+          "version": 1
+        },
+        "seq": 81,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-13",
+              "applies_to": null,
+              "change_type": "expansion",
+              "citations": [
+                {
+                  "char_end": 192,
+                  "char_start": 77,
+                  "document_id": "doc_000011",
+                  "quote": "Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13."
+                }
+              ],
+              "person_ids": [
+                "engineering-hana-sato"
+              ],
+              "project": "platform",
+              "scope": "person",
+              "signal_kind": "onboarding",
+              "status": "current",
+              "summary": "Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date.",
+              "team": "engineering",
+              "title": "Hana Sato joined the platform team",
+              "uncertainty": "The message does not say how much she will use the seat or the API key while ramping up."
+            }
+          },
+          "step": 25,
+          "tool": "record_signal"
+        },
+        "seq": 82,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 25,
+          "summary": "signal sig_000010 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 83,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "expansion",
+          "citations": 1,
+          "person_ids": [
+            "engineering-hana-sato"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000010",
+          "signal_kind": "onboarding",
+          "status": "current",
+          "summary": "Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date.",
+          "supersedes_signal_ids": [],
+          "team": "engineering"
+        },
+        "seq": 84,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 184,
+          "char_start": 81,
+          "doc_key": "product-tool-switch-slack",
+          "document_id": "doc_000012",
+          "quote": "From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly.",
+          "version": 1
+        },
+        "seq": 85,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 304,
+          "char_start": 251,
+          "doc_key": "product-tool-switch-slack",
+          "document_id": "doc_000012",
+          "quote": "it will show up as API usage instead of seat overage.",
+          "version": 1
+        },
+        "seq": 86,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-10-21",
+              "applies_to": null,
+              "change_type": "continuation",
+              "citations": [
+                {
+                  "char_end": 184,
+                  "char_start": 81,
+                  "document_id": "doc_000012",
+                  "quote": "From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly."
+                },
+                {
+                  "char_end": 304,
+                  "char_start": 251,
+                  "document_id": "doc_000012",
+                  "quote": "it will show up as API usage instead of seat overage."
+                }
+              ],
+              "person_ids": [
+                "product-felix-weber"
+              ],
+              "project": "workspace-launch",
+              "scope": "person",
+              "signal_kind": "tool_change",
+              "status": "current",
+              "summary": "Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage.",
+              "team": "product",
+              "title": "Felix Weber moving tuning scripts to the OpenAI API",
+              "uncertainty": "The thread does not compare API prices with seat overage, so whether the cost goes up or down is not known."
+            }
+          },
+          "step": 26,
+          "tool": "record_signal"
+        },
+        "seq": 87,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 26,
+          "summary": "signal sig_000011 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 88,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "continuation",
+          "citations": 2,
+          "person_ids": [
+            "product-felix-weber"
+          ],
+          "scope": "person",
+          "signal_id": "sig_000011",
+          "signal_kind": "tool_change",
+          "status": "current",
+          "summary": "Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage.",
+          "supersedes_signal_ids": [],
+          "team": "product"
+        },
+        "seq": 89,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 191,
+          "char_start": 78,
+          "doc_key": "company-model-announcement-slack",
+          "document_id": "doc_000013",
+          "quote": "Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week.",
+          "version": 1
+        },
+        "seq": 90,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "char_end": 367,
+          "char_start": 315,
+          "doc_key": "company-model-announcement-slack",
+          "document_id": "doc_000013",
+          "quote": "the net effect on each team's bill is not known yet.",
+          "version": 1
+        },
+        "seq": 91,
+        "source": "fake_runner",
+        "type": "evidence_found"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "args": {
+            "signal": {
+              "applies_from": "2026-11-02",
+              "applies_to": null,
+              "change_type": "other",
+              "citations": [
+                {
+                  "char_end": 191,
+                  "char_start": 78,
+                  "document_id": "doc_000013",
+                  "quote": "Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week."
+                },
+                {
+                  "char_end": 367,
+                  "char_start": 315,
+                  "document_id": "doc_000013",
+                  "quote": "the net effect on each team's bill is not known yet."
+                }
+              ],
+              "person_ids": [],
+              "project": null,
+              "scope": "company",
+              "signal_kind": "model_change",
+              "status": "current",
+              "summary": "From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known.",
+              "team": null,
+              "title": "Company-wide default model change from Nov 2",
+              "uncertainty": "The announcement gives no prices or volumes and says the net effect on each team's bill is not known yet."
+            }
+          },
+          "step": 27,
+          "tool": "record_signal"
+        },
+        "seq": 92,
+        "source": "fake_runner",
+        "type": "tool_call"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "is_error": false,
+          "step": 27,
+          "summary": "signal sig_000012 (current)",
+          "tool": "record_signal"
+        },
+        "seq": 93,
+        "source": "fake_runner",
+        "type": "tool_result"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "already_recorded": false,
+          "change_type": "other",
+          "citations": 2,
+          "person_ids": [],
+          "scope": "company",
+          "signal_id": "sig_000012",
+          "signal_kind": "model_change",
+          "status": "current",
+          "summary": "From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known.",
+          "supersedes_signal_ids": [],
+          "team": null
+        },
+        "seq": 94,
+        "source": "fake_runner",
+        "type": "signal_recorded"
+      },
+      {
+        "at": "2026-10-24T12:01:00Z",
+        "data": {
+          "text": "Read 13 documents; recorded 12 cited signals (10 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal)."
+        },
+        "seq": 95,
         "source": "fake_runner",
         "type": "assistant_text"
       },
@@ -799,12 +1711,19 @@
             "sig_000002",
             "sig_000003",
             "sig_000004",
-            "sig_000005"
+            "sig_000005",
+            "sig_000006",
+            "sig_000007",
+            "sig_000008",
+            "sig_000009",
+            "sig_000010",
+            "sig_000011",
+            "sig_000012"
           ],
           "status": "succeeded",
-          "summary": "Read 6 documents; recorded 5 cited signals (3 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal)."
+          "summary": "Read 13 documents; recorded 12 cited signals (10 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal)."
         },
-        "seq": 47,
+        "seq": 96,
         "source": "backend",
         "type": "run_finished"
       }
@@ -895,9 +1814,16 @@
         "sig_000002",
         "sig_000003",
         "sig_000004",
-        "sig_000005"
+        "sig_000005",
+        "sig_000006",
+        "sig_000007",
+        "sig_000008",
+        "sig_000009",
+        "sig_000010",
+        "sig_000011",
+        "sig_000012"
       ],
-      "summary": "Read 6 documents; recorded 5 cited signals (3 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
+      "summary": "Read 13 documents; recorded 12 cited signals (10 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
       "usage": null,
       "warnings": []
     },
@@ -909,7 +1835,14 @@
       "sig_000002",
       "sig_000003",
       "sig_000004",
-      "sig_000005"
+      "sig_000005",
+      "sig_000006",
+      "sig_000007",
+      "sig_000008",
+      "sig_000009",
+      "sig_000010",
+      "sig_000011",
+      "sig_000012"
     ],
     "simulated": true,
     "started_at": "2026-10-24T12:01:00Z",
@@ -923,7 +1856,7 @@
           "team": null
         },
         "at": "2026-10-24T12:01:00Z",
-        "result_summary": "6 document(s)",
+        "result_summary": "13 document(s)",
         "seq": 1,
         "tool": "search_corpus"
       },
@@ -965,11 +1898,29 @@
       },
       {
         "args": {
+          "document_id": "doc_000011"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "engineering-welcome-slack v1 (n/a, current)",
+        "seq": 6,
+        "tool": "read_document"
+      },
+      {
+        "args": {
           "document_id": "doc_000005"
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "product-launch-plan v2 (approved, current)",
-        "seq": 6,
+        "seq": 7,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000007"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "research-harness-asana v1 (approved, current)",
+        "seq": 8,
         "tool": "read_document"
       },
       {
@@ -978,7 +1929,52 @@
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "marketing-ideas-slack v1 (informal, current)",
-        "seq": 7,
+        "seq": 9,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000008"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "research-model-switch-slack v1 (n/a, current)",
+        "seq": 10,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000009"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "research-availability-monday v1 (n/a, current)",
+        "seq": 11,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000010"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "engineering-cutover-monday v1 (approved, current)",
+        "seq": 12,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000012"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "product-tool-switch-slack v1 (n/a, current)",
+        "seq": 13,
+        "tool": "read_document"
+      },
+      {
+        "args": {
+          "document_id": "doc_000013"
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "company-model-announcement-slack v1 (n/a, current)",
+        "seq": 14,
         "tool": "read_document"
       },
       {
@@ -1001,17 +1997,30 @@
                 "quote": "Nothing here is approved yet; we will confirm in the formal plan."
               }
             ],
+            "person_ids": [],
             "project": "model-evaluation",
+            "scope": "team",
+            "signal_kind": "project_deferred",
             "status": "superseded",
             "summary": "Older research email thread (2026-09-03) said the model-evaluation expansion would be pushed to next period; this timeline is no longer the current plan.",
             "team": "research",
+            "title": "Older thread: research expansion pushed to next period",
             "uncertainty": "Informal correspondence, never approved; kept only as history of the earlier timeline."
           }
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "signal sig_000001 (superseded)",
-        "seq": 8,
+        "seq": 15,
         "tool": "record_signal"
+      },
+      {
+        "args": {
+          "team": null
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "15 person(s)",
+        "seq": 16,
+        "tool": "list_people"
       },
       {
         "args": {
@@ -1039,17 +2048,21 @@
                 "quote": "Exact token volumes are not yet known; they depend on how many model updates ship."
               }
             ],
+            "person_ids": [],
             "project": "model-evaluation",
+            "scope": "team",
+            "signal_kind": "project_accelerated",
             "status": "current",
             "summary": "Approved research plan (2026-10-08) expands model-evaluation work in the current planning period; larger evaluation sweeps start this period instead of next.",
             "supersedes_signal_id": "sig_000001",
             "team": "research",
+            "title": "Research model-evaluation expansion moves into the current period",
             "uncertainty": "Plan is approved but exact token volumes are not yet known and depend on how many model updates ship; the plan does not justify a specific cost multiplier."
           }
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "signal sig_000002 (current)",
-        "seq": 9,
+        "seq": 17,
         "tool": "record_signal"
       },
       {
@@ -1078,16 +2091,20 @@
                 "quote": "The general-availability launch milestone for the assistant workspace lands in the current period."
               }
             ],
+            "person_ids": [],
             "project": "workspace-launch",
+            "scope": "team",
+            "signal_kind": "project_deferred",
             "status": "current",
             "summary": "Product launch update (2026-10-14) moves the GA milestone to the following period, reducing near-term launch rehearsal compared with the August plan (which had launch this period).",
             "team": "product",
+            "title": "Product GA launch moves to the following period",
             "uncertainty": "Timing depends on customer pilot feedback; lower near-term work is not by itself an authorization to take product's allocation."
           }
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "signal sig_000003 (current)",
-        "seq": 10,
+        "seq": 18,
         "tool": "record_signal"
       },
       {
@@ -1104,16 +2121,20 @@
                 "quote": "Platform migration work continues through the current period at the current pace."
               }
             ],
+            "person_ids": [],
             "project": "platform",
+            "scope": "team",
+            "signal_kind": "steady",
             "status": "current",
             "summary": "Engineering platform migration continues through the current period at the current pace; seats stay flat.",
             "team": "engineering",
+            "title": "Engineering platform migration continues at the current pace",
             "uncertainty": "A management note, not a budget plan; overage is expected to track the migration backlog."
           }
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "signal sig_000004 (current)",
-        "seq": 11,
+        "seq": 19,
         "tool": "record_signal"
       },
       {
@@ -1136,20 +2157,276 @@
                 "quote": "just brainstorming, not a plan"
               }
             ],
+            "person_ids": [],
             "project": "campaigns",
+            "scope": "team",
+            "signal_kind": null,
             "status": "informal",
             "summary": "Marketing Slack brainstorm about personalized AI demo videos; an idea, not a plan.",
             "team": null,
+            "title": "Marketing idea: personalized AI demo videos",
             "uncertainty": "Informal suggestion with no budget or approval; marketing is not a budgeted team here."
           }
         },
         "at": "2026-10-24T12:01:00Z",
         "result_summary": "signal sig_000005 (informal)",
-        "seq": 12,
+        "seq": 20,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-14",
+            "applies_to": "2026-11-03",
+            "change_type": "reduction",
+            "citations": [
+              {
+                "char_end": 274,
+                "char_start": 155,
+                "document_id": "doc_000007",
+                "quote": "Leila, please stay on the design doc longer and hold the harness build until the design review signs off on 2026-11-03."
+              },
+              {
+                "char_end": 394,
+                "char_start": 313,
+                "document_id": "doc_000007",
+                "quote": "I will pause the implementation branch and keep my API runs to the design spikes."
+              }
+            ],
+            "person_ids": [
+              "research-leila-novak"
+            ],
+            "project": "model-evaluation",
+            "scope": "person",
+            "signal_kind": "project_deferred",
+            "status": "current",
+            "summary": "Ava Chen asked Leila Novak (Asana, 2026-10-14) to stay on the design doc and hold the eval-harness build until the design review on 2026-11-03; Leila is pausing the implementation branch.",
+            "team": "research",
+            "title": "Leila Novak's harness build deferred to Nov 3",
+            "uncertainty": "The task does not say how much API usage the design spikes use, or whether the design review will sign off on 2026-11-03."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000006 (current)",
+        "seq": 21,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-19",
+            "applies_to": null,
+            "change_type": "reduction",
+            "citations": [
+              {
+                "char_end": 196,
+                "char_start": 91,
+                "document_id": "doc_000008",
+                "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier."
+              },
+              {
+                "char_end": 343,
+                "char_start": 273,
+                "document_id": "doc_000008",
+                "quote": "just the cheaper tier for everything except the final comparison runs."
+              }
+            ],
+            "person_ids": [
+              "research-omar-haddad"
+            ],
+            "project": "model-evaluation",
+            "scope": "person",
+            "signal_kind": "model_change",
+            "status": "current",
+            "summary": "Omar Haddad said (Slack, 2026-10-16) that from 2026-10-19 his nightly eval sweeps move to the smaller, cheaper model tier, except the final comparison runs.",
+            "team": "research",
+            "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+            "uncertainty": "The thread gives no prices or token volumes for either tier, and does not say how many final comparison runs stay on the large model."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000007 (current)",
+        "seq": 22,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-26",
+            "applies_to": "2026-10-30",
+            "change_type": "reduction",
+            "citations": [
+              {
+                "char_end": 349,
+                "char_start": 270,
+                "document_id": "doc_000009",
+                "quote": "Out of office 2026-10-26 to 2026-10-30, no eval runs scheduled while I am away."
+              }
+            ],
+            "person_ids": [
+              "research-theo-brandt"
+            ],
+            "project": null,
+            "scope": "person",
+            "signal_kind": "out_of_office",
+            "status": "current",
+            "summary": "Theo Brandt is out of office 2026-10-26 to 2026-10-30 (monday.com), with no eval runs scheduled while away.",
+            "team": "research",
+            "title": "Theo Brandt out of office Oct 26-30",
+            "uncertainty": "The board does not say whether teammates pick up his runs while he is away, or what his usual daily usage is."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000008 (current)",
+        "seq": 23,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-22",
+            "applies_to": null,
+            "change_type": "expansion",
+            "citations": [
+              {
+                "char_end": 260,
+                "char_start": 185,
+                "document_id": "doc_000010",
+                "quote": "the cutover regression suite now starts 2026-10-22 instead of mid-November."
+              },
+              {
+                "char_end": 359,
+                "char_start": 261,
+                "document_id": "doc_000010",
+                "quote": "Sofia Reyes will run the full regression suite with Claude Code daily until the cutover completes."
+              }
+            ],
+            "person_ids": [
+              "engineering-sofia-reyes"
+            ],
+            "project": "platform",
+            "scope": "person",
+            "signal_kind": "project_accelerated",
+            "status": "current",
+            "summary": "Arjun Rao moved the platform cutover regression suite up to 2026-10-22 from mid-November (monday.com); Sofia Reyes runs it daily with Claude Code until cutover.",
+            "team": "engineering",
+            "title": "Sofia Reyes's cutover regression runs start Oct 22",
+            "uncertainty": "The item does not say when the cutover completes or how much usage a daily suite takes. The engineering platform note (2026-10-12) says the migration continues at the current pace; this item moves one person's work earlier and does not say that the team total changes."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000009 (current)",
+        "seq": 24,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-13",
+            "applies_to": null,
+            "change_type": "expansion",
+            "citations": [
+              {
+                "char_end": 192,
+                "char_start": 77,
+                "document_id": "doc_000011",
+                "quote": "Welcome Hana Sato, who joined the platform team today; her Claude Code seat and API key are active from 2026-10-13."
+              }
+            ],
+            "person_ids": [
+              "engineering-hana-sato"
+            ],
+            "project": "platform",
+            "scope": "person",
+            "signal_kind": "onboarding",
+            "status": "current",
+            "summary": "Hana Sato joined engineering on 2026-10-13 (Slack); her Claude Code seat and API key are active from that date.",
+            "team": "engineering",
+            "title": "Hana Sato joined the platform team",
+            "uncertainty": "The message does not say how much she will use the seat or the API key while ramping up."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000010 (current)",
+        "seq": 25,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-10-21",
+            "applies_to": null,
+            "change_type": "continuation",
+            "citations": [
+              {
+                "char_end": 184,
+                "char_start": 81,
+                "document_id": "doc_000012",
+                "quote": "From 2026-10-21 I'm moving my launch-tuning scripts off my Codex seat and onto the OpenAI API directly."
+              },
+              {
+                "char_end": 304,
+                "char_start": 251,
+                "document_id": "doc_000012",
+                "quote": "it will show up as API usage instead of seat overage."
+              }
+            ],
+            "person_ids": [
+              "product-felix-weber"
+            ],
+            "project": "workspace-launch",
+            "scope": "person",
+            "signal_kind": "tool_change",
+            "status": "current",
+            "summary": "Felix Weber said (Slack, 2026-10-19) that from 2026-10-21 his launch-tuning scripts move from his Codex seat to the OpenAI API; the work is unchanged and shows up as API usage instead of seat overage.",
+            "team": "product",
+            "title": "Felix Weber moving tuning scripts to the OpenAI API",
+            "uncertainty": "The thread does not compare API prices with seat overage, so whether the cost goes up or down is not known."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000011 (current)",
+        "seq": 26,
+        "tool": "record_signal"
+      },
+      {
+        "args": {
+          "signal": {
+            "applies_from": "2026-11-02",
+            "applies_to": null,
+            "change_type": "other",
+            "citations": [
+              {
+                "char_end": 191,
+                "char_start": 78,
+                "document_id": "doc_000013",
+                "quote": "Starting 2026-11-02, every team's default model moves to the new mid-tier model that platform approved this week."
+              },
+              {
+                "char_end": 367,
+                "char_start": 315,
+                "document_id": "doc_000013",
+                "quote": "the net effect on each team's bill is not known yet."
+              }
+            ],
+            "person_ids": [],
+            "project": null,
+            "scope": "company",
+            "signal_kind": "model_change",
+            "status": "current",
+            "summary": "From 2026-11-02 every team's default model moves to a new mid-tier model (Slack #announcements); per-token prices are lower but long-context runs use more tokens, and the net effect is not known.",
+            "team": null,
+            "title": "Company-wide default model change from Nov 2",
+            "uncertainty": "The announcement gives no prices or volumes and says the net effect on each team's bill is not known yet."
+          }
+        },
+        "at": "2026-10-24T12:01:00Z",
+        "result_summary": "signal sig_000012 (current)",
+        "seq": 27,
         "tool": "record_signal"
       }
     ],
-    "summary": "Read 6 documents; recorded 5 cited signals (3 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
+    "summary": "Read 13 documents; recorded 12 cited signals (10 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
     "task_type": "interpret_corpus"
   },
   "scenario": "agent",
