@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
-from app.db.models import CorpusDocument
+from app.db.models import CorpusDocument, Person
 
 SNIPPET_RADIUS = 80
 MAX_MATCHES_PER_DOC = 3
@@ -92,8 +92,22 @@ def _resolve_supersedes_target(
     return target
 
 
+def _check_person_tags(session: Session, tags: list[str]) -> None:
+    reasons = []
+    for tag in tags:
+        person = session.get(Person, tag)
+        if person is None or not person.active:
+            reasons.append({"code": "unknown_person", "field": "person_tags", "person_id": tag,
+                            "message": f"unknown or inactive person {tag!r}"})
+    if reasons:
+        raise DomainError("unknown_person", 422, "person_tags must name people in the directory",
+                          {"reasons": reasons})
+
+
 def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory) -> IngestOutcome:
     """`data` is a DocumentIn (schemas/documents.py)."""
+    person_tags = list(getattr(data, "person_tags", None) or [])
+    _check_person_tags(session, person_tags)
     content = normalize_content(data.content)
     digest = content_hash(content)
     existing = versions(session, data.doc_key) if _key_exists(session, data.doc_key) else []
@@ -153,6 +167,8 @@ def ingest_document(session: Session, data: Any, *, clock: Clock, ids: IdFactory
         team_tags=list(data.team_tags),
         project_tags=list(data.project_tags),
         author=data.author,
+        integration=getattr(data, "integration", None),
+        person_tags=person_tags,
         content=content,
         content_hash=digest,
         supersedes_document_id=(target.id if target else (latest.id if latest else None)),

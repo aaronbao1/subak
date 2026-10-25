@@ -1,13 +1,16 @@
 """Northstar billing export (simulated). CSV or JSON with the same per-record fields.
 
-Columns: record_id, occurred_at, source_account, cost_category, amount, [provider, model, value_kind,
-unit, notional_value, input_tokens, cached_input_tokens, output_tokens, reasoning_tokens, description].
+Columns: record_id, occurred_at, source_account, cost_category, amount, [user_email, provider, model,
+value_kind, unit, notional_value, input_tokens, cached_input_tokens, output_tokens, reasoning_tokens,
+description].
 
 Rules (master plan §2, backend plan "Major features"):
 - Team attribution comes ONLY from team mappings. A `team` column is ignored with a warning.
 - subscription_fee / billable_overage / direct_api require a non-negative amount.
 - included_usage carries no charge (amount blank or 0); its list value goes in notional_value.
 - unpriced_usage must not carry an amount: a token count is not a dollar cost.
+- `user_email` (optional) names who used it. It is lowercased and only ever matched against the people
+  directory at import time; it never decides the team.
 """
 
 from __future__ import annotations
@@ -32,10 +35,21 @@ from app.services.parsers.base import (
 SOURCE_KIND = "northstar_billing"
 REQUIRED = ("record_id", "occurred_at", "source_account", "cost_category")
 OPTIONAL = (
-    "amount", "provider", "model", "value_kind", "unit", "notional_value", "description", *TOKEN_FIELDS,
+    "user_email", "amount", "provider", "model", "value_kind", "unit", "notional_value", "description", *TOKEN_FIELDS,
 )
 CHARGED = frozenset({"subscription_fee", "billable_overage", "direct_api"})
 ATTRIBUTION_COLUMNS = frozenset({"team", "team_id", "owner"})
+MAX_EMAIL = 320
+
+
+def _email(value: Any) -> str | None:
+    text = _text(value)
+    if text is None:
+        return None
+    text = text.lower()
+    if "@" not in text or len(text) > MAX_EMAIL or any(c.isspace() for c in text):
+        raise FieldError("invalid_user_email", f"user_email must be an email address of at most {MAX_EMAIL} characters")
+    return text
 
 
 def _money_or_none(value: Any, name: str) -> Any:
@@ -89,6 +103,7 @@ def parse_row(raw: dict[str, Any], row: int) -> ParsedRecord:
         raise FieldError("unpriced_usage_with_amount", "unpriced usage must not carry an amount")
 
     tokens = {f: parse_token_count(raw.get(f), f) for f in TOKEN_FIELDS}
+    user_ref = _email(raw.get("user_email"))
     return ParsedRecord(
         row=row,
         source_record_key=_text(raw["record_id"]),
@@ -102,6 +117,7 @@ def parse_row(raw: dict[str, Any], row: int) -> ParsedRecord:
         unit=unit,
         notional_value=notional,
         tokens=tokens,
+        user_ref=user_ref,
     )
 
 

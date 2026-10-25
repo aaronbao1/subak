@@ -31,6 +31,8 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "FORECAST_WORKER",
         "DROID_RUNNER",
         "FACTORY_API_KEY",
+        "DROID_CHAT_MODEL",
+        "DROID_CHAT_REASONING_EFFORT",
     ):
         monkeypatch.delenv(name, raising=False)
 

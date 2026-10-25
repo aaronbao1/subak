@@ -183,11 +183,11 @@ Write a pass/fail/not-run row for every checkpoint in `browser-result.md`, with 
 The latest executed source checks (run from repository root unless noted) are:
 
 ```bash
-node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs
+node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs frontend/src/lib/store.test.mjs
 cd frontend
 ./node_modules/.bin/next typegen
 ./node_modules/.bin/tsc --noEmit
 ./node_modules/.bin/eslint
 ```
 
-Observed result during implementation: **16 Node checks passed; route type generation, TypeScript and full ESLint passed** using the documented authentic cached compatibility runtime. Exact pinned production installation and the browser procedure above were not verified in the sandbox. See the integration verification notes for the separate copied webpack/font-fixture build and its styling limits.
+Observed result during implementation: **21 Node checks passed; route type generation, TypeScript and full ESLint passed** using the documented authentic cached compatibility runtime. Exact pinned production installation and the browser procedure above were not verified in the sandbox. See the integration verification notes for the separate copied webpack/font-fixture build and its styling limits.

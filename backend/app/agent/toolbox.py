@@ -37,6 +37,7 @@ from app.schemas.budget import BudgetState
 from app.schemas.charts import ChartSpecOut
 from app.schemas.documents import DocumentDetail, DocumentSearchItem
 from app.schemas.forecasts import ForecastSnapshotOut
+from app.schemas.people import PersonOut
 from app.schemas.proposals import ProposalCreate, ProposalOut, RebaseIn
 from app.schemas.signals import ContextSignalIn, ContextSignalOut
 from app.schemas.spending import SpendSummary
@@ -45,6 +46,7 @@ from app.services import charts as chart_svc
 from app.services import corpus as corpus_svc
 from app.services import coverage as coverage_svc
 from app.services import forecasts as forecast_svc
+from app.services import people as people_svc
 from app.services import proposals as proposal_svc
 from app.services import signals as signal_svc
 from app.services import spending as spending_svc
@@ -272,18 +274,37 @@ class BackendToolbox:
         def fn(s: Session) -> dict:
             result = forecast_svc.forecast_for_period(s, self._provider, self._period(s), clock=self._clock)
             snap = forecast_svc.snapshot(s, result, clock=self._clock, ids=self._ids)
-            return ForecastSnapshotOut.model_validate(forecast_svc.snapshot_out(snap)).model_dump(mode="json")
+            out = ForecastSnapshotOut.model_validate(forecast_svc.snapshot_out(snap)).model_dump(mode="json")
+            # The snapshot keeps the daily series; Droid gets amounts, spent_to_date and share only.
+            for item in [*out["forecast"]["projections"], *out["forecast"]["person_projections"]]:
+                item.pop("daily", None)
+            return out
 
         return self._invoke("get_forecast", {}, fn,
                             lambda r: f"{r['availability']} ({r['provider']}), snapshot {r['id']}")
 
-    def list_signals(self, status: str | None = None, team: str | None = None) -> dict:
+    def list_signals(self, status: str | None = None, team: str | None = None,
+                     include_company: bool = True) -> dict:
+        """A team filter keeps company-scope signals (no team, apply to every team) unless include_company
+        is false, so narrowing to a team never hides a company-wide change."""
         def fn(s: Session) -> dict:
             items = [ContextSignalOut.model_validate(signal_svc.signal_out(s, sig)).model_dump(mode="json")
-                     for sig in signal_svc.list_signals(s, team=team, status=status)]
+                     for sig in signal_svc.list_signals(s, team=team, status=status,
+                                                        include_company=include_company)]
             return {"count": len(items), "items": items}
 
-        return self._invoke("list_signals", {"status": status, "team": team}, fn, lambda r: f"{r['count']} signal(s)")
+        args: dict[str, Any] = {"status": status, "team": team}
+        if team is not None:
+            args["include_company"] = include_company
+        return self._invoke("list_signals", args, fn, lambda r: f"{r['count']} signal(s)")
+
+    def list_people(self, team: str | None = None) -> dict:
+        def fn(s: Session) -> dict:
+            items = [PersonOut.model_validate(people_svc.person_out(p)).model_dump(mode="json")
+                     for p in people_svc.list_people(s, team=team)]
+            return {"count": len(items), "items": items}
+
+        return self._invoke("list_people", {"team": team}, fn, lambda r: f"{r['count']} person(s)")
 
     def build_chart_spec(self, kind: str, team: str | None = None, metric: str | None = None) -> dict:
         """Read-only: a Vega-Lite v5 spec from backend data (no forecast snapshot is persisted)."""
@@ -430,14 +451,19 @@ def stale_context(s: Session, p: Proposal) -> dict:
 
 
 def _same_signal(s: Session, body: ContextSignalIn) -> ContextSignal | None:
-    """An identical Droid signal (same claim, same exact citations) is reused, not duplicated."""
+    """An identical Droid signal (same claim, scope, people, kind, title and exact citations) is reused,
+    not duplicated. A person signal recorded without a team matches the one whose team was derived."""
     want = sorted((c.document_id, c.quote) for c in body.citations)
     q = select(ContextSignal).where(
         ContextSignal.summary == body.summary, ContextSignal.status == body.status,
         ContextSignal.change_type == body.change_type, ContextSignal.produced_by != "finance",
+        ContextSignal.scope == body.scope,
     )
     for sig in s.scalars(q):
-        if sig.team_id == body.team and sorted((c.document_id, c.quote) for c in sig.citations) == want:
+        team_ok = sig.team_id == body.team or (body.scope == "person" and body.team is None)
+        if (team_ok and sorted(sig.person_ids or []) == sorted(body.person_ids)
+                and sig.signal_kind == body.signal_kind and sig.title == body.title
+                and sorted((c.document_id, c.quote) for c in sig.citations) == want):
             return sig
     return None
 

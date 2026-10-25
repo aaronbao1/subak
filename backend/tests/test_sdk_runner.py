@@ -104,11 +104,13 @@ def test_sdk_run_records_real_tool_steps_and_leaves_budget_unchanged(fake_sdk, s
     out = r.json()
     assert out["status"] == "succeeded", out["error"]
     assert out["runner_kind"] == "sdk" and out["simulated"] is False and out["applied_changes"] is False
-    assert [s["tool"] for s in out["steps"]] == ["search_corpus", "read_document", "record_signal",
+    # the runner's own pre-read of current signals is a recorded step, then Droid's calls
+    assert [s["tool"] for s in out["steps"]] == ["list_signals", "search_corpus", "read_document", "record_signal",
                                                   "get_budgets", "draft_proposal"]
-    # every Droid-side event carries source droid_sdk; lifecycle events are the backend's
+    # every Droid-side event carries source droid_sdk; lifecycle and runner settings are the backend's
     for e in out["events"]:
-        assert e["source"] == ("backend" if e["type"] in ("run_started", "run_finished") else "droid_sdk")
+        assert e["source"] == ("backend" if e["type"] in ("run_started", "run_finished", "runner_config")
+                               else "droid_sdk")
     perms = [e["data"] for e in out["events"] if e["type"] == "permission"]
     assert [p["decision"] for p in perms] == ["proceed_once", "proceed_once", "cancel", "proceed_once"]
     assert "tools.Execute" in perms[2]["tool_uses"][0]["script_excerpt"]

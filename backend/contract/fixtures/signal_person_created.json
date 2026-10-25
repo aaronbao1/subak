@@ -1,0 +1,73 @@
+{
+  "description": "person-scope signal: team derived from the person, signal_kind model_change",
+  "name": "signal_person_created",
+  "request": {
+    "body": {
+      "applies_from": "2026-10-19",
+      "change_type": "reduction",
+      "citations": [
+        {
+          "document_id": "doc_000008",
+          "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier."
+        }
+      ],
+      "person_ids": [
+        "research-omar-haddad"
+      ],
+      "project": "model-evaluation",
+      "scope": "person",
+      "signal_kind": "model_change",
+      "status": "current",
+      "summary": "Omar Haddad moves his nightly eval sweeps to the smaller model tier from 2026-10-19.",
+      "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+      "uncertainty": "no prices or token volumes for either tier"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "agent_run_id": null,
+    "applies_from": "2026-10-19",
+    "applies_to": null,
+    "change_type": "reduction",
+    "citations": [
+      {
+        "char_end": 196,
+        "char_start": 91,
+        "citation_currency": "current",
+        "doc_key": "research-model-switch-slack",
+        "document_id": "doc_000008",
+        "id": "cit_000007",
+        "offsets_corrected": false,
+        "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.",
+        "superseded_by_document_id": null,
+        "title": "Slack #research-evals: moving sweeps to a smaller model tier",
+        "version": 1
+      }
+    ],
+    "created_at": "2026-10-24T12:30:00Z",
+    "id": "sig_000006",
+    "needs_review": false,
+    "person_ids": [
+      "research-omar-haddad"
+    ],
+    "produced_by": "droid_fake",
+    "project": "model-evaluation",
+    "scope": "person",
+    "signal_kind": "model_change",
+    "status": "current",
+    "summary": "Omar Haddad moves his nightly eval sweeps to the smaller model tier from 2026-10-19.",
+    "superseded_by_signal_id": null,
+    "supersedes_signal_ids": [],
+    "team": "research",
+    "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+    "uncertainty": "no prices or token volumes for either tier"
+  },
+  "scenario": "main",
+  "schema": "ContextSignalOut",
+  "status": 201
+}

@@ -17,12 +17,12 @@
         "1 cumulative counter reset(s) detected",
         "period in progress (ends 2026-12-31); totals are to date"
       ],
-      "record_count": 12,
+      "record_count": 620,
       "source_kinds": [
         "codex_sessions",
         "northstar_billing"
       ],
-      "spend_record_count": 7,
+      "spend_record_count": 577,
       "status": "partial",
       "unmapped_records": 1,
       "value_kinds": [
@@ -58,19 +58,19 @@
             "amount": "26000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 88
           },
           "included_usage": {
             "amount": null,
             "counts_toward_spend": false,
             "notional_value": "2500.00",
-            "record_count": 1
+            "record_count": 20
           },
           "subscription_fee": {
             "amount": "4000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 88
           },
           "unpriced_usage": {
             "amount": null,
@@ -91,11 +91,11 @@
           "notes": [
             "1 unattributed record(s) in the period may belong to this team"
           ],
-          "record_count": 3,
+          "record_count": 196,
           "source_kinds": [
             "northstar_billing"
           ],
-          "spend_record_count": 2,
+          "spend_record_count": 176,
           "status": "partial",
           "team": "engineering",
           "unmapped_records": 0,
@@ -105,7 +105,7 @@
         },
         "included_usage_notional": "2500.00",
         "last_record_at": "2026-10-20T00:00:00Z",
-        "record_count": 3,
+        "record_count": 196,
         "recorded_spend": "30000.00",
         "team": "engineering",
         "tokens": {
@@ -122,7 +122,7 @@
             "amount": "16000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 80
           },
           "direct_api": {
             "amount": "0.00",
@@ -140,7 +140,7 @@
             "amount": "4000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 80
           },
           "unpriced_usage": {
             "amount": null,
@@ -157,15 +157,15 @@
         },
         "coverage": {
           "counter_resets": 0,
-          "last_record_at": "2026-10-15T00:00:00Z",
+          "last_record_at": "2026-10-20T00:00:00Z",
           "notes": [
             "1 unattributed record(s) in the period may belong to this team"
           ],
-          "record_count": 2,
+          "record_count": 160,
           "source_kinds": [
             "northstar_billing"
           ],
-          "spend_record_count": 2,
+          "spend_record_count": 160,
           "status": "partial",
           "team": "product",
           "unmapped_records": 0,
@@ -174,8 +174,8 @@
           ]
         },
         "included_usage_notional": "0.00",
-        "last_record_at": "2026-10-15T00:00:00Z",
-        "record_count": 2,
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "record_count": 160,
         "recorded_spend": "20000.00",
         "team": "product",
         "tokens": {
@@ -198,19 +198,19 @@
             "amount": "40000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 120
           },
           "included_usage": {
             "amount": null,
             "counts_toward_spend": false,
             "notional_value": "3000.00",
-            "record_count": 1
+            "record_count": 20
           },
           "subscription_fee": {
             "amount": "5000.00",
             "counts_toward_spend": true,
             "notional_value": null,
-            "record_count": 1
+            "record_count": 120
           },
           "unpriced_usage": {
             "amount": null,
@@ -227,17 +227,17 @@
         },
         "coverage": {
           "counter_resets": 1,
-          "last_record_at": "2026-10-19T09:30:00Z",
+          "last_record_at": "2026-10-20T00:00:00Z",
           "notes": [
             "1 cumulative counter reset(s); usage may be understated",
             "1 unattributed record(s) in the period may belong to this team"
           ],
-          "record_count": 6,
+          "record_count": 263,
           "source_kinds": [
             "codex_sessions",
             "northstar_billing"
           ],
-          "spend_record_count": 2,
+          "spend_record_count": 240,
           "status": "partial",
           "team": "research",
           "unmapped_records": 0,
@@ -247,8 +247,8 @@
           ]
         },
         "included_usage_notional": "3000.00",
-        "last_record_at": "2026-10-19T09:30:00Z",
-        "record_count": 6,
+        "last_record_at": "2026-10-20T00:00:00Z",
+        "record_count": 263,
         "recorded_spend": "45000.00",
         "team": "research",
         "tokens": {

@@ -59,7 +59,7 @@ PYTHONPATH=src:backend:agent .venv/bin/python -m pytest tests backend/tests -q
 PYTHONPATH=src:backend:agent .venv/bin/python -m app.contract.export --check
 PYTHONPATH=src:backend .venv/bin/python -m forecasting.replay_report \
   --output artifacts/northstar-replay.json
-node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs
+node --test frontend/src/components/dashboard/forecast-derive.test.mjs frontend/src/lib/data/*test.mjs frontend/src/lib/store.test.mjs
 cd frontend
 npm run lint
 npx tsc --noEmit

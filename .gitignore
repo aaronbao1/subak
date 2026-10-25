@@ -11,3 +11,5 @@ __pycache__/
 build/
 dist/
 artifacts/
+# generated synthetic dataset (python3 datagen/generate.py)
+datagen/out/

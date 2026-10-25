@@ -15,9 +15,11 @@
     "effective_from": "2026-10-01",
     "effective_to": "2026-12-31",
     "id": "doc_000003",
+    "integration": null,
     "is_current": true,
     "is_simulated": true,
     "origin": "seed",
+    "person_tags": [],
     "plan_status": "approved",
     "project_tags": [
       "model-evaluation"

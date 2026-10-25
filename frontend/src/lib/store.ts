@@ -4,6 +4,7 @@ import type {
   AllocationProposal, AssistantMessage, Budget, Company, ContextItem, Decision, Forecast, ForecastBundle, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, Person, SpendingRecord, Team,
 } from "@/lib/contracts";
 import { quarterForecasts } from "@/components/dashboard/forecast-derive";
+import { mergeThreadMessages } from "@/lib/data/thread-merge";
 import { getDataClient } from "@/lib/data";
 
 /**
@@ -53,6 +54,7 @@ interface AppState {
 }
 
 let forecastLoadRequest = 0;
+let inflightLoad: Promise<void> | null = null;
 
 export const useAppStore = create<AppState>((set, get) => ({
   loaded: false, forecastEvidence: [],
@@ -61,18 +63,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   composer: "",
 
   async load() {
-    const c = getDataClient();
-    const [company, teams, people, spendingHistory, budgets, allForecasts, context, proposals, decisions, main] = await Promise.all([
-      c.getCompany(), c.getTeams(), c.getPeople(), c.getSpending(), c.getBudgets(), c.getForecasts(), c.getContext(),
-      c.getProposals(), c.getDecisions(), c.getThread("main"),
-    ]);
-    await get().loadForecastViews();
-    const { start, end } = company.currentPeriod;
-    const spending = spendingHistory.filter((r) => r.date >= start && r.date <= end);
-    const canonical = get().forecastBundle?.views.length ? quarterForecasts(get().forecastBundle!) : allForecasts;
-    const forecasts = canonical.filter((f) => !f.personId);
-    const personForecasts = canonical.filter((f) => !!f.personId);
-    set({ loaded: true, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, proposals, decisions, threads: { main } });
+    // One load at a time: the live refresh interval can fire faster than a large backend answers,
+    // and overlapping full reloads would pile up requests. A tick that lands mid-load joins the running one.
+    if (inflightLoad) return inflightLoad;
+    inflightLoad = (async () => {
+      const c = getDataClient();
+      const [company, teams, people, spendingHistory, budgets, allForecasts, context, proposals, decisions, main] = await Promise.all([
+        c.getCompany(), c.getTeams(), c.getPeople(), c.getSpending(), c.getBudgets(), c.getForecasts(), c.getContext(),
+        c.getProposals(), c.getDecisions(), c.getThread("main"),
+      ]);
+      await get().loadForecastViews();
+      const { start, end } = company.currentPeriod;
+      const spending = spendingHistory.filter((r) => r.date >= start && r.date <= end);
+      const canonical = get().forecastBundle?.views.length ? quarterForecasts(get().forecastBundle!) : allForecasts;
+      const forecasts = canonical.filter((f) => !f.personId);
+      const personForecasts = canonical.filter((f) => !!f.personId);
+      set(state => ({ loaded: true, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, proposals, decisions, threads: { ...state.threads, main: mergeThreadMessages(main, state.threads.main ?? []) } }));
+    })().finally(() => { inflightLoad = null; });
+    return inflightLoad;
   },
 
   async loadForecastViews() {
@@ -121,7 +129,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   async sendMessage(threadId, content) {
     const msgs = await getDataClient().sendMessage(threadId, content, get().forecastQuestionContext);
-    set((s) => ({ threads: { ...s.threads, [threadId]: [...(s.threads[threadId] ?? []), ...msgs] } }));
+    set((s) => ({ threads: { ...s.threads, [threadId]: mergeThreadMessages(msgs, s.threads[threadId] ?? []) } }));
     await get().refreshBudgets();
     return msgs;
   },

@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 
 from app.db.base import create_all, make_engine, make_session_factory
-from app.db.models import ImportBatch, PlanningPeriod, Team, UsageRecord
+from app.db.models import ImportBatch, Person, PlanningPeriod, Team, UsageRecord
 from app.forecasting.persistence import ForecastStore
 
 
@@ -31,7 +31,7 @@ def repository(tmp_path):
 
 
 def add_record(factory, key, *, imported_at='2026-10-23T00:00:00Z', occurred_at='2026-10-22T01:00:00Z',
-               amount='12.34', category='direct_api', unit='USD', team='engineering'):
+               amount='12.34', category='direct_api', unit='USD', team='engineering', person=None):
     with factory() as session:
         batch = ImportBatch(id='batch-' + key, created_at=instant(imported_at), source_kind='billing',
                             content_hash=key, status='imported', record_count=1, imported_by='test',
@@ -40,7 +40,7 @@ def add_record(factory, key, *, imported_at='2026-10-23T00:00:00Z', occurred_at=
         session.flush()
         session.add(UsageRecord(id=key, created_at=instant(imported_at), import_batch_id=batch.id,
                                 source_kind='billing', source_record_key=key, source_account='shared-account',
-                                team_id=team, period_id='2026-q4', occurred_at=instant(occurred_at),
+                                team_id=team, person_id=person, period_id='2026-q4', occurred_at=instant(occurred_at),
                                 amount=None if amount is None else Decimal(amount), unit=unit,
                                 input_tokens=900, value_kind='measured', cost_category=category,
                                 counts_toward_spend=UsageRecord.derive_counts_toward_spend(category)))
@@ -296,3 +296,106 @@ def test_publication_capture_hook_commits_current_state(repository):
     receipt = factory.capture_inputs(now=NOW, tenant_id='northstar')
     assert receipt['kind'] == 'repository_state'
     assert len(store.input_records(NOW)) == 1
+
+
+def add_person(factory, *, name='Ada Example', team='engineering', active=True,
+               created_at='2026-09-01T00:00:00Z'):
+    with factory() as session:
+        session.add(Person(id='ada', name=name, team_id=team, active=active,
+                           is_simulated=False, integrations=['slack'], created_at=instant(created_at)))
+        session.commit()
+
+
+def test_directory_identity_flows_to_real_person_actuals_without_exposure(repository):
+    from forecasting.planning import build_forecast
+    add_person(repository)
+    add_record(repository, 'personal', person='ada')
+    snapshot = builder(repository)(now=NOW, as_of=False)
+    assert snapshot['people'] == [{'id': 'ada', 'name': 'Ada Example', 'team_id': 'engineering',
+                                   'active': True, 'is_simulated': False}]
+    row, = snapshot['observations']
+    assert row['person_id'] == 'ada'
+    assert snapshot['memberships'] == []
+    assert row['exposure'] is None and snapshot['coverage'] == []
+    bundle = build_forecast(snapshot, run_id='personal', generated_at=NOW)
+    personal, = [v for v in bundle['views'] if v['scope']['type'] == 'person']
+    assert personal['scope']['id'] == 'ada'
+    assert personal['components']['recorded'] == 12.34
+    assert personal['quarter_outlook']['base'] is None
+
+
+def test_uncaptured_history_does_not_leak_mutable_person_or_directory(repository):
+    add_person(repository, name='Current Name')
+    add_record(repository, 'personal', person='ada', imported_at='2026-10-18T00:00:00Z',
+               occurred_at='2026-10-17T00:00:00Z')
+    snapshot = builder(repository)(now='2026-10-19T00:00:00Z', as_of=True)
+    assert snapshot['observations'][0]['person_id'] is None
+    assert snapshot['observations'][0]['provenance']['person_id'] is None
+    assert snapshot['people'] == [{'id': 'ada', 'name': 'ada', 'team_id': None,
+                                   'active': None, 'is_simulated': None}]
+
+
+def test_person_directory_changes_stale_revision_and_archive_freezes_identity(repository, tmp_path):
+    from app.forecasting.repository import synchronize_repository_inputs
+    add_person(repository)
+    add_record(repository, 'personal', person='ada')
+    store = ForecastStore(tmp_path / 'people-archive.sqlite')
+    factory = builder(repository, store=store)
+    first = synchronize_repository_inputs(store, factory, now=NOW)
+    with repository() as session:
+        session.add(Team(id='research', name='Research', created_at=instant('2026-09-01T00:00:00Z')))
+        session.flush()
+        person = session.get(Person, 'ada')
+        person.name, person.team_id, person.active = 'New Name', 'research', False
+        session.commit()
+    current = factory(now=NOW, as_of=False)
+    old = factory(now=NOW, as_of=True)
+    assert current['repository_revision'] != old['repository_revision']
+    assert current['people'][0]['name'] == 'New Name'
+    assert old['people'][0]['name'] == 'Ada Example'
+    assert old['people'][0]['team_id'] == 'engineering'
+    assert old['people'][0]['active'] is True
+    # Native import-time attribution survives a later directory move/deactivation.
+    assert current['observations'][0]['person_id'] == old['observations'][0]['person_id'] == 'ada'
+    assert current['observations'][0]['team_id'] == old['observations'][0]['team_id'] == 'engineering'
+    assert old['repository_archive']['id'] == first['id']
+
+
+def test_future_directory_entries_do_not_appear_before_receipt_cutoff(repository):
+    add_person(repository, created_at='2026-10-25T00:00:00Z')
+    snapshot = builder(repository)(now=NOW, as_of=False)
+    assert snapshot['people'] == []
+
+
+def test_native_daily_seed_and_live_person_import_replay_without_false_coverage(seeded, client, clock):
+    from reference_data import upload
+    service = seeded.state.forecast_service
+    before = service.current_snapshot()
+    assert len(before['people']) == 15
+    assert sum(Decimal(r['quantity']) for r in before['observations']) == Decimal('95000.00')
+    assert all(r['person_id'] is not None for r in before['observations'])
+    assert before['coverage'] == [] and before['memberships'] == []
+    clock.advance(days=1)
+    raw = ('record_id,occurred_at,source_account,user_email,provider,cost_category,amount,unit\n'
+           'live-person,2026-10-21T00:00:00Z,ws-research,ava.chen@northstar.example,anthropic,direct_api,11.00,USD\n'
+           'live-future,2026-10-26T00:00:00Z,ws-research,ava.chen@northstar.example,anthropic,direct_api,7.00,USD\n')
+    first = upload(client, raw, filename='live-people.csv')
+    assert first.status_code == 201, first.text
+    assert first.json()['stats']['person_resolved'] == 2
+    duplicate = upload(client, raw, filename='live-people-again.csv')
+    assert duplicate.status_code == 200 and duplicate.json()['status'] == 'duplicate'
+    current = service.current_snapshot()
+    live, = [r for r in current['observations'] if r['provenance']['source_record_key'] == 'live-person']
+    assert live['person_id'] == 'research-ava-chen' and live['quantity'] == '11.00'
+    assert sum(Decimal(r['quantity']) for r in current['observations']) == Decimal('95011.00')
+    assert current['coverage'] == [] and not any(r['complete'] or r['mature'] for r in current['observations'])
+    old = service.current_snapshot(cutoff=NOW)
+    assert sum(Decimal(r['quantity']) for r in old['observations']) == Decimal('95000.00')
+    replay = service.current_snapshot(cutoff='2026-10-26T00:00:00Z')
+    future, = [r for r in replay['observations'] if r['provenance']['source_record_key'] == 'live-future']
+    assert future['person_id'] == 'research-ava-chen' and future['quantity'] == '7.00'
+    job = service.refresh('native-live-person')
+    assert seeded.state.forecast_worker.process_one()
+    issued = service.views(run_id=job['run_id'], scope_type='person', scope_id='research-ava-chen')['views']
+    assert issued and issued[0]['components']['recorded'] > 11
+    assert issued[0]['quarter_outlook']['base'] is None

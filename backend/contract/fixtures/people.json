@@ -1,0 +1,219 @@
+{
+  "description": "fifteen fictional people (6 research / 4 product / 5 engineering), simulated",
+  "name": "people",
+  "request": {
+    "method": "GET",
+    "path": "/api/people"
+  },
+  "response": [
+    {
+      "active": true,
+      "email": "arjun.rao@northstar.example",
+      "id": "engineering-arjun-rao",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Arjun Rao",
+      "primary_tool": "Claude Code",
+      "role": "Engineering lead",
+      "team": "engineering"
+    },
+    {
+      "active": true,
+      "email": "hana.sato@northstar.example",
+      "id": "engineering-hana-sato",
+      "integrations": [
+        "slack"
+      ],
+      "is_simulated": true,
+      "name": "Hana Sato",
+      "primary_tool": "Claude Code",
+      "role": "Engineer",
+      "team": "engineering"
+    },
+    {
+      "active": true,
+      "email": "lucas.meyer@northstar.example",
+      "id": "engineering-lucas-meyer",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Lucas Meyer",
+      "primary_tool": "Anthropic API",
+      "role": "Staff engineer",
+      "team": "engineering"
+    },
+    {
+      "active": true,
+      "email": "mateo.silva@northstar.example",
+      "id": "engineering-mateo-silva",
+      "integrations": [
+        "slack"
+      ],
+      "is_simulated": true,
+      "name": "Mateo Silva",
+      "primary_tool": "Cursor",
+      "role": "Engineer",
+      "team": "engineering"
+    },
+    {
+      "active": true,
+      "email": "sofia.reyes@northstar.example",
+      "id": "engineering-sofia-reyes",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Sofia Reyes",
+      "primary_tool": "Claude Code",
+      "role": "Platform engineer",
+      "team": "engineering"
+    },
+    {
+      "active": true,
+      "email": "felix.weber@northstar.example",
+      "id": "product-felix-weber",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Felix Weber",
+      "primary_tool": "Codex",
+      "role": "Product engineer",
+      "team": "product"
+    },
+    {
+      "active": true,
+      "email": "maya.patel@northstar.example",
+      "id": "product-maya-patel",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Maya Patel",
+      "primary_tool": "Codex",
+      "role": "Product lead",
+      "team": "product"
+    },
+    {
+      "active": true,
+      "email": "noah.kim@northstar.example",
+      "id": "product-noah-kim",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Noah Kim",
+      "primary_tool": "Codex",
+      "role": "Product manager",
+      "team": "product"
+    },
+    {
+      "active": true,
+      "email": "zara.ali@northstar.example",
+      "id": "product-zara-ali",
+      "integrations": [
+        "slack"
+      ],
+      "is_simulated": true,
+      "name": "Zara Ali",
+      "primary_tool": "Codex",
+      "role": "Designer",
+      "team": "product"
+    },
+    {
+      "active": true,
+      "email": "ava.chen@northstar.example",
+      "id": "research-ava-chen",
+      "integrations": [
+        "slack",
+        "asana"
+      ],
+      "is_simulated": true,
+      "name": "Ava Chen",
+      "primary_tool": "Claude Code",
+      "role": "Research lead",
+      "team": "research"
+    },
+    {
+      "active": true,
+      "email": "ines.moreau@northstar.example",
+      "id": "research-ines-moreau",
+      "integrations": [
+        "slack",
+        "asana"
+      ],
+      "is_simulated": true,
+      "name": "Ines Moreau",
+      "primary_tool": "Anthropic API",
+      "role": "Data scientist",
+      "team": "research"
+    },
+    {
+      "active": true,
+      "email": "leila.novak@northstar.example",
+      "id": "research-leila-novak",
+      "integrations": [
+        "slack",
+        "asana"
+      ],
+      "is_simulated": true,
+      "name": "Leila Novak",
+      "primary_tool": "Claude Code",
+      "role": "Research engineer",
+      "team": "research"
+    },
+    {
+      "active": true,
+      "email": "omar.haddad@northstar.example",
+      "id": "research-omar-haddad",
+      "integrations": [
+        "slack",
+        "asana"
+      ],
+      "is_simulated": true,
+      "name": "Omar Haddad",
+      "primary_tool": "Anthropic API",
+      "role": "Research scientist",
+      "team": "research"
+    },
+    {
+      "active": true,
+      "email": "theo.brandt@northstar.example",
+      "id": "research-theo-brandt",
+      "integrations": [
+        "slack",
+        "monday"
+      ],
+      "is_simulated": true,
+      "name": "Theo Brandt",
+      "primary_tool": "Anthropic API",
+      "role": "Research scientist",
+      "team": "research"
+    },
+    {
+      "active": true,
+      "email": "yuki.tanaka@northstar.example",
+      "id": "research-yuki-tanaka",
+      "integrations": [
+        "slack"
+      ],
+      "is_simulated": true,
+      "name": "Yuki Tanaka",
+      "primary_tool": "Claude Code",
+      "role": "Research engineer",
+      "team": "research"
+    }
+  ],
+  "scenario": "main",
+  "schema": "PersonOut[]",
+  "status": 200
+}

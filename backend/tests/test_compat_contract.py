@@ -1,7 +1,7 @@
 """Current checked-out contracts (never an obsolete vendored snapshot). Drift check: app/compat/schemas.py must mirror the frontend's TypeScript contract field for field.
 
 `tests/vendored/frontend_contracts.ts` is a verbatim copy of `frontend/src/lib/contracts/index.ts` from
-origin/main (copied at 9442db9). Set COMPAT_UPSTREAM_CHECK=1 to also check against the live
+the checked-out frontend contract. Set COMPAT_UPSTREAM_CHECK=1 to also check against the live
 `git show origin/main:frontend/src/lib/contracts/index.ts` (opt-in so a teammate's push cannot turn this
 suite red without anyone touching the backend).
 """
@@ -23,7 +23,7 @@ VENDORED = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "c
 UPSTREAM_PATH = "frontend/src/lib/contracts/index.ts"
 
 _IFACE = re.compile(r"export interface (\w+) \{(.*?)\n\}", re.S)
-_ALIAS = re.compile(r"export type (\w+) = ([^;]+);")
+_ALIAS = re.compile(r"export type (\w+)\s*=\s*([^;]+);")
 _FIELD = re.compile(r"^\s*(\w+)(\?)?:\s*([^;]+);", re.M)
 _LITERALS = re.compile(r'"([^"]+)"')
 
@@ -48,6 +48,8 @@ def _unwrap(annotation):
 
 def _literals(annotation) -> set[str] | None:
     a = _unwrap(annotation)
+    if typing.get_origin(a) is list:  # `Integration[]` -> the element's literals
+        a = _unwrap(typing.get_args(a)[0])
     if typing.get_origin(a) is typing.Literal:
         return set(typing.get_args(a))
     return None
@@ -74,7 +76,7 @@ def _check(text: str) -> list[str]:
                 continue
             if optional == ours[f].is_required():
                 problems.append(f"{name}.{f}: TS optional={optional}, compat required={ours[f].is_required()}")
-            ts_lits = set(_LITERALS.findall(ts_type)) or aliases.get(ts_type.strip(), set())
+            ts_lits = set(_LITERALS.findall(ts_type)) or aliases.get(ts_type.strip().removesuffix("[]"), set())
             if ts_lits:
                 mine = _literals(ours[f].annotation)
                 if mine != ts_lits:
@@ -86,8 +88,12 @@ def _check(text: str) -> list[str]:
 
 def test_parser_sees_the_whole_contract():
     interfaces, aliases = parse_ts(VENDORED.read_text())
-    assert len(interfaces) == len(S.CONTRACT_MODELS) == 16
-    assert {"Unit", "CostComponent", "Provenance", "ContextKind", "ClaimType", "ProposalKind"} <= set(aliases)
+    assert len(interfaces) == len(S.CONTRACT_MODELS) == 18
+    assert {"Unit", "CostComponent", "Provenance", "ContextKind", "ClaimType", "ProposalKind", "Integration",
+            "SignalKind"} <= set(aliases)
+    assert len(aliases["SignalKind"]) == 10  # a multi-line union is parsed whole
+    assert interfaces["Person"]["integrations"] == (True, "Integration[]")
+    assert interfaces["Forecast"]["daily"] == (True, "ForecastDailyPoint[]")
     assert interfaces["Forecast"]["low"] == (True, "number")
     assert interfaces["SpendingRecord"]["complete"] == (False, "boolean")
 
@@ -102,6 +108,9 @@ def test_drift_is_detected():
     problems = _check(text)
     assert "SpendingRecord.newField missing in compat model" in problems
     assert any(p.startswith("type Provenance") for p in problems)
+    text = VENDORED.read_text().replace('| "project_paused";', '| "project_paused"\n  | "vacation";')
+    problems = _check(text)
+    assert any(p.startswith("type SignalKind") for p in problems)
 
 
 @pytest.mark.skipif(os.environ.get("COMPAT_UPSTREAM_CHECK") != "1", reason="opt-in: COMPAT_UPSTREAM_CHECK=1")

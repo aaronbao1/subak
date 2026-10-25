@@ -6,6 +6,7 @@
     "path": "/api/forecasts"
   },
   "response": {
+    "as_of": null,
     "availability": "unavailable",
     "basis": "full_period_total",
     "forecast_run_id": null,
@@ -19,6 +20,7 @@
       "product",
       "research"
     ],
+    "person_projections": [],
     "procedure_version": null,
     "projections": [],
     "provider": "placeholder",

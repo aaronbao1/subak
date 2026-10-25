@@ -22,7 +22,7 @@ const THREAD = "main";
  * and an inline proposal card when the assistant prepared one. Review/apply happens in ProposalReview.
  */
 export function AssistantDrawer() {
-  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, company, composer: text, setComposer: setText, loaded, forecastQuestionContext, askAssistant } = useAppStore();
+  const { assistantOpen, setAssistantOpen, threads, sendMessage, proposals, teams, budgets, company, composer: text, setComposer: setText, loaded, forecastQuestionContext, askAssistant } = useAppStore();
   const messages = threads[THREAD] ?? [];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -68,10 +68,15 @@ export function AssistantDrawer() {
   // Quick prompts come from the data, never from a hard-coded team or amount.
   const unit = company?.budgetUnit ?? "usd";
   const firstTeam = teams[0]?.name;
+  // Roughly a tenth of the total allocation, rounded to one significant figure so it reads as a round number.
+  const totalAllocated = budgets.reduce((n, b) => n + b.allocated, 0);
+  const extra = roundClean(totalAllocated * 0.1);
   const quickPrompts = [
     firstTeam ? `Why is ${firstTeam} tracking over its allocation?` : "Which team is tracking over its allocation?",
     "Redistribute the existing allocation without adding funding",
-    `We have another ${formatAmount(25_000, unit)} to allocate this week.`,
+    extra > 0
+      ? `We have another ${formatAmount(extra, unit)} to allocate this week; how should we split it?`
+      : "We have additional budget to allocate this week; how should we split it?",
   ];
   const showPrompts = messages.length <= 1 && !sending && !forecastQuestionContext;
 
@@ -120,9 +125,9 @@ export function AssistantDrawer() {
 
         <div className="border-t border-border px-4 pt-3 pb-3">
           {/* The chip row keeps its height when empty so the composer never jumps. */}
-          <div className="mb-3 h-7">
+          <div className="mb-3 min-h-7">
             {showPrompts && (
-              <ul className="flex h-7 gap-1.5 overflow-x-auto" aria-label="Suggested prompts">
+              <ul className="flex flex-wrap gap-1.5" aria-label="Suggested prompts">
                 {quickPrompts.map((q) => (
                   <li key={q} className="shrink-0">
                     <button
@@ -153,10 +158,10 @@ export function AssistantDrawer() {
               className="min-h-8 max-h-40 flex-1 resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm focus:border-transparent focus-visible:border-transparent focus-visible:ring-0"
             />
             <Button type="submit" size="icon-sm" disabled={!canSend} aria-label="Send">
-              <ArrowUp className="size-4" />
+              <ArrowUp className="size-4" strokeWidth={1.5} />
             </Button>
           </form>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">Enter to send · Shift+Enter for a new line</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line</p>
         </div>
 
         {/* Nested inside the drawer so Esc closes only the topmost dialog. */}
@@ -167,13 +172,20 @@ export function AssistantDrawer() {
   );
 }
 
+/** Round to one significant figure: 23,400 becomes 20,000. */
+function roundClean(n: number) {
+  if (n <= 0) return 0;
+  const pow = 10 ** Math.floor(Math.log10(n));
+  return Math.round(n / pow) * pow;
+}
+
 function AvatarDot() {
   return <span aria-hidden className="mt-[7px] flex size-1.5 rounded-full bg-muted-foreground" />;
 }
 
 function Stamp({ iso, className }: { iso: string; className?: string }) {
   return (
-    <time className={cn("num block text-[11px] text-muted-foreground", className)} dateTime={iso}>
+    <time className={cn("num block text-xs text-muted-foreground", className)} dateTime={iso}>
       {new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
     </time>
   );
@@ -223,7 +235,7 @@ function WorkRecord({ calls }: { calls: NonNullable<AssistantMessage["toolCalls"
   return (
     <details className="group text-xs">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors duration-300 select-none hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden />
+        <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
         <span className="num">{calls.length}</span> {calls.length === 1 ? "step" : "steps"}
       </summary>
       <ol className="mt-2 space-y-2.5 border-l border-border pl-3">
@@ -252,7 +264,7 @@ function Sources({ citations, onSource }: { citations: SourceRef[]; onSource: (d
             title={c.excerpt ? `“${c.excerpt}”` : c.title}
             className="max-w-[240px] cursor-pointer gap-1.5 text-muted-foreground transition-colors duration-300 hover:border-border-strong hover:text-foreground"
           >
-            <FileText aria-hidden />
+            <FileText aria-hidden strokeWidth={1.5} />
             <span className="truncate">{c.title}</span>
             {c.date && <span className="num shrink-0">{fmtDate(c.date)}</span>}
           </Badge>

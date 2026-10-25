@@ -30,6 +30,18 @@ class Autonomy(str, Enum):
     HIGH = "high"
 
 
+class ReasoningEffort(str, Enum):  # same values as droid-sdk 0.5.0 `_high_level/enums.py`
+    NONE = "none"
+    DYNAMIC = "dynamic"
+    OFF = "off"
+    MINIMAL = "minimal"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    EXTRA_HIGH = "xhigh"
+    MAX = "max"
+
+
 class ToolConfirmationOutcome(str, Enum):
     PROCEED_ONCE = "proceed_once"
     PROCEED_ALWAYS = "proceed_always"
@@ -180,8 +192,10 @@ STATE: dict[str, Any] = {}
 
 
 class Session:
-    def __init__(self, *, cwd=None, model=None, config=None, interactions=None, runtime=None) -> None:
+    def __init__(self, *, cwd=None, model=None, reasoning_effort=None, config=None, interactions=None,
+                 runtime=None) -> None:
         self.cwd, self.model, self.config, self.interactions, self.runtime = cwd, model, config, interactions, runtime
+        self.reasoning_effort = reasoning_effort
         self._dispatcher = object()  # replaced by the runner's gate
         STATE["session"] = self
         self.opened = False

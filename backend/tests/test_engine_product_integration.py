@@ -146,3 +146,43 @@ def test_delayed_older_revision_does_not_stale_newly_issued_receipt(tmp_path):
     snapshot=app.state.forecast_service.current_snapshot()
     with app.state.session_factory() as session:
         assert current_revision(session,'northstar',app.state.clock.now())==revision_from_snapshot(snapshot)
+
+
+def test_engine_person_quarters_use_issued_identity_and_never_expand_short_daily_paths(tmp_path):
+    from app.forecasting.fixtures import build_northstar_snapshot
+    app = _app(tmp_path)
+    def single_member_snapshot(*, now, tenant_id='northstar'):
+        snapshot = build_northstar_snapshot(now=now, tenant_id=tenant_id)
+        snapshot['people'] = [p for p in snapshot['people'] if p['id'] == 'maya']
+        snapshot['memberships'] = [m for m in snapshot['memberships'] if m['person_id'] == 'maya']
+        snapshot['observations'] = [r for r in snapshot['observations'] if r['person_id'] == 'maya']
+        snapshot['drivers'] = []
+        return snapshot
+    app.state.forecast_service.snapshot_factory = single_member_snapshot
+    with TestClient(app) as client:
+        service = app.state.forecast_service
+        job = service.refresh('native-person-quarter', scheduled_for='2026-10-24T00:00:00Z')
+        assert app.state.forecast_worker.process_one()
+        result = client.get('/api/forecasts').json()
+        person, = result['person_projections']
+        assert person['person'] == 'maya' and person['team'] == 'research'
+        assert person['share'] == '100.0'
+        assert person['daily'] is None
+        issued, = service.views(scope_type='person')['views']
+        assert Decimal(person['amount']) == Decimal(str(issued['quarter_outlook']['base'])).quantize(Decimal('.01'))
+        assert Decimal(person['spent_to_date']) == Decimal(str(issued['quarter_outlook']['recorded'])).quantize(Decimal('.01'))
+        assert result['forecast_run_id'] == job['run_id']
+        assert 'proportional' not in ' '.join(person['assumptions']).lower()
+
+
+def test_engine_omits_person_split_when_issued_person_has_multiple_teams(tmp_path):
+    app = _app(tmp_path)
+    with TestClient(app) as client:
+        service = app.state.forecast_service
+        service.refresh('cross-team-person', scheduled_for='2026-10-24T00:00:00Z')
+        assert app.state.forecast_worker.process_one()
+        result = client.get('/api/forecasts').json()
+        assert result['projections']
+        # The synthetic fixture contains Maya's future research -> product move.
+        # A whole-person quarter cannot truthfully be assigned to either one team.
+        assert not any(p['person'] == 'maya' for p in result['person_projections'])

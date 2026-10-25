@@ -1,0 +1,52 @@
+{
+  "description": "scope rules: every person in a person signal must be on one team (person_team_mismatch)",
+  "name": "error_signal_scope",
+  "request": {
+    "body": {
+      "change_type": "other",
+      "citations": [
+        {
+          "document_id": "doc_000008",
+          "quote": "just the cheaper tier for everything except the final comparison runs."
+        }
+      ],
+      "person_ids": [
+        "research-omar-haddad",
+        "product-felix-weber"
+      ],
+      "scope": "person",
+      "status": "current",
+      "summary": "Two people on two teams.",
+      "team": "research",
+      "uncertainty": "invalid on purpose"
+    },
+    "headers": {
+      "X-Actor-Id": "droid-northstar",
+      "X-Actor-Role": "droid_agent"
+    },
+    "method": "POST",
+    "path": "/api/signals"
+  },
+  "response": {
+    "error": {
+      "code": "validation_failed",
+      "details": {
+        "reasons": [
+          {
+            "code": "person_team_mismatch",
+            "field": "person_ids",
+            "message": "all people in one signal must be on one team, got ['product', 'research']",
+            "teams": [
+              "product",
+              "research"
+            ]
+          }
+        ]
+      },
+      "message": "signal is invalid"
+    }
+  },
+  "scenario": "main",
+  "schema": "ErrorBody",
+  "status": 422
+}

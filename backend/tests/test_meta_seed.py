@@ -34,8 +34,14 @@ def test_seed_is_idempotent_and_matches_northstar(seeded, client):
     assert {a["team"]: a["amount"] for a in budget["allocations"]} == {
         "research": "60000.00", "product": "80000.00", "engineering": "60000.00"}
     docs = client.get("/api/documents").json()["items"]
-    assert len(docs) == 6
+    assert len(docs) == 13
     by_key = {(d["doc_key"], d["version"]): d for d in docs}
+    people = {p["id"] for p in client.get("/api/people").json()}
+    tagged = {d["doc_key"]: d["person_tags"] for d in docs if d["person_tags"]}
+    assert len(tagged) == 6 and all(set(t) <= people for t in tagged.values())
+    assert by_key[("company-model-announcement-slack", 1)]["integration"] == "slack"
+    assert by_key[("research-harness-asana", 1)]["integration"] == "asana"
+    assert by_key[("research-eval-plan", 1)]["integration"] is None and by_key[("research-eval-plan", 1)]["person_tags"] == []
     assert by_key[("research-timeline-thread", 1)]["superseded_by"]["doc_key"] == "research-eval-plan"
     assert by_key[("product-launch-plan", 1)]["is_current"] is False
     assert by_key[("marketing-ideas-slack", 1)]["plan_status"] == "informal"

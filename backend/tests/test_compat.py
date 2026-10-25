@@ -93,7 +93,10 @@ def test_teams_get_frontend_color_tokens(c):
     teams = get(c, "teams")
     assert [t["id"] for t in teams] == ["engineering", "product", "research"]
     assert [t["color"] for t in teams] == ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"]
-    assert all("lead" not in t and "description" not in t for t in teams)  # not stored: omitted, not invented
+    assert all("description" not in t for t in teams)  # not stored: omitted, not invented
+    # Team.lead is derived from the person whose role ends with " lead".
+    assert {t["id"]: t["lead"] for t in teams} == {"engineering": "Arjun Rao", "product": "Maya Patel",
+                                                  "research": "Ava Chen"}
 
 
 def test_seed_totals_through_compat(c):
@@ -106,7 +109,8 @@ def test_seed_totals_through_compat(c):
     assert by_team(get(c, "budgets"), "allocated") == ALLOCATED
     assert {b["version"] for b in get(c, "budgets")} == {"1"}
     fc = get(c, "forecasts")
-    assert by_team(fc, "projected") == PROJECTED
+    team_fc = [f for f in fc if "personId" not in f]
+    assert by_team(team_fc, "projected") == PROJECTED
     assert all(f["status"] == "available" and f["basis"] == "full_period" and f["origin"] == "placeholder"
                and "low" not in f and "high" not in f for f in fc)
 
@@ -115,8 +119,8 @@ def test_included_usage_counts_zero_and_is_labeled(c):
     rows = [r for r in get(c, "spending") if r["component"] == "included_usage"]
     assert {r["teamId"] for r in rows} == {"research", "engineering"}
     assert all(r["amount"] == 0 and r["provenance"] == "usage_only" for r in rows)
-    research = next(r for r in rows if r["teamId"] == "research")
-    assert "notional value $3,000.00 is not counted" in research["source"]
+    research = next(r for r in rows if r["teamId"] == "research" and r["date"] == "2026-10-01")
+    assert "notional value $" in research["source"] and "is not counted as spend" in research["source"]
     assert "(simulated)" in research["source"].lower() or "simulated" in research["source"].lower()
 
 
@@ -143,12 +147,14 @@ def test_unattributed_spend_gets_a_pseudo_team_and_marks_partial(c):
     # Company total is not understated; unpriced token rows never become dollars.
     assert sum(r["amount"] for r in rows) == sum(SPENT.values()) + 700
     assert all(r["component"] != "unpriced_usage" for r in rows)
-    assert not any(r["complete"] for r in rows)  # unattributed records make every team partial
+    # `complete` is per day: the unattributed row is partial, the teams' own days stay complete (the
+    # period-wide coverage flag would have marked every day of every team partial).
+    assert all(r["complete"] for r in rows if r["teamId"] != "unattributed")
 
 
 def test_documents_list_has_bodies_and_supersession(c):
     docs = get(c, "documents")
-    assert len(docs) == 6 and all(d["body"].strip() for d in docs)
+    assert len(docs) == 13 and all(d["body"].strip() for d in docs)
     v1 = next(d for d in docs if d["title"].startswith("Product launch plan - assistant"))
     assert v1["supersededBy"] and v1["kind"] == "plan" and v1["origin"].endswith("(simulated)")
     assert get(c, f"documents/{v1['id']}")["body"] == v1["body"]
@@ -162,18 +168,23 @@ def test_context_is_empty_until_interpreted_then_cited(c):
     say(c, "Read the documents and tell me what changed")
     items = get(c, "context", list[S.ContextItem])
     research = [i for i in items if i["teamIds"] == ["research"]]
-    current = next(i for i in research if "supersededBy" not in i)
+    # The research plan and the thread it supersedes (person-scope research items cite other documents).
+    current = next(i for i in research if "supersedes" in i)
     old = next(i for i in research if "supersededBy" in i)
     assert current["expectedEffect"] == "increase" and current["confidence"] == "high"
     assert current["claimType"] == "stated_plan" and current["kind"] == "plan"
     assert old["confidence"] == "low" and old["supersededBy"] == current["id"]
     assert current["supersedes"] == [old["id"]]
-    product = next(i for i in items if i["teamIds"] == ["product"])
-    assert product["expectedEffect"] == "unknown"  # timing shift: direction not stored, not guessed
+    product = next(i for i in items if i["teamIds"] == ["product"]
+                   and i["sources"][0]["title"].startswith("Product launch plan"))
+    # G5: a timing shift's direction comes from its typed kind (the launch is deferred -> decrease).
+    assert product["expectedEffect"] == "decrease" and product["signal"] == "project_deferred"
     for i in items:
         assert i["sources"] and all(s["excerpt"] and s["locator"].startswith("chars ") for s in i["sources"])
         assert len(i["title"]) <= mappers.TITLE_MAX
-    assert {i["id"] for i in get(c, "context?teamId=product")} == {product["id"]}
+    by_product = get(c, "context?teamId=product")
+    assert product["id"] in {i["id"] for i in by_product}
+    assert all(i["teamIds"] == ["product"] or i["scope"] == "company" for i in by_product)
 
 
 def test_read_routes_never_write(c, seeded):
@@ -210,7 +221,7 @@ def test_chat_addition_then_apply_once(c):
     r = c.post(f"{API}/proposals/{pid}/apply", json={"note": "Covers the approved research plan"})
     assert r.status_code == 200, r.text
     d = S.Decision.model_validate(r.json()).model_dump(exclude_none=True)
-    assert d["action"] == "applied" and d["kind"] == "add_budget" and d["appliedBy"] == "dashboard-approver"
+    assert d["action"] == "applied" and d["kind"] == "add_budget" and d["appliedBy"] == "Finance approver (demo)"
     assert d["note"] == "Covers the approved research plan" and d["rationale"] == p["rationale"]
     assert by_team(d["lines"], "after") == OUTCOME_B
     assert d["forecastsReviewed"] == p["forecastsReviewed"]
@@ -228,7 +239,10 @@ def test_chat_addition_then_apply_once(c):
 def test_apply_without_note_uses_default_reason(c):
     pid = say(c, "add $50,000 for research")["proposalId"]
     r = c.post(f"{API}/proposals/{pid}/apply", json={})
-    assert r.status_code == 200 and r.json()["note"] == "Approved from the dashboard (no note given)"
+    # The stored default reason is not finance's words, so it is not returned as a note (the UI quotes notes).
+    assert r.status_code == 200 and "note" not in r.json()
+    [d] = get(c, "decisions")
+    assert "note" not in d
 
 
 def test_stale_proposal_refused_then_refreshed_via_chat(c):
@@ -317,6 +331,8 @@ def test_question_is_read_only_answer(c):
     reply = say(c, "How is product tracking against its allocation?")
     assert reply["content"].startswith("**Read as:** a question")
     assert "proposalId" not in reply and reply["toolCalls"]
+    # The answer names the data's own as-of day (the fixed Oct 20 export), not only the clock time.
+    assert "(latest record dated 2026-10-20)" in reply["content"]
     assert by_team(get(c, "budgets"), "allocated") == ALLOCATED
 
 
@@ -383,9 +399,13 @@ def test_errors_are_plain_strings(c):
 
 
 def test_unseeded_database_answers_plain_errors(client):
-    assert_error(client.get(f"{API}/company"), 404)
-    assert_error(client.get(f"{API}/budgets"), 404)
-    assert client.get(f"{API}/teams").json() == []
+    body = assert_error(client.get(f"{API}/company"), 503, "The database is not seeded yet; run `python -m app.seed`.")
+    assert body["code"] == "not_seeded"
+    # Every list route the store loads answers 200 [] so nothing else fails on a fresh DB.
+    for path in ("teams", "people", "spending", "budgets", "forecasts", "context", "documents", "proposals",
+                 "decisions", "threads/main"):
+        r = client.get(f"{API}/{path}")
+        assert r.status_code == 200 and r.json() == [], (path, r.text)
 
 
 def test_forecast_unavailable_mode(tmp_path, clock, id_factory):
@@ -399,7 +419,7 @@ def test_forecast_unavailable_mode(tmp_path, clock, id_factory):
     try:
         with TestClient(app) as c:
             fc = get(c, "forecasts", list[S.Forecast])
-            assert len(fc) == 3
+            assert len([f for f in fc if "personId" not in f]) == 3 and len(fc) == 3 + 15
             assert all(f["status"] == "unavailable" and f["unavailableReason"] and "projected" not in f for f in fc)
             reply = say(c, "add 50k")  # no team, no projection to pick one: ask
             assert "Which team" in reply["content"]
@@ -517,3 +537,29 @@ def test_mapper_scalars():
     long = "word " * 40
     assert len(mappers.derived_title(long)) <= mappers.TITLE_MAX and mappers.derived_title(long).endswith("…")
     assert mappers.team_color(5) == "var(--chart-1)"
+
+
+def test_engine_forecast_mapping_preserves_full_quarter_and_unavailable_people(clock):
+    """A canonical 28-day view cannot replace the separately issued quarter amount."""
+    result = {
+        "provider": "engine", "target_period": "2026-P1", "basis": "full_period_total",
+        "value_kind": "estimated", "method_label": "conditional quarter continuation",
+        "projections": [{"team": "research", "amount": "12345.67", "low": "12000.00",
+                         "high": "13000.00", "assumptions": ["complete quarter continuation"],
+                         "view": {"projection": {"base": 28}, "quarter_outlook": {"base": 12345.67}}}],
+        "missing_teams": ["product"], "reason": "full quarter unavailable for product",
+    }
+    rows = mappers.forecasts(result, period_row={"starts_on": "2026-10-01", "ends_on": "2026-12-31",
+                                                "label": "Quarter"},
+                             team_ids=["research", "product"], now=clock.now(),
+                             people={"research": ["real-person"], "product": ["other-person"]})
+    research, product, *persons = rows
+    assert research["projected"] == 12345.67
+    assert research["basis"] == "full_period" and research["origin"] == "forecasting_service"
+    assert research["low"] == 12000 and research["high"] == 13000
+    assert "daily" not in research and "baseline" not in research and "adjustments" not in research
+    assert product["status"] == "unavailable" and "projected" not in product
+    assert len(persons) == 2 and all(p["status"] == "unavailable" and "projected" not in p for p in persons)
+    assert all(mappers.PERSON_SPLIT_LIMITATION not in p["limitations"] for p in persons)
+    for row in rows:
+        S.Forecast.model_validate(row)

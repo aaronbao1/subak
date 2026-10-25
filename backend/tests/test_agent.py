@@ -58,7 +58,7 @@ def test_fake_interpret_cites_exact_sources(seeded, client):
     assert r.status_code == 201, r.text
     out = r.json()
     assert out["status"] == "succeeded" and out["runner_kind"] == "fake" and out["simulated"] is True
-    assert len(out["signal_ids"]) == 5
+    assert len(out["signal_ids"]) == 12
     for sig in signals_by(client):
         assert sig["produced_by"] == "droid_fake" and sig["agent_run_id"] == out["id"]
         assert sig["citations"]
@@ -67,13 +67,15 @@ def test_fake_interpret_cites_exact_sources(seeded, client):
             assert doc["content"][c["char_start"]:c["char_end"]] == c["quote"]
     evidence = [e for e in out["events"] if e["type"] == "evidence_found"]
     assert evidence and all(e["data"]["quote"] for e in evidence)
-    statuses = sorted(s["status"] for s in signals_by(client))
-    assert statuses == ["current", "current", "current", "informal", "superseded"]
+    team_statuses = sorted(s["status"] for s in signals_by(client) if s["scope"] == "team")
+    assert team_statuses == ["current", "current", "current", "informal", "superseded"]
+    assert sorted((s["scope"], s["status"]) for s in signals_by(client) if s["scope"] != "team") == (
+        [("company", "current")] + [("person", "current")] * 6)
 
 
 def test_fake_interpret_marks_old_research_thread_superseded(seeded, client):
     out = run(client, "interpret_corpus").json()
-    sigs = {(s["team"], s["status"]): s for s in signals_by(client)}
+    sigs = {(s["team"], s["status"]): s for s in signals_by(client) if s["scope"] == "team"}
     old = sigs[("research", "superseded")]
     new = sigs[("research", "current")]
     assert old["superseded_by_signal_id"] == new["id"]
@@ -103,7 +105,7 @@ def test_rerunning_interpretation_does_not_duplicate_signals(seeded, client):
     first = run(client, "interpret_corpus").json()
     second = run(client, "interpret_corpus").json()
     assert second["status"] == "succeeded"
-    assert len(signals_by(client)) == 5
+    assert len(signals_by(client)) == 12
     assert sorted(second["signal_ids"]) == sorted(first["signal_ids"])
 
 
@@ -150,7 +152,7 @@ def test_droid_cannot_apply_its_draft_only_finance_can(seeded, client):
 def test_toolbox_has_no_decide_capability(seeded, client):
     names = set(tool_defs.TOOL_NAMES)
     assert names == {"search_corpus", "read_document", "get_spend_summary", "get_budgets", "get_forecast",
-                     "list_signals", "build_chart_spec", "record_signal", "draft_proposal", "rebase_proposal",
+                     "list_signals", "list_people", "build_chart_spec", "record_signal", "draft_proposal", "rebase_proposal",
                      "explain_forecast", "compare_forecasts", "preview_forecast_scenario", "request_forecast_refresh"}
     assert {t.name for t in tool_defs.TOOLS if t.kind == "draft"} == {"record_signal", "draft_proposal",
                                                                       "rebase_proposal", "preview_forecast_scenario", "request_forecast_refresh"}

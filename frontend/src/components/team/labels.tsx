@@ -1,8 +1,11 @@
 "use client";
 import type { ReactNode } from "react";
-import type { Budget, ClaimType, CostComponent, Forecast, Provenance, SpendingRecord, Team } from "@/lib/contracts";
+import type { Budget, ClaimType, ContextKind, CostComponent, Forecast, Provenance, SpendingRecord } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+/** One color per cost component, shared with the overview tiles. */
+export { COMPONENT_COLOR } from "@/components/shared/components";
 
 /* ------------------------------------------------------------------ */
 /* Cost components                                                     */
@@ -16,14 +19,6 @@ export const COMPONENT_LABEL: Record<CostComponent, string> = {
   included_usage: "Included usage",
   extra_usage: "Extra usage",
   api: "API",
-};
-
-/** CSS variables set by TeamSpendChart's scoped style block (validated categorical slots 1-4). */
-export const COMPONENT_COLOR_VAR: Record<CostComponent, string> = {
-  subscription: "var(--comp-subscription)",
-  included_usage: "var(--comp-included)",
-  extra_usage: "var(--comp-extra)",
-  api: "var(--comp-api)",
 };
 
 /* ------------------------------------------------------------------ */
@@ -83,6 +78,14 @@ export const CONFIDENCE_LABEL = {
   low: "Low confidence",
 } as const;
 
+/** Kind of a context item or the company document behind it. */
+export const KIND_LABEL: Record<ContextKind, string> = {
+  plan: "Plan",
+  project_doc: "Project document",
+  research_note: "Research note",
+  correspondence: "Correspondence",
+};
+
 /* ------------------------------------------------------------------ */
 /* Tags                                                                */
 /* ------------------------------------------------------------------ */
@@ -94,13 +97,6 @@ export function Tag({ children, title, className }: { children: ReactNode; title
       {children}
     </Badge>
   );
-}
-
-export const PLACEHOLDER_TITLE = "Placeholder projection: a shared sample number, not the output of the forecasting service";
-
-/** Always shown where a `origin: "placeholder"` projection is cited. */
-export function PlaceholderBadge({ className }: { className?: string }) {
-  return <Tag title={PLACEHOLDER_TITLE} className={className}>Sample projection</Tag>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -159,7 +155,7 @@ export function teamRecords(spending: SpendingRecord[], teamId: string) {
   return spending.filter((r) => r.teamId === teamId);
 }
 
-export function teamUnit(team: Team | undefined, budget: Budget | undefined, records: SpendingRecord[]) {
+export function teamUnit(budget: Budget | undefined, records: SpendingRecord[]) {
   return budget?.unit ?? records[0]?.unit ?? "usd";
 }
 

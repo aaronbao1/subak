@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
+import { companyQuarterProjection, scopeView } from "@/components/dashboard/forecast-derive";
 import { ForecastPanel } from "@/components/forecast/forecast-panel";
 import { useAppStore } from "@/lib/store";
 import { Hero, HeroSkeleton } from "@/components/dashboard/hero";
@@ -9,14 +10,22 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CostComponents, CostComponentsSkeleton } from "@/components/dashboard/cost-components";
+import { RecentEvidence } from "@/components/dashboard/recent-evidence";
+import { ModelBreakdown } from "@/components/dashboard/model-breakdown";
 import { buildDailyRows, completion, dateLabel, summarizeTeams } from "@/components/dashboard/derive";
 import { summarizePeople } from "@/components/person/derive";
+import { cn } from "@/lib/utils";
+import { riseDelay, useMounted } from "@/components/shared/motion";
 
 
 export default function OverviewPage() {
-  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant } = useAppStore();
+  const { loaded, company, teams, people, spending, spendingHistory, budgets, forecasts, personForecasts, context, askAssistant, forecastBundle } = useAppStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const toggleTeam = useCallback((id: string) => setSelectedId((cur) => (cur === id ? null : id)), []);
+  // Entrance: hero, chart and cost components rise in with a 60ms stagger (0 / 60 / 120ms, 700ms each, done by 820ms).
+  // The class is only applied once the client has mounted, so it never flashes during hydration and never replays on re-render.
+  const mounted = useMounted();
+  const enter = (i: number) => ({ className: cn("min-w-0", mounted ? "animate-rise" : "opacity-0"), style: riseDelay(i) });
 
   const unit = company?.budgetUnit ?? budgets[0]?.unit ?? "usd";
   const summaries = useMemo(() => summarizeTeams(teams, spending, budgets, forecasts), [teams, spending, budgets, forecasts]);
@@ -25,10 +34,16 @@ export default function OverviewPage() {
   const rows = useMemo(() => buildDailyRows(teams, spendingHistory, forecasts, period), [teams, spendingHistory, forecasts, period]);
   const { asOf, partialDates } = useMemo(() => completion(spending), [spending]);
 
-  const spent = summaries.reduce((s, t) => s + t.spent, 0);
+  const spent = spending.filter(r => r.unit === unit).reduce((sum, r) => sum + r.amount, 0);
   const envelope = budgets.length ? budgets.reduce((s, b) => s + b.allocated, 0) : undefined;
   const withProjection = summaries.filter((s) => typeof s.projected === "number");
-  const projected = withProjection.length ? withProjection.reduce((s, t) => s + (t.projected ?? 0), 0) : undefined;
+  // Teams without a projection are counted at their spend to date (a floor, never a forecast), so the company
+  // projection can never read below the company spend. The hero names those teams and says they are counted at spend.
+  const legacyProjected = withProjection.length
+    ? summaries.reduce((s, t) => s + (typeof t.projected === "number" ? t.projected : t.spent), 0)
+    : undefined;
+  const issuedCompany = scopeView(forecastBundle, "company");
+  const projected = companyQuarterProjection(forecastBundle, legacyProjected);
   const unavailableCount = teams.length - withProjection.length;
   const unavailableTeams = useMemo(() => summaries.filter((s) => typeof s.projected !== "number").map((s) => s.team.name), [summaries]);
   const hasPlaceholder = forecasts.some((f) => f.origin === "placeholder");
@@ -43,7 +58,7 @@ export default function OverviewPage() {
 
   if (!loaded) {
     return (
-      <div className="mx-auto w-full max-w-7xl min-w-0 space-y-6">
+      <div className="min-w-0 space-y-6">
         <HeroSkeleton />
         <SpendByTeamChartSkeleton />
         <CostComponentsSkeleton />
@@ -52,15 +67,18 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl min-w-0 space-y-6">
+    <div className="min-w-0 space-y-6">
       <ForecastPanel />
-      <Hero
-        unit={unit} spent={spent} envelope={envelope} projected={projected}
-        projectedTeamCount={withProjection.length} unavailableCount={unavailableCount} unavailableTeams={unavailableTeams} teamCount={teams.length}
-        periodLabel={period?.label} periodRange={periodRange} asOf={asOf}
-        hasPlaceholder={hasPlaceholder} isDemo={company?.isDemo ?? false}
-        summaries={summaries}
-      />
+      <div {...enter(0)}>
+        <Hero
+          unit={unit} spent={spent} envelope={envelope} projected={projected}
+          projectedTeamCount={withProjection.length} unavailableCount={unavailableCount} unavailableTeams={unavailableTeams} teamCount={teams.length}
+          periodLabel={period?.label} periodRange={periodRange} asOf={asOf}
+          hasPlaceholder={hasPlaceholder}
+          projectionCoverageNote={issuedCompany ? "Issued conditional quarter includes shared residuals. Missing inputs leave the company projection unavailable; current actuals do not rebase the issued forecast." : undefined}
+          summaries={summaries}
+        />
+      </div>
 
       {teams.length === 0 ? (
         <div className="flex flex-col items-center rounded-xl border border-border bg-card px-6 py-16 text-center">
@@ -70,7 +88,7 @@ export default function OverviewPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Daily spend">
+          <section aria-label="Daily spend" {...enter(1)}>
             <SpendByTeamChart
               teams={teams} rows={rows} partialDates={partialDates} unit={unit} period={period}
               selectedId={selectedId} onSelect={toggleTeam} placeholder={hasPlaceholder}
@@ -86,7 +104,17 @@ export default function OverviewPage() {
             </SheetContent>
           </Sheet>
 
-          <CostComponents spending={spending} unit={unit} />
+          <div {...enter(2)}>
+            <RecentEvidence items={context} teams={teams} people={people} />
+          </div>
+
+          <div {...enter(3)}>
+            <CostComponents spending={spending} unit={unit} />
+          </div>
+
+          <div {...enter(4)}>
+            <ModelBreakdown spending={spending} unit={unit} />
+          </div>
         </>
       )}
     </div>

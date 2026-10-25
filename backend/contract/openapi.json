@@ -1290,6 +1290,13 @@
             "title": "Citations",
             "type": "array"
           },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Ids",
+            "type": "array"
+          },
           "project": {
             "anyOf": [
               {
@@ -1301,6 +1308,36 @@
               }
             ],
             "title": "Project"
+          },
+          "scope": {
+            "default": "team",
+            "enum": [
+              "person",
+              "team",
+              "company"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "signal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "project_deferred",
+                  "project_accelerated",
+                  "model_change",
+                  "tool_change",
+                  "out_of_office",
+                  "onboarding",
+                  "steady"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Kind"
           },
           "status": {
             "enum": [
@@ -1340,6 +1377,19 @@
               }
             ],
             "title": "Team"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "uncertainty": {
             "maxLength": 5000,
@@ -1426,6 +1476,13 @@
             "title": "Needs Review",
             "type": "boolean"
           },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Ids",
+            "type": "array"
+          },
           "produced_by": {
             "enum": [
               "droid_fake",
@@ -1445,6 +1502,35 @@
               }
             ],
             "title": "Project"
+          },
+          "scope": {
+            "enum": [
+              "person",
+              "team",
+              "company"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "signal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "project_deferred",
+                  "project_accelerated",
+                  "model_change",
+                  "tool_change",
+                  "out_of_office",
+                  "onboarding",
+                  "steady"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Kind"
           },
           "status": {
             "enum": [
@@ -1490,6 +1576,17 @@
             ],
             "title": "Team"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
           "uncertainty": {
             "title": "Uncertainty",
             "type": "string"
@@ -1498,6 +1595,10 @@
         "required": [
           "id",
           "team",
+          "scope",
+          "person_ids",
+          "signal_kind",
+          "title",
           "project",
           "summary",
           "change_type",
@@ -1652,6 +1753,27 @@
           "imported_at"
         ],
         "title": "CoverageSource",
+        "type": "object"
+      },
+      "DailyProjection": {
+        "additionalProperties": false,
+        "description": "Projected spend on one day after the data as-of (frontend-integration-design §4.2).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "amount"
+        ],
+        "title": "DailyProjection",
         "type": "object"
       },
       "DataLabels": {
@@ -1965,6 +2087,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -1982,6 +2122,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2051,6 +2198,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -2127,6 +2276,24 @@
             ],
             "title": "Effective To"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_simulated": {
             "default": false,
             "title": "Is Simulated",
@@ -2142,6 +2309,14 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "default": "n/a",
@@ -2352,6 +2527,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -2376,6 +2569,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2449,6 +2649,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -2524,6 +2726,24 @@
             "title": "Id",
             "type": "string"
           },
+          "integration": {
+            "anyOf": [
+              {
+                "enum": [
+                  "slack",
+                  "asana",
+                  "monday",
+                  "email",
+                  "document"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration"
+          },
           "is_current": {
             "title": "Is Current",
             "type": "boolean"
@@ -2541,6 +2761,13 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "person_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Tags",
+            "type": "array"
           },
           "plan_status": {
             "enum": [
@@ -2610,6 +2837,8 @@
           "team_tags",
           "project_tags",
           "author",
+          "integration",
+          "person_tags",
           "content_hash",
           "is_simulated",
           "is_current",
@@ -2776,6 +3005,18 @@
         "additionalProperties": false,
         "description": "What a ForecastProvider returns. `projections` is empty when unavailable - never zero-filled.",
         "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
           "availability": {
             "enum": [
               "available",
@@ -2860,6 +3101,13 @@
               "type": "string"
             },
             "title": "Missing Teams",
+            "type": "array"
+          },
+          "person_projections": {
+            "items": {
+              "$ref": "#/components/schemas/PersonProjection"
+            },
+            "title": "Person Projections",
             "type": "array"
           },
           "procedure_version": {
@@ -3406,6 +3654,163 @@
           "ends_on"
         ],
         "title": "PeriodRef",
+        "type": "object"
+      },
+      "PersonOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "integrations": {
+            "items": {
+              "enum": [
+                "slack",
+                "asana",
+                "monday",
+                "email",
+                "document"
+              ],
+              "type": "string"
+            },
+            "title": "Integrations",
+            "type": "array"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Tool"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team",
+          "name",
+          "role",
+          "email",
+          "primary_tool",
+          "integrations",
+          "is_simulated",
+          "active"
+        ],
+        "title": "PersonOut",
+        "type": "object"
+      },
+      "PersonProjection": {
+        "additionalProperties": false,
+        "description": "A person's full-period projection, with method identified by its provider.\n\nThe placeholder uses a proportional spend-to-date split; the engine supplies\nonly compatible, immutable issued person quarters. `share` is the provider's\ndeclared percentage of the team total, as text rather than money.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "daily": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DailyProjection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "share": {
+            "title": "Share",
+            "type": "string"
+          },
+          "spent_to_date": {
+            "title": "Spent To Date",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty"
+          },
+          "unit": {
+            "const": "USD",
+            "default": "USD",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "team",
+          "amount",
+          "spent_to_date",
+          "share"
+        ],
+        "title": "PersonProjection",
         "type": "object"
       },
       "ProposalOut": {
@@ -4004,6 +4409,17 @@
             "title": "Period",
             "type": "string"
           },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
           "provider": {
             "anyOf": [
               {
@@ -4448,6 +4864,20 @@
             },
             "title": "Assumptions",
             "type": "array"
+          },
+          "daily": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DailyProjection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily"
           },
           "team": {
             "title": "Team",
@@ -6998,6 +7428,111 @@
         ]
       }
     },
+    "/api/people": {
+      "get": {
+        "operationId": "list_people_api_people_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonOut"
+                  },
+                  "title": "Response List People Api People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "List People",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/api/people/{person_id}": {
+      "get": {
+        "operationId": "get_person_api_people__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found. `error.code`: `not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`"
+          }
+        },
+        "summary": "Get Person",
+        "tags": [
+          "people"
+        ]
+      }
+    },
     "/api/proposals": {
       "get": {
         "operationId": "list_proposals_api_proposals_get",
@@ -7690,6 +8225,57 @@
               ],
               "title": "Project"
             }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "person",
+                    "team",
+                    "company"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "description": "person id: signals that name this person",
+            "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "person id: signals that name this person",
+              "title": "Person"
+            }
+          },
+          {
+            "description": "with team: also list company-wide signals",
+            "in": "query",
+            "name": "include_company",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "with team: also list company-wide signals",
+              "title": "Include Company",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -8166,6 +8752,24 @@
                 }
               ],
               "title": "Batch"
+            }
+          },
+          {
+            "description": "person id; team-level records have none",
+            "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "person id; team-level records have none",
+              "title": "Person"
             }
           },
           {

@@ -43,6 +43,8 @@ class Fixture:
     setup: Callable[[Any], dict[str, Any]] | None = None
     forecast_provider: str = "placeholder"
     tags: tuple[str, ...] = field(default_factory=tuple)
+    # Droid runs the setup itself starts (counted against the live cap like the scored run).
+    setup_runs: int = 0
 
 
 def _add_cancelled_doc(client) -> dict[str, Any]:
@@ -73,6 +75,14 @@ def _make_stale(client) -> dict[str, Any]:
     if ok.status_code != 201 or refused.status_code != 409:
         raise RuntimeError(f"setup failed: apply A {ok.status_code}, approve B {refused.status_code} (want 201/409)")
     return {"stale_proposal_id": b.json()["id"], "applied_proposal_id": a.json()["id"]}
+
+
+def _interpret_first(client) -> dict[str, Any]:
+    """An earlier interpret_corpus run (started by finance, as in the product) so current signals exist."""
+    r = client.post("/api/agent/runs", headers=ANALYST, json={"task_type": "interpret_corpus", "wait": True})
+    if r.status_code != 201 or r.json().get("status") != "succeeded":
+        raise RuntimeError(f"setup failed: interpret_corpus {r.status_code} {r.text[:300]}")
+    return {"interpret_run_id": r.json()["id"], "signal_ids": r.json().get("signal_ids", [])}
 
 
 def _propose(mode: str, amount: str | None = None) -> Callable[[dict], dict]:
@@ -115,6 +125,13 @@ FIXTURES: dict[str, Fixture] = {f.name: f for f in (
         forecast_provider="unavailable",
     ),
     Fixture(
+        name="addition_50k_after_interpret",
+        purpose="propose_allocation addition +50000.00 prioritizing research after an earlier interpret_corpus run",
+        setup=_interpret_first,
+        request=_propose("addition", "50000.00"),
+        setup_runs=1,
+    ),
+    Fixture(
         name="unsupported_question",
         purpose="answer_question asking for token prices, a 3x multiplier and per-engineer March 2027 spend",
         request=lambda _: {"task_type": "answer_question", "instruction": UNSUPPORTED_QUESTION},
@@ -124,4 +141,4 @@ FIXTURES: dict[str, Fixture] = {f.name: f for f in (
 # Order in which fixtures get live (sdk) runs when the global cap leaves fewer runs than fixtures.
 # stale_recovery is last: it was already live-verified (backend/docs/droid-live-log.md, run 4).
 LIVE_PRIORITY = ("interpret", "transfer", "forecast_unavailable", "unsupported_question", "addition_50k",
-                 "stale_recovery")
+                 "stale_recovery", "addition_50k_after_interpret")

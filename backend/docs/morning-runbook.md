@@ -111,18 +111,14 @@ zsh -ic '.venv/bin/python -m evals.run --runner sdk --scenario stale_recovery --
 
 ## 4. Point the frontend at the backend
 
-The Next.js app lives on `origin/main` under `frontend/`. This branch does not contain it. To check
-it out without touching this branch, use a separate worktree:
+The Next.js app is in `frontend/` on this branch. Seed and start the backend first (§1), then:
 
 ```bash
-git fetch origin
-git worktree add --detach ../cal-hacks-13-main origin/main
-cd ../cal-hacks-13-main/frontend
-echo 'NEXT_PUBLIC_API_URL=http://localhost:8787/compat' > .env.local
-npm install && npm run dev                                         # http://localhost:3000
+echo 'NEXT_PUBLIC_API_URL=http://localhost:8787/compat' > frontend/.env.local
+cd frontend && npm install && npm run dev                                         # http://localhost:3000
 ```
 
-- The backend serves the app's 15 endpoints under `/compat/api/*`, which is on by default
+- The backend serves the app's 16 endpoints (including `/api/people`) under `/compat/api/*`, which is on by default
   (`BACKEND_COMPAT`). CORS already allows any localhost port.
 - Check it with `curl -s http://127.0.0.1:8787/compat/api/company`.
 - Chat messages become typed Droid runs. Every reply starts with **Read as:**, which says how the
@@ -135,7 +131,9 @@ npm install && npm run dev                                         # http://loca
 - Apply and Reject in the UI act as the demo approver `dashboard-approver`. Chats run as
   `dashboard-analyst`, so the self-approval rule still holds.
 - Under the SDK runner a chat reply waits for the whole run, which takes 20-170 s.
-- The context view is empty until the first interpret run.
+- Context cards show on first load: `python -m app.seed` records the stand-in signals on a fresh seed
+  (`--no-signals` skips them, `--live-signals` uses the real Droid). Dismiss on a stale proposal
+  records a rejected decision and leaves budgets unchanged.
 - Known gaps (included usage, token-only rows, forecast ranges) are listed in
   [`frontend-alignment.md`](frontend-alignment.md).
 

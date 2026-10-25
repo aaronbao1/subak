@@ -18,9 +18,11 @@
         "effective_from": "2026-10-01",
         "effective_to": "2026-12-31",
         "id": "doc_000001",
+        "integration": null,
         "is_current": false,
         "is_simulated": true,
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "workspace-launch"
@@ -47,9 +49,11 @@
         "effective_from": "2026-10-01",
         "effective_to": "2027-03-31",
         "id": "doc_000005",
+        "integration": null,
         "is_current": true,
         "is_simulated": true,
         "origin": "seed",
+        "person_tags": [],
         "plan_status": "approved",
         "project_tags": [
           "workspace-launch"

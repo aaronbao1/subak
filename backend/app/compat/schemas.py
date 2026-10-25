@@ -23,6 +23,11 @@ Provenance = Literal["reported_charge", "estimate", "usage_only"]
 ContextKind = Literal["plan", "project_doc", "research_note", "correspondence"]
 ClaimType = Literal["stated_plan", "observed_event", "interpretation"]
 ProposalKind = Literal["redistribute", "add_budget"]
+Integration = Literal["slack", "asana", "monday", "email", "document", "gmail", "notion", "google_docs", "linear", "pdf"]
+SignalKind = Literal["project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office",
+                     "onboarding", "steady", "pricing_change", "policy_change", "project_paused"]
+EvidenceCategory = Literal["project", "staffing", "policy", "pricing", "model", "macro"]
+Scope = Literal["person", "team", "company"]
 Number = int | float
 
 
@@ -38,21 +43,26 @@ class Team(_Model):
     color: str
 
 
+class EffectMagnitude(_Model):
+    pct: Number | None = None
+    amount: Number | None = None
+    basis: str | None = None
+
+
+class ForecastAdjustment(_Model):
+    contextId: str
+    amount: Number
+    note: str | None = None
+
+
 class Person(_Model):
     id: str
     teamId: str
     name: str
     role: str | None = None
     email: str | None = None
-    integrations: list[str] | None = None
+    integrations: list[Integration] | None = None
     primaryTool: str | None = None
-
-
-class ForecastDailyPoint(_Model):
-    date: str
-    projected: Number
-    low: Number | None = None
-    high: Number | None = None
 
 
 class Period(_Model):
@@ -68,6 +78,8 @@ class SpendingRecord(_Model):
     date: str
     component: CostComponent
     provider: str
+    model: str | None = None
+    tokens: Number | None = None
     amount: Number
     unit: Unit
     provenance: Provenance
@@ -83,11 +95,17 @@ class Budget(_Model):
     version: str | None = None
 
 
+class ForecastDailyPoint(_Model):
+    date: str
+    projected: Number
+    low: Number | None = None
+    high: Number | None = None
+
+
 class Forecast(_Model):
     id: str | None = None
     teamId: str
     personId: str | None = None
-    daily: list[ForecastDailyPoint] | None = None
     period: Period
     status: Literal["available", "unavailable"]
     basis: Literal["full_period", "remaining"] | None = None
@@ -96,6 +114,9 @@ class Forecast(_Model):
     projected: Number | None = None
     low: Number | None = None
     high: Number | None = None
+    daily: list[ForecastDailyPoint] | None = None
+    baseline: Number | None = None
+    adjustments: list[ForecastAdjustment] | None = None
     unit: Unit
     assumptions: list[str]
     limitations: list[str]
@@ -110,7 +131,7 @@ class SourceRef(_Model):
     locator: str | None = None
     date: str | None = None
     kind: ContextKind | None = None
-    integration: Literal["slack", "asana", "monday", "email", "document"] | None = None
+    integration: Integration | None = None
     author: str | None = None
 
 
@@ -130,8 +151,11 @@ class ContextItem(_Model):
     supersededBy: str | None = None
     supersedes: list[str] | None = None
     personIds: list[str] | None = None
-    scope: Literal["person", "team", "company"] | None = None
-    signal: Literal["project_deferred", "project_accelerated", "model_change", "tool_change", "out_of_office", "onboarding", "steady"] | None = None
+    scope: Scope | None = None
+    signal: SignalKind | None = None
+    category: EvidenceCategory | None = None
+    magnitude: EffectMagnitude | None = None
+    attribution: str | None = None
 
 
 class AllocationLine(_Model):
@@ -199,7 +223,7 @@ class CompanyDocument(_Model):
     body: str
     supersededBy: str | None = None
     personIds: list[str] | None = None
-    integration: Literal["slack", "asana", "monday", "email", "document"] | None = None
+    integration: Integration | None = None
 
 
 class Company(_Model):
@@ -233,10 +257,10 @@ class ErrorOut(BaseModel):
 # Every interface in the TypeScript contract, by name (used by the drift test).
 CONTRACT_MODELS: dict[str, type[_Model]] = {
     m.__name__: m
-    for m in (Team, Person, ForecastDailyPoint, Period, SpendingRecord, Budget, Forecast, SourceRef, ContextItem, AllocationLine,
+    for m in (Team, EffectMagnitude, ForecastAdjustment, Person, Period, SpendingRecord, Budget, ForecastDailyPoint, Forecast, SourceRef, ContextItem, AllocationLine,
               AllocationProposal, Decision, ToolCallSummary, AssistantMessage, CompanyDocument, Company)
 }
 CONTRACT_ALIASES = {
     "Unit": Unit, "CostComponent": CostComponent, "Provenance": Provenance, "ContextKind": ContextKind,
-    "ClaimType": ClaimType, "ProposalKind": ProposalKind,
+    "ClaimType": ClaimType, "ProposalKind": ProposalKind, "Integration": Integration, "SignalKind": SignalKind, "EvidenceCategory": EvidenceCategory,
 }

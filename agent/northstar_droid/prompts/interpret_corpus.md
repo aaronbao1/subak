@@ -10,6 +10,25 @@ Interpret the company corpus for the current planning period.
      that finance has to resolve it;
    - Slack/email brainstorm, draft, "just an idea", "not approved" -> `informal`;
    - a plan marked cancelled, or text saying the work is cancelled/stopped -> `cancelled`.
+2b. Decide the scope of each finding:
+   - A document with `person_tags`, or one that names an individual whose own work changes (a
+     manager deferring someone's task, a person switching model or tool, someone out of office, a
+     new joiner): call `list_people` once and record `scope: "person"` with those people's ids in
+     `person_ids`. All of them must be on one team; `team` may be omitted (the backend derives it).
+     Only use ids of people the cited text actually names. Never infer a person who is not named.
+   - A company-wide announcement that affects every team (for example a new default model): record
+     `scope: "company"` with `team` null and no `person_ids`.
+   - A team plan or team note stays `scope: "team"` with no `person_ids`.
+   - Set `signal_kind` to the one that says why usage moves:
+     - `project_deferred`: work is pushed back (e.g. "stay on the design doc longer");
+     - `project_accelerated`: work is moved earlier or expanded into the current period;
+     - `model_change`: moving to a different model or model tier;
+     - `tool_change`: moving between tools or billing paths (seat to API, one assistant to another);
+     - `out_of_office`: away for given dates;
+     - `onboarding`: a new person, seat or key becomes active;
+     - `steady`: work continues at the current pace.
+     Leave it out when none fits (for example an informal idea).
+   - Give every signal a short `title` (at most 120 characters) that names who and what.
 3. Check `superseded_by` / `supersedes` on every document. When an older document conflicts with a
    newer one (for example different timelines for the same project), surface the conflict and say
    which document is current and why. Do not merge them silently, and do not let an older timeline

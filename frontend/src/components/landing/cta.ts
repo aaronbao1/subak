@@ -22,9 +22,5 @@ export function cta(
   );
 }
 
-/** Inline text link used under feature copy: underline carries the affordance, not color. */
-export const textLink =
-  "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-4 decoration-border-strong transition-colors duration-300 hover:decoration-foreground";
-
 /** Marketing container, shared by every landing section. */
 export const container = "mx-auto w-full max-w-[1440px] px-4 md:px-8 lg:px-12 xl:px-16";

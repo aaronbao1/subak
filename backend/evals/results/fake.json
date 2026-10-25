@@ -1,8 +1,8 @@
 {
   "runner": "fake",
-  "generated_at": "2026-10-24T11:17:09+00:00",
+  "generated_at": "2026-10-25T05:37:11+00:00",
   "counts": {
-    "pass": 11,
+    "pass": 13,
     "fail": 0,
     "not_run": 0
   },
@@ -193,11 +193,11 @@
     },
     {
       "id": "arithmetic_addition_250k",
-      "title": "Addition reproduces 95k/80k/75k @ 250k",
+      "title": "Valid +50k addition that prioritizes research and flags other overruns",
       "fixtures": [
         "addition_50k"
       ],
-      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "note": "The 95k/80k/75k @ 250k reference split is reported, not required (it is illustrative).",
       "status": "pass",
       "checks": [
         {
@@ -216,22 +216,32 @@
           "reason": "before + deltas = after, and team totals equal the envelope"
         },
         {
-          "name": "addition_50k:reference_figures",
+          "name": "addition_50k:prioritizes_research",
           "passed": true,
-          "reason": "after = {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+          "reason": "research gets the largest increase (+35000.00; deltas {'engineering': '15000.00', 'product': '0.00', 'research': '35000.00'})"
+        },
+        {
+          "name": "addition_50k:flags_other_overruns",
+          "passed": true,
+          "reason": "no other team stays projected over its allocation after the draft"
+        },
+        {
+          "name": "addition_50k:reference_split (informational)",
+          "passed": true,
+          "reason": "matches the reference split {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
         }
       ],
       "reasons": [
-        "4 check(s) passed"
+        "6 check(s) passed"
       ]
     },
     {
       "id": "arithmetic_transfer_200k",
-      "title": "Transfer reproduces 85k/50k/65k @ 200k",
+      "title": "Valid transfer that prioritizes research and flags other overruns",
       "fixtures": [
         "transfer"
       ],
-      "note": "Reference split from the answer key; a different valid split is a judgment divergence, scored as fail.",
+      "note": "The 85k/50k/65k @ 200k reference split is reported, not required (it is illustrative).",
       "status": "pass",
       "checks": [
         {
@@ -250,9 +260,19 @@
           "reason": "before + deltas = after, and team totals equal the envelope"
         },
         {
-          "name": "transfer:reference_figures",
+          "name": "transfer:prioritizes_research",
           "passed": true,
-          "reason": "after = {'research': '85000.00', 'product': '50000.00', 'engineering': '65000.00'} @ 200000.00"
+          "reason": "research gets the largest increase (+25000.00; deltas {'engineering': '5000.00', 'product': '-30000.00', 'research': '25000.00'})"
+        },
+        {
+          "name": "transfer:flags_other_overruns",
+          "passed": true,
+          "reason": "no other team stays projected over its allocation after the draft"
+        },
+        {
+          "name": "transfer:reference_split (informational)",
+          "passed": true,
+          "reason": "matches the reference split {'research': '85000.00', 'product': '50000.00', 'engineering': '65000.00'} @ 200000.00"
         },
         {
           "name": "no_team_below_recorded_spend",
@@ -261,7 +281,7 @@
         }
       ],
       "reasons": [
-        "5 check(s) passed"
+        "7 check(s) passed"
       ]
     },
     {
@@ -445,6 +465,119 @@
       "reasons": [
         "4 check(s) passed"
       ]
+    },
+    {
+      "id": "person_signals_cited",
+      "title": "Records person and company signals with the right people, team and kind",
+      "fixtures": [
+        "interpret"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "interpret:run_succeeded",
+          "passed": true,
+          "reason": "run run_000001 succeeded"
+        },
+        {
+          "name": "person:research-harness-asana",
+          "passed": true,
+          "reason": "sig_000006 (research, current, cites research-harness-asana@v1): ['research-leila-novak'] on research, project_deferred"
+        },
+        {
+          "name": "person:research-model-switch-slack",
+          "passed": true,
+          "reason": "sig_000007 (research, current, cites research-model-switch-slack@v1): ['research-omar-haddad'] on research, model_change"
+        },
+        {
+          "name": "person:research-availability-monday",
+          "passed": true,
+          "reason": "sig_000008 (research, current, cites research-availability-monday@v1): ['research-theo-brandt'] on research, out_of_office"
+        },
+        {
+          "name": "person:engineering-cutover-monday",
+          "passed": true,
+          "reason": "sig_000009 (engineering, current, cites engineering-cutover-monday@v1): ['engineering-sofia-reyes'] on engineering, project_accelerated"
+        },
+        {
+          "name": "person:engineering-welcome-slack",
+          "passed": true,
+          "reason": "sig_000010 (engineering, current, cites engineering-welcome-slack@v1): ['engineering-hana-sato'] on engineering, onboarding"
+        },
+        {
+          "name": "person:product-tool-switch-slack",
+          "passed": true,
+          "reason": "sig_000011 (product, current, cites product-tool-switch-slack@v1): ['product-felix-weber'] on product, tool_change"
+        },
+        {
+          "name": "person_ids_real",
+          "passed": true,
+          "reason": "every person_ids entry is a real person on the signal's team"
+        },
+        {
+          "name": "person_ids_grounded",
+          "passed": true,
+          "reason": "every person a signal names is named in the documents it cites"
+        },
+        {
+          "name": "company:company-model-announcement-slack",
+          "passed": true,
+          "reason": "one current company signal, team null, no people, model_change (sig_000012)"
+        },
+        {
+          "name": "team_signals_name_no_people",
+          "passed": true,
+          "reason": "no team-scope signal carries person_ids"
+        },
+        {
+          "name": "no_new_figures",
+          "passed": true,
+          "reason": "no person or company summary adds a $ amount or % value"
+        }
+      ],
+      "reasons": [
+        "12 check(s) passed"
+      ]
+    },
+    {
+      "id": "propose_reuses_signals",
+      "title": "A proposal after interpretation reuses current signals without re-reading",
+      "fixtures": [
+        "addition_50k_after_interpret"
+      ],
+      "note": "",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k_after_interpret:run_succeeded",
+          "passed": true,
+          "reason": "run run_000002 succeeded"
+        },
+        {
+          "name": "no_corpus_reread",
+          "passed": true,
+          "reason": "the propose run reused recorded signals (no corpus reads)"
+        },
+        {
+          "name": "addition_50k_after_interpret:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_000001"
+        },
+        {
+          "name": "evidence_signals_current",
+          "passed": true,
+          "reason": "7 signal evidence ref(s), all current"
+        },
+        {
+          "name": "addition_50k_after_interpret:drafts_pending_review",
+          "passed": true,
+          "reason": "every draft is pending_review (1 draft(s))"
+        }
+      ],
+      "reasons": [
+        "5 check(s) passed"
+      ]
     }
   ],
   "fixtures": {
@@ -459,13 +592,13 @@
         "wait": true
       },
       "setup": {
-        "cancelled_document_id": "doc_000007"
+        "cancelled_document_id": "doc_000014"
       },
       "run_id": "run_000001",
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.04,
+      "duration_s": 0.13,
       "tools_called": [
         "search_corpus",
         "read_document",
@@ -475,6 +608,21 @@
         "read_document",
         "read_document",
         "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "list_people",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
         "record_signal",
         "record_signal",
         "record_signal",
@@ -536,6 +684,69 @@
           "cites": [
             "marketing-ideas-slack@v1"
           ]
+        },
+        {
+          "id": "sig_000006",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-harness-asana@v1"
+          ]
+        },
+        {
+          "id": "sig_000007",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-model-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000008",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-availability-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000009",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-cutover-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000010",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-welcome-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000011",
+          "team": "product",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "product-tool-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000012",
+          "team": null,
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "company-model-announcement-slack@v1"
+          ]
         }
       ],
       "proposals": [],
@@ -543,7 +754,7 @@
         "before": 1,
         "after": 1
       },
-      "summary": "Read 7 documents; recorded 5 cited signals (3 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
+      "summary": "Read 14 documents; recorded 12 cited signals (10 current). Product launch plan update - milestone moved (2026-10-14, approved) supersedes Product launch plan - assistant workspace GA (2026-08-20, approved). Approved research plan - model-evaluation expansion (2026-10-08, approved) supersedes Re: model-evaluation timeline (2026-09-03, informal).",
       "usage": null
     },
     "transfer": {
@@ -565,7 +776,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.05,
+      "duration_s": 0.16,
       "tools_called": [
         "list_signals",
         "search_corpus",
@@ -575,6 +786,21 @@
         "read_document",
         "read_document",
         "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "list_people",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
         "record_signal",
         "record_signal",
         "record_signal",
@@ -635,6 +861,69 @@
           "cites": [
             "marketing-ideas-slack@v1"
           ]
+        },
+        {
+          "id": "sig_000006",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-harness-asana@v1"
+          ]
+        },
+        {
+          "id": "sig_000007",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-model-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000008",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-availability-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000009",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-cutover-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000010",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-welcome-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000011",
+          "team": "product",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "product-tool-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000012",
+          "team": null,
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "company-model-announcement-slack@v1"
+          ]
         }
       ],
       "proposals": [
@@ -682,7 +971,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.05,
+      "duration_s": 0.11,
       "tools_called": [
         "list_signals",
         "search_corpus",
@@ -692,6 +981,21 @@
         "read_document",
         "read_document",
         "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "list_people",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
         "record_signal",
         "record_signal",
         "record_signal",
@@ -759,6 +1063,69 @@
           "cites": [
             "marketing-ideas-slack@v1"
           ]
+        },
+        {
+          "id": "sig_000006",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-harness-asana@v1"
+          ]
+        },
+        {
+          "id": "sig_000007",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-model-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000008",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-availability-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000009",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-cutover-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000010",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-welcome-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000011",
+          "team": "product",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "product-tool-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000012",
+          "team": null,
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "company-model-announcement-slack@v1"
+          ]
         }
       ],
       "proposals": [
@@ -802,7 +1169,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.01,
+      "duration_s": 0.05,
       "tools_called": [
         "get_budgets",
         "get_spend_summary",
@@ -823,7 +1190,7 @@
         "before": 1,
         "after": 1
       },
-      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:00:00Z. engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Limitation: the deterministic fake runner does not interpret free-text questions; this is the standard per-team comparison. Analyses beyond it (for example token multipliers or scenarios the forecast provider does not supply) are not computed.",
+      "summary": "Period 2026-P1 (2026-10-01 to 2026-12-31), USD; recorded spend is to date as of 2026-10-24T12:00:00Z (latest record dated 2026-10-20). engineering: allocation 60000.00, recorded 30000.00, projected 65000.00; product: allocation 80000.00, recorded 20000.00, projected 50000.00; research: allocation 60000.00, recorded 45000.00, projected 85000.00. Spend coverage is complete; company total 95000.00 USD. Projections are simulated (shared placeholder (not a forecast model)), not measured spend. Limitation: the deterministic fake runner does not interpret free-text questions; this is the standard per-team comparison. Analyses beyond it (for example token multipliers or scenarios the forecast provider does not supply) are not computed.",
       "usage": null
     },
     "addition_50k": {
@@ -846,7 +1213,7 @@
       "runner_kind": "fake",
       "status": "succeeded",
       "run_error": null,
-      "duration_s": 0.05,
+      "duration_s": 0.12,
       "tools_called": [
         "list_signals",
         "search_corpus",
@@ -856,6 +1223,21 @@
         "read_document",
         "read_document",
         "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "list_people",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
         "record_signal",
         "record_signal",
         "record_signal",
@@ -915,6 +1297,69 @@
           "change_type": "other",
           "cites": [
             "marketing-ideas-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000006",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-harness-asana@v1"
+          ]
+        },
+        {
+          "id": "sig_000007",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-model-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000008",
+          "team": "research",
+          "status": "current",
+          "change_type": "reduction",
+          "cites": [
+            "research-availability-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000009",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-cutover-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_000010",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "expansion",
+          "cites": [
+            "engineering-welcome-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000011",
+          "team": "product",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "product-tool-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_000012",
+          "team": null,
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "company-model-announcement-slack@v1"
           ]
         }
       ],
@@ -996,6 +1441,79 @@
         "after": 2
       },
       "summary": "prop_000002 was drafted against budget version 1 and was not applied: the budget is now at version 2. Since then: engineering 60000.00 -> 65000.00, product 80000.00 -> 50000.00, research 60000.00 -> 85000.00 (envelope 200000.00 -> 200000.00). prop_000001 (transfer: product -> research 25000.00, product -> engineering 5000.00) was applied by fin-alice (version 1 -> 2). Rebased draft prop_000003 (addition to the envelope, same lines) on version 2: engineering 80000.00, product 50000.00, research 120000.00; envelope 250000.00 USD. It is pending_review and needs a fresh finance review; nothing has been applied and saved allocations remain at version 2. Warnings: the proposal cites no evidence.",
+      "usage": null
+    },
+    "addition_50k_after_interpret": {
+      "fixture": "addition_50k_after_interpret",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {
+        "interpret_run_id": "run_000001",
+        "signal_ids": [
+          "sig_000001",
+          "sig_000002",
+          "sig_000003",
+          "sig_000004",
+          "sig_000005",
+          "sig_000006",
+          "sig_000007",
+          "sig_000008",
+          "sig_000009",
+          "sig_000010",
+          "sig_000011",
+          "sig_000012"
+        ]
+      },
+      "run_id": "run_000002",
+      "runner_kind": "fake",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 0.06,
+      "tools_called": [
+        "list_signals",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "list_signals",
+        "draft_proposal"
+      ],
+      "warning_codes": [],
+      "warnings": [],
+      "signals": [],
+      "proposals": [
+        {
+          "id": "prop_000001",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "75000.00",
+              "product": "80000.00",
+              "research": "95000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "Drafted proposal prop_000001 (addition to the envelope) for finance review: engineering 75000.00, product 80000.00, research 95000.00; envelope 250000.00 USD. It is pending_review and has NOT been applied; saved allocations remain at version 1 until a finance approver decides.",
       "usage": null
     }
   }

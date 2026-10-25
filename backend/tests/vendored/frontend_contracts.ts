@@ -21,6 +21,71 @@ export interface Team {
   color: string;
 }
 
+/** Where a signal about a person's work came from. Document = an uploaded file or export, not a live connector. */
+export type Integration =
+  | "slack" | "asana" | "monday" | "email" | "document"
+  /** Added for richer evidence rendering; optional everywhere it appears. */
+  | "gmail" | "notion" | "google_docs" | "linear" | "pdf";
+
+/**
+ * Why an individual's usage is expected to move. project_deferred: a manager pushed work back (e.g. "stay on the
+ * design doc longer"); model_change: the person said they are moving to a different model; macro changes carry
+ * scope "company" on the ContextItem.
+ */
+export type SignalKind =
+  | "project_deferred"
+  | "project_accelerated"
+  | "model_change"
+  | "tool_change"
+  | "out_of_office"
+  | "onboarding"
+  | "steady"
+  /** A provider or vendor changed prices (e.g. a model's per-token rate). Company scope. */
+  | "pricing_change"
+  /** An internal policy changed who may use what (e.g. a new model enabled for all employees). Company scope. */
+  | "policy_change"
+  /** Work is paused for an external reason (office renovation, vendor outage); usage drops for the named people. */
+  | "project_paused";
+
+/** Where a piece of evidence comes from, for grouping on the Evidence page. */
+export type EvidenceCategory = "project" | "staffing" | "policy" | "pricing" | "model" | "macro";
+
+/** Expected size of an evidence item's effect, as finance would state it. Either field may be absent. */
+export interface EffectMagnitude {
+  /** Signed percent change to the affected spend (e.g. -18 for an 18% drop). */
+  pct?: number;
+  /** Signed absolute change over the period, in the budget unit. */
+  amount?: number;
+  /** Plain-language basis, e.g. "3 people at their last-week rate". */
+  basis?: string;
+}
+
+/** How one evidence item moved a projection away from its trend baseline. */
+export interface ForecastAdjustment {
+  contextId: string;
+  /** Signed amount applied to the projection, in the forecast's unit. */
+  amount: number;
+  /** One sentence the UI can show, e.g. "Three people paused until Oct 30: −$2,400". */
+  note?: string;
+}
+
+/**
+ * An individual whose usage rolls up into a team. Spending, forecasts and context can be attributed to a person
+ * through optional `personId` fields; team totals are always the sum over the team's people plus anything
+ * recorded at team level without a person.
+ */
+export interface Person {
+  id: string;
+  teamId: string;
+  name: string;
+  role?: string;
+  email?: string;
+  /** Integrations this person's signals arrive through (Slack, Asana, Monday). */
+  integrations?: Integration[];
+  /** Primary coding tool or API workspace, e.g. "Cursor", "Claude Code". */
+  primaryTool?: string;
+}
+
 export interface Period {
   /** ISO date, inclusive */
   start: string;
@@ -33,10 +98,16 @@ export interface Period {
 export interface SpendingRecord {
   id: string;
   teamId: string;
+  /** The individual this usage is attributed to, when attribution is known. Absent for team-level rows. */
+  personId?: string;
   /** ISO date (YYYY-MM-DD) */
   date: string;
   component: CostComponent;
   provider: string; // e.g. "anthropic", "openai", "cursor"
+  /** Model the usage ran on, for API rows: "Claude Opus 5.5", "GPT-5.5", "Gemini 3 Pro". Optional. */
+  model?: string;
+  /** Tokens consumed by this row, when the usage export reports them. Optional; never summed into `amount`. */
+  tokens?: number;
   amount: number;
   unit: Unit;
   provenance: Provenance;
@@ -56,10 +127,24 @@ export interface Budget {
   version?: string;
 }
 
+/**
+ * Optional per-day projection for days that are not yet complete: the partial day (its full-day total) and every
+ * later day in the period. For a full_period forecast, spend on complete days + the sum of these equals `projected`.
+ */
+export interface ForecastDailyPoint {
+  /** ISO date (YYYY-MM-DD) */
+  date: string;
+  projected: number;
+  low?: number;
+  high?: number;
+}
+
 /** Handoff 4: Forecast (forecasting → agent, frontend). Period comes from forecasting, never hard-coded. */
 export interface Forecast {
   id?: string;
   teamId: string;
+  /** Set on a person-level projection. Team-level forecasts have no personId; the UI never mixes the two. */
+  personId?: string;
   period: Period;
   status: "available" | "unavailable";
   /**
@@ -75,6 +160,12 @@ export interface Forecast {
   projected?: number;
   low?: number;
   high?: number;
+  /** Optional day-by-day breakdown of the projection for the days not yet complete. Same unit. */
+  daily?: ForecastDailyPoint[];
+  /** Trend-only projection before evidence adjustments; `projected = baseline + sum(adjustments)` when both are set. */
+  baseline?: number;
+  /** Evidence items that moved this projection, with the signed amount each contributed. */
+  adjustments?: ForecastAdjustment[];
   unit: Unit;
   assumptions: string[];
   limitations: string[];
@@ -91,6 +182,10 @@ export interface SourceRef {
   locator?: string;
   date?: string;
   kind?: ContextKind;
+  /** Connector the source arrived through, e.g. a Slack message, an Asana task, a Monday board item. */
+  integration?: Integration;
+  /** Who said or did it, e.g. the manager who asked for the change. */
+  author?: string;
 }
 
 export type ContextKind = "plan" | "project_doc" | "research_note" | "correspondence";
@@ -118,6 +213,18 @@ export interface ContextItem {
   supersededBy?: string;
   /** Ids of older items this one supersedes. */
   supersedes?: string[];
+  /** Individuals this item is about. A team- or company-wide item leaves this empty. */
+  personIds?: string[];
+  /** person: one individual's work; team: the team's plan; company: a macro change such as a new model everyone moves to. */
+  scope?: "person" | "team" | "company";
+  /** Typed reason, so the UI and the assistant can say *why* usage moves without parsing the summary. */
+  signal?: SignalKind;
+  /** Grouping for the Evidence page. */
+  category?: EvidenceCategory;
+  /** Expected size of the effect. */
+  magnitude?: EffectMagnitude;
+  /** Who said it, as the reader would recognize it: "Anthropic pricing page", "Priya N. in #research". */
+  attribution?: string;
 }
 
 /** Adding to the overall budget and redistributing the existing budget are DIFFERENT actions. */
@@ -205,6 +312,8 @@ export interface CompanyDocument {
   body: string;
   /** Id of the document that replaces this one, if any */
   supersededBy?: string;
+  personIds?: string[];
+  integration?: Integration;
 }
 
 export interface Company {
@@ -215,3 +324,5 @@ export interface Company {
   budgetUnit: Unit;
   currentPeriod: Period;
 }
+
+export type { ForecastView, ForecastBundle, ForecastScope, ForecastPoint, ForecastBand, ForecastDriver, ForecastRefresh, ForecastEvidence, ForecastQuestionContext, ForecastScenarioReceipt, ForecastScenarioResponse } from "./forecast-view";

@@ -53,3 +53,10 @@ test('source drawer closes when publication or scope changes',async()=>{
  assert.equal(selectedDriverForView(selection,{run_id:'r8',scope:{type:'team',id:'t1'}}),undefined);
  assert.equal(selectedDriverForView(selection,{run_id:'r7',scope:{type:'person',id:'p1'}}),undefined);
 });
+test('redesigned company hero preserves canonical unknown quarter and shared amount',async()=>{
+ const {companyQuarterProjection}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+ const company={run_id:'r',scope:{type:'company',id:'c'},quarter_outlook:{base:null}};
+ assert.equal(companyQuarterProjection({views:[company]},900),undefined);
+ assert.equal(companyQuarterProjection({views:[{...company,quarter_outlook:{base:1200}},{scope:{type:'team',id:'t'},quarter_outlook:{base:900}}]},900),1200);
+ assert.equal(companyQuarterProjection(undefined,900),900);
+});

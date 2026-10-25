@@ -16,7 +16,7 @@ from typing import Any
 from evals import textcheck as tc
 
 READ_TOOLS = {"search_corpus", "read_document", "get_spend_summary", "get_budgets", "get_forecast",
-              "list_signals", "build_chart_spec"}
+              "list_signals", "list_people", "build_chart_spec"}
 NOT_CURRENT_PLAN_STATUSES = {"informal", "cancelled", "draft"}
 
 
@@ -38,6 +38,7 @@ class RunCtx:
     runner: str
     ran: bool = False
     posted: bool = False  # the run request was sent (a live attempt may have used credits from here on)
+    setup_started: bool = False  # setup ran (a setup that starts its own Droid run may have used credits)
     skip_reason: str | None = None
     setup: dict[str, Any] = field(default_factory=dict)
     request: dict[str, Any] = field(default_factory=dict)
@@ -49,6 +50,7 @@ class RunCtx:
     decisions_before: list[dict] = field(default_factory=list)
     decisions_after: list[dict] = field(default_factory=list)
     signals: list[dict] = field(default_factory=list)
+    people: list[dict] = field(default_factory=list)  # GET /api/people (active directory)
     documents: dict[str, dict] = field(default_factory=dict)  # id -> detail (with content)
     proposals: list[dict] = field(default_factory=list)  # full proposal_out of every draft the run produced
     spend: dict[str, Any] = field(default_factory=dict)
@@ -449,6 +451,133 @@ def score_unsupported(c: dict[str, RunCtx]) -> list[Check]:
     return checks
 
 
+# Person and company documents (frontend-integration-design §5.1): doc_key -> expected signal_kind.
+PERSON_DOC_KINDS = {
+    "research-harness-asana": "project_deferred",
+    "research-model-switch-slack": "model_change",
+    "research-availability-monday": "out_of_office",
+    "engineering-cutover-monday": "project_accelerated",
+    "engineering-welcome-slack": "onboarding",
+    "product-tool-switch-slack": "tool_change",
+}
+COMPANY_DOC_KINDS = {"company-model-announcement-slack": "model_change"}
+_DOLLAR = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?")
+_PERCENT = re.compile(r"\d+(?:\.\d+)?\s?%")
+
+
+def _new_figures(summary: str, cited: str) -> list[str]:
+    """`$` amounts and `%` values in a summary that do not occur in the cited text."""
+    norm = lambda t: re.sub(r"\s+", "", t)  # noqa: E731
+    cited_n = norm(cited)
+    return [m for m in _DOLLAR.findall(summary) + _PERCENT.findall(summary) if norm(m) not in cited_n]
+
+
+def _names_person(text: str, name: str) -> bool:
+    return bool(name) and re.search(rf"(?<!\w){re.escape(name.lower())}(?!\w)", (text or "").lower()) is not None
+
+
+def _cited_text(ctx: RunCtx, s: dict) -> str:
+    """The full text of every document version a signal cites (falls back to its quotes)."""
+    parts = []
+    for cit in s.get("citations", []):
+        doc = ctx.documents.get(cit.get("document_id")) or {}
+        parts.append(doc.get("content") or cit.get("quote") or "")
+    return "\n".join(parts)
+
+
+def expected_people(doc: dict, people: dict[str, dict]) -> set[str]:
+    """The people a person signal on `doc` must name: its person tags that are real, on one team, and
+    actually named (full name) in the document's text. A tag the text does not back is not expected."""
+    return {pid for pid in doc.get("person_tags") or []
+            if pid in people and _names_person(doc.get("content") or "", people[pid]["name"])}
+
+
+def score_person_signals(c: dict[str, RunCtx]) -> list[Check]:
+    ctx = c["interpret"]
+    checks = [_ran(ctx)]
+    sigs = ctx.run_signals()
+    people = {p["id"]: p for p in ctx.people}
+    docs_by_key = {d["doc_key"]: d for d in ctx.documents.values() if d.get("is_current")}
+    for key, kind in PERSON_DOC_KINDS.items():
+        doc = docs_by_key.get(key)
+        if doc is None:
+            checks.append(Check(f"person:{key}", False, f"document {key} is not in the corpus"))
+            continue
+        mine = [s for s in sigs if s["status"] == "current" and s.get("scope") == "person" and _cites(s, key)]
+        if len(mine) != 1:
+            checks.append(Check(f"person:{key}", False,
+                                f"want exactly one current person signal citing {key}, got {len(mine)}: "
+                                + "; ".join(map(_sig_label, mine))))
+            continue
+        sig = mine[0]
+        want = expected_people(doc, people)
+        teams = {people[p]["team"] for p in want}
+        problems = []
+        if not want:
+            problems.append(f"{key} names none of its tagged people; the scenario has no grounded answer")
+        if set(sig.get("person_ids") or []) != want:  # order-insensitive
+            problems.append(f"person_ids {sorted(sig.get('person_ids') or [])} != people the document names "
+                            f"and tags {sorted(want)}")
+        if teams != {sig.get("team")}:
+            problems.append(f"team {sig.get('team')!r} is not the tagged people's team {sorted(teams)}")
+        if sig.get("signal_kind") != kind:
+            problems.append(f"signal_kind {sig.get('signal_kind')!r} != {kind!r}")
+        checks.append(_ok(f"person:{key}", not problems,
+                          f"{_sig_label(sig)}: {sig['person_ids']} on {sig['team']}, {kind}", "; ".join(problems)))
+    unreal = [(s["id"], pid) for s in sigs for pid in s.get("person_ids") or []
+              if pid not in people or people[pid]["team"] != s.get("team")]
+    checks.append(_ok("person_ids_real", not unreal, "every person_ids entry is a real person on the signal's team",
+                      f"person ids not on the signal's team: {unreal}"))
+    # Grounding in the text, not the tags: every person a signal names must be named in what it cites.
+    ungrounded = [(s["id"], pid) for s in sigs for pid in s.get("person_ids") or []
+                  if pid in people and not _names_person(_cited_text(ctx, s), people[pid]["name"])]
+    checks.append(_ok("person_ids_grounded", not ungrounded,
+                      "every person a signal names is named in the documents it cites",
+                      f"people not named in the cited documents: {ungrounded}"))
+    for key, kind in COMPANY_DOC_KINDS.items():
+        comp = [s for s in sigs if s["status"] == "current" and s.get("scope") == "company" and _cites(s, key)]
+        ok = (len(comp) == 1 and comp[0].get("team") is None and comp[0].get("person_ids") == []
+              and comp[0].get("signal_kind") == kind)
+        checks.append(_ok(f"company:{key}", ok, f"one current company signal, team null, no people, {kind}"
+                          + (f" ({comp[0]['id']})" if comp else ""),
+                          f"want one current company-scope {kind} signal with team null and no people citing "
+                          f"{key}; got " + "; ".join(f"{_sig_label(s)} people={s.get('person_ids')} "
+                                                       f"kind={s.get('signal_kind')}" for s in comp) or "none"))
+    team_people = [s["id"] for s in sigs if s.get("scope", "team") == "team" and s.get("person_ids")]
+    checks.append(_ok("team_signals_name_no_people", not team_people, "no team-scope signal carries person_ids",
+                      f"team-scope signals with person_ids: {team_people}"))
+    bad: list[str] = []
+    for s in sigs:
+        if s.get("scope") not in ("person", "company"):
+            continue
+        cited = " ".join(c["quote"] for c in s.get("citations", []))
+        extra = _new_figures(s["summary"], cited)
+        if extra:
+            bad.append(f"{s['id']}: {extra}")
+    checks.append(_ok("no_new_figures", not bad, "no person or company summary adds a $ amount or % value",
+                      "summaries with figures absent from the cited text: " + "; ".join(bad)))
+    return checks
+
+
+def score_propose_reuses(c: dict[str, RunCtx]) -> list[Check]:
+    ctx = c["addition_50k_after_interpret"]
+    checks = [_ran(ctx)]
+    reads = [t for t in ctx.tools_called() if t in ("search_corpus", "read_document")]
+    checks.append(_ok("no_corpus_reread", not reads, "the propose run reused recorded signals (no corpus reads)",
+                      f"the propose run re-read the corpus: {reads}"))
+    by_id = {s["id"]: s for s in ctx.signals}
+    p, chk = _one_proposal(ctx, "addition")
+    checks.append(chk)
+    if p:
+        refs = [r["id"] for r in p.get("evidence_refs") or [] if r.get("kind") == "signal"]
+        bad = [r for r in refs if (by_id.get(r) or {}).get("status") != "current"]
+        checks.append(_ok("evidence_signals_current", refs and not bad,
+                          f"{len(refs)} signal evidence ref(s), all current",
+                          f"signal evidence refs missing or not current: {bad or 'none cited'}"))
+        checks.append(_drafts_pending(ctx))
+    return checks
+
+
 SCENARIOS: tuple[Scenario, ...] = (
     Scenario("superseded_research_thread", "Catches the superseded research thread", ("interpret",),
              score_superseded_thread),
@@ -472,6 +601,10 @@ SCENARIOS: tuple[Scenario, ...] = (
              ("forecast_unavailable",), score_forecast_unavailable),
     Scenario("unsupported_question_limited", "Refuses or limits an unsupported question", ("unsupported_question",),
              score_unsupported),
+    Scenario("person_signals_cited", "Records person and company signals with the right people, team and kind",
+             ("interpret",), score_person_signals),
+    Scenario("propose_reuses_signals", "A proposal after interpretation reuses current signals without re-reading",
+             ("addition_50k_after_interpret",), score_propose_reuses),
 )
 
 SCENARIOS_BY_ID = {s.id: s for s in SCENARIOS}

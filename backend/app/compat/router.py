@@ -9,11 +9,16 @@ on `/compat/api/company`. Nothing here collides with `/api/*`, and none of it is
   (apply / reject, as the demo approver), so every authority rule (approver role, no self-approval,
   stale version, exactly-once) is the real service's. Droid still only drafts.
 - Errors are `{"error": "<plain English>", "code": "<backend code>"}` (see `errors.py`).
+- The frontend loads 10 GETs with `Promise.all`, so every list route answers `200 []` on an unseeded or
+  empty DB (no period, no envelope, no rows). Only `/company` refuses (503 `not_seeded`): a Company cannot
+  be built without its current period.
 - Identity: the frontend sends none. Compat uses two configured demo actors unless the request carries
   `X-Actor-Id` + `X-Actor-Role`, which then win (docs/frontend-alignment.md G9).
 """
 
 from __future__ import annotations
+
+import os
 
 from collections.abc import Callable
 from datetime import date
@@ -30,6 +35,8 @@ from app.api import routes_meta
 from app.api.deps import get_clock, get_forecast_provider, get_ids
 from app.compat import errors, intent, mappers, threads
 from app.compat import schemas as S
+# Stored as the decision rationale when the dashboard sends no note; mappers.decision never returns them as `note`.
+from app.compat.mappers import APPROVE_NOTE, DISMISS_NOTE, REJECT_NOTE
 from app.core.actors import Actor, get_actor
 from app.core.clock import Clock, IdFactory
 from app.core.errors import DomainError
@@ -40,6 +47,7 @@ from app.schemas.decisions import DecisionCreate
 from app.services import agent_runs as run_svc
 from app.services import budget as budget_svc
 from app.services import corpus as corpus_svc
+from app.services import people as people_svc
 from app.services import coverage as coverage_svc
 from app.services import decisions as decision_svc
 from app.services import forecasts as forecast_svc
@@ -48,12 +56,11 @@ from app.services import signals as signal_svc
 from app.services import spending as spending_svc
 
 PREFIX = "/compat/api"
-COMPANY_ID = "northstar"
-COMPANY_NAME = "Northstar Software"  # the seeded demo company; the backend stores no company row
+# The backend stores no company row; the loaded dataset names it (datagen/demo.sh sets these for the Uber data).
+COMPANY_ID = os.environ.get("BACKEND_COMPANY_ID", "northstar")
+COMPANY_NAME = os.environ.get("BACKEND_COMPANY_NAME", "Northstar Software")
 ANALYST = Actor(id="dashboard-analyst", role="finance_analyst")
 APPROVER = Actor(id="dashboard-approver", role="finance_approver")
-APPROVE_NOTE = "Approved from the dashboard (no note given)"
-REJECT_NOTE = "Rejected from the dashboard"
 MAX_MESSAGE = 4000
 MAX_THREAD_ID = 200
 
@@ -98,6 +105,21 @@ def _period(session: Session, clock: Clock) -> PlanningPeriod:
     return coverage_svc.resolve_period(session, None, clock.now())
 
 
+def _period_or_none(session: Session, clock: Clock) -> PlanningPeriod | None:
+    """The current period, or None on an unseeded DB (list routes then answer `200 []`)."""
+    try:
+        return _period(session, clock)
+    except DomainError:
+        return None
+
+
+def _people_by_team(session: Session, request: Request) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for p in get_people(request, session):
+        out.setdefault(p["teamId"], []).append(p["id"])
+    return out
+
+
 def _active_teams(session: Session) -> list[Team]:
     return [t for t in session.scalars(select(Team).order_by(Team.id)) if t.active]
 
@@ -126,8 +148,11 @@ def _snapshot_forecasts(session: Session, refs: list[dict]) -> list[dict]:
             continue
         result = forecast_svc.snapshot_out(snap)["forecast"]
         team_ids = [p.team for p in result.projections] + list(result.missing_teams)
-        out.extend(mappers.forecasts(result, period_row=_period_row(session, result.target_period),
-                                     team_ids=sorted(set(team_ids)), now=snap.fetched_at))
+        # Team-level items only: proposal-review finds the reviewed projection by teamId, so a person
+        # item must never shadow its team (frontend-integration-design §1.1).
+        out.extend(f for f in mappers.forecasts(result, period_row=_period_row(session, result.target_period),
+                                                team_ids=sorted(set(team_ids)), now=snap.fetched_at)
+                   if "personId" not in f)
     return out
 
 
@@ -168,33 +193,36 @@ def get_company(request: Request, session: Session = Depends(get_session), clock
                 provider=Depends(get_forecast_provider)):
     meta = routes_meta.meta(request, session, clock, provider)
     if meta["period"] is None:
-        raise DomainError("no_periods", 404, "no planning periods are configured")
+        raise DomainError("not_seeded", 503, "the database is not seeded yet")
     return mappers.company(meta, company_id=COMPANY_ID, name=COMPANY_NAME)
 
 
 @router.get("/teams", response_model=list[S.Team], **JSON_OPTS)
 def get_teams(session: Session = Depends(get_session), clock: Clock = Depends(get_clock)):
-    try:
-        unattributed = _has_unattributed(session, _period(session, clock).id)
-    except DomainError:
-        unattributed = False  # no period yet: plain team list
-    return mappers.teams(_active_teams(session), include_unattributed=unattributed)
+    period = _period_or_none(session, clock)
+    unattributed = period is not None and _has_unattributed(session, period.id)  # no period yet: plain list
+    return mappers.teams(_active_teams(session), include_unattributed=unattributed,
+                         leads=mappers.team_leads(people_svc.list_people(session)))
 
 
 @router.get("/people", response_model=list[S.Person], **JSON_OPTS)
-def get_people(request: Request):
+def get_people(request: Request, session: Session = Depends(get_session)):
+    if not request.app.state.settings.forecast_demo:
+        active = {t.id for t in _active_teams(session)}
+        return [mappers.person(p) for p in people_svc.list_people(session) if p.team_id in active]
     snapshot = request.app.state.forecast_service.current_snapshot()
-    at = snapshot['information_cutoff'][:10]
+    at = snapshot["information_cutoff"][:10]
     result = []
-    for person in snapshot.get('people', []):
-        memberships = [m for m in snapshot.get('memberships', []) if m['person_id'] == person['id']
-                       and m['effective_from'] <= at and (not m.get('effective_to') or at < m['effective_to'])]
-        teams = {m['team_id'] for m in memberships}
-        # Unresolved membership stays unattributed, not assigned to an arbitrary team.
-        row = {'id': person['id'], 'name': person['name'], 'teamId': next(iter(teams)) if len(teams) == 1 else 'unattributed'}
-        row.update({k: person[k] for k in ('role', 'email', 'integrations', 'primaryTool') if k in person})
+    for person in snapshot.get("people", []):
+        memberships = [m for m in snapshot.get("memberships", []) if m["person_id"] == person["id"]
+                       and m["effective_from"] <= at and (not m.get("effective_to") or at < m["effective_to"])]
+        teams = {m["team_id"] for m in memberships}
+        # An unresolved membership stays unattributed instead of choosing an arbitrary team.
+        row = {"id": person["id"], "name": person["name"],
+               "teamId": next(iter(teams)) if len(teams) == 1 else mappers.UNATTRIBUTED}
+        row.update({k: person[k] for k in ("role", "email", "integrations", "primaryTool") if k in person})
         result.append(row)
-    return result
+    return sorted(result, key=lambda row: (row["teamId"], row["name"], row["id"]))
 
 
 @router.get("/spending", response_model=list[S.SpendingRecord], **JSON_OPTS)
@@ -206,7 +234,9 @@ def get_spending(
     session: Session = Depends(get_session),
     clock: Clock = Depends(get_clock),
 ):
-    period = _period(session, clock)
+    period = _period_or_none(session, clock)
+    if period is None:
+        return []
     if request.app.state.settings.forecast_demo:
         from app.forecasting.fixtures import northstar_spending_records
         try:
@@ -224,12 +254,10 @@ def get_spending(
         offset += len(page["items"])
         if not page["items"] or offset >= page["total"]:
             break
-    cov = coverage_svc.coverage_report(session, period, clock.now())
-    status = {t["team"]: t["status"] for t in cov["teams"]}
     batch_ids = {r["import_batch_id"] for r in records}
     labels = {b.id: (b.source_label or b.filename or b.source_kind)
               for b in session.scalars(select(ImportBatch).where(ImportBatch.id.in_(batch_ids)))} if batch_ids else {}
-    rows = mappers.spending(records, team_status=status, batch_labels=labels)
+    rows = mappers.spending(records, batch_labels=labels)
     if team_id:
         rows = [r for r in rows if r["teamId"] == team_id]
     if date_from:
@@ -241,26 +269,37 @@ def get_spending(
 
 @router.get("/budgets", response_model=list[S.Budget], **JSON_OPTS)
 def get_budgets(session: Session = Depends(get_session), clock: Clock = Depends(get_clock)):
-    period, env = budget_svc.resolve_envelope(session, None, clock)
+    if _period_or_none(session, clock) is None:
+        return []
+    try:
+        period, env = budget_svc.resolve_envelope(session, None, clock)
+    except DomainError as exc:
+        if exc.code == "no_budget":
+            return []
+        raise
     return mappers.budgets(budget_svc.budget_state(session, period, env))
 
 
 @router.get("/forecasts", response_model=list[S.Forecast], **JSON_OPTS)
-def get_forecasts(session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
+def get_forecasts(request: Request, session: Session = Depends(get_session), clock: Clock = Depends(get_clock),
                   provider=Depends(get_forecast_provider)):
-    period = _period(session, clock)
+    period = _period_or_none(session, clock)
+    if period is None:
+        return []
     result = forecast_svc.forecast_for_period(session, provider, period, clock=clock)  # read only: no snapshot
     return mappers.forecasts(result, period_row=period, team_ids=forecast_svc.active_team_ids(session),
-                             now=clock.now())
+                             now=clock.now(), people=_people_by_team(session, request))
 
 
 @router.get("/context", response_model=list[S.ContextItem], **JSON_OPTS)
 def get_context(team_id: str | None = Query(default=None, alias="teamId"), session: Session = Depends(get_session)):
+    """A `teamId` filter returns that team's signals plus every company-scope signal (they apply to all teams)."""
+    team_ids = [t.id for t in _active_teams(session)]
     items = []
-    for sig in signal_svc.list_signals(session, team=team_id or None):
+    for sig in signal_svc.list_signals(session, team=team_id or None, include_company=True):
         out = signal_svc.signal_out(session, sig)
         docs = {c["document_id"]: session.get(CorpusDocument, c["document_id"]) for c in out["citations"]}
-        items.append(mappers.context_item(out, docs))
+        items.append(mappers.context_item(out, docs, company_team_ids=team_ids))
     return items
 
 
@@ -305,8 +344,9 @@ def get_thread(thread_id: str, session: Session = Depends(get_session)):
 
 def _intent_context(session: Session, request: Request, clock: Clock) -> dict:
     teams = [(t.id, t.name) for t in _active_teams(session)]
+    names = dict(teams)
     gaps: dict[str, Decimal] = {}
-    stale: list[str] = []
+    open_: list[dict] = []
     try:
         period, env = budget_svc.resolve_envelope(session, None, clock)
         alloc = budget_svc.allocation_map(env)
@@ -317,11 +357,23 @@ def _intent_context(session: Session, request: Request, clock: Clock) -> dict:
             if pr.team in alloc:
                 gaps[pr.team] = projected - alloc[pr.team]
         for p in reversed(proposal_svc.list_proposals(session)):
-            if p.status == "stale" or (p.status == "pending_review" and p.base_version != env.state_version):
-                stale.append(p.id)
+            if p.status in proposal_svc.REVISABLE_STATUSES:
+                open_.append(_open_proposal(p, env.state_version, names))
     except DomainError:
         pass  # unseeded: the parser asks instead of guessing
-    return {"teams": teams, "gaps": gaps, "stale_proposal_ids": stale}
+    return {"teams": teams, "gaps": gaps, "open_proposals": open_}
+
+
+def _open_proposal(p: Proposal, version: int, names: dict[str, str]) -> dict:
+    """What the chat parser needs to revise a proposal: its mode, the team it favours most, a short label."""
+    gains = {t: d for t, d in proposal_svc.deltas(p.before, p.after).items() if d > 0}
+    favoured = max(sorted(gains), key=lambda t: gains[t]) if gains else None
+    stale = p.status == "stale" or p.base_version != version
+    amount = p.envelope_increase if p.action_type == "addition" else sum(gains.values(), Decimal("0"))
+    what = "add" if p.action_type == "addition" else "move"
+    label = (f"{'stale' if stale else 'awaiting review'}, {what} ${amount:,.2f}"
+             + (f" toward {names.get(favoured, favoured)}" if favoured else ""))
+    return {"id": p.id, "stale": stale, "mode": p.action_type, "prioritize": favoured, "label": label}
 
 
 @router.post("/threads/{thread_id}/messages", response_model=list[S.AssistantMessage], **JSON_OPTS)
@@ -374,15 +426,35 @@ def post_message(
     session.expire_all()  # the run wrote through its own sessions
     run = run_svc.run_out(session, run_svc.get_run(session, run_id))
     proposal_id = run["proposals"][0]["id"] if run["proposals"] else None
+    revised_note = _link_revision(session, parsed.revises, proposal_id, actor=actor, clock=clock)
     proposal = (proposal_svc.proposal_out(session, proposal_svc.get_proposal(session, proposal_id))
                 if proposal_id else None)
     reply = threads.add_message(
-        session, thread_id, "assistant", threads.reply_text(parsed.read_as, run), clock=clock, ids=ids,
+        session, thread_id, "assistant", threads.reply_text(parsed.read_as, run) + revised_note, clock=clock, ids=ids,
         agent_run_id=run_id, proposal_id=proposal_id, citations=threads.citations(session, run, proposal),
         tool_calls=threads.tool_calls(run),
     )
     session.commit()
     return [threads.message_out(user), threads.message_out(reply)]
+
+
+def _link_revision(session: Session, original_id: str | None, new_id: str | None, *, actor: Actor,
+                   clock: Clock) -> str:
+    """A chat revise: finance asked for `original_id` to be revised and the run drafted `new_id`. The original
+    becomes `revised` and the draft records what it replaces. Returns a line for the reply ("" when no link)."""
+    if not original_id or not new_id:
+        return ""
+    if new_id == original_id:
+        return f"\n\n_The revised draft came out the same as {original_id}, so {original_id} stays open._"
+    try:
+        linked = proposal_svc.link_revision(session, original_id, new_id, actor=actor, clock=clock)
+    except DomainError as exc:
+        session.rollback()
+        return f"\n\n_{new_id} was drafted, but {original_id} could not be marked revised: {exc.message}._"
+    session.commit()
+    if not linked:
+        return f"\n\n_{new_id} was drafted, but {original_id} had already moved on, so it was not marked revised._"
+    return f"\n\n_{new_id} replaces {original_id}, which is now marked revised._"
 
 
 def _guard_settled(p: Proposal) -> None:
@@ -420,10 +492,15 @@ def reject_proposal(
     ids: IdFactory = Depends(get_ids),
     actor: Actor = Depends(_actor(APPROVER)),
 ):
+    """The dashboard's Reject and Dismiss. A stale proposal (status `stale`, or still pending on an outdated
+    budget version) is retired with DISMISS_NOTE; the decision is `rejected` and allocations are untouched.
+    The backend never stores `failed` (proposals are validated when drafted), so there is no failed case."""
     p = proposal_svc.get_proposal(session, proposal_id)
     _guard_settled(p)
-    decision_svc.decide(session, proposal_id, DecisionCreate(outcome="reject", rationale=REJECT_NOTE), actor=actor,
-                        idempotency_key=f"compat-reject-{proposal_id}", clock=clock, ids=ids)
+    stale = proposal_svc.proposal_out(session, p)["is_stale"]
+    decision_svc.decide(session, proposal_id,
+                        DecisionCreate(outcome="reject", rationale=DISMISS_NOTE if stale else REJECT_NOTE),
+                        actor=actor, idempotency_key=f"compat-reject-{proposal_id}", clock=clock, ids=ids)
     session.expire_all()
     return _proposal(session, proposal_svc.get_proposal(session, proposal_id))
 

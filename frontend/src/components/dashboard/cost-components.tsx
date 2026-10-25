@@ -1,8 +1,13 @@
-import type { SpendingRecord, Unit } from "@/lib/contracts";
+"use client";
+import type { CostComponent, SpendingRecord, Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/shared/stat-tile";
+import { riseDelay } from "@/components/shared/motion";
+import { COMPONENT_COLOR } from "@/components/shared/components";
+import { COMPONENT_LABEL, ProvenanceBadge } from "@/components/team/labels";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { COMPONENT_LABEL, PROVENANCE_LABEL, componentTotals } from "./derive";
+import { componentTotals } from "./derive";
 
 /**
  * Hairline dividers between the four tiles: stacked below sm, a 2x2 grid from sm, one row from xl.
@@ -19,6 +24,7 @@ const TILE_DIVIDER = [
  * Full section, always open: one tile per cost component with its share of recorded spend,
  * a bar against the largest component, and provenance badges. Included usage is drawn dashed
  * because it is informational, not billed on top of subscriptions.
+ * On first paint the tiles rise in with a 60ms stagger, their bars grow from the left on the same delay, and the values count up.
  */
 export function CostComponents({ spending, unit }: { spending: SpendingRecord[]; unit: Unit }) {
   const totals = componentTotals(spending);
@@ -49,25 +55,30 @@ export function CostComponents({ spending, unit }: { spending: SpendingRecord[];
             const informational = t.component === "included_usage";
             const width = max > 0 ? Math.max(t.amount > 0 ? 1 : 0, (t.amount / max) * 100) : 0;
             const share = billable > 0 && !informational ? t.amount / billable : undefined;
+            const color = COMPONENT_COLOR[t.component];
+            const noRecords = t.provenances.length === 0;
             return (
-              <li key={t.component} className={cn("min-w-0 border-border p-4", TILE_DIVIDER[i] ?? "")}>
-                <div className="eyebrow truncate">{COMPONENT_LABEL[t.component]}</div>
-                <div className={cn("num mt-2 truncate text-2xl font-medium leading-none", informational ? "text-muted-foreground" : "text-foreground")}>
-                  {t.provenances.length === 0 ? <span className="text-base text-muted-foreground">No records</span> : formatAmount(t.amount, unit)}
-                </div>
-                <p className="num mt-2 min-h-4 text-xs text-muted-foreground">
-                  {informational ? "informational, not billed" : share !== undefined ? `${Math.round(share * 100)}% of billable` : ""}
-                </p>
+              <li key={t.component} className={cn("animate-rise min-w-0 border-border p-4", TILE_DIVIDER[i] ?? "")} style={riseDelay(i)}>
+                <StatTile
+                  size="secondary" animate format={(n) => formatAmount(n, unit)}
+                  label={
+                    <>
+                      <ComponentSwatch component={t.component} />
+                      {COMPONENT_LABEL[t.component]}
+                    </>
+                  }
+                  value={noRecords ? "No records" : t.amount}
+                  muted={noRecords || informational}
+                  caption={informational ? "Informational, not billed" : share !== undefined ? <span className="num">{Math.round(share * 100)}% of billable</span> : undefined}
+                />
                 <div className="mt-3 h-1.5 w-full overflow-hidden rounded-sm bg-muted" aria-hidden>
                   <div
-                    className={cn("h-full", informational ? "border border-dashed border-foreground/40 bg-foreground/10" : "bg-foreground/70")}
-                    style={{ width: `${width}%` }}
+                    className={cn("animate-grow-x h-full", informational && "border border-dashed")}
+                    style={{ ...riseDelay(i), ...(informational ? { width: `${width}%`, borderColor: color } : { width: `${width}%`, background: color }) }}
                   />
                 </div>
-                <div className="mt-3 flex min-h-6 flex-wrap gap-1.5">
-                  {t.provenances.map((p) => (
-                    <span key={p} className="inline-flex h-6 items-center rounded-md border border-border bg-popover px-2 text-xs text-muted-foreground">{PROVENANCE_LABEL[p]}</span>
-                  ))}
+                <div className="mt-3 flex min-h-5 flex-wrap gap-1.5">
+                  {t.provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
                 </div>
               </li>
             );
@@ -75,6 +86,19 @@ export function CostComponents({ spending, unit }: { spending: SpendingRecord[];
         </ul>
       )}
     </section>
+  );
+}
+
+/** Square swatch in the component's color; included usage is drawn as a dashed outline because it is not billed. */
+function ComponentSwatch({ component }: { component: CostComponent }) {
+  const color = COMPONENT_COLOR[component];
+  const dashed = component === "included_usage";
+  return (
+    <span
+      aria-hidden
+      className={cn("mr-1.5 inline-block size-2 shrink-0 rounded-sm align-[-1px]", dashed && "border border-dashed")}
+      style={dashed ? { borderColor: color } : { background: color }}
+    />
   );
 }
 

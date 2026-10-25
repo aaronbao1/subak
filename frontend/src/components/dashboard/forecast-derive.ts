@@ -59,3 +59,9 @@ export function omissionDrivers(bundle: ForecastBundle | undefined, issued: Fore
 export function selectedDriverForView(selection: { driver: ForecastDriver; runId: string; scopeType: string; scopeId: string | null } | undefined, issued: ForecastView | undefined): ForecastDriver | undefined {
   return selection && issued && selection.runId === issued.run_id && selection.scopeType === issued.scope.type && selection.scopeId === issued.scope.id ? selection.driver : undefined;
 }
+
+/** A present company view is authoritative, including its unavailable quarter and shared residuals. */
+export function companyQuarterProjection(bundle: ForecastBundle | undefined, fallback?: number): number | undefined {
+  const company = scopeView(bundle, "company");
+  return company ? finite(company.quarter_outlook?.base) : fallback;
+}

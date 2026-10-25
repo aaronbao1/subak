@@ -12,11 +12,11 @@
       "notes": [
         "period in progress (ends 2026-12-31); totals are to date"
       ],
-      "record_count": 8,
+      "record_count": 616,
       "source_kinds": [
         "northstar_billing"
       ],
-      "spend_record_count": 6,
+      "spend_record_count": 576,
       "status": "complete",
       "unmapped_records": 0,
       "value_kinds": [
@@ -47,11 +47,11 @@
         "counter_resets": 0,
         "last_record_at": "2026-10-20T00:00:00Z",
         "notes": [],
-        "record_count": 3,
+        "record_count": 196,
         "source_kinds": [
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 176,
         "status": "complete",
         "team": "engineering",
         "unmapped_records": 0,
@@ -61,13 +61,13 @@
       },
       {
         "counter_resets": 0,
-        "last_record_at": "2026-10-15T00:00:00Z",
+        "last_record_at": "2026-10-20T00:00:00Z",
         "notes": [],
-        "record_count": 2,
+        "record_count": 160,
         "source_kinds": [
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 160,
         "status": "complete",
         "team": "product",
         "unmapped_records": 0,
@@ -77,13 +77,13 @@
       },
       {
         "counter_resets": 0,
-        "last_record_at": "2026-10-15T00:00:00Z",
+        "last_record_at": "2026-10-20T00:00:00Z",
         "notes": [],
-        "record_count": 3,
+        "record_count": 260,
         "source_kinds": [
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 240,
         "status": "complete",
         "team": "research",
         "unmapped_records": 0,

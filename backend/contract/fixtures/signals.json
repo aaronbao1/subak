@@ -1,12 +1,12 @@
 {
-  "description": "current / superseded / informal signals with citation currency",
+  "description": "team / person / company signals (current, superseded, informal) with citation currency",
   "name": "signals",
   "request": {
     "method": "GET",
     "path": "/api/signals"
   },
   "response": {
-    "count": 5,
+    "count": 7,
     "items": [
       {
         "agent_run_id": null,
@@ -28,16 +28,20 @@
             "version": 1
           }
         ],
-        "created_at": "2026-10-24T12:21:00Z",
+        "created_at": "2026-10-24T12:23:00Z",
         "id": "sig_000001",
         "needs_review": false,
+        "person_ids": [],
         "produced_by": "finance",
         "project": "model-evaluation",
+        "scope": "team",
+        "signal_kind": null,
         "status": "current",
         "summary": "Approved plan expands model-evaluation work in the current period.",
         "superseded_by_signal_id": null,
         "supersedes_signal_ids": [],
         "team": "research",
+        "title": null,
         "uncertainty": "token volume depends on how many model updates ship; plan is not measured usage"
       },
       {
@@ -60,16 +64,20 @@
             "version": 1
           }
         ],
-        "created_at": "2026-10-24T12:22:00Z",
+        "created_at": "2026-10-24T12:24:00Z",
         "id": "sig_000002",
         "needs_review": false,
+        "person_ids": [],
         "produced_by": "finance",
         "project": "model-evaluation",
+        "scope": "team",
+        "signal_kind": null,
         "status": "superseded",
         "summary": "Older email thread pushed the evaluation expansion to next period; superseded by the approved plan.",
         "superseded_by_signal_id": null,
         "supersedes_signal_ids": [],
         "team": "research",
+        "title": null,
         "uncertainty": "informal correspondence; replaced by the approved plan of 2026-10-08"
       },
       {
@@ -105,16 +113,20 @@
             "version": 2
           }
         ],
-        "created_at": "2026-10-24T12:23:00Z",
+        "created_at": "2026-10-24T12:25:00Z",
         "id": "sig_000003",
         "needs_review": false,
+        "person_ids": [],
         "produced_by": "finance",
         "project": "workspace-launch",
+        "scope": "team",
+        "signal_kind": null,
         "status": "current",
         "summary": "Launch milestone moved to the following period; near-term launch work reduced.",
         "superseded_by_signal_id": null,
         "supersedes_signal_ids": [],
         "team": "product",
+        "title": null,
         "uncertainty": "pilot feedback could move the milestone again"
       },
       {
@@ -137,16 +149,20 @@
             "version": 1
           }
         ],
-        "created_at": "2026-10-24T12:24:00Z",
+        "created_at": "2026-10-24T12:26:00Z",
         "id": "sig_000004",
         "needs_review": false,
+        "person_ids": [],
         "produced_by": "finance",
         "project": "platform",
+        "scope": "team",
+        "signal_kind": null,
         "status": "current",
         "summary": "Platform migration continues through the current period at the current pace.",
         "superseded_by_signal_id": null,
         "supersedes_signal_ids": [],
         "team": "engineering",
+        "title": null,
         "uncertainty": "pace tracks the migration backlog"
       },
       {
@@ -169,17 +185,95 @@
             "version": 1
           }
         ],
-        "created_at": "2026-10-24T12:25:00Z",
+        "created_at": "2026-10-24T12:27:00Z",
         "id": "sig_000005",
         "needs_review": false,
+        "person_ids": [],
         "produced_by": "finance",
         "project": "campaigns",
+        "scope": "team",
+        "signal_kind": null,
         "status": "informal",
         "summary": "Marketing brainstorm about generated demo videos; no budget or approval.",
         "superseded_by_signal_id": null,
         "supersedes_signal_ids": [],
         "team": null,
+        "title": null,
         "uncertainty": "brainstorm only, explicitly not a plan"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": "2026-10-19",
+        "applies_to": null,
+        "change_type": "reduction",
+        "citations": [
+          {
+            "char_end": 196,
+            "char_start": 91,
+            "citation_currency": "current",
+            "doc_key": "research-model-switch-slack",
+            "document_id": "doc_000008",
+            "id": "cit_000007",
+            "offsets_corrected": false,
+            "quote": "from Monday 2026-10-19 I'm moving the nightly eval sweeps from the large model to the smaller model tier.",
+            "superseded_by_document_id": null,
+            "title": "Slack #research-evals: moving sweeps to a smaller model tier",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:30:00Z",
+        "id": "sig_000006",
+        "needs_review": false,
+        "person_ids": [
+          "research-omar-haddad"
+        ],
+        "produced_by": "droid_fake",
+        "project": "model-evaluation",
+        "scope": "person",
+        "signal_kind": "model_change",
+        "status": "current",
+        "summary": "Omar Haddad moves his nightly eval sweeps to the smaller model tier from 2026-10-19.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": "research",
+        "title": "Omar Haddad moving eval sweeps to a cheaper model tier",
+        "uncertainty": "no prices or token volumes for either tier"
+      },
+      {
+        "agent_run_id": null,
+        "applies_from": "2026-11-02",
+        "applies_to": null,
+        "change_type": "other",
+        "citations": [
+          {
+            "char_end": 367,
+            "char_start": 315,
+            "citation_currency": "current",
+            "doc_key": "company-model-announcement-slack",
+            "document_id": "doc_000013",
+            "id": "cit_000008",
+            "offsets_corrected": false,
+            "quote": "the net effect on each team's bill is not known yet.",
+            "superseded_by_document_id": null,
+            "title": "Slack #announcements: new default model",
+            "version": 1
+          }
+        ],
+        "created_at": "2026-10-24T12:31:00Z",
+        "id": "sig_000007",
+        "needs_review": false,
+        "person_ids": [],
+        "produced_by": "droid_fake",
+        "project": null,
+        "scope": "company",
+        "signal_kind": "model_change",
+        "status": "current",
+        "summary": "Every team's default model moves to a new mid-tier model from 2026-11-02.",
+        "superseded_by_signal_id": null,
+        "supersedes_signal_ids": [],
+        "team": null,
+        "title": "Company-wide default model change from Nov 2",
+        "uncertainty": "the net effect on each team's bill is not known"
       }
     ]
   },

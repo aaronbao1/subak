@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 from app.schemas.common import InModel, OutModel
+from app.schemas.people import Integration
 
 DocOrigin = Literal["upload", "email_export", "slack_export", "seed"]
 DocType = Literal["plan", "update", "correspondence", "note"]
@@ -39,6 +40,10 @@ class DocumentIn(InModel):
     team_tags: list[str] = Field(default_factory=list)
     project_tags: list[str] = Field(default_factory=list)
     author: str | None = Field(default=None, max_length=200)
+    # Where the document came from; omitted -> derived from `origin` when shown (frontend-integration §1.1).
+    integration: Integration | None = None
+    # People the document is about; every id must be an active person (422 unknown_person otherwise).
+    person_tags: list[str] = Field(default_factory=list, max_length=50)
     content: str = Field(min_length=1, max_length=1_000_000)
     supersedes_document_id: str | None = None
     supersedes_doc_key: str | None = None
@@ -75,6 +80,11 @@ class DocumentIn(InModel):
     @classmethod
     def _projects(cls, v: list[str]) -> list[str]:
         return _slugs(v, "project_tags")
+
+    @field_validator("person_tags")
+    @classmethod
+    def _people(cls, v: list[str]) -> list[str]:
+        return _slugs(v, "person_tags")
 
     @model_validator(mode="after")
     def _checks(self) -> "DocumentIn":
@@ -116,6 +126,8 @@ class DocumentSummary(OutModel):
     team_tags: list[str]
     project_tags: list[str]
     author: str | None
+    integration: Integration | None
+    person_tags: list[str]
     content_hash: str
     is_simulated: bool
     is_current: bool

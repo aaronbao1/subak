@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import Clock
 from app.core.errors import DomainError
-from app.db.models import COST_CATEGORIES, NON_SPEND_CATEGORIES, VALUE_KINDS, ImportBatch, PlanningPeriod, Team, UsageRecord
+from app.db.models import COST_CATEGORIES, NON_SPEND_CATEGORIES, VALUE_KINDS, ImportBatch, Person, PlanningPeriod, Team, UsageRecord
 from app.services import coverage as coverage_svc
 
 ZERO = Decimal("0.00")
@@ -118,7 +118,7 @@ def record_out(r: UsageRecord) -> dict:
     return {
         "id": r.id, "import_batch_id": r.import_batch_id, "source_kind": r.source_kind,
         "source_record_key": r.source_record_key, "source_account": r.source_account,
-        "team": r.team_id or UNATTRIBUTED, "period": r.period_id, "occurred_at": r.occurred_at,
+        "team": r.team_id or UNATTRIBUTED, "person": r.person_id, "period": r.period_id, "occurred_at": r.occurred_at,
         "provider": r.provider, "model": r.model, "stream_key": r.stream_key,
         **{f: getattr(r, f) for f in TOKEN_FIELDS},
         "counter_reset": r.counter_reset, "amount": r.amount, "unit": r.unit, "value_kind": r.value_kind,
@@ -135,6 +135,7 @@ def list_records(
     value_kind: str | None = None,
     cost_category: str | None = None,
     batch: str | None = None,
+    person: str | None = None,
     offset: int = 0,
     limit: int = 500,
 ) -> dict:
@@ -147,6 +148,8 @@ def list_records(
         reasons.append({"code": "unknown_cost_category", "message": f"cost_category must be one of {COST_CATEGORIES}"})
     if batch is not None and session.get(ImportBatch, batch) is None:
         reasons.append({"code": "unknown_batch", "message": f"import batch {batch!r} not found"})
+    if person is not None and session.get(Person, person) is None:
+        reasons.append({"code": "unknown_person", "message": f"unknown person {person!r}"})
     if reasons:
         raise DomainError("validation_failed", 422, "invalid record filter", {"reasons": reasons})
 
@@ -161,13 +164,16 @@ def list_records(
         q = q.where(UsageRecord.cost_category == cost_category)
     if batch:
         q = q.where(UsageRecord.import_batch_id == batch)
+    if person:
+        q = q.where(UsageRecord.person_id == person)
     total = session.scalar(select(func.count()).select_from(q.subquery())) or 0
     rows = session.scalars(
         q.order_by(UsageRecord.occurred_at, UsageRecord.source_record_key).offset(offset).limit(limit)
     ).all()
     return {
         "period": period.id,
-        "filters": {"team": team, "value_kind": value_kind, "cost_category": cost_category, "batch": batch},
+        "filters": {"team": team, "value_kind": value_kind, "cost_category": cost_category, "batch": batch,
+                    "person": person},
         "total": total, "offset": offset, "limit": limit,
         "items": [record_out(r) for r in rows],
     }

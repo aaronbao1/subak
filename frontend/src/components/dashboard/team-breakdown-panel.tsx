@@ -1,12 +1,16 @@
 "use client";
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, MessageSquare, X } from "lucide-react";
-import type { Unit } from "@/lib/contracts";
+import { ArrowUpRight, ChevronRight, FileSearch, MessageSquare, X } from "lucide-react";
+import type { CostComponent, Unit } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
+import { StatTile } from "@/components/shared/stat-tile";
+import { riseDelay } from "@/components/shared/motion";
+import { COMPONENT_COLOR } from "@/components/shared/components";
+import { COMPONENT_LABEL, ProvenanceBadge, StatusChip, teamStatus } from "@/components/team/labels";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { COMPONENT_LABEL, PROVENANCE_LABEL, dayLabel, type TeamSummary } from "./derive";
-import { STATUS_BADGE, STATUS_META, teamStatus } from "./status";
+import { dayLabel, type TeamSummary } from "./derive";
+import { ProviderLogo } from "./provider-brand";
 import type { PersonSummary } from "@/components/person/derive";
 import { SignalChip } from "@/components/person/signal-badges";
 
@@ -19,25 +23,23 @@ export interface TeamBreakdownPanelProps {
   people?: PersonSummary[];
 }
 
-/** Component segments share one neutral hue; the label row carries identity. Included usage is informational. */
-const SEGMENT_STYLE: Record<string, string> = {
-  subscription: "bg-foreground/80",
-  included_usage: "bg-foreground/10 border border-dashed border-foreground/40",
-  extra_usage: "bg-foreground/55",
-  api: "bg-foreground/30",
-};
-
-const BADGE = "inline-flex h-5 items-center rounded-md border border-border bg-popover px-1.5 text-[11px] text-muted-foreground whitespace-nowrap";
+/** Segments and swatches take the shared component color; included usage is a dashed outline because it is informational, not billed. */
+function segmentStyle(component: CostComponent, width?: string): React.CSSProperties {
+  const color = COMPONENT_COLOR[component];
+  return component === "included_usage" ? { width, borderColor: color } : { width, background: color };
+}
 
 export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, people = [] }: TeamBreakdownPanelProps) {
   if (!summary) return null;
 
-  const { team, budget, forecast, spent, projected, low, high, byComponent, daily, dailyProjected } = summary;
+  const { team, budget, forecast, spent, projected, low, high, byComponent, byModel, daily, dailyProjected } = summary;
+  const apiTotal = byModel.reduce((s, m) => s + m.amount, 0);
   const allocated = budget?.allocated;
-  const status = teamStatus(allocated, projected, high);
+  const status = teamStatus(budget, forecast, spent);
   const over = typeof projected === "number" && typeof allocated === "number" ? projected > allocated : typeof allocated === "number" && spent > allocated;
   const days = [...daily, ...dailyProjected];
   const componentTotal = byComponent.reduce((s, c) => s + c.amount, 0);
+  const money = (n: number) => formatAmount(n, unit);
 
   return (
     <aside className="flex min-h-full min-w-0 flex-col divide-y divide-border" aria-label={`${team.name} breakdown`}>
@@ -46,7 +48,7 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
           <div className="flex min-w-0 items-center gap-2">
             <span className="size-2 shrink-0 rounded-full" style={{ background: team.color }} aria-hidden />
             <h2 className="truncate text-base font-medium">{team.name}</h2>
-            <span className={cn(STATUS_BADGE, STATUS_META[status].className)}>{STATUS_META[status].label}</span>
+            <StatusChip status={status} />
           </div>
           {team.lead && <p className="mt-1 text-xs text-muted-foreground">Lead {team.lead}</p>}
         </div>
@@ -54,31 +56,33 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
       </header>
 
       <div className="space-y-3 px-4 py-4">
-        <dl className="grid grid-cols-3 gap-3">
-          <Figure label="Allocation" value={typeof allocated === "number" ? formatAmount(allocated, unit) : "Not set"} muted={typeof allocated !== "number"} />
-          <Figure label="Spent" value={formatAmount(spent, unit)} />
-          <Figure
+        {/* The three figures count up when the panel opens and tick when another team is picked. */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile size="compact" animate format={money} label="Allocation" value={typeof allocated === "number" ? allocated : "Not set"} muted={typeof allocated !== "number"} />
+          <StatTile size="compact" animate format={money} label="Spent" value={spent} />
+          <StatTile
+            size="compact" animate format={money}
             label="Projection"
-            value={typeof projected === "number" ? formatAmount(projected, unit) : "None"}
+            value={typeof projected === "number" ? projected : "None"}
             muted={typeof projected !== "number"}
-            sub={typeof low === "number" && typeof high === "number" ? `${formatAmount(low, unit, { compact: true })} to ${formatAmount(high, unit, { compact: true })}` : undefined}
+            caption={typeof low === "number" && typeof high === "number" ? <span className="num">{formatAmount(low, unit, { compact: true })} to {formatAmount(high, unit, { compact: true })}</span> : undefined}
           />
-        </dl>
+        </div>
         {forecast?.status === "unavailable" && (
           <p className="rounded-md border border-dashed border-border px-2.5 py-1.5 text-xs text-muted-foreground">
             {forecast.unavailableReason ?? "Projection unavailable."}
           </p>
         )}
-        {forecast?.status === "available" && forecast.origin === "placeholder" && (
-          <p className="text-xs text-muted-foreground">Placeholder projection for the whole period, including spend to date.</p>
+        {forecast?.status === "available" && forecast.basis === "full_period" && (
+          <p className="text-xs text-muted-foreground">Projection for the whole period, including spend to date.</p>
         )}
       </div>
 
       <Section title="Cost components" hint={componentTotal > 0 ? formatAmount(componentTotal, unit, { compact: true }) : undefined}>
         {componentTotal > 0 && (
           <div className="flex h-1.5 w-full gap-px overflow-hidden rounded-sm bg-muted" aria-hidden>
-            {byComponent.filter((c) => c.amount > 0).map((c) => (
-              <div key={c.component} className={cn("h-full", SEGMENT_STYLE[c.component])} style={{ width: `${(c.amount / componentTotal) * 100}%` }} />
+            {byComponent.filter((c) => c.amount > 0).map((c, i) => (
+              <div key={c.component} className={cn("animate-grow-x h-full", c.component === "included_usage" && "border border-dashed")} style={{ ...riseDelay(i), ...segmentStyle(c.component, `${(c.amount / componentTotal) * 100}%`) }} />
             ))}
           </div>
         )}
@@ -86,14 +90,12 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
           {byComponent.map((c) => (
             <li key={c.component} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2">
               <span className="flex items-center gap-1.5">
-                <span className={cn("size-2 rounded-sm", SEGMENT_STYLE[c.component])} aria-hidden />
+                <span className={cn("size-2 shrink-0 rounded-sm", c.component === "included_usage" && "border border-dashed")} style={segmentStyle(c.component)} aria-hidden />
                 {COMPONENT_LABEL[c.component]}
                 {c.component === "included_usage" && <span className="text-[11px] text-muted-foreground">informational</span>}
               </span>
               <span className="flex items-center gap-1.5">
-                {c.provenances.map((p) => (
-                  <span key={p} className={BADGE}>{PROVENANCE_LABEL[p]}</span>
-                ))}
+                {c.provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
                 <span className={cn("num text-right", c.component === "included_usage" && "text-muted-foreground")}>
                   {c.amount > 0 || c.provenances.length ? formatAmount(c.amount, unit) : <span className="text-muted-foreground">No records</span>}
                 </span>
@@ -102,6 +104,26 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
           ))}
         </ul>
       </Section>
+
+      {byModel.length > 0 && (
+        <Section title="By model" hint={formatAmount(apiTotal, unit, { compact: true })}>
+          <ul className="divide-y divide-border text-xs">
+            {byModel.map((m) => (
+              <li key={m.model} className="flex items-center justify-between gap-3 py-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <ProviderLogo provider={m.provider} className="size-3.5" />
+                  <span className="truncate">{m.model}</span>
+                </span>
+                <span className="flex items-baseline gap-3">
+                  {typeof m.tokens === "number" && <span className="num text-muted-foreground">{formatAmount(m.tokens, "tokens", { compact: true })}</span>}
+                  <span className="num w-14 text-right">{formatAmount(m.amount, unit, { compact: true })}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-muted-foreground">API rows only. Tokens from usage exports, dollars from cost reports.</p>
+        </Section>
+      )}
 
       {people.length > 0 && (
         <Section title="People" hint={`${people.length}`}>
@@ -138,21 +160,20 @@ export function TeamBreakdownPanel({ summary, unit, onClose, askAssistant, peopl
               ))}
             </tbody>
           </table>
-        )}
-        {dailyProjected.length > 0 && forecast?.origin === "placeholder" && (
-          <p className="text-[11px] text-muted-foreground">Projected days are placeholder projections.</p>
-        )}
-      </Section>
+        )}      </Section>
 
       <footer className="mt-auto flex flex-wrap gap-2 px-4 py-3">
         <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/teams/${team.id}`} />}>
           View team <ArrowUpRight strokeWidth={1.5} />
         </Button>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" nativeButton={false} render={<Link href={`/evidence?team=${encodeURIComponent(team.id)}`} />}>
+          <FileSearch strokeWidth={1.5} /> Evidence
+        </Button>
         <Button
           variant="ghost" size="sm" className="text-muted-foreground"
           onClick={() => askAssistant(`Why is ${team.name} tracking ${over ? "over" : "under"} its allocation?`)}
         >
-          <MessageSquare strokeWidth={1.5} /> Ask assistant
+          <MessageSquare strokeWidth={1.5} /> Ask the assistant
         </Button>
       </footer>
     </aside>
@@ -170,15 +191,5 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
       </summary>
       <div className="space-y-2 px-4 pb-4 pt-1">{children}</div>
     </details>
-  );
-}
-
-function Figure({ label, value, sub, muted }: { label: string; value: string; sub?: string; muted?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="eyebrow truncate">{label}</dt>
-      <dd className={cn("num mt-2 truncate text-xl leading-none", muted ? "text-muted-foreground" : "font-medium text-foreground")}>{value}</dd>
-      {sub && <dd className="num mt-1.5 truncate text-xs text-muted-foreground">{sub}</dd>}
-    </div>
   );
 }

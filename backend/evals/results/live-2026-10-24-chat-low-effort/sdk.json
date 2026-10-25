@@ -1,0 +1,312 @@
+{
+  "runner": "sdk",
+  "generated_at": "2026-10-25T05:46:50+00:00",
+  "counts": {
+    "pass": 1,
+    "fail": 0,
+    "not_run": 0
+  },
+  "live_runs_used": 1,
+  "live_log_total": 21,
+  "notes": [],
+  "scenarios": [
+    {
+      "id": "arithmetic_addition_250k",
+      "title": "Valid +50k addition that prioritizes research and flags other overruns",
+      "fixtures": [
+        "addition_50k"
+      ],
+      "note": "The 95k/80k/75k @ 250k reference split is reported, not required (it is illustrative).",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "addition_50k:run_succeeded",
+          "passed": true,
+          "reason": "run run_a01faf3f-4018-4d80-9e20-f8709de7913e succeeded"
+        },
+        {
+          "name": "addition_50k:addition_drafted",
+          "passed": true,
+          "reason": "addition draft prop_4a108be4-2afa-412e-875b-dbecb0def7af"
+        },
+        {
+          "name": "addition_50k:arithmetic_consistent",
+          "passed": true,
+          "reason": "before + deltas = after, and team totals equal the envelope"
+        },
+        {
+          "name": "addition_50k:prioritizes_research",
+          "passed": true,
+          "reason": "research gets the largest increase (+50000.00; deltas {'engineering': '0.00', 'product': '0.00', 'research': '50000.00'})"
+        },
+        {
+          "name": "addition_50k:flags_other_overruns",
+          "passed": true,
+          "reason": "names the other projected overrun(s): engineering +5000.00"
+        },
+        {
+          "name": "addition_50k:reference_split (informational)",
+          "passed": true,
+          "reason": "differs from the reference split: after = {'research': '110000.00', 'product': '80000.00', 'engineering': '60000.00'} @ 250000.00; reference {'research': '95000.00', 'product': '80000.00', 'engineering': '75000.00'} @ 250000.00"
+        }
+      ],
+      "reasons": [
+        "6 check(s) passed"
+      ]
+    }
+  ],
+  "fixtures": {
+    "addition_50k": {
+      "fixture": "addition_50k",
+      "ran": true,
+      "skip_reason": null,
+      "error": null,
+      "http_status": 201,
+      "request": {
+        "task_type": "propose_allocation",
+        "params": {
+          "mode": "addition",
+          "prioritize": "research",
+          "amount": "50000.00"
+        },
+        "wait": true
+      },
+      "setup": {},
+      "run_id": "run_a01faf3f-4018-4d80-9e20-f8709de7913e",
+      "runner_kind": "sdk",
+      "status": "succeeded",
+      "run_error": null,
+      "duration_s": 42.37,
+      "tools_called": [
+        "list_signals",
+        "list_signals",
+        "get_budgets",
+        "get_spend_summary",
+        "get_forecast",
+        "search_corpus",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "list_people",
+        "search_corpus",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "read_document",
+        "record_signal",
+        "search_corpus",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "read_document",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "record_signal",
+        "list_signals",
+        "draft_proposal"
+      ],
+      "warning_codes": [],
+      "warnings": [],
+      "signals": [
+        {
+          "id": "sig_269ea737-e5f2-42a6-a23d-288d67ef71fd",
+          "team": "product",
+          "status": "superseded",
+          "change_type": "continuation",
+          "cites": [
+            "product-launch-plan@v1"
+          ]
+        },
+        {
+          "id": "sig_9b6061ab-5766-4fbd-81bb-63656465c5a1",
+          "team": "research",
+          "status": "superseded",
+          "change_type": "continuation",
+          "cites": [
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_43c9dd2d-4629-4931-bfb6-b273bae713b6",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-eval-plan@v1",
+            "research-timeline-thread@v1"
+          ]
+        },
+        {
+          "id": "sig_eab4cdca-8a0a-4927-984d-4e8e031b6caa",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "continuation",
+          "cites": [
+            "engineering-platform-note@v1"
+          ]
+        },
+        {
+          "id": "sig_658e4623-f044-4ffb-9165-73eec5593c19",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "engineering-welcome-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_401fb2d9-388e-49de-aff7-8583d83ffae7",
+          "team": "product",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "product-launch-plan@v1",
+            "product-launch-plan@v2"
+          ]
+        },
+        {
+          "id": "sig_bbd0085f-e188-4393-839d-afa0bc9be3c4",
+          "team": "research",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "research-harness-asana@v1"
+          ]
+        },
+        {
+          "id": "sig_507ff6ba-e3a7-4cdb-9562-ba0d2dddaf69",
+          "team": "research",
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "research-model-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_317d9c8a-80da-4a15-87df-2b1bd3604a97",
+          "team": "research",
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "research-availability-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_571c8ae0-6eb7-48c0-ad77-42cf0a9167c2",
+          "team": "engineering",
+          "status": "current",
+          "change_type": "timing_shift",
+          "cites": [
+            "engineering-cutover-monday@v1"
+          ]
+        },
+        {
+          "id": "sig_d7868c1c-15c3-47eb-96ba-d9e482fcf309",
+          "team": "product",
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "product-tool-switch-slack@v1"
+          ]
+        },
+        {
+          "id": "sig_b21622ee-66ba-4e20-9e96-109d470b37d7",
+          "team": null,
+          "status": "current",
+          "change_type": "other",
+          "cites": [
+            "company-model-announcement-slack@v1"
+          ]
+        }
+      ],
+      "proposals": [
+        {
+          "id": "prop_4a108be4-2afa-412e-875b-dbecb0def7af",
+          "action_type": "addition",
+          "status": "pending_review",
+          "base_version": 1,
+          "envelope_increase": "50000.00",
+          "after": {
+            "total": "250000.00",
+            "allocations": {
+              "engineering": "60000.00",
+              "product": "80000.00",
+              "research": "110000.00"
+            }
+          },
+          "rebased_from_proposal_id": null
+        }
+      ],
+      "budget_version": {
+        "before": 1,
+        "after": 1
+      },
+      "summary": "Drafted for finance review: `prop_4a108be4-2afa-412e-875b-dbecb0def7af`.\n\n**Addition:** USD 50,000.00 to research only. Status: `pending_review`, requiring a finance approver.\n\n| Allocation | Before | Proposed after |\n|---|---:|---:|\n| Engineering | 60,000.00 | 60,000.00 |\n| Product | 80,000.00 | 80,000.00 |\n| Research | 60,000.00 | 110,000.00 |\n| **Envelope** | **200,000.00** | **250,000.00** |\n\n- Engineering\u2019s placeholder projection remains USD 5,000.00 above its allocation, not covered by this draft.\n- Research\u2019s proposed allocation exceeds its placeholder projection by USD 25,000.00.\n- Backend warnings: none.\n- The budget remains unchanged at version **1**.\n\n**Limitations:** Forecast snapshot `fcs_a8f6f3d9-01f1-4f3b-9794-0cc315d0b4ae` is available but simulated and a placeholder. Spend coverage is complete through October 20, not the full period, and is also simulated. Documents do not establish that USD 50,000.00 is required. `research-eval-plan` v1 states: \u201cExact token volumes are not yet known; they depend on how many model updates ship.\u201d The unrelated marketing signal was refused because its team is unknown; nothing was recorded for it.",
+      "usage": {
+        "provider_reported": {
+          "input_tokens": 1354,
+          "output_tokens": 2410,
+          "cache_creation_tokens": 36063,
+          "cache_read_tokens": 138000,
+          "thinking_tokens": 61,
+          "factory_credits": 51762.0
+        },
+        "subtype": "success",
+        "duration_s": 39.098,
+        "permission_allowed": 72,
+        "permission_cancelled": 0
+      }
+    }
+  }
+}

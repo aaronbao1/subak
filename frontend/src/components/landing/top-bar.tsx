@@ -5,6 +5,7 @@ import { container, cta } from "./cta";
 const LINKS = [
   { label: "Overview", href: "/overview" },
   { label: "Teams", href: "/teams" },
+  { label: "Evidence", href: "/evidence" },
   { label: "Decisions", href: "/decisions" },
   { label: "How it works", href: "#how-it-works" },
 ] as const;

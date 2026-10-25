@@ -39,10 +39,10 @@ If you need a shared component, put it in your own folder first and flag it; don
 - **A receipt follows every applied decision**: what changed, when, why, who. History lives at /decisions.
 - **Forecast periods come from the Forecast object.** Never hard-code dates or name a quarter the data doesn't name.
 - **Never double count.** `Forecast.basis === "full_period"` already includes incurred spend; do not add spent + projected. Only a `remaining` basis is added to spent.
-- **Placeholder projections stay labeled.** `Forecast.origin === "placeholder"` renders a visible "placeholder projection" tag. `kind === "scenario"` is labeled as conditional on its assumptions, never as a forecast.
+- **Scenarios stay labeled.** `kind === "scenario"` is labeled as conditional on its assumptions, never as a forecast.
 - **Receipts cite the projection reviewed.** A decision shows `forecastsReviewed` from the moment of review, not the current forecast.
 - **Citations are reachable** from any context card or proposal, but the main dashboard is not a tool-execution console.
-- **Demo label stays on.** `company.isDemo` shows a badge.
+- No demo or placeholder labels in the UI (owner decision, Oct 24). Data fields `isDemo` and `origin` stay in the contracts.
 - **Individuals reconcile to the team.** Person projections sum to the team projection; person spend sums to team spend. A person has no allocation of their own (allocations stay at team level); show share of the team number instead.
 - Calm design: restrained status colors, clear hierarchy, details on demand. No neon dashboards.
 

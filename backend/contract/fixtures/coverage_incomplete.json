@@ -14,12 +14,12 @@
         "1 cumulative counter reset(s) detected",
         "period in progress (ends 2026-12-31); totals are to date"
       ],
-      "record_count": 12,
+      "record_count": 620,
       "source_kinds": [
         "codex_sessions",
         "northstar_billing"
       ],
-      "spend_record_count": 7,
+      "spend_record_count": 577,
       "status": "partial",
       "unmapped_records": 1,
       "value_kinds": [
@@ -67,11 +67,11 @@
         "notes": [
           "1 unattributed record(s) in the period may belong to this team"
         ],
-        "record_count": 3,
+        "record_count": 196,
         "source_kinds": [
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 176,
         "status": "partial",
         "team": "engineering",
         "unmapped_records": 0,
@@ -81,15 +81,15 @@
       },
       {
         "counter_resets": 0,
-        "last_record_at": "2026-10-15T00:00:00Z",
+        "last_record_at": "2026-10-20T00:00:00Z",
         "notes": [
           "1 unattributed record(s) in the period may belong to this team"
         ],
-        "record_count": 2,
+        "record_count": 160,
         "source_kinds": [
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 160,
         "status": "partial",
         "team": "product",
         "unmapped_records": 0,
@@ -99,17 +99,17 @@
       },
       {
         "counter_resets": 1,
-        "last_record_at": "2026-10-19T09:30:00Z",
+        "last_record_at": "2026-10-20T00:00:00Z",
         "notes": [
           "1 cumulative counter reset(s); usage may be understated",
           "1 unattributed record(s) in the period may belong to this team"
         ],
-        "record_count": 6,
+        "record_count": 263,
         "source_kinds": [
           "codex_sessions",
           "northstar_billing"
         ],
-        "spend_record_count": 2,
+        "spend_record_count": 240,
         "status": "partial",
         "team": "research",
         "unmapped_records": 0,

@@ -1,8 +1,9 @@
 """Read actual repository imports without manufacturing daily completeness.
 
 The legacy repository records money and optional token counters, but has neither
-daily source manifests nor person/exposure ledgers. Money is an already billed
-observation, never a token quantity. The optional synchronization entry point is
+daily source manifests or exposure ledgers. The native people directory supplies
+known identities; its current team metadata is not employment history. Money is
+an already billed observation, never a token quantity. The optional synchronization entry point is
 explicitly a write operation; normal snapshot/actuals reads never append inputs.
 """
 from __future__ import annotations
@@ -16,7 +17,7 @@ import sqlite3
 
 from sqlalchemy import select
 
-from app.db.models import ImportBatch, PlanningPeriod, Team, TeamMapping, UsageRecord
+from app.db.models import ImportBatch, Person, PlanningPeriod, Team, TeamMapping, UsageRecord
 
 from .persistence import identity, iso
 from .service import empty_snapshot
@@ -53,6 +54,7 @@ def _material(session, now, *, include_future=False):
     return {
         'batches': [_row(row) for row in batches],
         'records': [_row(row) for row in observations],
+        'people': [_row(row) for row in session.scalars(select(Person).where(Person.created_at <= cutoff).order_by(Person.id))],
         'teams': [_row(row) for row in session.scalars(select(Team).where(Team.created_at <= cutoff).order_by(Team.id))],
         'mappings': [_row(row) for row in session.scalars(select(TeamMapping).where(TeamMapping.created_at <= cutoff).order_by(TeamMapping.id))],
         'periods': [_row(row) for row in session.scalars(select(PlanningPeriod).where(PlanningPeriod.created_at <= cutoff).order_by(PlanningPeriod.id))],
@@ -72,7 +74,7 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
     """Return the ``ForecastService`` snapshot callable over repository records.
 
     ``clock`` is the application's trusted current clock, not the requested
-    information cutoff. Legacy mappings have no update history; historical reads
+    information cutoff. Legacy mappings and directory rows have no update history; historical reads
     therefore leave attribution unknown rather than backdating today's mapping.
     The service explicitly identifies historical reads with ``as_of=True`` and
     current reads with ``as_of=False``. Direct callers omitting that flag use a
@@ -110,10 +112,17 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
         snapshot['repository_revision'] = identity(material)
         snapshot['limitations'] = [
             'Repository imports have no daily source completeness attestations; missing days and late usage remain unknown.',
-            'Repository accounts do not establish person identities, project attribution, or work exposure.',
+            'Person attribution uses known directory identities recorded on usage; project attribution and work exposure remain unknown.',
         ]
         if historical:
-            snapshot['limitations'].append('Historical attribution is unknown: mutable repository team mappings have no revision history.')
+            snapshot['limitations'].append('Historical attribution is unknown: mutable repository team mappings and people have no revision history.')
+        snapshot['people'] = [{'id': p['id'], 'name': p['id'] if historical else p['name'],
+                               'team_id': None if historical else p['team_id'],
+                               'active': None if historical else p['active'],
+                               'is_simulated': None if historical else p['is_simulated']}
+                              for p in material.get('people', [])]
+        # Directory team_id is current metadata, not an effective-dated employment
+        # or exposure ledger. Do not manufacture canonical memberships from it.
         snapshot['teams'] = [{'id': t['id'], 'name': t['id'] if historical else t['name']} for t in material['teams']]
         # PlanningPeriod ends_on is inclusive; canonical end is exclusive. Use an
         # actual active repository period only, otherwise the UTC quarter fallback.
@@ -133,7 +142,7 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
             if historical:
                 # Raw provenance must not leak today's mutable attribution any
                 # more than the canonical component can use it numerically.
-                record = {**record, 'team_id': None}
+                record = {**record, 'team_id': None, 'person_id': None}
             if not record['counts_toward_spend'] or record['amount'] is None:
                 ignored.append({'id': record['id'], 'reason': 'nonspend_or_unpriced', 'provenance': record})
                 continue
@@ -155,7 +164,8 @@ def repository_snapshot_factory(session_factory, *, clock=None, store=None):
             snapshot['observations'].append({
                 'observation_id': 'repository:usage:' + record['id'], 'date': record['occurred_at'][:10],
                 'quantity': record['amount'], 'recorded_amount': record['amount'], 'recorded_currency': 'USD',
-                'person_id': None, 'team_id': None if historical else record['team_id'], 'project_id': None,
+                'person_id': None if historical else record.get('person_id'),
+                'team_id': None if historical else record['team_id'], 'project_id': None,
                 'configuration_id': configuration, 'meter': 'usd', 'billing_pool': pool,
                 'source_id': 'repository:usage', 'revision': batch['content_hash'],
                 'available_at': max(record['created_at'], batch['created_at']),

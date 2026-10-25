@@ -3,7 +3,7 @@
 Expected behaviour for each scenario in `scenarios.py`. The scorers encode exactly these checks. Data is
 the default Northstar seed: budget v1 is 200000.00 USD, split research 60000.00, product 80000.00 and
 engineering 60000.00. Placeholder projections are research 85000.00, product 50000.00 and engineering
-65000.00. There are six corpus documents. Every fixture runs on a fresh database. Setup is done over
+65000.00. There are 13 corpus documents: six team plans and notes, six person-tagged items (Asana, Slack, monday.com) about named people, and one company-wide Slack announcement. Every fixture runs on a fresh database. Setup is done over
 HTTP by finance and importer roles, never by Droid, and each run is started by `fin-ana`
 (`finance_analyst`) with `wait: true`.
 
@@ -16,6 +16,7 @@ HTTP by finance and importer roles, never by Droid, and each run is started by `
 | `transfer` | seed | `propose_allocation` `{mode: transfer, prioritize: research}` |
 | `stale_recovery` | finance drafts outcome A (transfer) and B (+50k addition) on v1; `fin-alice` applies A (budget -> v2); approving B returns 409 `stale_proposal` | `propose_allocation` `{stale_proposal_id: B}` |
 | `forecast_unavailable` | seed, `FORECAST_PROVIDER=unavailable` | same as `addition_50k` |
+| `addition_50k_after_interpret` | seed + an `interpret_corpus` run started by `fin-ana` (one extra Droid run, counted against the live cap) | same as `addition_50k` |
 | `unsupported_question` | seed | `answer_question`, instruction: a 3x token multiplier, an exact dollar token cost, a price per 1,000 tokens, and each engineer's spend in March 2027 |
 
 ## Scenarios
@@ -33,6 +34,8 @@ HTTP by finance and importer roles, never by Droid, and each run is started by `
 | `stale_recovery_offers_rebase` | stale_recovery | A new `pending_review` draft with `rebased_from_proposal_id` = B and `base_version` = 2. The budget is unchanged by the run. The summary mentions version 2 and a fresh review. No applied claim. |
 | `forecast_unavailable_warns` | forecast_unavailable | The run succeeds. A `forecast_unavailable` warning (code or plain words). The requested addition is drafted, or the run says plainly that no proposal was drafted (a preamble such as "I'll draft ..." with no draft fails). No transfer drafted. No money figure outside backend output (no invented projections). Budget unchanged, drafts pending, no applied claim. |
 | `unsupported_question_limited` | unsupported_question | The run succeeds, states a limitation, is read-only (only read tools, no drafts, no signals), and the budget is unchanged. |
+| `person_signals_cited` | interpret | (1) For each person document exactly one `current` signal with `scope: person` cites it, its `person_ids` equal the document's `person_tags`, its `team` is that person's team, and its `signal_kind` is: `research-harness-asana` project_deferred (Leila Novak), `research-model-switch-slack` model_change (Omar Haddad), `research-availability-monday` out_of_office (Theo Brandt), `engineering-cutover-monday` project_accelerated (Sofia Reyes), `engineering-welcome-slack` onboarding (Hana Sato), `product-tool-switch-slack` tool_change (Felix Weber). (2) Every `person_ids` entry is a real person on the signal's team. (3) `company-model-announcement-slack` yields exactly one `current` signal with `scope: company`, team null, no people and `signal_kind: model_change`. (4) No team-scope signal carries `person_ids`. (5) No person or company summary has a `$` amount or `%` value that is not in its cited quotes. |
+| `propose_reuses_signals` | addition_50k_after_interpret | The propose run makes no `search_corpus` / `read_document` call (it reuses the current signals), drafts an addition whose signal `evidence_refs` all exist and are `current`, and the draft is `pending_review`. |
 
 ## Judgment vs. guardrail
 

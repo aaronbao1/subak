@@ -150,7 +150,7 @@ export class MockDataClient implements DataClient {
       action: "applied",
       kind: p.kind,
       appliedAt: new Date().toISOString(),
-      appliedBy: "finance@demo",
+      appliedBy: "Erin Walsh, FP&A",
       note,
       lines: p.lines,
       unit: p.unit,
@@ -168,7 +168,7 @@ export class MockDataClient implements DataClient {
     p.status = "rejected";
     this.decisions.unshift({
       id: newId("dec"), proposalId, action: "rejected", kind: p.kind,
-      appliedAt: new Date().toISOString(), appliedBy: "finance@demo", lines: p.lines, unit: p.unit,
+      appliedAt: new Date().toISOString(), appliedBy: "Erin Walsh, FP&A", lines: p.lines, unit: p.unit,
       forecastsReviewed: p.forecastsReviewed, rationale: p.rationale,
     });
     return p;

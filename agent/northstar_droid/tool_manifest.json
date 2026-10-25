@@ -286,10 +286,15 @@
       "name": "request_forecast_refresh"
     },
     {
-      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency.",
+      "description": "Context signals already recorded (by finance or earlier Droid runs), with citation currency. Read these before a proposal: when a current signal covers the team, cite it by id instead of re-reading documents. A team filter also returns company-scope signals (they have no team but apply to every team) unless include_company is false.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "include_company": {
+            "default": true,
+            "title": "Include Company",
+            "type": "boolean"
+          },
           "status": {
             "anyOf": [
               {
@@ -327,6 +332,32 @@
       },
       "kind": "read",
       "name": "list_signals"
+    },
+    {
+      "description": "People directory: active team members with id, team, name, role, primary_tool and integrations. Use it to turn a name in a document into a person id for a person-scope signal. Optional team narrows the list.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "team": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Team"
+          }
+        },
+        "title": "ListPeopleIn",
+        "type": "object"
+      },
+      "kind": "read",
+      "name": "list_people"
     },
     {
       "description": "Build a Vega-Lite v5 chart spec from backend data only (data inline; nothing estimated). kind: spend_vs_allocation (metric recorded_spend | remaining), projection_vs_allocation (projected | gap; no projection rows when the forecast is unavailable), spend_by_cost_category (recorded_spend | record_count; team may be `unattributed`), budget_history (allocation | envelope_total). Optional team narrows to one team. Title, subtitle and description carry the value kinds and simulated labels; keep them when you show or describe the chart. Read-only: persists nothing.",
@@ -382,7 +413,7 @@
       "name": "build_chart_spec"
     },
     {
-      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. Does not change any budget.",
+      "description": "Record a cited context signal (what is planned/changing, team, timing, status current|superseded|conflicting|informal|cancelled, uncertainty). Every citation must quote a stored document version exactly; the backend verifies it. A current signal may not rest only on superseded or only on cancelled documents. scope: `person` (person_ids from list_people, all on one team; team may be omitted and is derived), `team` (a team plan; no person_ids), or `company` (team null and no person_ids; every team is affected). signal_kind is one of project_deferred, project_accelerated, model_change, tool_change, out_of_office, onboarding, steady. title is a short label of at most 120 characters. Never name a person the cited text does not name (the backend refuses a person the cited documents do not name: person_not_in_citations). Does not change any budget.",
       "input_schema": {
         "$defs": {
           "CitationIn": {
@@ -483,6 +514,13 @@
             "title": "Citations",
             "type": "array"
           },
+          "person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Person Ids",
+            "type": "array"
+          },
           "project": {
             "anyOf": [
               {
@@ -495,6 +533,37 @@
             ],
             "default": null,
             "title": "Project"
+          },
+          "scope": {
+            "default": "team",
+            "enum": [
+              "person",
+              "team",
+              "company"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "signal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "project_deferred",
+                  "project_accelerated",
+                  "model_change",
+                  "tool_change",
+                  "out_of_office",
+                  "onboarding",
+                  "steady"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Signal Kind"
           },
           "status": {
             "enum": [
@@ -536,6 +605,20 @@
             ],
             "default": null,
             "title": "Team"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
           },
           "uncertainty": {
             "maxLength": 5000,
