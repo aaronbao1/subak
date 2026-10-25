@@ -27,3 +27,12 @@ Source spec: `/private/tmp/claude-501/-Users-erfanballew/08f08e85-80db-4705-b54b
 - **Motion:** 150ms (menus) and 300ms (color/opacity) only, plus at most one fade-up on enter. No parallax, no hover lift, no glow. Respect `prefers-reduced-motion` (already global).
 - **Chrome is quiet:** sentence case everywhere; uppercase only in `.eyebrow`. Icons `size-4 text-muted-foreground` stroke 1.5. No colored headers, no gradient bars, no icon backgrounds.
 - **Copy:** sentence case, 4–6 word two-clause headlines, no exclamation marks, no Title Case. Product rules in `CLAUDE.md` still apply (add ≠ redistribute, units explicit, provenance visible, missing data shown, placeholder tagged).
+
+## Motion (added Oct 24, evening)
+One vocabulary, in `src/components/shared/motion.ts` and `globals.css`. No motion library.
+- **Enter:** sections and cards get `className="animate-rise"` with `style={riseDelay(i)}` (60ms stagger). Runs once on mount.
+- **Count:** every hero/stat number uses `useCountUp(value)` (900ms, ease-out cubic). Re-runs when the value changes, so an applied proposal ticks the number.
+- **Draw:** charts grow from the baseline with `useProgress()` (1.1s) or Recharts' own first-paint animation gated by a ref; bars use `animate-grow-y` with per-column delay; meters use `animate-grow-x`.
+- **Calculating:** the projection reads as derived from the current: the bar extends from the recorded end to the projected end with a pulsing marker while the number counts from the current value to the projected one.
+- Reduced motion: hooks return the end state; the global `prefers-reduced-motion` rule zeroes CSS durations.
+- Budget: one entrance sequence per page load, ≤1.2s total; no loops except the calculating pulse while it runs; no hover lift.

@@ -1,20 +1,27 @@
 "use client";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import type { Unit } from "@/lib/contracts";
+import type { Provenance, Unit } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { formatAmount } from "@/lib/format";
+import { PageTitle, StatTile } from "@/components/shared/stat-tile";
+import { riseDelay, useMounted } from "@/components/shared/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { spentToDate, StatusChip, teamRecords, teamStatus, teamUnit } from "./labels";
+import { ProvenanceBadge, spentToDate, StatusChip, teamRecords, teamStatus, teamUnit } from "./labels";
+import { CountUpAmount, riseAt, rowStep } from "./count-up";
 
-const HEAD = "eyebrow h-10 px-4 text-muted-foreground";
 const CELL = "px-4 text-sm";
+/* Entrance (ms): tiles 0/60/120 · table card 180 · rows 180 + i*step (≤300 of stagger) · last rise ends ≤1180. */
+const TABLE_AT = 180;
 
 /** All teams with allocation, spend to date, projection, variance and a status badge. */
 export function TeamList() {
   const { loaded, teams, spending, budgets, forecasts, company } = useAppStore();
+  // Entrance classes apply once, on the client after load; re-renders keep the end state.
+  const mounted = useMounted();
+  const rise = mounted ? "animate-rise" : "opacity-0";
 
   if (!loaded) return <TeamListSkeleton />;
 
@@ -23,7 +30,7 @@ export function TeamList() {
     const budget = budgets.find((b) => b.teamId === team.id);
     const forecast = forecasts.find((f) => f.teamId === team.id);
     const spent = spentToDate(records);
-    const unit = teamUnit(team, budget, records);
+    const unit = teamUnit(budget, records);
     const projected =
       forecast?.status === "available" && forecast.projected != null
         ? forecast.basis === "remaining" ? spent + forecast.projected : forecast.projected
@@ -38,18 +45,21 @@ export function TeamList() {
   const totalAllocation = budgets.length ? budgets.reduce((n, b) => n + b.allocated, 0) : undefined;
   const totalSpent = rows.reduce((n, r) => n + r.spent, 0);
   const withProjection = rows.filter((r) => r.projected != null);
-  const totalProjected = withProjection.length ? withProjection.reduce((n, r) => n + (r.projected as number), 0) : undefined;
+  // Same rule as the overview hero: teams without a projection count at their spend to date (a floor, not a forecast).
+  const totalProjected = withProjection.length ? rows.reduce((n, r) => n + (r.projected != null ? (r.projected as number) : r.spent), 0) : undefined;
   const missing = rows.length - withProjection.length;
   const periodLabel = company?.currentPeriod.label ?? "the current period";
+  // Provenance of the spend total: one badge when every record agrees, "Mixed" plus the set when they differ.
+  const provenances = [...new Set<Provenance>(spending.map((r) => r.provenance))];
+  const step = rowStep(rows.length);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-[22px] leading-[1.15]">Teams</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Internal allocations, spend to date and projected totals for {periodLabel}. Projections are full-period totals and already include spend to date.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageTitle
+        className={rise}
+        title="Teams"
+        description={<>Internal allocations, spend to date and projected totals for {periodLabel}. Projections are full-period totals and already include spend to date.</>}
+      />
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-border py-16 text-center">
@@ -59,35 +69,65 @@ export function TeamList() {
       ) : (
         <>
           {/* Company totals */}
-          <dl className="grid grid-cols-3 gap-4" aria-label="Company totals">
-            <StatTile label="Total allocation" value={totalAllocation != null ? formatAmount(totalAllocation, totalUnit) : "—"} muted={totalAllocation == null} />
-            <StatTile label="Spent to date" value={formatAmount(totalSpent, totalUnit)} />
-            <StatTile
-              label="Projection"
-              caption={missing > 0 ? `Excludes ${missing} ${missing === 1 ? "team" : "teams"} with no projection` : undefined}
-              value={totalProjected != null ? formatAmount(totalProjected, totalUnit) : "None"}
-              muted={totalProjected == null}
-            />
-          </dl>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Company totals">
+            <div className={rise} style={riseDelay(0)}>
+              <StatTile
+                className="h-full"
+                size="secondary"
+                card
+                label="Total allocation"
+                value={totalAllocation != null ? <CountUpAmount value={totalAllocation} unit={totalUnit} /> : "—"}
+                muted={totalAllocation == null}
+              />
+            </div>
+            <div className={rise} style={riseDelay(1)}>
+              <StatTile
+                className="h-full"
+                size="secondary"
+                card
+                label="Spent to date"
+                value={<CountUpAmount value={totalSpent} unit={totalUnit} delay={60} />}
+                caption={
+                  provenances.length > 0 ? (
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      {provenances.length > 1 && <span>Mixed</span>}
+                      {provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
+                    </span>
+                  ) : undefined
+                }
+              />
+            </div>
+            <div className={rise} style={riseDelay(2)}>
+              <StatTile
+                className="h-full"
+                size="secondary"
+                card
+                label="Projection"
+                caption={missing > 0 ? `${missing} ${missing === 1 ? "team" : "teams"} with no projection, counted at spend to date` : undefined}
+                value={totalProjected != null ? <CountUpAmount value={totalProjected} unit={totalUnit} delay={120} /> : "None"}
+                muted={totalProjected == null}
+              />
+            </div>
+          </section>
 
           {/* Table on md and up */}
-          <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
+          <div className={cn("hidden overflow-hidden rounded-xl border border-border bg-card md:block", rise)} style={riseAt(TABLE_AT)}>
             <Table>
               <TableHeader>
-                <TableRow className="border-border-strong hover:bg-transparent">
-                  <TableHead className={HEAD}>Team</TableHead>
-                  <TableHead className={HEAD}>Lead</TableHead>
-                  <TableHead className={cn(HEAD, "text-right")}>Allocation</TableHead>
-                  <TableHead className={cn(HEAD, "text-right")}>Spent to date</TableHead>
-                  <TableHead className={cn(HEAD, "text-right")}>Projection</TableHead>
-                  <TableHead className={cn(HEAD, "text-right")}>Variance</TableHead>
-                  <TableHead className={HEAD}>Status</TableHead>
-                  <TableHead className={cn(HEAD, "w-12")}><span className="sr-only">Open</span></TableHead>
+                <TableRow>
+                  <TableHead>Team</TableHead>
+                  <TableHead>Lead</TableHead>
+                  <TableHead className="text-right">Allocation</TableHead>
+                  <TableHead className="text-right">Spent to date</TableHead>
+                  <TableHead className="text-right">Projection</TableHead>
+                  <TableHead className="text-right">Variance</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12"><span className="sr-only">Open</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map(({ team, budget, spent, unit, projected, variance, status }) => (
-                  <TableRow key={team.id} className="group relative h-12 border-border transition-colors duration-300 hover:bg-popover">
+                {rows.map(({ team, budget, spent, unit, projected, variance, status }, i) => (
+                  <TableRow key={team.id} className={cn("group relative", rise)} style={riseAt(TABLE_AT + i * step)}>
                     <TableCell className={cn(CELL, "font-medium")}>
                       <Link
                         href={`/teams/${team.id}`}
@@ -104,11 +144,11 @@ export function TeamList() {
                       {projected != null ? formatAmount(projected, unit) : <span className="font-sans text-muted-foreground">No projection</span>}
                     </TableCell>
                     <TableCell className={cn(CELL, "text-right")}>
-                      {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} /> : <Dash />}
+                      {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} grow={mounted} delay={TABLE_AT + i * step} /> : <Dash />}
                     </TableCell>
                     <TableCell className={CELL}><StatusChip status={status} /></TableCell>
                     <TableCell className={cn(CELL, "pr-4")}>
-                      <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+                      <ChevronRight className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -118,8 +158,8 @@ export function TeamList() {
 
           {/* Cards below md so nothing scrolls horizontally on a phone */}
           <ul className="grid gap-3 md:hidden">
-            {rows.map(({ team, budget, spent, unit, projected, variance, status }) => (
-              <li key={team.id}>
+            {rows.map(({ team, budget, spent, unit, projected, variance, status }, i) => (
+              <li key={team.id} className={rise} style={riseAt(TABLE_AT + i * step)}>
                 <Link
                   href={`/teams/${team.id}`}
                   className="block rounded-xl border border-border bg-card p-4 outline-none transition-colors duration-300 hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
@@ -141,7 +181,7 @@ export function TeamList() {
                     <div className="min-w-0">
                       <dt className="eyebrow">Variance</dt>
                       <dd className="mt-1 text-sm">
-                        {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} /> : <Dash />}
+                        {variance != null && budget ? <Variance variance={variance} allocation={budget.allocated} unit={unit} grow={mounted} delay={TABLE_AT + i * step} /> : <Dash />}
                       </dd>
                     </div>
                   </dl>
@@ -159,8 +199,11 @@ function Dash() {
   return <span className="text-muted-foreground">—</span>;
 }
 
-/** Signed variance with a 48px bar scaled to the allocation. Over runs read in --destructive; headroom in --success. */
-function Variance({ variance, allocation, unit }: { variance: number; allocation: number; unit: Unit }) {
+/**
+ * Signed variance with a 48px bar scaled to the allocation. Over runs read in --destructive; headroom in --success.
+ * The bar grows from the left once on load, after the row's own delay.
+ */
+function Variance({ variance, allocation, unit, grow, delay = 0 }: { variance: number; allocation: number; unit: Unit; grow?: boolean; delay?: number }) {
   const over = variance > 0;
   const share = allocation > 0 ? Math.min(1, Math.abs(variance) / allocation) : 0;
   const label = variance === 0 ? formatAmount(0, unit) : `${over ? "+" : "−"}${formatAmount(Math.abs(variance), unit)}`;
@@ -168,20 +211,12 @@ function Variance({ variance, allocation, unit }: { variance: number; allocation
     <span className="inline-flex items-center justify-end gap-2">
       <span className={cn("num", over ? "text-destructive" : "text-foreground")}>{label}</span>
       <span aria-hidden className="h-1.5 w-12 shrink-0 overflow-hidden rounded-sm bg-border">
-        <span className={cn("block h-full rounded-sm", over ? "bg-destructive" : "bg-success")} style={{ width: `${Math.round(share * 100)}%` }} />
+        <span
+          className={cn("block h-full rounded-sm", over ? "bg-destructive" : "bg-success", grow ? "animate-grow-x" : "scale-x-0")}
+          style={{ width: `${Math.round(share * 100)}%`, ...riseAt(delay) }}
+        />
       </span>
     </span>
-  );
-}
-
-/** Totals tile: eyebrow label above, mono 24px value, optional caption. */
-function StatTile({ label, value, caption, muted }: { label: string; value: string; caption?: string; muted?: boolean }) {
-  return (
-    <div className="min-w-0 rounded-xl border border-border bg-card p-4">
-      <dt className="eyebrow">{label}</dt>
-      <dd className={cn("num mt-2 truncate text-2xl leading-none", muted && "text-muted-foreground")}>{value}</dd>
-      {caption && <dd className="mt-2 truncate text-xs text-muted-foreground">{caption}</dd>}
-    </div>
   );
 }
 
@@ -196,12 +231,12 @@ function Stat({ label, value, muted }: { label: string; value: string; muted?: b
 
 function TeamListSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-7 w-24" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="space-y-2 rounded-xl border border-border bg-card p-4">
             <Skeleton className="h-3 w-24" />

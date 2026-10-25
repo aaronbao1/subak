@@ -3,6 +3,7 @@ import { ArrowLeftRight, FileSearch, Receipt } from "lucide-react";
 import { BrandMark } from "@/components/shell/brand-mark";
 import { TopBar } from "./top-bar";
 import { FeatureSection } from "./feature-section";
+import { KineticDots } from "./kinetic-dots";
 import { HeroMock, ReceiptMock, TeamListMock } from "./mocks";
 import { container, cta } from "./cta";
 
@@ -60,6 +61,7 @@ const RULES = [
     title: "Provenance on every amount",
     body:
       "Reported charge, estimate, or usage only: each figure says how it was arrived at, and days with incomplete data are marked, not smoothed over.",
+    href: "/evidence",
   },
   {
     icon: Receipt,
@@ -80,8 +82,10 @@ export function LandingPage() {
     <>
       <TopBar />
       <main className="flex-1">
-        {/* Hero */}
-        <section className={`${container} pt-32 pb-12 text-center md:pt-40 md:pb-20`}>
+        {/* Hero, on a dot grid that leans toward the pointer and fades out before the first feature. */}
+        <section className="relative">
+          <KineticDots className="absolute inset-0 size-full" />
+          <div className={`${container} relative pt-32 pb-12 text-center md:pt-40 md:pb-20`}>
           <p className="eyebrow">AI spend planning for finance</p>
           <h1 className="mx-auto mt-4 max-w-[1050px] text-[40px] leading-none md:text-5xl lg:text-[64px]">{HEADLINE}</h1>
           <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-[1.35] text-muted-foreground md:text-lg">
@@ -111,6 +115,7 @@ export function LandingPage() {
               className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] rounded-b-xl bg-linear-to-b from-transparent to-background"
             />
           </div>
+          </div>
         </section>
 
         {FEATURES.map((f) => (
@@ -133,7 +138,15 @@ export function LandingPage() {
                   <div className="flex size-10 items-center justify-center rounded-lg border border-border">
                     <r.icon className="size-4 text-muted-foreground" strokeWidth={1.5} aria-hidden />
                   </div>
-                  <h3 className="mt-5 text-[22px] leading-[1.15]">{r.title}</h3>
+                  <h3 className="mt-5 text-[22px] leading-[1.15]">
+                    {"href" in r ? (
+                      <Link href={r.href} className="underline underline-offset-4 decoration-border-strong transition-colors duration-300 hover:decoration-foreground">
+                        {r.title}
+                      </Link>
+                    ) : (
+                      r.title
+                    )}
+                  </h3>
                   <p className="mt-3 text-sm leading-5 text-muted-foreground">{r.body}</p>
                 </article>
               ))}

@@ -1,8 +1,9 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { ArrowLink } from "./arrow-link";
 import { MediaSlot } from "./media-slot";
-import { container, textLink } from "./cta";
+import { Reveal } from "./reveal";
+import { container } from "./cta";
 
 export interface FeatureSectionProps {
   id?: string;
@@ -33,19 +34,20 @@ export function FeatureSection({
   const headingId = id ? `${id}-heading` : undefined;
   return (
     <section id={id} className="scroll-mt-20 py-12 md:py-20" aria-labelledby={headingId}>
-      <div className={cn(container, "grid items-center gap-8 lg:grid-cols-2 lg:gap-16")}>
+      {/* Fades up once on first entry (20% in view); the mock inside starts its own motion at the same moment. */}
+      <Reveal className={cn(container, "grid items-center gap-8 lg:grid-cols-2 lg:gap-16")}>
         <div className={cn(mediaSide === "left" && "lg:order-2")}>
           <p className="eyebrow">{eyebrow}</p>
           <h2 id={headingId} className="mt-3 max-w-[520px] text-[28px] leading-[1.1] md:text-[32px] lg:text-[40px]">
             {heading}
           </h2>
           <p className="mt-4 max-w-[480px] text-[15px] leading-[1.4] text-muted-foreground md:text-base">{body}</p>
-          <Link href={href} className={cn(textLink, "mt-6")}>
-            See it in the dashboard <span aria-hidden>→</span>
-          </Link>
+          <ArrowLink href={href} className="mt-6">
+            See it in the dashboard
+          </ArrowLink>
         </div>
         <MediaSlot src={mediaSrc} alt={mediaAlt} placeholder={placeholder} className={cn(mediaSide === "left" && "lg:order-1")} />
-      </div>
+      </Reveal>
     </section>
   );
 }

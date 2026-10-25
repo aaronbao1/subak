@@ -1,20 +1,6 @@
 import type { Budget, CostComponent, Forecast, ForecastDailyPoint, Period, Provenance, SpendingRecord, Team } from "@/lib/contracts";
+import { COMPONENT_ORDER } from "@/components/team/labels";
 import { projectedTotals } from "./status";
-
-export const COMPONENT_ORDER: CostComponent[] = ["subscription", "included_usage", "extra_usage", "api"];
-
-export const COMPONENT_LABEL: Record<CostComponent, string> = {
-  subscription: "Subscription",
-  included_usage: "Included usage",
-  extra_usage: "Extra usage",
-  api: "API",
-};
-
-export const PROVENANCE_LABEL: Record<Provenance, string> = {
-  reported_charge: "Reported charge",
-  estimate: "Estimate",
-  usage_only: "Usage only",
-};
 
 export interface ComponentTotal {
   component: CostComponent;
@@ -43,6 +29,8 @@ export interface TeamSummary {
   /** Day-by-day projection for days not complete yet (the partial day's full-day total, then later days); empty when none was supplied. */
   dailyProjected: DailyPoint[];
   byComponent: ComponentTotal[];
+  /** API spend by model, largest first; empty when no API rows exist. */
+  byModel: ModelTotal[];
 }
 
 /**
@@ -136,6 +124,7 @@ export function summarizeTeams(
       team, budget, forecast, spent, daily, dailyProjected,
       ...projectedTotals(forecast, spent),
       byComponent: componentTotals(records),
+      byModel: modelTotals(records),
     };
   });
 }
@@ -191,4 +180,38 @@ export function buildDailyRows(teams: Team[], spending: SpendingRecord[], foreca
     if (anchor[tk] !== null) anchor[pk] = anchor[tk];
   }
   return rows;
+}
+
+export interface ModelTotal {
+  model: string;
+  provider: string;
+  amount: number;
+  /** Sum of reported tokens; undefined when no row reported any. */
+  tokens?: number;
+}
+
+/** API spend grouped by model, largest first. Rows without a model are grouped under their provider. */
+export function modelTotals(records: SpendingRecord[]): ModelTotal[] {
+  const byModel = new Map<string, ModelTotal>();
+  for (const r of records) {
+    if (r.component !== "api") continue;
+    const key = r.model ?? `${r.provider} (unspecified model)`;
+    const m = byModel.get(key) ?? { model: key, provider: r.provider, amount: 0 };
+    m.amount += r.amount;
+    if (typeof r.tokens === "number") m.tokens = (m.tokens ?? 0) + r.tokens;
+    byModel.set(key, m);
+  }
+  return [...byModel.values()].sort((a, b) => b.amount - a.amount);
+}
+
+/** API spend grouped by provider, largest first. */
+export function providerTotals(records: SpendingRecord[]): ModelTotal[] {
+  const byProvider = new Map<string, ModelTotal>();
+  for (const m of modelTotals(records)) {
+    const p = byProvider.get(m.provider) ?? { model: m.provider, provider: m.provider, amount: 0 };
+    p.amount += m.amount;
+    if (typeof m.tokens === "number") p.tokens = (p.tokens ?? 0) + m.tokens;
+    byProvider.set(m.provider, p);
+  }
+  return [...byProvider.values()].sort((a, b) => b.amount - a.amount);
 }

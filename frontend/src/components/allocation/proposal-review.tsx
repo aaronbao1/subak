@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { fmtDate, fmtDateTime } from "@/components/team/labels";
-import { Delta, EnvelopeLine, KindBadge, kindLabel, PlaceholderTag, ProposalStatusBadge, teamColor, teamName } from "./proposal-bits";
+import { fmtDate, fmtDateTime, PlaceholderBadge } from "@/components/team/labels";
+import { Delta, EnvelopeLine, KindBadge, kindLabel, ProposalStatusBadge, teamColor, teamName } from "./proposal-bits";
 
 interface Props {
   proposalId?: string;
@@ -107,22 +107,22 @@ function ReviewBody({ proposalId, onClose }: Props) {
             {/* Outcome banners */}
             {phase.kind === "applied" && <Receipt decision={phase.decision} />}
             {phase.kind === "rejected" && (
-              <Banner tone="muted" icon={<X />} title={phase.dismissed ? "Dismissed and recorded" : "Rejected and recorded"}>
+              <Banner tone="muted" icon={<X strokeWidth={1.5} />} title={phase.dismissed ? "Dismissed and recorded" : "Rejected and recorded"}>
                 Allocations are unchanged. The {phase.dismissed ? "dismissal" : "rejection"} is in the decision history.
               </Banner>
             )}
             {phase.kind === "error" && (
-              <Banner tone="destructive" icon={<AlertTriangle />} title="Not applied">
+              <Banner tone="destructive" icon={<AlertTriangle strokeWidth={1.5} />} title="Not applied">
                 {phase.message} Allocations are unchanged.
               </Banner>
             )}
             {phase.kind === "idle" && proposal.status === "stale" && (
-              <Banner tone="warn" icon={<History />} title="Budgets changed since this was prepared">
+              <Banner tone="warn" icon={<History strokeWidth={1.5} />} title="Budgets changed since this was prepared">
                 Ask the assistant for a refreshed proposal, or dismiss this one to record that it was not used.
               </Banner>
             )}
             {phase.kind === "idle" && proposal.status === "failed" && (
-              <Banner tone="destructive" icon={<Ban />} title="Refused by the backend">
+              <Banner tone="destructive" icon={<Ban strokeWidth={1.5} />} title="Refused by the backend">
                 {proposal.failureReason ?? "The backend refused this change."} Allocations are unchanged.
               </Banner>
             )}
@@ -167,7 +167,7 @@ function ReviewBody({ proposalId, onClose }: Props) {
                           </td>
                           <td className={cn(TD, "num text-right text-muted-foreground")}>{formatAmount(l.before, proposal.unit, { compact: true })}</td>
                           <td className={cn(TD, "num text-right", d !== 0 && "font-medium")}>{formatAmount(l.after, proposal.unit, { compact: true })}</td>
-                          <td className={cn(TD, "text-right text-xs whitespace-nowrap")}><Delta n={d} unit={proposal.unit} compact /></td>
+                          <td className={cn(TD, "text-right text-xs whitespace-nowrap")}><Delta n={d} unit={proposal.unit} kind={proposal.kind} compact /></td>
                           <td className={cn(TD, "num hidden text-right text-muted-foreground sm:table-cell")}>{formatAmount(spentFor(l.teamId), proposal.unit, { compact: true })}</td>
                           <td className={cn(TD, "hidden text-right sm:table-cell")}>{projection}</td>
                         </tr>
@@ -180,7 +180,7 @@ function ReviewBody({ proposalId, onClose }: Props) {
 
             {anyPlaceholder && (
               <p className="-mt-2 flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
-                <PlaceholderTag className="shrink-0" />
+                <PlaceholderBadge className="shrink-0" />
                 Projections reviewed here are shared placeholder numbers, not the output of the forecasting service.
               </p>
             )}
@@ -193,8 +193,8 @@ function ReviewBody({ proposalId, onClose }: Props) {
             {proposal.citations.length > 0 && (
               <details className="group rounded-xl border border-border">
                 <summary className="flex h-10 cursor-pointer list-none items-center gap-2 px-4 text-sm select-none [&::-webkit-details-marker]:hidden">
-                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden />
-                  <FileText className="size-4 text-muted-foreground" aria-hidden />
+                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
+                  <FileText className="size-4 text-muted-foreground" aria-hidden strokeWidth={1.5} />
                   <span>Evidence</span>
                   <span className="num text-xs text-muted-foreground">{proposal.citations.length}</span>
                   <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Show</span>
@@ -293,14 +293,14 @@ export function Receipt({ decision }: { decision: Decision }) {
   const teams = useAppStore((s) => s.teams);
   const changed = decision.lines.filter((l) => l.after !== l.before);
   return (
-    <Banner tone="ok" icon={<Check />} title="Applied and saved">
+    <Banner tone="ok" icon={<Check strokeWidth={1.5} />} title="Applied and saved">
       <span className="text-foreground/80">
         {changed.length === 0
           ? "No allocation changed."
           : changed.map((l, i) => (
               <span key={l.teamId}>
                 {i > 0 && <span className="text-muted-foreground"> · </span>}
-                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={decision.unit} />
+                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={decision.unit} kind={decision.kind} />
               </span>
             ))}
       </span>

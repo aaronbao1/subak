@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { fmtDateTime } from "@/components/team/labels";
-import { AllocationLines, decisionTotals, Delta, KindBadge, kindLabel, PlaceholderTag, ProposalStatusBadge, teamName } from "./proposal-bits";
+import { PageTitle } from "@/components/shared/stat-tile";
+import { fmtDateTime, PlaceholderBadge } from "@/components/team/labels";
+import { AllocationLines, decisionTotals, Delta, KindBadge, kindLabel, ProposalStatusBadge, teamName } from "./proposal-bits";
 import { ProposalReview } from "./proposal-review";
 
 /** /decisions: receipts newest first, plus proposals that still need attention. */
@@ -17,9 +18,9 @@ export function DecisionLog() {
 
   if (!loaded) {
     return (
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-6">
         <div className="space-y-2">
-          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-7 w-28" />
           <Skeleton className="h-4 w-72 max-w-full" />
         </div>
         <Skeleton className="h-24 w-full rounded-xl" />
@@ -31,11 +32,8 @@ export function DecisionLog() {
   const attention = proposals.filter((p) => p.status === "proposed" || p.status === "stale" || p.status === "failed");
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-[22px] leading-[1.15]">Decisions</h1>
-        <p className="text-sm text-muted-foreground">Every applied or rejected allocation change, with what finance reviewed at the time.</p>
-      </div>
+    <div className="space-y-8">
+      <PageTitle title="Decisions" description="Every applied or rejected allocation change, with what finance reviewed at the time." />
 
       {attention.length > 0 && (
         <section className="space-y-3" aria-label="Needs attention">
@@ -58,7 +56,7 @@ export function DecisionLog() {
                 Ask the assistant for a proposal, review it, and apply or reject it. The receipt lands here.
               </p>
             </div>
-            <Button variant="outline" className="border-border bg-popover hover:border-border-strong" onClick={() => setAssistantOpen(true)}>Open assistant</Button>
+            <Button variant="outline" size="lg" onClick={() => setAssistantOpen(true)}>Ask the assistant</Button>
           </div>
         ) : (
           <ol className="divide-y divide-border rounded-xl border border-border bg-card">
@@ -167,7 +165,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
             changed.map((l, i) => (
               <span key={l.teamId}>
                 {i > 0 && <span aria-hidden className="mx-1.5 text-muted-foreground">·</span>}
-                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={d.unit} />
+                {teamName(teams, l.teamId)} <Delta n={l.after - l.before} unit={d.unit} kind={d.kind} />
               </span>
             ))
           ) : "No allocation changed."
@@ -184,7 +182,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
           <div className="mt-3 space-y-5 border-t border-border pt-4">
             <div className="space-y-1">
               <div className="eyebrow">Per team</div>
-              <AllocationLines lines={d.lines} unit={d.unit} teams={teams} />
+              <AllocationLines lines={d.lines} unit={d.unit} teams={teams} kind={d.kind} />
             </div>
             {d.rationale && (
               <div className="space-y-1.5">
@@ -196,7 +194,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="eyebrow">Projections reviewed at the time</span>
-                  {placeholder && <PlaceholderTag />}
+                  {placeholder && <PlaceholderBadge />}
                 </div>
                 <ul className="divide-y divide-border text-sm">
                   {d.forecastsReviewed.map((f) => (
@@ -204,7 +202,7 @@ function DecisionReceipt({ d, teams }: { d: Decision; teams: ReturnType<typeof u
                       <span>{teamName(teams, f.teamId)}</span>
                       <span className="inline-flex items-center gap-2 text-muted-foreground">
                         <span className="num">{f.status === "available" && typeof f.projected === "number" ? formatAmount(f.projected, f.unit) : f.unavailableReason ?? "Unavailable"}</span>
-                        {f.origin === "placeholder" && <PlaceholderTag />}
+                        {f.origin === "placeholder" && <PlaceholderBadge />}
                       </span>
                     </li>
                   ))}

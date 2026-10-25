@@ -151,7 +151,7 @@
     font-variant-numeric: tabular-nums;
   }
   ::selection {
-    background: oklch(0.892 0.176 114.7 / 22%);
+    background: var(--brand-soft);
     color: var(--foreground);
   }
   /* Headlines carry size and whitespace, not weight. */
@@ -195,6 +195,56 @@
 }
 
 @layer components {
+  /* Entrance: rise 12px and fade in. Stagger with --rise-delay. Runs once on mount. */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  .animate-rise {
+    animation: rise 700ms cubic-bezier(.32,.72,0,1) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+  /* Bars and meters grow from the left. */
+  @keyframes grow-x {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .animate-grow-x {
+    transform-origin: left center;
+    animation: grow-x 900ms cubic-bezier(.32,.72,0,1) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+  /* Columns rise from the baseline. */
+  @keyframes grow-y {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+  .animate-grow-y {
+    transform-origin: center bottom;
+    animation: grow-y 800ms cubic-bezier(.32,.72,0,1) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+  /* Chevrons along the current → projected connector light up in sequence while the projection calculates. */
+  @keyframes chevron-light {
+    0%, 100% { opacity: .22; }
+    40% { opacity: 1; }
+  }
+  .animate-chevron { animation: chevron-light 720ms ease-in-out infinite; animation-delay: var(--rise-delay, 0ms); }
+  /* The arrowhead lands: a quick scale pop. */
+  @keyframes land {
+    0% { transform: scale(.6); opacity: .4; }
+    60% { transform: scale(1.25); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-land { transform-box: fill-box; transform-origin: center; animation: land 360ms cubic-bezier(.32,.72,0,1) both; }
+
+  /* A soft pulse for a "calculating" marker. */
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .55; transform: scale(.8); }
+  }
+  .animate-pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+
   /* Mono eyebrow: section labels, table column heads, stat labels. */
   .eyebrow {
     @apply font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground;

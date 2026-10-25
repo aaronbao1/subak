@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Rectangle, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis,
   type BarShapeProps, type TooltipContentProps,
@@ -8,9 +8,12 @@ import { X } from "lucide-react";
 import type { CostComponent, Forecast, Provenance, SpendingRecord, Team, Unit } from "@/lib/contracts";
 import { formatAmount } from "@/lib/format";
 import { projectedDays } from "@/components/dashboard/derive";
+import { isWeekend, WEEKEND_PATTERN_ID } from "@/components/shared/components";
+import { useMounted, usePrefersReducedMotion } from "@/components/shared/motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { COMPONENT_COLOR_VAR, COMPONENT_LABEL, COMPONENT_ORDER, fmtDate, PlaceholderBadge, ProvenanceBadge } from "./labels";
+import { COMPONENT_COLOR, COMPONENT_LABEL, COMPONENT_ORDER, fmtDate, ProvenanceBadge } from "./labels";
+import { riseAt } from "./count-up";
 
 interface Props {
   team: Team;
@@ -18,7 +21,15 @@ interface Props {
   /** Supplies the dashed projected days after the last recorded one, when the forecast breaks its total down by day. */
   forecast?: Forecast;
   unit: Unit;
+  /** Where this card sits in the page's entrance sequence, in ms. The day buttons follow 60ms later. */
+  enterAt?: number;
 }
+
+/* First paint: each stacked layer rises from the baseline over 900ms, 70ms after the one below it; the dashed
+   projected layer goes last (begins at 280ms, ends at 1180ms). After that every re-render paints instantly. */
+const BAR_DURATION_MS = 900;
+const BAR_STAGGER_MS = 70;
+const BAR_SEQUENCE_MS = BAR_STAGGER_MS * COMPONENT_ORDER.length + BAR_DURATION_MS;
 
 type SegmentKey = CostComponent | "projectedBar";
 
@@ -32,23 +43,14 @@ type DayRow = {
   topKey?: SegmentKey;
 } & Record<CostComponent, number>;
 
-/**
- * Component colors are scoped here: four distinct hues (blue, green, amber, coral) at matched lightness and
- * restrained chroma so they sit quietly on the dark surface while staying distinguishable when stacked.
- * The theme's --chart-1..8 tokens are reserved for team identity, so they are not reused for cost components.
- */
-const SCOPED_STYLE = `
-.team-spend-chart{--comp-subscription:oklch(0.68 0.10 255);--comp-included:oklch(0.70 0.08 165);--comp-extra:oklch(0.76 0.10 80);--comp-api:oklch(0.68 0.11 30)}
-`;
-
 const COMPONENT_NOTE: Partial<Record<CostComponent, string>> = {
   included_usage: "Usage covered by the subscription; shown for information",
 };
 
 const AXIS_TICK = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
 
-/** Saturday or Sunday, read from the ISO date so the local timezone cannot shift it. */
-const isWeekend = (date: string) => { const d = new Date(`${date}T00:00:00Z`).getUTCDay(); return d === 0 || d === 6; };
+/** Included usage is informational, not billed: neutral fill with a dashed outline, in the legend and the bars alike. */
+const isInformational = (c: CostComponent) => c === "included_usage";
 
 /** Rounded 4px at the data end of the topmost segment only; square everywhere else. 2px surface stroke is the gap. */
 function segmentShape(key: SegmentKey) {
@@ -68,8 +70,20 @@ function segmentShape(key: SegmentKey) {
 }
 
 /** Daily stacked bars by cost component; projected days follow as dashed outlines. Select a recorded day for its breakdown. */
-export function TeamSpendChart({ team, records, forecast, unit }: Props) {
+export function TeamSpendChart({ team, records, forecast, unit, enterAt = 0 }: Props) {
   const [selected, setSelected] = useState<string | undefined>();
+  const mounted = useMounted();
+  const reduce = usePrefersReducedMotion();
+  const rise = mounted ? "animate-rise" : "opacity-0";
+  // Recharts animates the columns on first paint only. The one-way flag flips once the sequence is over (or on
+  // the first day selection, whichever comes first) so a later selection or resize never re-animates.
+  // (A plain ref can't be read during render under this repo's react-hooks/refs rule, hence state.)
+  const [firstPaint, setFirstPaint] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setFirstPaint(false), BAR_SEQUENCE_MS);
+    return () => clearTimeout(t);
+  }, []);
+  const animateBars = firstPaint && !reduce;
 
   const days = useMemo<DayRow[]>(() => {
     const byDate = new Map<string, DayRow>();
@@ -102,7 +116,6 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
   }, [records, forecast]);
   const projectedCount = days.filter((d) => d.projected).length;
   const weekendDays = days.filter((d) => d.weekend);
-  const placeholder = forecast?.origin === "placeholder";
 
   /** Provenance seen per component across the team's records, for the legend. */
   const legendProvenance = useMemo(() => {
@@ -121,7 +134,10 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
   const recordedDays = days.filter((d) => !d.projected);
   const selectedDay = selected ? days.find((d) => d.date === selected && !d.projected) : undefined;
   const selectedRecords = selected ? records.filter((r) => r.date === selected) : [];
-  const toggle = (date: string) => setSelected((cur) => (cur === date ? undefined : date));
+  const toggle = (date: string) => {
+    setFirstPaint(false);
+    setSelected((cur) => (cur === date ? undefined : date));
+  };
 
   if (days.length === 0) {
     return (
@@ -133,8 +149,7 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
   }
 
   return (
-    <section className="team-spend-chart rounded-xl border border-border bg-card" aria-labelledby="spend-heading">
-      <style dangerouslySetInnerHTML={{ __html: SCOPED_STYLE }} />
+    <section className={cn("rounded-xl border border-border bg-card", rise)} style={riseAt(enterAt)} aria-labelledby="spend-heading">
       <div className="flex flex-col gap-3 p-5 pb-0 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 id="spend-heading" className="text-base font-medium">Daily spend</h2>
@@ -146,7 +161,7 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
         <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end" aria-label="Legend">
           {COMPONENT_ORDER.map((c) => (
             <li key={c} className="inline-flex items-center gap-2" title={COMPONENT_NOTE[c]}>
-              <span aria-hidden className="size-2 rounded-[2px]" style={{ background: COMPONENT_COLOR_VAR[c] }} />
+              <span aria-hidden className={cn("size-2 rounded-[2px]", isInformational(c) && "border border-dashed border-muted-foreground")} style={{ background: COMPONENT_COLOR[c] }} />
               <span>{COMPONENT_LABEL[c]}</span>
               {[...(legendProvenance.get(c) ?? [])].map((p) => <ProvenanceBadge key={p} provenance={p} />)}
             </li>
@@ -155,7 +170,6 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
             <li className="inline-flex items-center gap-2" title="Day-by-day projection from the forecast; nothing recorded yet">
               <span aria-hidden className="size-2 rounded-[2px] border border-dashed border-muted-foreground" />
               <span>Projected</span>
-              {placeholder && <PlaceholderBadge />}
             </li>
           )}
           {weekendDays.length > 0 && (
@@ -182,13 +196,13 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
           >
             <defs>
               {/* Diagonal hatch for weekends, the same mark the overview chart uses. */}
-              <pattern id="team-weekend-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <pattern id={WEEKEND_PATTERN_ID} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                 <line x1="0" y1="0" x2="0" y2="6" stroke="var(--foreground)" strokeOpacity="0.09" strokeWidth="1.5" />
               </pattern>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             {weekendDays.map((d) => (
-              <ReferenceArea key={`w-${d.date}`} x1={d.date} x2={d.date} fill="url(#team-weekend-hatch)" stroke="none" />
+              <ReferenceArea key={`w-${d.date}`} x1={d.date} x2={d.date} fill={`url(#${WEEKEND_PATTERN_ID})`} stroke="none" />
             ))}
             <XAxis
               dataKey="date"
@@ -213,16 +227,21 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
               cursor={{ fill: "var(--foreground)", fillOpacity: 0.04 }}
               content={(p) => <SpendTooltip {...p} unit={unit} />}
             />
-            {COMPONENT_ORDER.map((c) => (
+            {COMPONENT_ORDER.map((c, i) => (
               <Bar
                 key={c}
                 dataKey={c}
                 name={COMPONENT_LABEL[c]}
                 stackId="day"
-                fill={COMPONENT_COLOR_VAR[c]}
-                stroke="var(--card)"
-                strokeWidth={2}
-                isAnimationActive={false}
+                fill={COMPONENT_COLOR[c]}
+                stroke={isInformational(c) ? "var(--muted-foreground)" : "var(--card)"}
+                strokeOpacity={isInformational(c) ? 0.8 : 1}
+                strokeWidth={isInformational(c) ? 1 : 2}
+                strokeDasharray={isInformational(c) ? "3 3" : undefined}
+                isAnimationActive={animateBars}
+                animationBegin={i * BAR_STAGGER_MS}
+                animationDuration={BAR_DURATION_MS}
+                animationEasing="ease-out"
                 maxBarSize={24}
                 shape={segmentShape(c)}
               >
@@ -239,7 +258,11 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
                 dataKey="projectedBar" name="Projected" stackId="day"
                 fill="var(--muted-foreground)" fillOpacity={0.1}
                 stroke="var(--muted-foreground)" strokeOpacity={0.8} strokeWidth={1} strokeDasharray="3 3"
-                isAnimationActive={false} maxBarSize={24}
+                isAnimationActive={animateBars}
+                animationBegin={COMPONENT_ORDER.length * BAR_STAGGER_MS}
+                animationDuration={BAR_DURATION_MS}
+                animationEasing="ease-out"
+                maxBarSize={24}
                 shape={segmentShape("projectedBar")}
               >
                 {days.map((d) => {
@@ -253,7 +276,7 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
       </div>
 
       {/* Keyboard-reachable day selection: one button per recorded day. */}
-      <div className="px-5 pt-3">
+      <div className={cn("px-5 pt-3", rise)} style={riseAt(enterAt + 60)}>
         <div role="group" aria-label="Select a recorded day" className="flex gap-1 overflow-x-auto pb-1">
           {recordedDays.map((d) => {
             const active = selected === d.date;
@@ -283,7 +306,7 @@ export function TeamSpendChart({ team, records, forecast, unit }: Props) {
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <span aria-hidden className="mt-[3px] inline-block size-2.5 shrink-0 rounded-[2px] border border-dashed border-muted-foreground" />
             <span>
-              Dashed segments are projected, not recorded{placeholder ? ", and the projection is a placeholder" : ""}: the rest of a partial day, then{" "}
+              Dashed segments are projected, not recorded: the rest of a partial day, then{" "}
               <span className="num">{days.filter((d) => d.projected).map((d) => fmtDate(d.date)).join(", ")}</span>.
             </span>
           </p>
@@ -337,7 +360,7 @@ function SpendTooltip({ active, payload, label, unit }: TooltipContentProps & { 
       <div className={TOOLTIP}>
         <div className="mb-1.5 flex items-baseline justify-between gap-3">
           <span className="num font-medium">{fmtDate(String(label), { year: true })}</span>
-          <span className="text-muted-foreground">projected</span>
+          <span className="text-muted-foreground">Projected</span>
         </div>
         <div className="flex justify-between gap-4 font-medium">
           <span>Projected</span><span className="num">{formatAmount(row.total, unit)}</span>
@@ -351,7 +374,7 @@ function SpendTooltip({ active, payload, label, unit }: TooltipContentProps & { 
     <div className={TOOLTIP}>
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <span className="num font-medium">{fmtDate(String(label), { year: true })}</span>
-        {row && !row.complete && <span className="text-muted-foreground">partial day, recorded so far</span>}
+        {row && !row.complete && <span className="text-muted-foreground">Partial day, recorded so far</span>}
       </div>
       <ul className="space-y-1">
         {[...parts].reverse().map((p) => (
@@ -395,7 +418,7 @@ function DayBreakdown({ day, records, unit, onClose }: { day: DayRow; records: S
             </div>
           )}
         </div>
-        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Close day breakdown" className="-mr-1 text-muted-foreground"><X className="size-4" /></Button>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Close day breakdown" className="-mr-1 text-muted-foreground"><X className="size-4" strokeWidth={1.5} /></Button>
       </div>
       <ul className="mt-3 divide-y divide-border border-t border-border">
         {groups.map(({ component, records: rs }) => {
@@ -404,10 +427,10 @@ function DayBreakdown({ day, records, unit, onClose }: { day: DayRow; records: S
             <li key={component} className="grid gap-1 py-2.5 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span aria-hidden className="size-2 rounded-[2px]" style={{ background: COMPONENT_COLOR_VAR[component] }} />
+                  <span aria-hidden className={cn("size-2 rounded-[2px]", isInformational(component) && "border border-dashed border-muted-foreground")} style={{ background: COMPONENT_COLOR[component] }} />
                   <span className="font-medium">{COMPONENT_LABEL[component]}</span>
                   {[...new Set(rs.map((r) => r.provenance))].map((p) => <ProvenanceBadge key={p} provenance={p} />)}
-                  {rs.some((r) => !r.complete) && <span className="text-xs text-muted-foreground">partial</span>}
+                  {rs.some((r) => !r.complete) && <span className="text-xs text-muted-foreground">Partial</span>}
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground break-words">
                   {[...new Set(rs.map((r) => `${r.source}${r.provider ? ` · ${r.provider}` : ""}`))].join("; ")}

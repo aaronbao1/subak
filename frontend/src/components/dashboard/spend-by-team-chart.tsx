@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -9,12 +9,12 @@ import type { Period, Team, Unit } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatAmount, unitNoun } from "@/lib/format";
+import { WEEKEND_PATTERN_ID, isWeekend } from "@/components/shared/components";
+import { EASE_CSS, ENTER_STAGGER_MS, usePrefersReducedMotion } from "@/components/shared/motion";
 import { dateLabel, dayLabel, projectedKey, teamKey, toTs, type DailyRow } from "./derive";
 import { TeamPicker } from "./team-picker";
 
 const HALF_DAY = 43_200_000;
-/** Saturday or Sunday, read from the ISO date so the local timezone cannot shift it. */
-const isWeekend = (date: string) => { const d = new Date(`${date}T00:00:00Z`).getUTCDay(); return d === 0 || d === 6; };
 /** Up to two weeks of days get one tick per day with a weekday label; longer ranges fall back to weekly ticks. */
 const DAILY_TICK_LIMIT = 14;
 /** How much of the history is in view. 0 means everything. */
@@ -24,6 +24,25 @@ type ZoomDays = (typeof ZOOMS)[number]["days"];
 const MAX_LINES = 8;
 const OTHER_ID = "__other";
 const AXIS_TICK = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
+/*
+ * First-paint draw-in (ms). Team lines with rank r (largest spend first) draw left to right from r*60 for 1100;
+ * their dashed projections continue from where the recorded line ended for 500 more. Dots pop 300ms each,
+ * 40ms per column, as soon as their line has passed them. The weekend hatch, partial and projected areas fade
+ * in once the last projection is drawn. Pan, zoom, picker and selection never re-animate; a new dataset does.
+ */
+const LINE_MS = 1100;
+const PROJ_MS = 500;
+const DOT_MS = 300;
+const DOT_STEP_MS = 40;
+const AREAS_MS = 300;
+/** Draw phases: lines, then recorded dots, then projected dots, then the reference areas, then settled. */
+const PHASE = { lines: 0, dots: 1, projectedDots: 2, areas: 3, done: 4 } as const;
+type Phase = (typeof PHASE)[keyof typeof PHASE];
+const DOT_POP = "sbt-dot-pop";
+const popStyle = (delayMs: number): React.CSSProperties => ({
+  transformBox: "fill-box", transformOrigin: "center",
+  animation: `${DOT_POP} ${DOT_MS}ms ${EASE_CSS} both`, animationDelay: `${Math.max(0, delayMs)}ms`,
+});
 const AREA_LABEL = { fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" };
 
 /** A drawn line: a team, or the folded "Other" series which carries the teams it sums. */
@@ -41,7 +60,7 @@ export interface SpendByTeamChartProps {
   unit: Unit;
   selectedId: string | null;
   onSelect: (teamId: string) => void;
-  /** True when any projection on the chart is a placeholder; keeps the dashed days labeled as such. */
+  /** Accepted for existing callers; no longer rendered. */
   placeholder?: boolean;
   /** The planning period; the chart opens on it and earlier history sits to the left. */
   period?: Period;
@@ -55,7 +74,7 @@ export interface SpendByTeamChartProps {
  * are summed into a neutral dashed "Other" line; hiding a team in the picker lets another take its place.
  * Colors follow the team (`team.color`), so hiding one team never recolors another.
  */
-export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, unit, period, selectedId, onSelect, placeholder }: SpendByTeamChartProps) {
+export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, unit, period, selectedId, onSelect }: SpendByTeamChartProps) {
   const [zoom, setZoom] = useState<ZoomDays>(7);
   /** Teams the reader has unchecked in the picker. Empty means every team is drawn. */
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
@@ -78,6 +97,37 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
     const own: Series[] = drawn.map((t) => ({ id: t.id, name: t.name, color: t.color }));
     return folded.length ? [...own, { id: OTHER_ID, name: `Other (${folded.length} teams)`, color: "var(--chart-other)", folded }] : own;
   }, [drawn, folded]);
+  /** Draw order for the first paint: the largest team by recorded spend in the period draws first; Other draws last. */
+  const drawRank = useMemo(() => {
+    const inPeriod = period ? all.filter((r) => r.date >= period.start && r.date <= period.end) : all;
+    const spendOf = (s: Series) => s.folded ? -1 : inPeriod.reduce((sum, r) => { const v = r[teamKey(s.id)]; return sum + (typeof v === "number" ? v : 0); }, 0);
+    const ordered = [...series].sort((a, b) => spendOf(b) - spendOf(a));
+    return new Map(ordered.map((s, i) => [s.id, i]));
+  }, [series, all, period]);
+
+  // First-paint draw-in, run once per dataset. `phase` gates the dots and areas; Recharts draws the lines.
+  const reduce = usePrefersReducedMotion();
+  const [dataset, setDataset] = useState(allTeams);
+  const [phase, setPhase] = useState<Phase>(PHASE.lines);
+  if (dataset !== allTeams) { setDataset(allTeams); setPhase(PHASE.lines); }
+  // Under reduced motion nothing is gated: lines, dots and areas render in their end state at once.
+  const animating = phase < PHASE.done && !reduce;
+  const lastBegin = Math.max(0, series.length - 1) * ENTER_STAGGER_MS;
+  useEffect(() => {
+    if (phase === PHASE.done || reduce) return;
+    const areasAt = lastBegin + LINE_MS + PROJ_MS;
+    const timers = [
+      setTimeout(() => setPhase(PHASE.dots), LINE_MS),
+      setTimeout(() => setPhase(PHASE.projectedDots), LINE_MS + PROJ_MS),
+      setTimeout(() => setPhase(PHASE.areas), areasAt),
+      setTimeout(() => setPhase(PHASE.done), areasAt + AREAS_MS + DOT_MS),
+    ];
+    return () => timers.forEach(clearTimeout);
+    // Restart only when the dataset changes; the stagger is fixed at first paint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataset, reduce]);
+  /** Any interaction settles the chart so pans, zooms and picks render instantly, even mid-sequence. */
+  const settle = useCallback(() => setPhase(PHASE.done), []);
   /** Rows with the folded teams summed under the Other keys; untouched when nothing is folded. */
   const plotAll = useMemo(() => {
     if (folded.length === 0) return all;
@@ -92,10 +142,11 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   }, [all, folded]);
 
   const onHiddenChange = useCallback((next: Set<string>) => {
+    settle();
     setHiddenIds(next);
     // Hiding the selected team would leave the breakdown panel pointing at a line that is no longer drawn.
     if (selectedId !== null && next.has(selectedId)) onSelect(selectedId);
-  }, [selectedId, onSelect]);
+  }, [selectedId, onSelect, settle]);
   /** Days between the window's right edge and the latest row; 0 shows the current period. */
   const [offset, setOffset] = useState(0);
   const plotRef = useRef<HTMLDivElement>(null);
@@ -112,7 +163,8 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   const canBack = off < maxOffset;
   const canForward = off > 0;
   const clampOffset = useCallback((o: number) => Math.max(0, Math.min(maxOffset, o)), [maxOffset]);
-  const pan = useCallback((days: number) => setOffset((o) => clampOffset(Math.min(o, maxOffset) + days)), [clampOffset, maxOffset]);
+  const pan = useCallback((days: number) => { settle(); setOffset((o) => clampOffset(Math.min(o, maxOffset) + days)); }, [clampOffset, maxOffset, settle]);
+  const changeZoom = useCallback((z: ZoomDays) => { settle(); setZoom(z); }, [settle]);
   const pxPerDay = () => (plotRef.current?.clientWidth ?? 600) / Math.max(1, windowDays);
   // Horizontal trackpad swipe (or shift+wheel) pans; vertical wheel keeps scrolling the page.
   const onWheel = (e: React.WheelEvent) => {
@@ -127,7 +179,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
     const days = Math.round((e.clientX - drag.current.x) / pxPerDay());
-    if (days !== 0) drag.current.moved = true;
+    if (days !== 0) { drag.current.moved = true; settle(); }
     setOffset(clampOffset(drag.current.offset + days));
   };
   const onPointerUp = () => { dragMoved.current = drag.current?.moved ?? false; drag.current = null; };
@@ -154,6 +206,10 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
   const projectedStart = useMemo(() => rows.find((r) => r.kind === "projected")?.ts, [rows]);
   const projectedDays = useMemo(() => rows.filter((r) => r.kind === "projected").length, [rows]);
   const hasProjection = projectedStart !== undefined;
+  /** Index of the first projected row, so projected dots pop from the boundary rather than from the chart's left edge. */
+  const projectedIdx0 = useMemo(() => Math.max(0, rows.findIndex((r) => r.kind === "projected")), [rows]);
+  const showDots = daily && (!animating || phase >= PHASE.dots);
+  const showProjectedDots = daily && (!animating || phase >= PHASE.projectedDots);
   const tickLabel = (v: number) => (daily ? dayLabel(v) : dateLabel(v));
 
   const dimming = selectedId !== null;
@@ -162,6 +218,10 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
 
   return (
     <section className="flex min-w-0 flex-col rounded-xl border border-border bg-card" aria-label={`Daily ${noun} by team`}>
+      {/* Dot pop and the reference-area fade, scoped to this chart. The global reduced-motion rule zeroes both. */}
+      <style>{`@keyframes ${DOT_POP}{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+.sbt-plot .recharts-reference-area,.sbt-plot .recharts-reference-line{transition:opacity ${AREAS_MS}ms ${EASE_CSS}}
+.sbt-plot.sbt-areas-pending .recharts-reference-area,.sbt-plot.sbt-areas-pending .recharts-reference-line{opacity:0}`}</style>
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-5">
         <div className="min-w-0">
           <h2 className="text-base font-medium">Daily {noun} by team</h2>
@@ -176,10 +236,10 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           <div className="flex items-center rounded-md bg-popover p-0.5" role="group" aria-label="Range">
             {ZOOMS.map((z) => (
               <button
-                key={z.label} type="button" onClick={() => setZoom(z.days)} aria-pressed={zoom === z.days}
+                key={z.label} type="button" onClick={() => changeZoom(z.days)} aria-pressed={zoom === z.days}
                 className={cn(
                   "relative h-7 rounded-sm px-2.5 text-xs text-muted-foreground transition-colors duration-300 hover:text-foreground",
-                  zoom === z.days && "bg-card text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-brand",
+                  zoom === z.days && "bg-card text-foreground",
                 )}
               >
                 {z.label}
@@ -195,7 +255,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                 <ChevronRight className="size-4" strokeWidth={1.5} />
               </button>
               {canForward && (
-                <button type="button" onClick={() => setOffset(0)} className="ml-0.5 h-7 rounded-md px-2 text-xs text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground">
+                <button type="button" onClick={() => { settle(); setOffset(0); }} className="ml-0.5 h-7 rounded-md px-2 text-xs text-muted-foreground transition-colors duration-300 hover:bg-popover hover:text-foreground">
                   Today
                 </button>
               )}
@@ -216,22 +276,22 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           </div>
         ) : (
           <div
-            ref={plotRef} className={cn("h-64 w-full touch-pan-y select-none md:h-72 [&_svg:focus]:outline-none [&_.recharts-wrapper:focus]:outline-none", maxOffset > 0 && "cursor-grab active:cursor-grabbing")}
+            ref={plotRef} className={cn("sbt-plot h-64 w-full touch-pan-y select-none rounded-md focus-visible:ring-2 focus-visible:ring-ring md:h-72", maxOffset > 0 && "cursor-grab active:cursor-grabbing", animating && phase < PHASE.areas && "sbt-areas-pending")}
             onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rows} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
                 <defs>
                   {/* Diagonal hatch for weekends: distinct from the flat shading used for partial and projected days. */}
-                  <pattern id="weekend-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <pattern id={WEEKEND_PATTERN_ID} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                     <line x1="0" y1="0" x2="0" y2="6" stroke="var(--foreground)" strokeOpacity="0.09" strokeWidth="1.5" />
                   </pattern>
                 </defs>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
                 {weekendTs.map((ts, i) => (
                   <ReferenceArea
-                    key={`w-${ts}`} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="url(#weekend-hatch)" stroke="none"
-                    label={daily && (i === 0 || !weekendTs.includes(ts - 2 * HALF_DAY)) ? { value: "weekend", position: "insideBottom", ...AREA_LABEL, fontSize: 10 } : undefined}
+                    key={`w-${ts}`} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill={`url(#${WEEKEND_PATTERN_ID})`} stroke="none"
+                    label={daily && (i === 0 || !weekendTs.includes(ts - 2 * HALF_DAY)) ? { value: "Weekend", position: "insideBottom", ...AREA_LABEL } : undefined}
                   />
                 ))}
                 <XAxis
@@ -259,7 +319,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                   return (
                     <ReferenceArea
                       key={d} x1={ts - HALF_DAY} x2={ts + HALF_DAY} fill="var(--foreground)" fillOpacity={0.045} stroke="none"
-                      label={daily ? { value: "partial", position: "insideTop", ...AREA_LABEL, fontSize: 10 } : undefined}
+                      label={daily ? { value: "Partial", position: "insideTop", ...AREA_LABEL } : undefined}
                     />
                   );
                 })}
@@ -349,14 +409,26 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                   const selected = s.id === selectedId;
                   const dim = dimming && !selected;
                   const clickable = !s.folded;
+                  const begin = (drawRank.get(s.id) ?? 0) * ENTER_STAGGER_MS;
                   return (
                     <Line
                       key={s.id} type="monotone" dataKey={teamKey(s.id)} name={s.name}
                       stroke={s.color} strokeWidth={selected ? 2.5 : 2} strokeOpacity={dim ? 0.2 : 0.95}
                       strokeDasharray={s.folded ? "6 4" : undefined}
                       strokeLinecap="round" strokeLinejoin="round"
-                      dot={daily ? { r: 4, fill: s.color, fillOpacity: dim ? 0.2 : 1, stroke: "var(--card)", strokeWidth: 2 } : false}
-                      connectNulls={false} isAnimationActive={false}
+                      dot={showDots ? (props) => {
+                        const { key, cx, cy, index } = props as { key?: React.Key | null; cx?: number; cy?: number; index?: number };
+                        const k = key ?? undefined;
+                        if (cx === undefined || cy === undefined) return <g key={k} />;
+                        return (
+                          <circle
+                            key={k} cx={cx} cy={cy} r={4} fill={s.color} fillOpacity={dim ? 0.2 : 1} stroke="var(--card)" strokeWidth={2}
+                            style={animating ? popStyle(begin + (index ?? 0) * DOT_STEP_MS) : undefined}
+                          />
+                        );
+                      } : false}
+                      connectNulls={false}
+                      isAnimationActive={animating ? "auto" : false} animationBegin={begin} animationDuration={LINE_MS} animationEasing="ease-out"
                       style={{ cursor: clickable ? "pointer" : "default" }}
                       onClick={() => select(s)}
                       activeDot={{
@@ -371,21 +443,28 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
                   const selected = s.id === selectedId;
                   const dim = dimming && !selected;
                   const clickable = !s.folded;
+                  const begin = (drawRank.get(s.id) ?? 0) * ENTER_STAGGER_MS;
                   return (
                     <Line
                       key={`p-${s.id}`} type="monotone" dataKey={projectedKey(s.id)} name={`${s.name} (projected)`}
                       stroke={s.color} strokeWidth={selected ? 2.5 : 2} strokeOpacity={dim ? 0.15 : 0.7} strokeDasharray="5 4"
                       strokeLinecap="round" strokeLinejoin="round"
                       dot={(props) => {
-                        const { key, cx, cy, payload } = props as { key?: React.Key | null; cx?: number; cy?: number; payload?: DailyRow };
+                        const { key, cx, cy, index, payload } = props as { key?: React.Key | null; cx?: number; cy?: number; index?: number; payload?: DailyRow };
                         const k = key ?? undefined;
                         // The anchor point on the last recorded day already has a solid dot.
                         // Hollow dots only where the value is a projection: projected days and the partial day's full-day total.
                         const show = payload?.kind === "projected" || (payload?.partial && payload[teamKey(s.id)] !== null && payload[projectedKey(s.id)] !== payload[teamKey(s.id)]);
-                        if (!daily || !show || cx === undefined || cy === undefined) return <g key={k} />;
-                        return <circle key={k} cx={cx} cy={cy} r={4} fill="var(--card)" stroke={s.color} strokeOpacity={dim ? 0.2 : 0.9} strokeWidth={2} />;
+                        if (!showProjectedDots || !show || cx === undefined || cy === undefined) return <g key={k} />;
+                        return (
+                          <circle
+                            key={k} cx={cx} cy={cy} r={4} fill="var(--card)" stroke={s.color} strokeOpacity={dim ? 0.2 : 0.9} strokeWidth={2}
+                            style={animating ? popStyle(begin + ((index ?? 0) - projectedIdx0) * DOT_STEP_MS) : undefined}
+                          />
+                        );
                       }}
-                      connectNulls={false} isAnimationActive={false}
+                      connectNulls={false}
+                      isAnimationActive={animating ? "auto" : false} animationBegin={begin + LINE_MS} animationDuration={PROJ_MS} animationEasing="ease-out"
                       style={{ cursor: clickable ? "pointer" : "default" }}
                       onClick={() => select(s)}
                       activeDot={{
@@ -407,7 +486,7 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
           <EncodingLegend hasProjection={hasProjection} />
           <ChartLegend series={series} selectedId={selectedId} onSelect={onSelect} />
         </div>
-        {(folded.length > 0 || partialDates.length > 0 || (hasProjection && placeholder) || weekendTs.length > 0) && (
+        {(folded.length > 0 || partialDates.length > 0 || hasProjection || weekendTs.length > 0) && (
           <p className="text-xs text-muted-foreground">
             {folded.length > 0 && (
               <>Showing the {MAX_LINES} largest teams by spend this period; {folded.length} more {folded.length === 1 ? "is" : "are"} summed into Other. Hide a team in the picker to swap another in. </>
@@ -416,8 +495,8 @@ export function SpendByTeamChart({ teams: allTeams, rows: all, partialDates, uni
             {partialDates.length > 0 && (
               <>Shaded {partialDates.length === 1 ? "day is" : "days are"} partial (<span className="num">{partialDates.map(dateLabel).join(", ")}</span>): some sources have not reported yet. </>
             )}
-            {hasProjection && placeholder && (
-              <>Dashed lines and hollow dots are placeholder projections ({projectedDays} {projectedDays === 1 ? "day" : "days"} ahead), not recorded usage.</>
+            {hasProjection && (
+              <>Dashed lines and hollow dots are projections ({projectedDays} {projectedDays === 1 ? "day" : "days"} ahead), not recorded usage.</>
             )}
           </p>
         )}

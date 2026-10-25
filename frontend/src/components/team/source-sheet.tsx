@@ -7,19 +7,13 @@ import { getDataClient } from "@/lib/data";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fmtDate } from "./labels";
+import { fmtDate, KIND_LABEL } from "./labels";
+import { SourceBadge } from "@/components/context/source-brand";
 
 interface Props {
   documentId?: string;
   onClose: () => void;
 }
-
-const KIND_LABEL: Record<CompanyDocument["kind"], string> = {
-  plan: "Plan",
-  project_doc: "Project document",
-  research_note: "Research note",
-  correspondence: "Correspondence",
-};
 
 type Loaded =
   | { id: string; status: "missing" }
@@ -92,7 +86,11 @@ export function SourceSheet({ documentId, onClose }: Props) {
         {state.status === "ready" && (
           <>
             <SheetHeader className="gap-1 border-b border-border pr-12">
-              <div className="eyebrow">{KIND_LABEL[state.doc.kind]}</div>
+              <div className="flex items-center gap-2">
+                <SourceBadge integration={state.doc.integration ?? "document"} size="xs" />
+                <span aria-hidden className="text-muted-foreground/60">·</span>
+                <div className="eyebrow">{KIND_LABEL[state.doc.kind]}</div>
+              </div>
               <SheetTitle className="leading-snug">{state.doc.title}</SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-x-1.5 text-xs">
                 <span className="num">{fmtDate(state.doc.date, { year: true })}</span>
@@ -104,7 +102,7 @@ export function SourceSheet({ documentId, onClose }: Props) {
               <div className="px-4 py-4">
                 {state.doc.supersededBy && (
                   <div className="mb-4 flex gap-2.5 rounded-md border border-dashed border-border-strong bg-popover px-3 py-2.5 text-xs text-muted-foreground" role="note">
-                    <History className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <History className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden strokeWidth={1.5} />
                     <div>
                       <div className="font-medium text-foreground/80">Superseded document</div>
                       <p className="mt-0.5">

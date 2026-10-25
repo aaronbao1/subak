@@ -1,9 +1,8 @@
 "use client";
-import type { AllocationLine, AllocationProposal, Decision, Team, Unit } from "@/lib/contracts";
+import type { AllocationLine, AllocationProposal, Decision, ProposalKind, Team, Unit } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PlaceholderBadge } from "@/components/team/labels";
 
 /* Shared pieces for proposals and receipts: kind label, status badge, total-allocation line, per-team lines. */
 
@@ -72,24 +71,24 @@ export function KindBadge({ kind, className }: { kind: AllocationProposal["kind"
   );
 }
 
-/** Tag for placeholder projections. Always visible where such a projection is cited. */
-export function PlaceholderTag({ className }: { className?: string }) {
-  return <PlaceholderBadge className={className} />;
-}
-
 export function signed(n: number, unit: Unit, opts: { compact?: boolean } = {}) {
   if (n === 0) return "no change";
   return `${n > 0 ? "+" : "−"}${formatAmount(Math.abs(n), unit, opts)}`;
 }
 
-/** Deltas use the status pair only: up is --success, down is --destructive, unchanged is muted. */
-export function deltaClass(n: number) {
-  return n > 0 ? "text-success" : n < 0 ? "text-destructive" : "text-muted-foreground";
+/**
+ * Up is --success, unchanged is muted. Down is --warning in a redistribute (a planned move, not a failure);
+ * only an unexpected loss under add budget, which should never happen, reads --destructive.
+ */
+export function deltaClass(n: number, kind: ProposalKind = "redistribute") {
+  if (n > 0) return "text-success";
+  if (n < 0) return kind === "redistribute" ? "text-warning" : "text-destructive";
+  return "text-muted-foreground";
 }
 
 /** Signed, colored delta in mono. */
-export function Delta({ n, unit, className, compact }: { n: number; unit: Unit; className?: string; compact?: boolean }) {
-  return <span className={cn("num", deltaClass(n), className)}>{signed(n, unit, { compact })}</span>;
+export function Delta({ n, unit, kind, className, compact }: { n: number; unit: Unit; kind?: ProposalKind; className?: string; compact?: boolean }) {
+  return <span className={cn("num", deltaClass(n, kind), className)}>{signed(n, unit, { compact })}</span>;
 }
 
 export function teamName(teams: Team[], id: string) {
@@ -112,7 +111,7 @@ export function EnvelopeLine({ before, after, unit, kind, className }: { before:
         {kind === "redistribute" ? (
           <span className="font-sans text-xs text-muted-foreground">unchanged</span>
         ) : (
-          <Delta n={after - before} unit={unit} className="text-xs" />
+          <Delta n={after - before} unit={unit} kind={kind} className="text-xs" />
         )}
       </span>
     </div>
@@ -123,7 +122,7 @@ export function EnvelopeLine({ before, after, unit, kind, className }: { before:
  * Per-team before / after / delta rows. Teams with no change are muted so the eye lands on what moves.
  * Numbers use the compact form; the unit is stated once on the total-allocation line above.
  */
-export function AllocationLines({ lines, unit, teams, className }: { lines: AllocationLine[]; unit: Unit; teams: Team[]; className?: string }) {
+export function AllocationLines({ lines, unit, teams, kind, className }: { lines: AllocationLine[]; unit: Unit; teams: Team[]; kind?: ProposalKind; className?: string }) {
   const compact = { compact: true };
   return (
     <ul className={cn("divide-y divide-border text-sm", className)}>
@@ -139,7 +138,7 @@ export function AllocationLines({ lines, unit, teams, className }: { lines: Allo
               <span className="text-muted-foreground">{formatAmount(l.before, unit, compact)}</span>
               <span aria-hidden className="text-muted-foreground">→</span>
               <span className={cn(d !== 0 && "font-medium")}>{formatAmount(l.after, unit, compact)}</span>
-              <Delta n={d} unit={unit} compact className="inline-block min-w-[4rem] text-right text-xs" />
+              <Delta n={d} unit={unit} kind={kind} compact className="inline-block min-w-[4rem] text-right text-xs" />
             </span>
           </li>
         );

@@ -38,12 +38,12 @@ export function ProposalCard({ proposal, teams, onReview, className }: { proposa
       <div className="border-t border-border px-4 py-3">
         <EnvelopeLine before={proposal.totalBefore} after={proposal.totalAfter} unit={proposal.unit} kind={proposal.kind} />
       </div>
-      <AllocationLines lines={proposal.lines} unit={proposal.unit} teams={teams} className="border-t border-border px-4" />
+      <AllocationLines lines={proposal.lines} unit={proposal.unit} teams={teams} kind={proposal.kind} className="border-t border-border px-4" />
 
       <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
         <span className={cn("min-w-0 text-xs leading-snug text-muted-foreground", proposal.status === "failed" && "text-destructive")}>{footnote}</span>
         <Button size="sm" variant={open ? "default" : "ghost"} onClick={() => onReview(proposal.id)} className="shrink-0">
-          {open ? "Review" : "Details"} <ArrowUpRight data-icon="inline-end" className={cn(!open && "text-muted-foreground")} />
+          {open ? "Review" : "Details"} <ArrowUpRight data-icon="inline-end" className={cn(!open && "text-muted-foreground")} strokeWidth={1.5} />
         </Button>
       </div>
     </div>

@@ -1,14 +1,16 @@
 "use client";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight, Info, MessageSquare } from "lucide-react";
-import type { Budget, Forecast, SpendingRecord, Team } from "@/lib/contracts";
+import type { Budget, Forecast, Provenance, SpendingRecord, Team } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { formatAmount } from "@/lib/format";
+import { PageTitle, StatTile } from "@/components/shared/stat-tile";
+import { riseDelay, useMounted } from "@/components/shared/motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { fmtDate, fmtDateTime, ProvenanceBadge, spentToDate, StatusChip, Tag, teamStatus, teamUnit } from "./labels";
+import { CountUpAmount } from "./count-up";
 import { cn } from "@/lib/utils";
-import { fmtDate, fmtDateTime, PlaceholderBadge, spentToDate, StatusChip, Tag, teamStatus, teamUnit } from "./labels";
 
 interface Props {
   team: Team;
@@ -20,9 +22,13 @@ interface Props {
 /** Team identity, three stat tiles, and a quiet disclosure with the forecast's metadata, assumptions and limitations. */
 export function TeamHeader({ team, budget, forecast, records }: Props) {
   const askAssistant = useAppStore((s) => s.askAssistant);
+  // Entrance (ms): link and title 0 · tiles 60/120/180 (numbers count up from each tile's delay) · alert and disclosure 240.
+  const mounted = useMounted();
+  const rise = mounted ? "animate-rise" : "opacity-0";
   const spent = spentToDate(records);
-  const unit = teamUnit(team, budget, records);
+  const unit = teamUnit(budget, records);
   const lastDate = records.reduce<string | undefined>((m, r) => (!m || r.date > m ? r.date : m), undefined);
+  const provenances = [...new Set<Provenance>(records.map((r) => r.provenance))];
   const status = teamStatus(budget, forecast, spent);
 
   const available = forecast?.status === "available" && forecast.projected != null;
@@ -33,69 +39,89 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
   const high = available && forecast.high != null ? (isRemaining ? spent + forecast.high : forecast.high) : undefined;
   const fUnit = forecast?.unit ?? unit;
   const isScenario = forecast?.kind === "scenario";
-  const isPlaceholder = forecast?.origin === "placeholder";
   const periodLabel = (p: { start: string; end: string; label?: string }) => p.label ?? `${fmtDate(p.start)} – ${fmtDate(p.end, { year: true })}`;
 
   return (
     <div className="space-y-6">
-      <Link href="/teams" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors duration-300 hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> All teams
+      <Link href="/teams" className={cn("inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors duration-300 hover:text-foreground", rise)}>
+        <ArrowLeft className="size-4" aria-hidden strokeWidth={1.5} /> All teams
       </Link>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="flex items-center gap-2.5 text-[22px] leading-[1.15]">
+      <PageTitle
+        className={rise}
+        title={
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="flex items-center gap-2.5">
               <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: team.color }} />
               {team.name}
-            </h1>
+            </span>
             <StatusChip status={status} />
-          </div>
-          <div className="mt-1.5 text-sm text-muted-foreground">
+          </span>
+        }
+        description={
+          <>
             {team.lead ? <>Lead <span className="text-foreground/80">{team.lead}</span></> : "No lead listed"}
             {team.description && <> · {team.description}</>}
-          </div>
+          </>
+        }
+        actions={
+          <Button variant="outline" onClick={() => askAssistant(`Tell me about ${team.name}'s spending and projection`)}>
+            <MessageSquare className="text-muted-foreground" strokeWidth={1.5} /> Ask the assistant
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className={rise} style={riseDelay(1)}>
+          <StatTile
+            className="h-full"
+            size="primary"
+            card
+            label="Allocation"
+            value={budget ? <CountUpAmount value={budget.allocated} unit={budget.unit} delay={60} /> : "—"}
+            muted={!budget}
+            caption={budget ? periodLabel(budget.period) : "No allocation recorded"}
+          />
         </div>
-        <Button
-          variant="outline"
-          size="lg"
-          className="shrink-0 self-start border-border bg-popover hover:border-border-strong"
-          onClick={() => askAssistant(`Tell me about ${team.name}'s spending and projection`)}
-        >
-          <MessageSquare className="text-muted-foreground" /> Ask the assistant
-        </Button>
+        <div className={rise} style={riseDelay(2)}>
+          <StatTile
+            className="h-full"
+            size="primary"
+            card
+            label="Spent to date"
+            value={<CountUpAmount value={spent} unit={unit} delay={120} />}
+            caption={
+              lastDate ? (
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <span>Through <span className="num">{fmtDate(lastDate, { year: true })}</span></span>
+                  {provenances.map((p) => <ProvenanceBadge key={p} provenance={p} />)}
+                </span>
+              ) : "No spending recorded"
+            }
+          />
+        </div>
+        <div className={rise} style={riseDelay(3)}>
+          <StatTile
+            className="h-full"
+            size="primary"
+            card
+            label={isScenario ? "Scenario" : "Projection"}
+            value={projectedTotal != null ? <CountUpAmount value={projectedTotal} unit={fUnit} delay={180} /> : "No projection"}
+            muted={projectedTotal == null}
+            caption={
+              projectedTotal != null
+                ? low != null && high != null
+                  ? <><span className="num">{formatAmount(low, fUnit)} – {formatAmount(high, fUnit)}</span> · full period, includes spend to date</>
+                  : "Full period, includes spend to date"
+                : forecast?.status === "unavailable" ? "See reason below" : "Not supplied"
+            }
+          />
+        </div>
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-3">
-        <Tile
-          label="Allocation"
-          value={budget ? formatAmount(budget.allocated, budget.unit) : "—"}
-          muted={!budget}
-          caption={budget ? periodLabel(budget.period) : "No allocation recorded"}
-        />
-        <Tile
-          label="Spent to date"
-          value={formatAmount(spent, unit)}
-          caption={lastDate ? `Through ${fmtDate(lastDate, { year: true })}` : "No spending recorded"}
-        />
-        <Tile
-          label={isScenario ? "Scenario" : "Projection"}
-          value={projectedTotal != null ? formatAmount(projectedTotal, fUnit) : "No projection"}
-          muted={projectedTotal == null}
-          tag={isPlaceholder ? <PlaceholderBadge /> : undefined}
-          caption={
-            projectedTotal != null
-              ? low != null && high != null
-                ? <><span className="num">{formatAmount(low, fUnit)} – {formatAmount(high, fUnit)}</span> · full period, includes spend to date</>
-                : "Full period, includes spend to date"
-              : forecast?.status === "unavailable" ? "See reason below" : "Not supplied"
-          }
-        />
-      </dl>
-
       {forecast?.status === "unavailable" && (
-        <Alert className="border-border bg-card">
-          <Info className="size-4 text-muted-foreground" />
+        <Alert className={cn("border-border bg-card", rise)} style={riseDelay(4)}>
+          <Info className="size-4 text-muted-foreground" strokeWidth={1.5} />
           <AlertTitle>Projection unavailable</AlertTitle>
           <AlertDescription>
             {forecast.unavailableReason ?? "The forecasting service did not return a projection for this team."}{" "}
@@ -105,14 +131,13 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
       )}
 
       {forecast && (
-        <details className="group rounded-xl border border-border bg-card">
+        <details className={cn("group rounded-xl border border-border bg-card", rise)} style={riseDelay(4)}>
           <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm transition-colors duration-300 [&::-webkit-details-marker]:hidden">
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden />
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden strokeWidth={1.5} />
             <span className="font-medium">About this {isScenario ? "scenario" : "projection"}</span>
             <span className="hidden min-w-0 flex-wrap items-center gap-x-2 text-xs text-muted-foreground sm:flex">
               <span aria-hidden>·</span>
               <span className="truncate">{periodLabel(forecast.period)}</span>
-              {isPlaceholder && <PlaceholderBadge />}
               {isScenario && <Tag title="Conditional on the stated assumptions; not an unconditional forecast">Scenario</Tag>}
               {isRemaining && <Tag>Remaining basis, added to spend</Tag>}
             </span>
@@ -122,7 +147,6 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
               <dt className="text-muted-foreground">Kind</dt>
               <dd className="flex flex-wrap items-center gap-2">
                 {isScenario ? "Scenario, conditional on the assumptions below" : "Forecast"}
-                {isPlaceholder && <PlaceholderBadge />}
               </dd>
               <dt className="text-muted-foreground">Period</dt>
               <dd>{periodLabel(forecast.period)}</dd>
@@ -130,8 +154,6 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
               <dd className="num">{fmtDateTime(forecast.generatedAt)}</dd>
               <dt className="text-muted-foreground">Basis</dt>
               <dd>{isRemaining ? "Remaining spend to period end; added to spend to date above" : "Full-period total; already includes spend to date"}</dd>
-              <dt className="text-muted-foreground">Origin</dt>
-              <dd>{isPlaceholder ? "Shared placeholder number, not the output of the forecasting service" : "Forecasting service"}</dd>
             </dl>
             <div className="grid gap-5 sm:grid-cols-2">
               <ListBlock title="Assumptions" items={forecast.assumptions} empty="No assumptions stated." />
@@ -140,20 +162,6 @@ export function TeamHeader({ team, budget, forecast, records }: Props) {
           </div>
         </details>
       )}
-    </div>
-  );
-}
-
-/** Stat tile per spec: eyebrow above, mono 32px value, caption below. */
-function Tile({ label, value, caption, muted, tag }: { label: string; value: string; caption?: ReactNode; muted?: boolean; tag?: ReactNode }) {
-  return (
-    <div className="min-w-0 rounded-xl border border-border bg-card p-4">
-      <dt className="flex items-center gap-2">
-        <span className="eyebrow">{label}</span>
-        {tag}
-      </dt>
-      <dd className={cn("num mt-2 truncate text-[32px] leading-none tracking-[-0.01em]", muted && "text-muted-foreground")}>{value}</dd>
-      {caption && <dd className="mt-2 text-xs leading-relaxed text-muted-foreground">{caption}</dd>}
     </div>
   );
 }

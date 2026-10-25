@@ -21,7 +21,7 @@ export interface TeamPickerProps {
 export function TeamPicker({ teams, hiddenIds, onChange, foldedIds }: TeamPickerProps) {
   const visibleCount = teams.filter((t) => !hiddenIds.has(t.id)).length;
   const allVisible = visibleCount === teams.length;
-  const label = allVisible ? "All teams" : `${visibleCount} of ${teams.length} teams`;
+  const label = allVisible ? "All teams" : `${visibleCount} teams shown`;
 
   const toggle = (id: string) => {
     const next = new Set(hiddenIds);
@@ -91,7 +91,7 @@ export function TeamPicker({ teams, hiddenIds, onChange, foldedIds }: TeamPicker
                         )}
                         style={checked ? { background: t.color } : undefined}
                       >
-                        {checked && <Check className="size-2.5 text-background" strokeWidth={3} />}
+                        {checked && <Check className="size-2.5 text-background" strokeWidth={1.5} />}
                       </span>
                       <span className={cn("truncate", !checked && "text-muted-foreground")}>{t.name}</span>
                       {folded && <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">in Other</span>}
