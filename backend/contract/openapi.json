@@ -7223,7 +7223,7 @@
                 }
               }
             },
-            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`, `non_positive_amount`, `invalid_params`, `unexpected_params`"
+            "description": "Validation failed (`validation_failed` with `details.errors[]` or `details.reasons[]`). `error.code`: `validation_failed`, `unknown_team`, `non_positive_amount`, `invalid_params`, `unexpected_params`, `unknown_document`, `document_superseded`"
           },
           "429": {
             "content": {

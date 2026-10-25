@@ -76,8 +76,10 @@ Droid scenario evals (answer key, fake and live runners, live-run cap): see [`ev
 | `DROID_EXECUTABLE`, `DROID_MODEL`, `DROID_TIMEOUT_S` | `droid` on PATH, user default, `120` | SDK runner only |
 | `DROID_CHAT_MODEL`, `DROID_CHAT_REASONING_EFFORT` | `DROID_MODEL`, SDK default | SDK runner only: model and reasoning effort (`none`, `dynamic`, `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) for chat tasks (`answer_question`, `propose_allocation`); corpus interpretation keeps `DROID_MODEL`. `low` is a good demo setting |
 | `BACKEND_ALLOW_RESET` | off | `1` enables `POST /api/admin/reset` for demos (reseeds and reruns the stand-in interpretation) |
+| `BACKEND_COMPANY_ID`, `BACKEND_COMPANY_NAME` | unset | Override the company shown by `/api/meta` and `/compat/api/company`. Otherwise the `company_profile` row (written by `python -m app.seed` or `datagen/load_backend.py`) is used, then the Northstar default |
 | `BACKEND_COMPAT` | on | `0` unmounts the frontend compat layer under `/compat/api` (see below) |
 | `NEXT_PUBLIC_API_URL` (frontend, in `frontend/.env.local`) | unset (mock data) | `http://localhost:8787/compat` points the UI at this backend |
+| `NEXT_PUBLIC_LIVE_REFRESH_MS` (frontend) | unset (no polling) | Re-fetch interval for live data; the frontend enforces at least 2000 |
 
 No credentials are stored in this repo or requested by the backend. The Factory SDK reads its own
 key from the environment only when `DROID_RUNNER=sdk`.
@@ -173,6 +175,96 @@ cd frontend && npm install && npm run dev # http://localhost:3000
   (demo)"); chat runs as `dashboard-analyst`, so self-approval is still blocked. Dismissing a stale
   proposal records a rejected decision and leaves budgets unchanged.
 
+## Run on the Uber dataset
+
+The simulated "Uber (simulated)" company from `../datagen/` (16 teams, 130 people, ~331k usage
+records Q1-Q4 2026, 249 corpus documents; Q4 current, as-of 2026-10-24). Everything below uses the
+fake runner unless you set `DROID_RUNNER=sdk` yourself.
+
+```bash
+# one command (from the repo root): generate if needed, load once into backend/data/uber.db, start the
+# backend (default FORECAST_PROVIDER=engine) with the Uber company name, stream live usage
+datagen/demo.sh                               # --interval 1 --speed 100 for a faster feed
+
+# or by hand
+python3 datagen/generate.py --quiet           # writes datagen/out/ (gitignored)
+backend/.venv/bin/python datagen/load_backend.py --db backend/data/uber.db --reset   # ~45 s
+cd backend && PYTHONPATH=../src:.:../agent BACKEND_DB_PATH=data/uber.db .venv/bin/python -m app.main
+```
+
+- **Company.** The loader writes a `company_profile` row, so `/compat/api/company` says "Uber
+  (simulated)" without env vars. `BACKEND_COMPANY_ID` / `BACKEND_COMPANY_NAME` (set by `demo.sh`) win
+  over the row; Northstar is the default when neither exists.
+- **Forecasts** (default `FORECAST_PROVIDER=engine`). The numerical engine from the repo-root
+  `src/forecasting` package (install and `PYTHONPATH` as in Setup) publishes immutable runs; read paths
+  never recompute. No load step publishes. The worker queues the current week's job on its first poll
+  after startup, but that job's information cutoff is the start of the week (Monday 00:00 UTC), before
+  a freshly loaded import became available, so it publishes zero recorded spend. Request a refresh by
+  hand after loading and poll it (about 100 s on the default dataset):
+
+  ```bash
+  curl -X POST http://127.0.0.1:8787/api/forecast-refreshes -H 'Idempotency-Key: uber-1'
+  curl http://127.0.0.1:8787/api/forecast-refreshes/<id>
+  ```
+
+  The published run then carries recorded Q4 spend per company, team and person (person views sum to
+  the team, teams to the company, and both match `/compat/api/spending`). Repository usage carries no
+  exposure, source-day coverage or complete pricing pool, so the future component and the quarter
+  total stay unavailable and `/compat/api/forecasts` reports every team and person as `unavailable`
+  ("Some full-quarter amounts are incomplete or unavailable."). That is the engine's honest result, not
+  a bug. Projected numbers for this dataset come from the standalone numerical CLI instead (see
+  [`../datagen/README.md`](../datagen/README.md#forecasting)), which the backend does not read.
+  `GET /compat/api/forecast-views` returns every repository observation under `current_actuals`
+  (~525 MB of JSON, ~50 MB gzipped, ~55 s on the default dataset).
+  Startup captures all current repository rows for the forecast store, which takes longer on ~331k rows.
+  Details: [`../docs/implementation/forecast-integration-runbook.md`](../docs/implementation/forecast-integration-runbook.md).
+- **Live interpretation of the corpus** (`python -m app.interpret`). Selects the period-relevant
+  documents, runs one scoped `interpret_corpus` Droid run per batch, and stops before the credit cap:
+
+  ```bash
+  cd backend
+  BACKEND_DB_PATH=data/uber.db .venv/bin/python -m app.interpret --since 2026-09-01 --include-announced \
+      --batch 10 --credit-cap 600000 --dry-run    # print the selection and batch plan only
+  BACKEND_DB_PATH=data/uber.db .venv/bin/python -m app.interpret --since 2026-09-01 --include-announced \
+      --batch 10 --credit-cap 600000              # DROID_RUNNER=sdk for the real Droid
+  ```
+
+  Selection: current documents authored on or after `--since`, plus (with `--include-announced`) earlier
+  documents whose effective window overlaps the current period: 64 documents in 8 batches on the default
+  dataset. Message/task pairs stay in the same batch. The cap sums provider-reported `factory_credits`,
+  including earlier interpret-cli runs in the same database (`--ignore-prior-spend` opts out). It stops
+  before a batch that could exceed the cap and hands each batch the remaining cap as its credit budget,
+  which the sdk runner enforces on the provider's streamed usage. So the cap holds to within one usage
+  update, not exactly. An sdk batch that reports no or partial credits also stops the run. 8 batches can
+  cost more than 600k: use a larger cap to cover them all in one go.
+  Re-running skips documents already interpreted by the same runner kind (`--force` re-runs). sdk
+  batches append to `data/live_runs.log`. With `DROID_RUNNER=sdk` and the SDK or key unavailable it exits
+  2 and runs nothing; there is no fallback to the stand-in. The fake runner is scripted for Northstar and
+  records **no** signals for Uber documents (the CLI header says so) so a fake run never looks like an
+  interpretation. Exit codes: 0 done (also when stopped at the cap), 1 a batch failed, 2 runner unavailable
+  or bad input. Notes and the selection rule: [`docs/uber-interpret-notes.md`](docs/uber-interpret-notes.md).
+- **Live refresh in the UI.** In `frontend/.env.local` set `NEXT_PUBLIC_API_URL=http://localhost:8787/compat`
+  and `NEXT_PUBLIC_LIVE_REFRESH_MS=1000`. The frontend currently clamps the interval to at least 2 s
+  (`frontend/src/components/shell/app-shell.tsx`); the backend is built to answer every 1 s. Responses are
+  gzipped. `/compat/api/people` keeps its rendered JSON keyed by a data stamp (write generation + latest
+  usage row id) plus query parameters, so an unchanged poll is a cache hit
+  ([`app/compat/cache.py`](app/compat/cache.py)). `/compat/api/spending` uses an incremental index
+  ([`app/compat/spending_index.py`](app/compat/spending_index.py)): an unchanged poll serves the stored
+  body, and a pure append (what live imports do) reads only the new rows and re-renders only the rows
+  they touch.
+
+Measured on the default dataset (331,731 records, in-process TestClient, fake runner, 2026-10-25; forecast
+reads are served from the engine's stored publication and are not response-cached here):
+
+| Request | First call | Warm (cached) |
+|---|---|---|
+| `GET /compat/api/spending` (~3 MB JSON before gzip) | 358 ms | 4 ms |
+| `GET /compat/api/people` | 7 ms | 2 ms |
+
+A live import does not trigger a full spending rebuild: the next read folds in only the appended rows.
+A full rebuild happens only after an in-place UPDATE/DELETE on `usage_records` (for example a team
+re-attribution or a demo reset), a schema change, or a period change.
+
 ## Frontend compat layer
 
 `app/compat/` serves the app's 16 paths (including `GET /api/people`) under `/compat/api/*` in the
@@ -228,6 +320,7 @@ judge feedback, and how it is handled or why it is out of scope, is listed in
 | Northstar spend, budgets, corpus, people | simulated (`value_kind=simulated`, `is_simulated=true`); 15 fictional people with `@northstar.example` emails |
 | Per-person projections | proportional split of the team placeholder by spend to date, not a person-level model |
 | Codex session parser | real format; real samples import as `measured` tokens, `unpriced_usage` unless priced |
-| Projections | placeholder, not a model; `unavailable` mode available |
+| Projections | `engine` (default): numerical engine publications from the `src/forecasting` package; `placeholder`: shared simulated projections, not a model; `unavailable` mode available |
+| Uber dataset | simulated by `datagen/` ("Uber (simulated)"); not Uber data |
 | Droid | `FakeDroidRunner` (deterministic) by default; `DROID_RUNNER=sdk` runs real Factory Droid (live-verified 2026-10-24); `runner_kind` always reported |
 | Identity | demo headers, not authentication; authority rules themselves are enforced |

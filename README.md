@@ -1,4 +1,4 @@
-# AI Spend Planner
+# Subak
 
 A finance workspace for understanding company AI spending, forecasting future needs, and reviewing internal budget changes. Built for Cal Hacks 13.0 with Next.js, FastAPI, SQLite, a Python numerical engine, and the Factory Droid SDK.
 
@@ -168,7 +168,8 @@ Forecast endpoints also mount beneath `/compat`. The four forecast tools are `ex
 From the repository root, with both Python packages and frontend dependencies installed:
 
 ```sh
-PYTHONPATH=src:backend:agent .venv/bin/python -m pytest tests backend/tests -q
+PYTHONPATH=src:backend:agent .venv/bin/python -m pytest tests -q
+PYTHONPATH=src:backend:agent .venv/bin/python -m pytest backend/tests -q
 PYTHONPATH=src:backend:agent .venv/bin/python -m app.contract.export --check
 PYTHONPATH=src:backend .venv/bin/python -m forecasting.replay_report \
   --output artifacts/northstar-replay.json

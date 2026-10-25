@@ -3,6 +3,11 @@
 Revision triggers commit with the source write, including writes from a different process. Readers
 never write: startup installs triggers, while polling only reads the small revision table. Pure usage
 appends retain the incremental index; updates/deletes and source-label edits force a complete rebuild.
+
+People responses keep their final JSON bytes keyed by the committed data stamp and request parameters;
+spending uses the incremental index in spending_index.py. Forecasts are read from the engine's stored
+publication on every request. ResponseCache builds are single-flight per key. Bodies use the same
+Pydantic validation and exclude_none serialization as uncached routes, and live only on app.state.
 """
 from __future__ import annotations
 
@@ -18,8 +23,8 @@ from sqlalchemy import event, text
 from sqlalchemy.orm import Session
 from app.db.base import Base
 
-GZIP_MIN = 1024
-GZIP_LEVEL = 1
+GZIP_MIN = 1024  # same threshold as the app's GZipMiddleware
+GZIP_LEVEL = 1  # favor speed for large bodies rebuilt while the live feed runs
 _REVISION_TABLE = "_compat_cache_revisions"
 
 
@@ -57,12 +62,18 @@ def _revisions(session: Session) -> dict[str, int]:
 
 
 def table_generation(session: Session, *tables: str, inserts: bool = False) -> tuple:
+    """Committed mutation revisions for these tables, including external SQLite writes.
+
+    Pure appends leave the mutation stamp unchanged so rowid-tracking readers can update incrementally.
+    Set inserts=True when all changes matter. Startup/reset also advance the schema revision.
+    """
     versions = _revisions(session)
     return (versions["schema"],) + tuple((versions.get(f"{t}:mut", 0),
             versions.get(f"{t}:ins", 0) if inserts else 0) for t in tables)
 
 
 def data_stamp(session: Session) -> tuple:
+    """Current directory revisions; callers add their other dependencies and request parameters."""
     return table_generation(session, "people", "teams", inserts=True)
 
 

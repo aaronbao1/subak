@@ -471,3 +471,29 @@ def test_cli_local_configuration_failure_stops_before_running(app, seeded, clock
     code = cli.main(['--db', str(seeded)], clock=clock, ids=id_factory, out=lines.append)
     assert code == 2 and _runs(app) == []
     assert lines == ['Invalid backend environment assignment.']
+
+
+def test_engine_forecast_provider_is_wired_to_the_published_forecast_store(app, seeded, clock, id_factory):
+    """Under the default FORECAST_PROVIDER=engine the CLI's toolbox reads the engine's stored publication
+    (like the server), not an unconfigured provider that reports 'forecast persistence is not configured'."""
+    seen = {}
+
+    class Probe:
+        kind = "fake"
+
+        def run(self, task, tools):
+            provider = tools._provider
+            seen["service"] = tools._forecast_service
+            seen["provider"] = provider.name
+            s = app.state.session_factory()
+            try:
+                period_id = resolve_period(s, None, clock.now()).id
+            finally:
+                s.close()
+            seen["reason"] = provider.get_forecast(period_id, ["product"]).reason
+            return AgentRunOutput(summary="probe")
+
+    code, _ = _main(seeded, "--batch", "20", runner=Probe(), clock=clock, id_factory=id_factory)
+    assert code == 0
+    assert seen["provider"] == "engine" and seen["service"] is not None
+    assert seen["reason"] == "no published forecast; request a refresh"

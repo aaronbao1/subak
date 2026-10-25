@@ -6,9 +6,9 @@ on the Uber dataset, and the live feed (datagen/live.py) appends records every f
 records grouped exactly as `mappers.spending` groups them (one output row per team x person x day x
 component x provider x model x value kind) plus each row's rendered JSON, and on each request:
 
-- **nothing changed** (same period, same `table_generation("usage_records")`, same MAX(rowid)): serves
-  the stored body (one cheap MAX(rowid) query);
-- **pure append** (MAX(rowid) grew, no UPDATE/DELETE on usage_records, no DDL): reads only the new rows
+- **nothing changed** (same period, same committed mutation revisions, same MAX(rowid)): serves
+  the stored body after reading the small revision table and MAX(rowid);
+- **pure append** (MAX(rowid) grew, no usage mutation or source-label/reset change): reads only the new rows
   (rowid > the last one seen), re-maps and re-renders only the rows they touch, re-joins the bytes;
 - **anything else** (an in-place change such as a team re-attribution, a reset, a smaller MAX(rowid)
   from another process, another period): full rebuild, as before.

@@ -49,7 +49,8 @@ def create_all(engine: Engine) -> None:
 
     from app.compat import cache  # noqa: F401 - install transactional cache revision triggers
     Base.metadata.create_all(engine)
-    # create_all does not add newly declared indexes to existing tables.
+    # create_all skips indexes on tables that already exist; add newly declared indexes to old files.
+    # Skip indexes whose columns are missing so check_schema can report the outdated file clearly.
     inspector = inspect(engine)
     for table in Base.metadata.sorted_tables:
         present = {column["name"] for column in inspector.get_columns(table.name)}
