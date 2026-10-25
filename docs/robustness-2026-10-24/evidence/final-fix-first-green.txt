@@ -1,0 +1,42 @@
+......F.......                                                           [100%]
+=================================== FAILURES ===================================
+_______ test_rational_projection_has_fixed_rounding_exponents_and_traps ________
+
+    def test_rational_projection_has_fixed_rounding_exponents_and_traps():
+        for rounding in (ROUND_DOWN, ROUND_UP):
+            with localcontext() as context:
+                context.prec, context.rounding, context.Emax, context.Emin, context.clamp = 3, rounding, 1, -1, 1
+                for signal in context.traps: context.traps[signal] = True
+                summary = _summaries((0, 1, 1), (1/3,)*3, (.5,), None, .95)
+>               large = _summaries((Decimal('1e100'),), (1,), (.5,), Decimal('1e100'), .95)
+
+tests/test_final_review_regressions.py:75:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/forecasting/joint_service.py:82: in _summaries
+    excess = str(_ratio(sum((Fraction(max(Decimal(0),exact_sum((v,threshold.copy_negate()))))*w
+src/forecasting/joint_service.py:82: in <genexpr>
+    excess = str(_ratio(sum((Fraction(max(Decimal(0),exact_sum((v,threshold.copy_negate()))))*w
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+values = (Decimal('1E+100'), Decimal('-1E+100'))
+
+    def exact_sum(values) -> Decimal:
+        """Sum finite Decimals with enough local precision for every input digit."""
+        values=tuple(values)
+        if not values:return Decimal(0)
+        for value in values:
+            if not isinstance(value,Decimal):raise ContractError('exact arithmetic requires Decimal')
+            decimal(value)
+        low=min(v.as_tuple().exponent for v in values)
+        high=max(v.adjusted() for v in values)
+        with localcontext() as context:
+            context.prec=max(28,high-low+len(str(len(values)))+3)
+            context.Emin=MIN_EMIN;context.Emax=MAX_EMAX;context.clamp=0
+            context.traps[Inexact]=True
+>           return decimal(sum(values,Decimal(0)))
+E           decimal.Rounded: [<class 'decimal.Rounded'>]
+
+src/forecasting/contracts.py:42: Rounded
+=========================== short test summary info ============================
+FAILED tests/test_final_review_regressions.py::test_rational_projection_has_fixed_rounding_exponents_and_traps
+1 failed, 13 passed in 0.18s

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "16-E01",
+    "family": "session_horizon_allocation",
+    "scenario": "A costly request starts shortly before month end, pauses for a long test, then resumes next month; its final usage counter arrives late.",
+    "mechanism": "Assigning eventual task severity to start date or treating late reported usage as future continuation advances or duplicates spending across finance periods.",
+    "detection": "Preserve occurrence interval, source reporting convention, observed-at timestamp, request start and state transitions; compare accrued and reported-time views.",
+    "response": "Forecast only increments inside the target interval; keep late-incurred nowcast separate; expose ambiguous occurrence intervals instead of inventing uniform accrual.",
+    "test_assertion": "For a deterministic fixture with dated invocation increments, month totals sum to the lifetime total with each invocation counted once; late arrival changes observed completeness but not the documented occurrence-time assignment.",
+    "residual_limit": "A provider that supplies only completion timestamps cannot support exact within-call accrual without an explicit convention.",
+    "owner": "Backend usage normalization and forecasting target owner",
+    "requirement_source": "ai-spend-master-plan.md sections 2 and 4; mentor-discussion.txt lines 74-81; 16-S02"
+  },
+  {
+    "id": "16-E02",
+    "family": "pause_resume_cache_state",
+    "scenario": "A session remains open overnight awaiting the human; on return it incurs a large uncached prefix under a changed cache policy.",
+    "mechanism": "Open-session count is mistaken for continuous token production, while the resumed-request severity model assumes a warm cache.",
+    "detection": "Separate human-wait intervals from model-running state; record preceding gap, cached/uncached usage and known cache-policy/version metadata.",
+    "response": "Use state-dependent resumption and resource marks; treat a new user task as an arrival in an existing context, not continuous autonomous work.",
+    "test_assertion": "An observed waiting interval contributes no fabricated model usage; resumed invocation uses its actual cache category and is assigned once regardless of whether conversation ID persists.",
+    "residual_limit": "Cache eviction is often externally unobserved; a gap is a predictive feature, not proof of a specific retention rule.",
+    "owner": "Session feature and pricing owners",
+    "requirement_source": "ai-spend-master-plan.md section 2; 16-S02 and 16-S04"
+  },
+  {
+    "id": "16-E03",
+    "family": "compaction_counter_epoch",
+    "scenario": "Context compacts while the local cumulative counter resets after a runtime restart, and the source re-emits the last pre-restart event.",
+    "mechanism": "Context shrinkage becomes negative incurred usage, a reset delta becomes zero or a giant positive jump, or the replayed event duplicates spending.",
+    "detection": "Keep context length separate from cumulative resource counters, persist counter epoch and event identity, and flag decreasing cumulative counters.",
+    "response": "Normalize usage within validated counter epochs; quarantine ambiguous reset gaps; represent compaction as a state change with any separately observed summarizer usage.",
+    "test_assertion": "Compaction never reduces already-incurred usage; replay is idempotent; known post-reset increments remain countable without silently assuming missing pre-reset usage was zero.",
+    "residual_limit": "Unlogged reset boundaries can leave a bounded or unknown increment rather than an exact value.",
+    "owner": "Telemetry normalization owner",
+    "requirement_source": "backend-plan.md acceptance checks; ai-spend-master-plan.md repeated cumulative counter warning; 16-S07"
+  },
+  {
+    "id": "16-E04",
+    "family": "fork_retry_lineage",
+    "scenario": "A user forks a conversation with copied historical telemetry, retries a failed request on another machine, and both branches execute new model calls.",
+    "mechanism": "Shared history is billed twice or legitimate retry work is deduplicated merely because task text matches; independent roots inflate human arrival counts.",
+    "detection": "Retain invocation/source IDs, machine/source namespaces, lineage and inherited-event metadata; distinguish semantic task identity from physical execution identity.",
+    "response": "Deduplicate copied historical invocations only; count genuinely distinct billable executions; preserve related-branch groups for evaluation and dependence modeling.",
+    "test_assertion": "Forked historical events have one incurred total, while new child and retry invocations all remain in totals; train/test splits keep known related branches together.",
+    "residual_limit": "Without provider invocation IDs or lineage, exact overlap may be unresolved; do not merge based only on similar text.",
+    "owner": "Identity/deduplication and evaluation owners",
+    "requirement_source": "backend-plan.md idempotent ingestion; master plan explicit attribution; 16-S04 session-linkage limitation"
+  },
+  {
+    "id": "16-E05",
+    "family": "concurrency_quota_delay",
+    "scenario": "One person starts several requests before a deadline; shared provider quotas queue or reject calls and automatic retries resume after the forecast boundary.",
+    "mechanism": "Summing unconstrained session rate forecasts overstates near-term usage and underestimates later retry bursts; active session count conflates waiting and execution.",
+    "detection": "Capture running/waiting states, rejection reason, retry events and known shared quota scope; inspect overlapping intervals and completion delays.",
+    "response": "Condition near-term continuation on observed capacity state where available; simulate shared delay shocks rather than independent request timelines; retain a quota-unknown scenario.",
+    "test_assertion": "A fixture with queued nonbillable requests produces no invented model tokens until invocation; distinct billable retry calls are counted and timed correctly.",
+    "residual_limit": "Undisclosed provider queues and unreported failed-call charging prevent exact pre-call cost timing.",
+    "owner": "Session state and forecast simulation owners",
+    "requirement_source": "ai-spend-master-plan.md future projection assumptions; 16-S02 timing evidence"
+  },
+  {
+    "id": "16-E06",
+    "family": "informative_session_missingness",
+    "scenario": "The telemetry collector crashes disproportionately on very long expensive sessions; coverage begins mid-request for replacement machines.",
+    "mechanism": "Closed-only training overrepresents short cheap runs; unknown initial ages become zero; coverage loss is misclassified as successful termination.",
+    "detection": "Maintain independent collector coverage and heartbeat state, end-reason provenance, last-observed event, known or unknown start age, and unresolved terminal statuses. Check distinct source capabilities for daily totals, session summaries, identified prefixes, live state and availability provenance, plus freshness.",
+    "response": "Represent right censoring, left truncation and unknown age separately; compare complete-case results to missingness sensitivity scenarios; fall back to aggregates when linkage is unreliable. Aggregates/finalized summaries alone cannot enable live continuation; failed coverage/freshness gates select the daily fallback.",
+    "test_assertion": "A collector-loss record remains unknown/censored rather than completed with zero future usage; restarting observation does not reset known request age or duplicate prior increments. An aggregate-only source or stale snapshot cannot activate the live continuation model.",
+    "residual_limit": "Informative censoring may remain unidentifiable without an independent billing source; survival-model assumptions must be reported.",
+    "owner": "Coverage and survival-model owners",
+    "requirement_source": "frontend-plan.md missing data must not become zero; 16-S08"
+  },
+  {
+    "id": "16-E07",
+    "family": "prefix_label_leakage",
+    "scenario": "An evaluation uses task category inferred from final logs, final success status, or realized future model mix at an early prefix; sibling prefixes appear in training. A normalized round starts before a cutoff but its tool result and token_count report arrive after it.",
+    "mechanism": "The estimator receives future behavior and related outcomes that would not exist at forecast time, overstating usable accuracy. Filtering by earliest round timestamp exposes final usage, result size/status and tool latency before those fields exist.",
+    "detection": "Require available-at timestamps for all features, preserve extraction version and source cutoff, and group related request/fork IDs before splitting. Track field-level supporting report/result events, CLI/turn-ID behavior, pinned dataset release and extractor/schema.",
+    "response": "Recompute features from truncated source prefixes; use future unknown covariates only as explicit scenarios; keep all prefixes of a request in the same partition. Mask final usage and result-derived fields until supporting events; preserve original ingestion times where available. Otherwise label event-time prefix simulation, not original arrival/source-delay replay.",
+    "test_assertion": "Changing suffix events after the forecast cutoff cannot change the stored prefix feature vector or prediction inputs; a grouped split contains no shared request lineage. At a cutoff between tool emission and later result/usage report, tool request is visible but final usage, result status/size and latency are absent; re-normalization cannot reveal them retrospectively.",
+    "residual_limit": "Unknown cross-account retries and semantic duplicates can still leak correlated tasks across groups. Event timestamps alone cannot reconstruct original ingestion delays.",
+    "owner": "Forecast evaluation owner",
+    "requirement_source": "Forecast research boundary and evidence standard; 16-S08 and 16-S06; 16-S03 README data format; r04 telemetry cross-review"
+  },
+  {
+    "id": "16-E08",
+    "family": "in_session_configuration_drift",
+    "scenario": "A user changes model, reasoning effort and permission mode mid-session while a harness update changes compaction behavior; the export labels the whole session using its final model.",
+    "mechanism": "Historical usage is repriced with the wrong model and future severity uses an obsolete workflow regime; missing effort is silently interpreted as low effort.",
+    "detection": "Prefer step-level model/configuration events and versioned alias mapping; compare session summary labels against per-invocation metadata and track unknown feature values.",
+    "response": "Split configuration epochs while retaining session lineage; apply time-valid rates by invocation; widen uncertainty or use pooled fallback for unseen regimes.",
+    "test_assertion": "Earlier invocations retain original model/rate after a later switch; absent effort remains unknown; a change in config is reflected only from its observed effective point onward.",
+    "residual_limit": "Some products hide routing or effort; a single opaque plan label cannot identify the real execution configuration.",
+    "owner": "Usage contract, pricing and session feature owners",
+    "requirement_source": "mentor-discussion.txt lines 102-115; ai-spend-master-plan.md usage versus cost distinction; 16-S01 and 16-S07"
+  },
+  {
+    "id": "16-E09",
+    "family": "arrival_severity_common_shock",
+    "scenario": "A production incident simultaneously increases request arrivals, expensive debugging severity, retries and cross-team concurrency, then subsides after mitigation.",
+    "mechanism": "Independent count/severity forecasts and independent team sampling miss tail risk; a Hawkes model mistakes the common incident for persistent self-excitation.",
+    "detection": "Inspect conditional severity versus count, residual cross-team correlation and known incident timing using only available evidence; compare common-shock and excitation models.",
+    "response": "Use joint count/mark or shared calendar-shock simulations and scenario conditioning; evaluate a non-exciting baseline; derive aggregate quantiles from joint sampled totals.",
+    "test_assertion": "Synthetic dependent fixtures distinguish E[sum severity|N] from independent mean multiplication; summed sample paths reproduce dependence and do not use sums of marginal quantiles as company quantiles.",
+    "residual_limit": "Unannounced incidents remain unpredictable; correct dependence representation does not guarantee accurate incident arrival forecasts.",
+    "owner": "Arrival/severity and aggregate uncertainty owners",
+    "requirement_source": "Master plan company/team forecasts with limitations; 16-S09; coordination with track 07"
+  },
+  {
+    "id": "16-E10",
+    "family": "hybrid_component_overlap",
+    "scenario": "An additive hybrid combines a daily total forecast with full unfinished-request continuation; the daily target already contains that continuation, while a late provider correction overlaps telemetry.",
+    "mechanism": "Unfinished-work usage and late-incurred observations are counted in multiple components, biasing totals upward despite individually calibrated component forecasts.",
+    "detection": "Define request-start and occurrence-time partitions at each forecast cutoff; audit target provenance, observed invocation keys and component ownership.",
+    "response": "Active component predicts only future increments from requests started by the cutoff; arrival component predicts increments from later starts; late-incurred nowcast is disjoint. Keep daily totals as standalone comparator or feature-enriched model if partition is unavailable.",
+    "test_assertion": "For a fixture with an ongoing request, a future request and a late usage correction, each covered increment belongs to exactly one component; component totals reconcile to the target and cannot add full continuation to a total-demand baseline.",
+    "residual_limit": "Unidentified request starts or uncertain occurrence intervals may prevent an exact partition; disable the additive hybrid rather than assume disjointness.",
+    "owner": "Forecast target, reconciliation and hybrid model owners",
+    "requirement_source": "ai-spend-master-plan.md observed/forecast distinctions; 16 target formula; r04 telemetry cross-review"
+  }
+]

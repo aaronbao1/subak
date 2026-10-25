@@ -1,0 +1,122 @@
+[
+  {
+    "id": "18-E01",
+    "family": "allocation-semantics",
+    "scenario": "Finance requests another 50000 credits while an assistant reuses a redistribution template from the original Northstar state.",
+    "mechanism": "Envelope addition and existing-funds transfer are conflated, or alternative proposals are sequentially compounded.",
+    "detection": "Compare action kind, source budget version, units, company-envelope delta and team-delta sum.",
+    "response": "Return an explicit independent proposal branch with before/after totals and authorized addition amount; backend alone saves the selected branch.",
+    "test_assertion": "From 200000, redistribution produces 200000 and additions produce 250000; selecting one alternative does not silently apply the other; no provider balance changes.",
+    "residual_limit": "Arithmetic cannot infer authority or the correct business distribution.",
+    "owner": "Backend + Factory + frontend",
+    "requirement_source": "Master plan §§1 and 3; backend acceptance checks; frontend review/action/receipt."
+  },
+  {
+    "id": "18-E02",
+    "family": "censored-demand",
+    "scenario": "Product appears under budget after a provider cap and voluntary project deferral; finance proposes moving its headroom to research.",
+    "mechanism": "Observed spend is treated as uncapped demand and a soft internal allocation is confused with an external enforced constraint.",
+    "detection": "Inspect policy effective dates, enforcement/denial evidence, deferred-work context, coverage and whether unconstrained-demand identifiability is supported.",
+    "response": "Keep observed-spend forecast separate; disclose constrained-demand status and return a conditional scenario or unavailable latent-demand estimate.",
+    "test_assertion": "A cap-limited history cannot by itself yield a confident unconstrained-demand figure or automatic donor recommendation; internal allocation alone never implies censoring.",
+    "residual_limit": "Unlogged abandoned tasks and voluntary restraint may remain invisible.",
+    "owner": "Forecasting + context extraction + backend",
+    "requirement_source": "Master plan internal-allocation boundary and company-context scope; mentor lines 33–45; inference from Huh et al. and Perdomo et al."
+  },
+  {
+    "id": "18-E03",
+    "family": "policy-feedback-evaluation",
+    "scenario": "An overrun warning causes research to defer work and finance to increase allocation before period end; final spend is below the new budget.",
+    "mechanism": "Evaluator labels a useful warning a false positive or credits the model with savings using a threshold changed after issuance.",
+    "detection": "Join warning to issued budget version, action exposure, decision effective date and revised outcome basis.",
+    "response": "Report original-threshold prediction performance with policy-change qualification and record decision outcome separately; do not assert prevented spend without causal evidence.",
+    "test_assertion": "Historical alert and threshold remain reproducible after budget revisions; no forecast-minus-actual field is labeled realized savings.",
+    "residual_limit": "The no-warning/no-decision counterfactual is usually unobserved.",
+    "owner": "Evaluation + backend decision history",
+    "requirement_source": "Master plan evidence and decision history; mentor lines 49–51; performative-prediction research."
+  },
+  {
+    "id": "18-E04",
+    "family": "evidence-staleness",
+    "scenario": "A proposal is drafted from an approved research expansion, then that plan is cancelled while budget totals remain unchanged.",
+    "mechanism": "Only budget-version checks run, so semantic evidence staleness is missed.",
+    "detection": "Revalidate supporting context version, supersession, effective dates and affected forecast/scenario lineage at review/apply.",
+    "response": "Mark rationale stale and present the material forecast/proposal revision for renewed finance review; retain original packet.",
+    "test_assertion": "An unchanged budget version does not permit automatic application of a proposal with materially superseded supporting evidence.",
+    "residual_limit": "Unrecorded business changes cannot be detected from the corpus.",
+    "owner": "Factory + forecasting + backend + frontend",
+    "requirement_source": "Master plan newer approved plan versus old thread; frontend stale proposals; Factory context status distinctions."
+  },
+  {
+    "id": "18-E05",
+    "family": "period-and-cost-basis",
+    "scenario": "A 30-day usage-cost forecast is compared with current-month allocation while delayed prior-month charges and included subscription usage are added again.",
+    "mechanism": "Horizon, incurred/reporting basis and coverage mismatch manufacture a shortfall.",
+    "detection": "Validate exact endpoints, time zone, cost-category coverage, charge/service period and disjoint component lineage.",
+    "response": "Return compatible component forecasts or unavailable comparison; show late-incurred nowcast separately and avoid double counting.",
+    "test_assertion": "No risk probability is emitted for an unmapped budget period or mixed unit; duplicate included usage cannot increase the projected expense.",
+    "residual_limit": "Missing billing attribution may prevent a full-period total.",
+    "owner": "Backend + forecasting + frontend",
+    "requirement_source": "Master plan §2; mentor incurred-but-unbilled example lines 18–25; frontend comparable-period requirements."
+  },
+  {
+    "id": "18-E06",
+    "family": "judgment-and-reserve",
+    "scenario": "An approved workload expansion enters a contextual predictor, then an analyst adds the same uplift and finance adds a conservative reserve.",
+    "mechanism": "One event is counted twice and a risk preference becomes part of the forecast target, biasing evaluation.",
+    "detection": "Link adjustments to baseline information set and source-event IDs; require purpose forecast_adjustment versus allocation_reserve.",
+    "response": "Preserve baseline/adjustment/reserve separately, remove duplicated rationale and evaluate genuine forecast adjustments independently.",
+    "test_assertion": "Changing a reserve changes proposal risk tolerance/allocation, not historical forecast predictions; one workload event cannot silently contribute twice.",
+    "residual_limit": "Different signals may encode the same event without obvious identifiers.",
+    "owner": "Forecasting + Factory + finance review",
+    "requirement_source": "Master plan context facts do not justify multipliers; Factory numerical ownership; judgmental-adjustment research."
+  },
+  {
+    "id": "18-E07",
+    "family": "cross-team-spillover",
+    "scenario": "Research receives product funds, accelerates evaluation jobs and increases shared engineering support usage while product shifts work to next period.",
+    "mechanism": "A reallocation is evaluated as if team spending were fixed and independent, ignoring workload spillovers and time shifting.",
+    "detection": "Inspect shared-project dependencies, affected teams, scenario policy assumptions and forecast horizon coverage.",
+    "response": "Keep pure bookkeeping comparison labeled as fixed-spend; create an explicit affected-team workload scenario without claiming causal effect.",
+    "test_assertion": "The allocation edit cannot silently alter spend forecasts; an intervention scenario identifies affected teams/periods and uses coherent joint totals.",
+    "residual_limit": "Shared resources and unknown behavioral response may make intervention estimates unidentified.",
+    "owner": "Forecasting + Factory",
+    "requirement_source": "Master plan company/team comparison and company-context scope; inference from causal and performative methods."
+  },
+  {
+    "id": "18-E08",
+    "family": "rejected-action-lineage",
+    "scenario": "Finance rejects a proposed product reduction; a retry or later training job treats the proposal as an applied policy.",
+    "mechanism": "Draft/rejected events contaminate authoritative allocations, policy features or benefit analysis.",
+    "detection": "Require receipt-linked applied state and unique operation ID; distinguish proposal event time from effective applied-policy time.",
+    "response": "Leave saved allocations unchanged; retain rejection as decision evidence with its reason, not as a zero allocation or implemented action.",
+    "test_assertion": "Rejected and failed proposals do not change balances or applied-policy training features; retry of an applied decision cannot create a second budget mutation.",
+    "residual_limit": "Off-platform decisions need separate ingestion; rejection does not reveal the rejected action outcome.",
+    "owner": "Backend + evaluation + Factory",
+    "requirement_source": "Backend and frontend acceptance checks; master plan finance decision and saved result handoff."
+  },
+  {
+    "id": "18-E09",
+    "family": "false-efficiency",
+    "scenario": "Provider spend falls after a cheaper-model substitution, but staff abandon difficult tasks and spend more time reviewing successful outputs.",
+    "mechanism": "The dashboard labels lower bills as savings/ROI and analyzes only completed work.",
+    "detection": "Separate spend, attempted/completed/deferred/abandoned tasks, human review/rework time, quality evidence and missingness; inspect selection denominators.",
+    "response": "Report the spend change with outcome limitations; keep unmeasured productivity/opportunity cost unknown and offer scenario sensitivity if finance supplies values.",
+    "test_assertion": "Missing effort is never zero; dropping abandoned tasks cannot turn an unsupported spend reduction into measured productivity improvement.",
+    "residual_limit": "Task value, latent demand and parallel human/agent time can remain difficult to observe.",
+    "owner": "Evaluation + backend + frontend",
+    "requirement_source": "Research brief decision usefulness; master plan preserve explainable evidence; METR 2025 study and 2026 update."
+  },
+  {
+    "id": "18-E10",
+    "family": "probability-and-actionability",
+    "scenario": "A high-confidence extraction of a plan is presented as 90 percent overspend probability, and the warning arrives after the allocation review deadline.",
+    "mechanism": "Semantic certainty substitutes for calibrated spending uncertainty; lead time and action constraints are omitted.",
+    "detection": "Require uncertainty provenance, target definition, as-of timestamp, decision deadline and supported forecast distribution.",
+    "response": "Label plan evidence separately; withhold unsupported probabilities, present supported scenario amounts and state remaining feasible review options.",
+    "test_assertion": "Extraction scores cannot populate overspend probability; warning evaluation reports lead time and does not count post-deadline delivery as timely success.",
+    "residual_limit": "Even a well-calibrated warning may not permit an effective action.",
+    "owner": "Forecasting + Factory + evaluation + frontend",
+    "requirement_source": "Master plan uncertainty and ownership boundaries; mentor horizon-usefulness challenge lines 49–51; brief extraction confidence constraint."
+  }
+]

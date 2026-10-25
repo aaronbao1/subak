@@ -1,0 +1,122 @@
+[
+  {
+    "id": "15-E01",
+    "family": "dependence_and_aggregation",
+    "scenario": "Research and engineering share an evaluation burst, but samples are drawn independently by team and day.",
+    "mechanism": "Marginal distributions remain plausible while common-tail company-period risk is erased.",
+    "detection": "Compare cross-team/cross-date residual dependence and shared-burst event scores; verify path IDs survive transformations.",
+    "response": "Use aligned joint residual blocks or a qualified dependence model; withhold company risk if unsupported.",
+    "test_assertion": "Construct two $100/p=0.1 teams: independence gives P(total>150)=0.01, perfect co-burst gives 0.10; aggregator preserves assigned joint law.",
+    "residual_limit": "Observed correlations cannot identify a never-seen shared extreme.",
+    "owner": "Forecasting",
+    "requirement_source": "master plan §3 projections handoff; frontend §company/team overview"
+  },
+  {
+    "id": "15-E02",
+    "family": "quantile_arithmetic",
+    "scenario": "Two mostly zero days each show a daily p95 of zero and the UI adds p95 values.",
+    "mechanism": "Quantiles do not commute with temporal or entity summation.",
+    "detection": "Inspect whether period quantiles are computed from period distributions/complete paths rather than displayed component quantiles.",
+    "response": "Aggregate each path or fit/calibrate the total directly.",
+    "test_assertion": "Two independent $100 bursts each with p=.04 have daily p95=0 and two-day p95=100; total is not zero.",
+    "residual_limit": "Even correct aggregation inherits the path model assumptions.",
+    "owner": "Forecasting and Frontend",
+    "requirement_source": "master plan §3 supported uncertainty; frontend financial meaning acceptance"
+  },
+  {
+    "id": "15-E03",
+    "family": "overlapping_targets",
+    "scenario": "Twenty daily forecasts of one month end are treated as twenty independent calibrated monthly outcomes.",
+    "mechanism": "Repeated targets and overlapping sums inflate apparent calibration sample size and precision.",
+    "detection": "Track target-period IDs, overlap matrix, distinct mature periods and evaluation clustering.",
+    "response": "Preserve all forecast rows but report dependent evidence and group evaluation uncertainty by target/origin structure.",
+    "test_assertion": "Duplicating origins for an unchanged terminal target does not increase distinct-target count or narrow an IID evidence interval.",
+    "residual_limit": "Nonoverlapping periods may still share regimes.",
+    "owner": "Forecasting evaluation",
+    "requirement_source": "master plan forecast research TBDs; original transcript weekly/monthly comparison"
+  },
+  {
+    "id": "15-E04",
+    "family": "delayed_truth",
+    "scenario": "A long 30-day horizon is recalibrated tomorrow using a partially settled invoice.",
+    "mechanism": "Incomplete target is mislabeled as a low-spend final outcome, causing downward interval adaptation.",
+    "detection": "Pending-score queue keyed by target end, financial basis, maturity and truth version.",
+    "response": "Update only when declared target maturity is met; keep provisional evaluation separately.",
+    "test_assertion": "Partial invoice does not complete a mature-total residual or update that target calibrator; mature arrival updates it once.",
+    "residual_limit": "Maturity rules may miss later corrections.",
+    "owner": "Backend and Forecasting",
+    "requirement_source": "backend coverage/origin requirements; frontend delayed data cannot become zero"
+  },
+  {
+    "id": "15-E05",
+    "family": "revised_truth",
+    "scenario": "Provider restates a large burst after an ACI update and the new invoice triggers a second update.",
+    "mechanism": "One outcome is counted twice; calibrator state depends on connector retry order.",
+    "detection": "Version each outcome and maintain consumed-score/update ledger.",
+    "response": "Replace evidence through deterministic replay or a justified versioned correction; retain operational and restated metrics.",
+    "test_assertion": "Replaying identical source revisions produces same final calibration state; forecast artifact remains immutable.",
+    "residual_limit": "Replay policy itself needs validation after historical revisions.",
+    "owner": "Backend and Forecasting",
+    "requirement_source": "backend idempotency and history acceptance"
+  },
+  {
+    "id": "15-E06",
+    "family": "informative_reporting_delay",
+    "scenario": "High-spend bursts take longer to settle, while calibration includes only quickly settled normal days.",
+    "mechanism": "Complete-case selection changes the score distribution and hides the right tail.",
+    "detection": "Compare reported/mature delay by spend/activity strata; expose outstanding coverage and value estimates.",
+    "response": "Evaluate delay-aware nowcast and maturity policies; degrade risk availability when pending coverage is material.",
+    "test_assertion": "Synthetic delayed-burst fixture shows missing targets as pending, never zero, and qualification checks see selection imbalance.",
+    "residual_limit": "Unreported activity cannot be fully quantified without another signal.",
+    "owner": "Ingestion and Forecasting",
+    "requirement_source": "master plan measured/estimated coverage; backend source completeness"
+  },
+  {
+    "id": "15-E07",
+    "family": "conformal_boundary",
+    "scenario": "Eighteen calibration scores are used to claim a finite unrestricted 95% split-conformal bound; infinities are capped to fit a chart.",
+    "mechanism": "Rank exceeds calibration size and UI capping silently destroys the stated construction.",
+    "detection": "Check finite-sample rank, boundary alpha and infinite interval status before serialization.",
+    "response": "Return unbounded/insufficient-evidence state and keep point/actual values if available.",
+    "test_assertion": "At n=18 and alpha=.05 rank=19; no finite empirical rank is substituted; infinite bounds do not serialize as zero.",
+    "residual_limit": "Nineteen scores permit a finite bound but do not prove practical accuracy or independence.",
+    "owner": "Forecasting and Frontend",
+    "requirement_source": "master plan supported uncertainty/unavailable handoff"
+  },
+  {
+    "id": "15-E08",
+    "family": "support_and_revision",
+    "scenario": "A nonnegative gross-spend forecast is reused for net charges after a refund and cumulative paths are forcibly monotone.",
+    "mechanism": "Financial-basis mismatch removes legitimate negative revisions and can falsely mark overspend certain.",
+    "detection": "Carry gross/net and component basis through model/forecast/budget comparison; detect negative charge categories.",
+    "response": "Separate gross usage and credits or use a net model with appropriate support; reconcile once.",
+    "test_assertion": "A refund fixture is retained in net totals; gross-model support checks do not overwrite the refund or declare terminal exceedance certain.",
+    "residual_limit": "Future discretionary credits can remain unpredictable.",
+    "owner": "Backend and Forecasting",
+    "requirement_source": "master plan fixed/included/variable distinction and financial unit requirements"
+  },
+  {
+    "id": "15-E09",
+    "family": "scenario_probability",
+    "scenario": "An approved research launch has 0.9 extraction confidence and is presented as 90% probability of an expensive launch.",
+    "mechanism": "Semantic confidence is substituted for event probability; scenario weights fabricate a predictive mixture.",
+    "detection": "Require distinct provenance for scenario occurrence weights, extraction confidence and conditional spend distributions.",
+    "response": "Return scenario-conditioned totals; leave unconditional risk unavailable when weights are unknown.",
+    "test_assertion": "Changing extraction confidence alone never changes numeric scenario occurrence weights or unconditional spend probability.",
+    "residual_limit": "Approved plans can still be cancelled; defensible weights may never be available.",
+    "owner": "Factory and Forecasting",
+    "requirement_source": "Factory plans versus guaranteed events; no invented numerical multipliers"
+  },
+  {
+    "id": "15-E10",
+    "family": "rare_burst_and_weighting",
+    "scenario": "A new provider/project is compared with a heavily recency-weighted residual pool containing no extreme bursts.",
+    "mechanism": "Small effective support plus changed conditional law makes narrow weighted intervals look adapted while tail mass disappears.",
+    "detection": "Report weight concentration, mature-tail counts, provider/project shift and subgroup coverage; test shared-burst scenarios.",
+    "response": "Compare broader pooling, explicit tail challengers and unweighted stress cases; qualify or withhold tail probability.",
+    "test_assertion": "Fixture with identical ordinary marginals and a new shared-burst regime triggers an unsupported-tail state despite many Monte Carlo draws.",
+    "residual_limit": "No retrospective estimator identifies unannounced paradigm changes reliably.",
+    "owner": "Forecasting",
+    "requirement_source": "master plan no claim to predict every adoption change; frontend uncertain outcomes"
+  }
+]

@@ -1,0 +1,5127 @@
+{
+  "schema": "native-token-benchmark-v1",
+  "unit": "tokens",
+  "bin_seconds": 3600.0,
+  "observations": 1462,
+  "total_tokens": 872916802.0,
+  "context_bins": 64,
+  "protocol": "fixed zero-shot procedures; no D/C selection or fitted calibration; final 20% chronological",
+  "final_fraction": 0.2,
+  "seed": 0,
+  "foundation": {
+    "adapter_sha256": "293f971a981ac9c7b81058be6b06207df4ca34df3e69b213d0ba68d04f6f6be7",
+    "load_failure": "ModuleNotFoundError: No module named 'chronos'",
+    "cold_load_seconds": 0.725933708
+  },
+  "internal_joint_dates": "arbitrary integer-bin index mapped to consecutive date API; not calendar-day evidence",
+  "forecast_statistics": {
+    "foundation": "native adapter point; see model metadata",
+    "joint_block_mean": "empirical joint-path mean, uncalibrated",
+    "last_observation": "point",
+    "trailing_mean_16": "point",
+    "seasonal_naive": "point"
+  },
+  "limitations": [
+    "one public serving trace, not companies or enterprise invoices",
+    "pretraining contamination unknown",
+    "no monthly/daily financial validation or empirical probability calibration",
+    "native bins assumed fully observed only per accompanying acquisition provenance",
+    "success-conditional loss must be read alongside all-opportunity availability"
+  ],
+  "horizons": {
+    "1": {
+      "horizon_seconds": 3600.0,
+      "origin_indices": [
+        1170,
+        1185,
+        1201,
+        1216,
+        1231,
+        1247,
+        1262,
+        1277,
+        1293,
+        1308,
+        1323,
+        1338,
+        1354,
+        1369,
+        1384,
+        1400,
+        1415,
+        1430,
+        1446,
+        1461
+      ],
+      "nonoverlapping_target_blocks": 20,
+      "origin_manifest_sha256": "86dcfd734742128b40ec825056f6f5d5265aea0aa51a9f8d4a057306eb6efe9d",
+      "summaries": {
+        "foundation": {
+          "opportunities": 20,
+          "successes": 0,
+          "failures": 20,
+          "availability": 0.0,
+          "mae_tokens": null,
+          "rmse_tokens": null,
+          "bias_tokens": null,
+          "wape": null,
+          "worst_absolute_loss_tokens": null,
+          "latency_seconds_total": 1.9664000000085835e-05,
+          "latency_seconds_median": 8.750000000112834e-07,
+          "failure_reasons": {
+            "ValueError: genuine pretrained checkpoint/runtime not supplied": 20
+          }
+        },
+        "joint_block_mean": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 349854.73154687503,
+          "rmse_tokens": 563462.6387798982,
+          "bias_tokens": 62261.65226562501,
+          "wape": 0.9662015785089269,
+          "worst_absolute_loss_tokens": 2091829.5771875,
+          "latency_seconds_total": 0.06163825299999992,
+          "latency_seconds_median": 0.0026428539999999723,
+          "failure_reasons": {}
+        },
+        "last_observation": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 358746.0,
+          "rmse_tokens": 632312.3739346716,
+          "bias_tokens": -39471.3,
+          "wape": 0.9907567919724468,
+          "worst_absolute_loss_tokens": 2227238.0,
+          "latency_seconds_total": 2.3085000000033773e-05,
+          "latency_seconds_median": 1.0624999999819806e-06,
+          "failure_reasons": {}
+        },
+        "seasonal_naive": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 463495.5,
+          "rmse_tokens": 724914.4154765444,
+          "bias_tokens": 110161.6,
+          "wape": 1.2800458114478357,
+          "worst_absolute_loss_tokens": 2246774.0,
+          "latency_seconds_total": 2.9295000000151283e-05,
+          "latency_seconds_median": 1.4375000000343974e-06,
+          "failure_reasons": {}
+        },
+        "trailing_mean_16": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 345308.5625,
+          "rmse_tokens": 555076.4526495934,
+          "bias_tokens": 27819.1375,
+          "wape": 0.9536463225321458,
+          "worst_absolute_loss_tokens": 2066495.4375,
+          "latency_seconds_total": 0.00015554399999995194,
+          "latency_seconds_median": 7.812499999981792e-06,
+          "failure_reasons": {}
+        },
+        "zero_diagnostic": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 362092.9,
+          "rmse_tokens": 624023.6603201837,
+          "bias_tokens": -362092.9,
+          "wape": 1.0,
+          "worst_absolute_loss_tokens": 2316811.0,
+          "latency_seconds_total": 1.4957000000093146e-05,
+          "latency_seconds_median": 7.499999999938112e-07,
+          "failure_reasons": {}
+        }
+      },
+      "paired_vs_last_observation": {
+        "foundation": {
+          "matched_opportunities": 0,
+          "mean_absolute_loss_difference_vs_last_tokens": null,
+          "wins": 0,
+          "ties": 0,
+          "losses": 0
+        },
+        "joint_block_mean": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": -8891.268453125,
+          "wins": 8,
+          "ties": 0,
+          "losses": 12
+        },
+        "last_observation": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 0.0,
+          "wins": 0,
+          "ties": 20,
+          "losses": 0
+        },
+        "seasonal_naive": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 104749.5,
+          "wins": 7,
+          "ties": 0,
+          "losses": 13
+        },
+        "trailing_mean_16": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": -13437.4375,
+          "wins": 10,
+          "ties": 0,
+          "losses": 10
+        },
+        "zero_diagnostic": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 3346.9,
+          "wins": 8,
+          "ties": 1,
+          "losses": 11
+        }
+      },
+      "matched_success_origins": [],
+      "matched_success_summaries": {},
+      "slices": {
+        "slice_zero_target": {},
+        "slice_high_load_target": {
+          "foundation": {
+            "opportunities": 1,
+            "successes": 0,
+            "failures": 1,
+            "availability": 0.0,
+            "mae_tokens": null,
+            "rmse_tokens": null,
+            "bias_tokens": null,
+            "wape": null,
+            "worst_absolute_loss_tokens": null,
+            "latency_seconds_total": 1.7909999999732307e-06,
+            "latency_seconds_median": 1.7909999999732307e-06,
+            "failure_reasons": {
+              "ValueError: genuine pretrained checkpoint/runtime not supplied": 1
+            }
+          },
+          "joint_block_mean": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2091829.5771875,
+            "rmse_tokens": 2091829.5771875,
+            "bias_tokens": -2091829.5771875,
+            "wape": 0.9028917668240957,
+            "worst_absolute_loss_tokens": 2091829.5771875,
+            "latency_seconds_total": 0.01109983399999992,
+            "latency_seconds_median": 0.01109983399999992,
+            "failure_reasons": {}
+          },
+          "last_observation": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2227238.0,
+            "rmse_tokens": 2227238.0,
+            "bias_tokens": -2227238.0,
+            "wape": 0.9613378044216814,
+            "worst_absolute_loss_tokens": 2227238.0,
+            "latency_seconds_total": 2.500000000016378e-06,
+            "latency_seconds_median": 2.500000000016378e-06,
+            "failure_reasons": {}
+          },
+          "seasonal_naive": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2246774.0,
+            "rmse_tokens": 2246774.0,
+            "bias_tokens": -2246774.0,
+            "wape": 0.9697700848278086,
+            "worst_absolute_loss_tokens": 2246774.0,
+            "latency_seconds_total": 2.1669999999973655e-06,
+            "latency_seconds_median": 2.1669999999973655e-06,
+            "failure_reasons": {}
+          },
+          "trailing_mean_16": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2066495.4375,
+            "rmse_tokens": 2066495.4375,
+            "bias_tokens": -2066495.4375,
+            "wape": 0.8919568482280169,
+            "worst_absolute_loss_tokens": 2066495.4375,
+            "latency_seconds_total": 8.499999999966867e-06,
+            "latency_seconds_median": 8.499999999966867e-06,
+            "failure_reasons": {}
+          },
+          "zero_diagnostic": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2316811.0,
+            "rmse_tokens": 2316811.0,
+            "bias_tokens": -2316811.0,
+            "wape": 1.0,
+            "worst_absolute_loss_tokens": 2316811.0,
+            "latency_seconds_total": 7.499999999938112e-07,
+            "latency_seconds_median": 7.499999999938112e-07,
+            "failure_reasons": {}
+          }
+        },
+        "slice_burst_target": {
+          "foundation": {
+            "opportunities": 1,
+            "successes": 0,
+            "failures": 1,
+            "availability": 0.0,
+            "mae_tokens": null,
+            "rmse_tokens": null,
+            "bias_tokens": null,
+            "wape": null,
+            "worst_absolute_loss_tokens": null,
+            "latency_seconds_total": 1.7909999999732307e-06,
+            "latency_seconds_median": 1.7909999999732307e-06,
+            "failure_reasons": {
+              "ValueError: genuine pretrained checkpoint/runtime not supplied": 1
+            }
+          },
+          "joint_block_mean": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2091829.5771875,
+            "rmse_tokens": 2091829.5771875,
+            "bias_tokens": -2091829.5771875,
+            "wape": 0.9028917668240957,
+            "worst_absolute_loss_tokens": 2091829.5771875,
+            "latency_seconds_total": 0.01109983399999992,
+            "latency_seconds_median": 0.01109983399999992,
+            "failure_reasons": {}
+          },
+          "last_observation": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2227238.0,
+            "rmse_tokens": 2227238.0,
+            "bias_tokens": -2227238.0,
+            "wape": 0.9613378044216814,
+            "worst_absolute_loss_tokens": 2227238.0,
+            "latency_seconds_total": 2.500000000016378e-06,
+            "latency_seconds_median": 2.500000000016378e-06,
+            "failure_reasons": {}
+          },
+          "seasonal_naive": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2246774.0,
+            "rmse_tokens": 2246774.0,
+            "bias_tokens": -2246774.0,
+            "wape": 0.9697700848278086,
+            "worst_absolute_loss_tokens": 2246774.0,
+            "latency_seconds_total": 2.1669999999973655e-06,
+            "latency_seconds_median": 2.1669999999973655e-06,
+            "failure_reasons": {}
+          },
+          "trailing_mean_16": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2066495.4375,
+            "rmse_tokens": 2066495.4375,
+            "bias_tokens": -2066495.4375,
+            "wape": 0.8919568482280169,
+            "worst_absolute_loss_tokens": 2066495.4375,
+            "latency_seconds_total": 8.499999999966867e-06,
+            "latency_seconds_median": 8.499999999966867e-06,
+            "failure_reasons": {}
+          },
+          "zero_diagnostic": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 2316811.0,
+            "rmse_tokens": 2316811.0,
+            "bias_tokens": -2316811.0,
+            "wape": 1.0,
+            "worst_absolute_loss_tokens": 2316811.0,
+            "latency_seconds_total": 7.499999999938112e-07,
+            "latency_seconds_median": 7.499999999938112e-07,
+            "failure_reasons": {}
+          }
+        }
+      },
+      "records": [
+        {
+          "candidate": "last_observation",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": 89573.0,
+          "failure": null,
+          "latency_seconds": 2.500000000016378e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            89573.0
+          ],
+          "error_tokens": -2227238.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": 250315.5625,
+          "failure": null,
+          "latency_seconds": 8.499999999966867e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            250315.5625
+          ],
+          "error_tokens": -2066495.4375
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -2316811.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": 224981.4228125,
+          "failure": null,
+          "latency_seconds": 0.01109983399999992,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            224981.4228125
+          ],
+          "error_tokens": -2091829.5771875
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": 70037.0,
+          "failure": null,
+          "latency_seconds": 2.1669999999973655e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            70037.0
+          ],
+          "error_tokens": -2246774.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1170,
+          "target_end_exclusive": 1171,
+          "horizon_bins": 1,
+          "truth_tokens": 2316811.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.7909999999732307e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": 177394.0,
+          "failure": null,
+          "latency_seconds": 1.2500000000637002e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            177394.0
+          ],
+          "error_tokens": -126483.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": 442780.625,
+          "failure": null,
+          "latency_seconds": 7.749999999973056e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            442780.625
+          ],
+          "error_tokens": 138903.625
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.090000000431473e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -303877.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": 524388.966875,
+          "failure": null,
+          "latency_seconds": 0.002777666999999928,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            524388.966875
+          ],
+          "error_tokens": 220511.96687500004
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": 327034.0,
+          "failure": null,
+          "latency_seconds": 1.5829999999716904e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            327034.0
+          ],
+          "error_tokens": 23157.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1185,
+          "target_end_exclusive": 1186,
+          "horizon_bins": 1,
+          "truth_tokens": 303877.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.1659999999968917e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": 94781.0,
+          "failure": null,
+          "latency_seconds": 1.1659999999968917e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            94781.0
+          ],
+          "error_tokens": 8458.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": 268171.875,
+          "failure": null,
+          "latency_seconds": 8.4169999999828e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            268171.875
+          ],
+          "error_tokens": 181848.875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.910000000554973e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -86323.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": 269377.53250000003,
+          "failure": null,
+          "latency_seconds": 0.002747249999999979,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            269377.53250000003
+          ],
+          "error_tokens": 183054.53250000003
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": 29082.0,
+          "failure": null,
+          "latency_seconds": 1.4580000000652404e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            29082.0
+          ],
+          "error_tokens": -57241.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1201,
+          "target_end_exclusive": 1202,
+          "horizon_bins": 1,
+          "truth_tokens": 86323.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.0419999999511376e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": 387939.0,
+          "failure": null,
+          "latency_seconds": 1.1249999999352056e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            387939.0
+          ],
+          "error_tokens": -451184.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": 368010.3125,
+          "failure": null,
+          "latency_seconds": 8.208999999981259e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            368010.3125
+          ],
+          "error_tokens": -471112.6875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.90999999944475e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -839123.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": 444399.6115625,
+          "failure": null,
+          "latency_seconds": 0.002752375000000029,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            444399.6115625
+          ],
+          "error_tokens": -394723.3884375
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": 161684.0,
+          "failure": null,
+          "latency_seconds": 1.8330000000066349e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            161684.0
+          ],
+          "error_tokens": -677439.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1216,
+          "target_end_exclusive": 1217,
+          "horizon_bins": 1,
+          "truth_tokens": 839123.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.5420000000210266e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.37499999997015e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -2842.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": 320649.8125,
+          "failure": null,
+          "latency_seconds": 7.666999999988988e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            320649.8125
+          ],
+          "error_tokens": 317807.8125
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.07999999960407e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -2842.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": 279017.2725,
+          "failure": null,
+          "latency_seconds": 0.0025033750000000854,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            279017.2725
+          ],
+          "error_tokens": 276175.2725
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": 49756.0,
+          "failure": null,
+          "latency_seconds": 1.4999999999876223e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            49756.0
+          ],
+          "error_tokens": 46914.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1231,
+          "target_end_exclusive": 1232,
+          "horizon_bins": 1,
+          "truth_tokens": 2842.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": 425632.0,
+          "failure": null,
+          "latency_seconds": 1.1670000000796321e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            425632.0
+          ],
+          "error_tokens": 392436.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": 567259.3125,
+          "failure": null,
+          "latency_seconds": 7.45900000009847e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            567259.3125
+          ],
+          "error_tokens": 534063.3125
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -33196.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": 621482.6028125,
+          "failure": null,
+          "latency_seconds": 0.0025574170000000063,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            621482.6028125
+          ],
+          "error_tokens": 588286.6028125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": 511793.0,
+          "failure": null,
+          "latency_seconds": 1.5829999999716904e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            511793.0
+          ],
+          "error_tokens": 478597.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1247,
+          "target_end_exclusive": 1248,
+          "horizon_bins": 1,
+          "truth_tokens": 33196.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.0409999999794195e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": 50017.0,
+          "failure": null,
+          "latency_seconds": 1.2500000000637002e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            50017.0
+          ],
+          "error_tokens": -484775.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": 94986.125,
+          "failure": null,
+          "latency_seconds": 7.958000000085619e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            94986.125
+          ],
+          "error_tokens": -439805.875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 8.340000000606196e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -534792.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": 164132.0840625,
+          "failure": null,
+          "latency_seconds": 0.002604042000000084,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            164132.0840625
+          ],
+          "error_tokens": -370659.91593749996
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": 664082.0,
+          "failure": null,
+          "latency_seconds": 1.4590000000369585e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            664082.0
+          ],
+          "error_tokens": 129290.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1262,
+          "target_end_exclusive": 1263,
+          "horizon_bins": 1,
+          "truth_tokens": 534792.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.170000000446876e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": 15959.0,
+          "failure": null,
+          "latency_seconds": 1.0419999999511376e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            15959.0
+          ],
+          "error_tokens": 8610.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": 624092.0,
+          "failure": null,
+          "latency_seconds": 7.1670000000301215e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            624092.0
+          ],
+          "error_tokens": 616743.0
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.910000000554973e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -7349.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": 700220.7365625,
+          "failure": null,
+          "latency_seconds": 0.0026147079999999656,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            700220.7365625
+          ],
+          "error_tokens": 692871.7365625
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.4999999999876223e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -7349.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1277,
+          "target_end_exclusive": 1278,
+          "horizon_bins": 1,
+          "truth_tokens": 7349.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.170000000446876e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": 139978.0,
+          "failure": null,
+          "latency_seconds": 1.0839999999845418e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            139978.0
+          ],
+          "error_tokens": 74797.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": 77630.5,
+          "failure": null,
+          "latency_seconds": 8.000000000008e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            77630.5
+          ],
+          "error_tokens": 12449.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.920000000272154e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -65181.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": 155329.1175,
+          "failure": null,
+          "latency_seconds": 0.002653041999999939,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            155329.1175
+          ],
+          "error_tokens": 90148.1175
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": 1151414.0,
+          "failure": null,
+          "latency_seconds": 1.4170000000035543e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1151414.0
+          ],
+          "error_tokens": 1086233.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1293,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 1,
+          "truth_tokens": 65181.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": 164499.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            164499.0
+          ],
+          "error_tokens": 12239.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": 54589.5625,
+          "failure": null,
+          "latency_seconds": 7.957999999974597e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            54589.5625
+          ],
+          "error_tokens": -97670.4375
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -152260.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": 177633.810625,
+          "failure": null,
+          "latency_seconds": 0.0026208329999999336,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            177633.810625
+          ],
+          "error_tokens": 25373.810625000013
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": 103816.0,
+          "failure": null,
+          "latency_seconds": 1.1669999999686098e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            103816.0
+          ],
+          "error_tokens": -48444.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1308,
+          "target_end_exclusive": 1309,
+          "horizon_bins": 1,
+          "truth_tokens": 152260.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.329999999778792e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": 30865.0,
+          "failure": null,
+          "latency_seconds": 1.0000000000287557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            30865.0
+          ],
+          "error_tokens": 30788.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": 418299.6875,
+          "failure": null,
+          "latency_seconds": 8.000000000008e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            418299.6875
+          ],
+          "error_tokens": 418222.6875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -77.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": 410890.663125,
+          "failure": null,
+          "latency_seconds": 0.0026372919999999578,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            410890.663125
+          ],
+          "error_tokens": 410813.663125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": 10006.0,
+          "failure": null,
+          "latency_seconds": 1.3340000000194863e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            10006.0
+          ],
+          "error_tokens": 9929.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1323,
+          "target_end_exclusive": 1324,
+          "horizon_bins": 1,
+          "truth_tokens": 77.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.329999999778792e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": 228771.0,
+          "failure": null,
+          "latency_seconds": 1.0419999999511376e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            228771.0
+          ],
+          "error_tokens": -15693.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": 182756.3125,
+          "failure": null,
+          "latency_seconds": 7.832999999957124e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            182756.3125
+          ],
+          "error_tokens": -61707.6875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -244464.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": 225746.08875,
+          "failure": null,
+          "latency_seconds": 0.002630000000000021,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            225746.08875
+          ],
+          "error_tokens": -18717.911250000005
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": 632999.0,
+          "failure": null,
+          "latency_seconds": 1.2499999999526779e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            632999.0
+          ],
+          "error_tokens": 388535.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1338,
+          "target_end_exclusive": 1339,
+          "horizon_bins": 1,
+          "truth_tokens": 244464.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": 368901.0,
+          "failure": null,
+          "latency_seconds": 1.0839999999845418e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            368901.0
+          ],
+          "error_tokens": 211804.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": 255399.75,
+          "failure": null,
+          "latency_seconds": 7.79200000000646e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            255399.75
+          ],
+          "error_tokens": 98302.75
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.090000000431473e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -157097.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": 319186.600625,
+          "failure": null,
+          "latency_seconds": 0.0026467079999999976,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            319186.600625
+          ],
+          "error_tokens": 162089.60062500002
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": 372092.0,
+          "failure": null,
+          "latency_seconds": 1.4580000000652404e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            372092.0
+          ],
+          "error_tokens": 214995.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1354,
+          "target_end_exclusive": 1355,
+          "horizon_bins": 1,
+          "truth_tokens": 157097.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": 776083.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            776083.0
+          ],
+          "error_tokens": 305389.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": 771109.25,
+          "failure": null,
+          "latency_seconds": 7.874999999990528e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            771109.25
+          ],
+          "error_tokens": 300415.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.920000000272154e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -470694.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": 853070.4828125,
+          "failure": null,
+          "latency_seconds": 0.0026285839999999894,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            853070.4828125
+          ],
+          "error_tokens": 382376.4828125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": 222120.0,
+          "failure": null,
+          "latency_seconds": 1.291999999986082e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            222120.0
+          ],
+          "error_tokens": -248574.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1369,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 1,
+          "truth_tokens": 470694.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": 528141.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            528141.0
+          ],
+          "error_tokens": -215257.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": 705295.875,
+          "failure": null,
+          "latency_seconds": 7.70899999991137e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            705295.875
+          ],
+          "error_tokens": -38102.125
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -743398.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": 757088.971875,
+          "failure": null,
+          "latency_seconds": 0.0026316250000000263,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            757088.971875
+          ],
+          "error_tokens": 13690.971875000047
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": 1970246.0,
+          "failure": null,
+          "latency_seconds": 1.3340000000194863e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1970246.0
+          ],
+          "error_tokens": 1226848.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1384,
+          "target_end_exclusive": 1385,
+          "horizon_bins": 1,
+          "truth_tokens": 743398.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": 225811.0,
+          "failure": null,
+          "latency_seconds": 1.0419999999511376e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            225811.0
+          ],
+          "error_tokens": -185227.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": 687783.125,
+          "failure": null,
+          "latency_seconds": 8.083999999963787e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            687783.125
+          ],
+          "error_tokens": 276745.125
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.90999999944475e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -411038.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": 744830.29625,
+          "failure": null,
+          "latency_seconds": 0.0026500419999999636,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            744830.29625
+          ],
+          "error_tokens": 333792.29625
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": 163520.0,
+          "failure": null,
+          "latency_seconds": 1.333999999908464e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            163520.0
+          ],
+          "error_tokens": -247518.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1400,
+          "target_end_exclusive": 1401,
+          "horizon_bins": 1,
+          "truth_tokens": 411038.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": 798063.0,
+          "failure": null,
+          "latency_seconds": 9.589999999670695e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            798063.0
+          ],
+          "error_tokens": 707074.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": 594229.6875,
+          "failure": null,
+          "latency_seconds": 7.083000000074335e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            594229.6875
+          ],
+          "error_tokens": 503240.6875
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 6.659999999270028e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -90989.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": 521383.888125,
+          "failure": null,
+          "latency_seconds": 0.002916375000000082,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            521383.888125
+          ],
+          "error_tokens": 430394.888125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": 1230004.0,
+          "failure": null,
+          "latency_seconds": 1.5840000000544308e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1230004.0
+          ],
+          "error_tokens": 1139015.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1415,
+          "target_end_exclusive": 1416,
+          "horizon_bins": 1,
+          "truth_tokens": 90989.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": 1689538.0,
+          "failure": null,
+          "latency_seconds": 1.0000000000287557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1689538.0
+          ],
+          "error_tokens": 1262863.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": 521278.25,
+          "failure": null,
+          "latency_seconds": 7.249999999903167e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            521278.25
+          ],
+          "error_tokens": 94603.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.080000000714293e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -426675.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": 467026.9121875,
+          "failure": null,
+          "latency_seconds": 0.002638999999999947,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            467026.9121875
+          ],
+          "error_tokens": 40351.912187499984
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": 1029983.0,
+          "failure": null,
+          "latency_seconds": 1.3750000000811724e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1029983.0
+          ],
+          "error_tokens": 603308.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1430,
+          "target_end_exclusive": 1431,
+          "horizon_bins": 1,
+          "truth_tokens": 426675.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": 6365.0,
+          "failure": null,
+          "latency_seconds": 1.0000000000287557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            6365.0
+          ],
+          "error_tokens": -273474.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": 381694.75,
+          "failure": null,
+          "latency_seconds": 7.79200000000646e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            381694.75
+          ],
+          "error_tokens": 101855.75
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -279839.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": 342423.371875,
+          "failure": null,
+          "latency_seconds": 0.002672792000000035,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            342423.371875
+          ],
+          "error_tokens": 62584.37187500001
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": 418883.0,
+          "failure": null,
+          "latency_seconds": 1.3330000000477682e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            418883.0
+          ],
+          "error_tokens": 139044.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1446,
+          "target_end_exclusive": 1447,
+          "horizon_bins": 1,
+          "truth_tokens": 279839.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.330000000889015e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": 254122.0,
+          "failure": null,
+          "latency_seconds": 1.0000000000287557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            254122.0
+          ],
+          "error_tokens": 178289.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": 211908.375,
+          "failure": null,
+          "latency_seconds": 7.041000000040931e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            211908.375
+          ],
+          "error_tokens": 136075.375
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 6.249999999763389e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0
+          ],
+          "error_tokens": -75833.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": 284480.611875,
+          "failure": null,
+          "latency_seconds": 0.0026552920000000313,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            284480.611875
+          ],
+          "error_tokens": 208647.611875
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": 326539.0,
+          "failure": null,
+          "latency_seconds": 1.3340000000194863e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            326539.0
+          ],
+          "error_tokens": 250706.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1461,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 1,
+          "truth_tokens": 75833.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.329999999778792e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        }
+      ]
+    },
+    "4": {
+      "horizon_seconds": 14400.0,
+      "origin_indices": [
+        1170,
+        1186,
+        1202,
+        1214,
+        1230,
+        1246,
+        1262,
+        1278,
+        1290,
+        1306,
+        1322,
+        1338,
+        1350,
+        1366,
+        1382,
+        1398,
+        1414,
+        1426,
+        1442,
+        1458
+      ],
+      "nonoverlapping_target_blocks": 20,
+      "origin_manifest_sha256": "a25f5fc5a0fe013ff0c9ddcaabe7e8dda60d095e9d35116d2775613b0b5c4d53",
+      "summaries": {
+        "foundation": {
+          "opportunities": 20,
+          "successes": 0,
+          "failures": 20,
+          "availability": 0.0,
+          "mae_tokens": null,
+          "rmse_tokens": null,
+          "bias_tokens": null,
+          "wape": null,
+          "worst_absolute_loss_tokens": null,
+          "latency_seconds_total": 1.9289999999894114e-05,
+          "latency_seconds_median": 8.750000000112834e-07,
+          "failure_reasons": {
+            "ValueError: genuine pretrained checkpoint/runtime not supplied": 20
+          }
+        },
+        "joint_block_mean": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 1352666.97509375,
+          "rmse_tokens": 1876421.1998248722,
+          "bias_tokens": 128690.82759375003,
+          "wape": 0.8554455956764825,
+          "worst_absolute_loss_tokens": 5310037.636875,
+          "latency_seconds_total": 0.04666274899999978,
+          "latency_seconds_median": 0.002311041499999944,
+          "failure_reasons": {}
+        },
+        "last_observation": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 824088.75,
+          "rmse_tokens": 1636480.0420295538,
+          "bias_tokens": -520292.95,
+          "wape": 0.52116530130055,
+          "worst_absolute_loss_tokens": 5846013.0,
+          "latency_seconds_total": 2.879200000061033e-05,
+          "latency_seconds_median": 1.3750000000811724e-06,
+          "failure_reasons": {}
+        },
+        "seasonal_naive": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 1100305.0,
+          "rmse_tokens": 1667631.0964594658,
+          "bias_tokens": 229239.4,
+          "wape": 0.6958483377518522,
+          "worst_absolute_loss_tokens": 4870936.0,
+          "latency_seconds_total": 3.89179999999989e-05,
+          "latency_seconds_median": 1.875000000040039e-06,
+          "failure_reasons": {}
+        },
+        "trailing_mean_16": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 1342390.0,
+          "rmse_tokens": 1848295.4412746965,
+          "bias_tokens": -52959.8,
+          "wape": 0.8489462922686972,
+          "worst_absolute_loss_tokens": 5203042.75,
+          "latency_seconds_total": 0.0001645000000002339,
+          "latency_seconds_median": 8.124999999969962e-06,
+          "failure_reasons": {}
+        },
+        "zero_diagnostic": {
+          "opportunities": 20,
+          "successes": 20,
+          "failures": 0,
+          "availability": 1.0,
+          "mae_tokens": 1581242.55,
+          "rmse_tokens": 2230175.7963503795,
+          "bias_tokens": -1581242.55,
+          "wape": 1.0,
+          "worst_absolute_loss_tokens": 6204305.0,
+          "latency_seconds_total": 2.1496999999870425e-05,
+          "latency_seconds_median": 1.0830000000128237e-06,
+          "failure_reasons": {}
+        }
+      },
+      "paired_vs_last_observation": {
+        "foundation": {
+          "matched_opportunities": 0,
+          "mean_absolute_loss_difference_vs_last_tokens": null,
+          "wins": 0,
+          "ties": 0,
+          "losses": 0
+        },
+        "joint_block_mean": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 528578.22509375,
+          "wins": 8,
+          "ties": 0,
+          "losses": 12
+        },
+        "last_observation": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 0.0,
+          "wins": 0,
+          "ties": 20,
+          "losses": 0
+        },
+        "seasonal_naive": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 276216.25,
+          "wins": 10,
+          "ties": 0,
+          "losses": 10
+        },
+        "trailing_mean_16": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 518301.25,
+          "wins": 7,
+          "ties": 0,
+          "losses": 13
+        },
+        "zero_diagnostic": {
+          "matched_opportunities": 20,
+          "mean_absolute_loss_difference_vs_last_tokens": 757153.8,
+          "wins": 3,
+          "ties": 0,
+          "losses": 17
+        }
+      },
+      "matched_success_origins": [],
+      "matched_success_summaries": {},
+      "slices": {
+        "slice_zero_target": {},
+        "slice_high_load_target": {
+          "foundation": {
+            "opportunities": 1,
+            "successes": 0,
+            "failures": 1,
+            "availability": 0.0,
+            "mae_tokens": null,
+            "rmse_tokens": null,
+            "bias_tokens": null,
+            "wape": null,
+            "worst_absolute_loss_tokens": null,
+            "latency_seconds_total": 9.999999999177334e-07,
+            "latency_seconds_median": 9.999999999177334e-07,
+            "failure_reasons": {
+              "ValueError: genuine pretrained checkpoint/runtime not supplied": 1
+            }
+          },
+          "joint_block_mean": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5310037.636875,
+            "rmse_tokens": 5310037.636875,
+            "bias_tokens": -5310037.636875,
+            "wape": 0.8558634104666034,
+            "worst_absolute_loss_tokens": 5310037.636875,
+            "latency_seconds_total": 0.0023668749999999905,
+            "latency_seconds_median": 0.0023668749999999905,
+            "failure_reasons": {}
+          },
+          "last_observation": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5846013.0,
+            "rmse_tokens": 5846013.0,
+            "bias_tokens": -5846013.0,
+            "wape": 0.9422510659936931,
+            "worst_absolute_loss_tokens": 5846013.0,
+            "latency_seconds_total": 1.792000000055971e-06,
+            "latency_seconds_median": 1.792000000055971e-06,
+            "failure_reasons": {}
+          },
+          "seasonal_naive": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 4870936.0,
+            "rmse_tokens": 4870936.0,
+            "bias_tokens": -4870936.0,
+            "wape": 0.7850897078721952,
+            "worst_absolute_loss_tokens": 4870936.0,
+            "latency_seconds_total": 2.0840000000132974e-06,
+            "latency_seconds_median": 2.0840000000132974e-06,
+            "failure_reasons": {}
+          },
+          "trailing_mean_16": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5203042.75,
+            "rmse_tokens": 5203042.75,
+            "bias_tokens": -5203042.75,
+            "wape": 0.8386181449815894,
+            "worst_absolute_loss_tokens": 5203042.75,
+            "latency_seconds_total": 8.165999999976137e-06,
+            "latency_seconds_median": 8.165999999976137e-06,
+            "failure_reasons": {}
+          },
+          "zero_diagnostic": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 6204305.0,
+            "rmse_tokens": 6204305.0,
+            "bias_tokens": -6204305.0,
+            "wape": 1.0,
+            "worst_absolute_loss_tokens": 6204305.0,
+            "latency_seconds_total": 1.291999999986082e-06,
+            "latency_seconds_median": 1.291999999986082e-06,
+            "failure_reasons": {}
+          }
+        },
+        "slice_burst_target": {
+          "foundation": {
+            "opportunities": 1,
+            "successes": 0,
+            "failures": 1,
+            "availability": 0.0,
+            "mae_tokens": null,
+            "rmse_tokens": null,
+            "bias_tokens": null,
+            "wape": null,
+            "worst_absolute_loss_tokens": null,
+            "latency_seconds_total": 9.999999999177334e-07,
+            "latency_seconds_median": 9.999999999177334e-07,
+            "failure_reasons": {
+              "ValueError: genuine pretrained checkpoint/runtime not supplied": 1
+            }
+          },
+          "joint_block_mean": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5310037.636875,
+            "rmse_tokens": 5310037.636875,
+            "bias_tokens": -5310037.636875,
+            "wape": 0.8558634104666034,
+            "worst_absolute_loss_tokens": 5310037.636875,
+            "latency_seconds_total": 0.0023668749999999905,
+            "latency_seconds_median": 0.0023668749999999905,
+            "failure_reasons": {}
+          },
+          "last_observation": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5846013.0,
+            "rmse_tokens": 5846013.0,
+            "bias_tokens": -5846013.0,
+            "wape": 0.9422510659936931,
+            "worst_absolute_loss_tokens": 5846013.0,
+            "latency_seconds_total": 1.792000000055971e-06,
+            "latency_seconds_median": 1.792000000055971e-06,
+            "failure_reasons": {}
+          },
+          "seasonal_naive": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 4870936.0,
+            "rmse_tokens": 4870936.0,
+            "bias_tokens": -4870936.0,
+            "wape": 0.7850897078721952,
+            "worst_absolute_loss_tokens": 4870936.0,
+            "latency_seconds_total": 2.0840000000132974e-06,
+            "latency_seconds_median": 2.0840000000132974e-06,
+            "failure_reasons": {}
+          },
+          "trailing_mean_16": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 5203042.75,
+            "rmse_tokens": 5203042.75,
+            "bias_tokens": -5203042.75,
+            "wape": 0.8386181449815894,
+            "worst_absolute_loss_tokens": 5203042.75,
+            "latency_seconds_total": 8.165999999976137e-06,
+            "latency_seconds_median": 8.165999999976137e-06,
+            "failure_reasons": {}
+          },
+          "zero_diagnostic": {
+            "opportunities": 1,
+            "successes": 1,
+            "failures": 0,
+            "availability": 1.0,
+            "mae_tokens": 6204305.0,
+            "rmse_tokens": 6204305.0,
+            "bias_tokens": -6204305.0,
+            "wape": 1.0,
+            "worst_absolute_loss_tokens": 6204305.0,
+            "latency_seconds_total": 1.291999999986082e-06,
+            "latency_seconds_median": 1.291999999986082e-06,
+            "failure_reasons": {}
+          }
+        }
+      },
+      "records": [
+        {
+          "candidate": "last_observation",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": 358292.0,
+          "failure": null,
+          "latency_seconds": 1.792000000055971e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            89573.0,
+            89573.0,
+            89573.0,
+            89573.0
+          ],
+          "error_tokens": -5846013.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": 1001262.25,
+          "failure": null,
+          "latency_seconds": 8.165999999976137e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            250315.5625,
+            250315.5625,
+            250315.5625,
+            250315.5625
+          ],
+          "error_tokens": -5203042.75
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.291999999986082e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -6204305.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": 894267.3631249999,
+          "failure": null,
+          "latency_seconds": 0.0023668749999999905,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            317488.56625,
+            230521.954375,
+            207153.2175,
+            139103.625
+          ],
+          "error_tokens": -5310037.636875
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": 1333369.0,
+          "failure": null,
+          "latency_seconds": 2.0840000000132974e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true,
+          "prediction_path_tokens": [
+            70037.0,
+            111785.0,
+            111821.0,
+            1039726.0
+          ],
+          "error_tokens": -4870936.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1170,
+          "target_end_exclusive": 1174,
+          "horizon_bins": 4,
+          "truth_tokens": 6204305.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.999999999177334e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": true,
+          "slice_burst_target": true
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": 1215508.0,
+          "failure": null,
+          "latency_seconds": 1.4999999999876223e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            303877.0,
+            303877.0,
+            303877.0,
+            303877.0
+          ],
+          "error_tokens": 26174.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": 1824698.5,
+          "failure": null,
+          "latency_seconds": 8.459000000016204e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            456174.625,
+            456174.625,
+            456174.625,
+            456174.625
+          ],
+          "error_tokens": 635364.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -1189334.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": 2116273.0925000003,
+          "failure": null,
+          "latency_seconds": 0.002332125000000018,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            652896.525,
+            464615.17,
+            684356.03625,
+            314405.36125
+          ],
+          "error_tokens": 926939.0925000003
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": 2059855.0,
+          "failure": null,
+          "latency_seconds": 1.833999999978353e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1773768.0,
+            72980.0,
+            117431.0,
+            95676.0
+          ],
+          "error_tokens": 870521.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1186,
+          "target_end_exclusive": 1190,
+          "horizon_bins": 4,
+          "truth_tokens": 1189334.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.159999999619473e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": 345292.0,
+          "failure": null,
+          "latency_seconds": 1.3750000000811724e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            86323.0,
+            86323.0,
+            86323.0,
+            86323.0
+          ],
+          "error_tokens": 254611.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": 1018299.0,
+          "failure": null,
+          "latency_seconds": 8.041000000069687e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            254574.75,
+            254574.75,
+            254574.75,
+            254574.75
+          ],
+          "error_tokens": 927618.0
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -90681.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": 1066195.4446875001,
+          "failure": null,
+          "latency_seconds": 0.0023522080000000223,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            394729.806875,
+            136339.70781249998,
+            404271.8040625,
+            130854.12593750001
+          ],
+          "error_tokens": 975514.4446875001
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": 32182.0,
+          "failure": null,
+          "latency_seconds": 1.916999999962421e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            3481.0,
+            8759.0,
+            14920.0,
+            5022.0
+          ],
+          "error_tokens": -58499.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1202,
+          "target_end_exclusive": 1206,
+          "horizon_bins": 4,
+          "truth_tokens": 90681.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": 1414800.0,
+          "failure": null,
+          "latency_seconds": 1.3750000000811724e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            353700.0,
+            353700.0,
+            353700.0,
+            353700.0
+          ],
+          "error_tokens": -425606.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": 1410993.75,
+          "failure": null,
+          "latency_seconds": 8.167000000058877e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            352748.4375,
+            352748.4375,
+            352748.4375,
+            352748.4375
+          ],
+          "error_tokens": -429412.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0839999999845418e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -1840406.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": 1927457.5750000002,
+          "failure": null,
+          "latency_seconds": 0.0023476669999999977,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            512515.410625,
+            318128.585625,
+            853039.700625,
+            243773.87812500002
+          ],
+          "error_tokens": 87051.57500000019
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": 908619.0,
+          "failure": null,
+          "latency_seconds": 1.6250000000050946e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            236851.0,
+            293378.0,
+            161684.0,
+            216706.0
+          ],
+          "error_tokens": -931787.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1214,
+          "target_end_exclusive": 1218,
+          "horizon_bins": 4,
+          "truth_tokens": 1840406.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": 26416.0,
+          "failure": null,
+          "latency_seconds": 1.3329999999367459e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            6604.0,
+            6604.0,
+            6604.0,
+            6604.0
+          ],
+          "error_tokens": -512446.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": 1325426.25,
+          "failure": null,
+          "latency_seconds": 7.957999999974597e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            331356.5625,
+            331356.5625,
+            331356.5625,
+            331356.5625
+          ],
+          "error_tokens": 786564.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0409999999794195e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -538862.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": 1283909.929375,
+          "failure": null,
+          "latency_seconds": 0.0023366670000000145,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            239055.2246875,
+            300345.4696875,
+            450521.81625,
+            293987.41875
+          ],
+          "error_tokens": 745047.9293750001
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": 588836.0,
+          "failure": null,
+          "latency_seconds": 1.875000000040039e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            10035.0,
+            49756.0,
+            221524.0,
+            307521.0
+          ],
+          "error_tokens": 49974.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1230,
+          "target_end_exclusive": 1234,
+          "horizon_bins": 4,
+          "truth_tokens": 538862.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": 631736.0,
+          "failure": null,
+          "latency_seconds": 1.208000000030296e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            157934.0,
+            157934.0,
+            157934.0,
+            157934.0
+          ],
+          "error_tokens": 89835.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": 2162629.25,
+          "failure": null,
+          "latency_seconds": 7.499999999938112e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            540657.3125,
+            540657.3125,
+            540657.3125,
+            540657.3125
+          ],
+          "error_tokens": 1620728.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -541901.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": 2490760.301875,
+          "failure": null,
+          "latency_seconds": 0.0023648330000000106,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            486308.32625000004,
+            805047.311875,
+            723858.731875,
+            475545.931875
+          ],
+          "error_tokens": 1948859.301875
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": 1574375.0,
+          "failure": null,
+          "latency_seconds": 2.8330000000353905e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            458281.0,
+            511793.0,
+            390973.0,
+            213328.0
+          ],
+          "error_tokens": 1032474.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1246,
+          "target_end_exclusive": 1250,
+          "horizon_bins": 4,
+          "truth_tokens": 541901.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.8749999999290168e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": 200068.0,
+          "failure": null,
+          "latency_seconds": 2.3749999999989058e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            50017.0,
+            50017.0,
+            50017.0,
+            50017.0
+          ],
+          "error_tokens": -3571794.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": 379944.5,
+          "failure": null,
+          "latency_seconds": 1.1500000000053134e-05,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            94986.125,
+            94986.125,
+            94986.125,
+            94986.125
+          ],
+          "error_tokens": -3391917.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.4170000000035543e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -3771862.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": 575500.5587500001,
+          "failure": null,
+          "latency_seconds": 0.002636458000000008,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            120085.1878125,
+            270478.62093750003,
+            90406.20718750001,
+            94530.5428125
+          ],
+          "error_tokens": -3196361.44125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": 3518499.0,
+          "failure": null,
+          "latency_seconds": 2.2080000000590516e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            664082.0,
+            1252625.0,
+            876962.0,
+            724830.0
+          ],
+          "error_tokens": -253363.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1262,
+          "target_end_exclusive": 1266,
+          "horizon_bins": 4,
+          "truth_tokens": 3771862.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.4579999999542181e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": 29396.0,
+          "failure": null,
+          "latency_seconds": 1.4160000000318362e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            7349.0,
+            7349.0,
+            7349.0,
+            7349.0
+          ],
+          "error_tokens": -135698.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": 2485701.0,
+          "failure": null,
+          "latency_seconds": 7.915999999941192e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            621425.25,
+            621425.25,
+            621425.25,
+            621425.25
+          ],
+          "error_tokens": 2320607.0
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.589999999670695e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -165094.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": 2872816.01375,
+          "failure": null,
+          "latency_seconds": 0.002269625000000053,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            693798.5246875,
+            1009155.8546875,
+            583927.8296875,
+            585933.8046875
+          ],
+          "error_tokens": 2707722.01375
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": 245553.0,
+          "failure": null,
+          "latency_seconds": 1.8749999999290168e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            3312.0,
+            22877.0,
+            219364.0
+          ],
+          "error_tokens": 80459.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1278,
+          "target_end_exclusive": 1282,
+          "horizon_bins": 4,
+          "truth_tokens": 165094.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.160000000729696e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": 704280.0,
+          "failure": null,
+          "latency_seconds": 1.2500000000637002e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            176070.0,
+            176070.0,
+            176070.0,
+            176070.0
+          ],
+          "error_tokens": 338568.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": 247457.75,
+          "failure": null,
+          "latency_seconds": 7.79200000000646e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            61864.4375,
+            61864.4375,
+            61864.4375,
+            61864.4375
+          ],
+          "error_tokens": -118254.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -365712.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": 575231.47,
+          "failure": null,
+          "latency_seconds": 0.0022846670000000735,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            132894.88625,
+            198219.17625,
+            100978.50125,
+            143138.90625
+          ],
+          "error_tokens": 209519.46999999997
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": 3775293.0,
+          "failure": null,
+          "latency_seconds": 2.082999999930557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            823174.0,
+            822246.0,
+            978459.0,
+            1151414.0
+          ],
+          "error_tokens": 3409581.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1290,
+          "target_end_exclusive": 1294,
+          "horizon_bins": 4,
+          "truth_tokens": 365712.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.999999999177334e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": 425448.0,
+          "failure": null,
+          "latency_seconds": 1.6670000000384988e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            106362.0,
+            106362.0,
+            106362.0,
+            106362.0
+          ],
+          "error_tokens": -407761.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": 192459.5,
+          "failure": null,
+          "latency_seconds": 8.417000000093822e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            48114.875,
+            48114.875,
+            48114.875,
+            48114.875
+          ],
+          "error_tokens": -640749.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -833209.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": 820599.390625,
+          "failure": null,
+          "latency_seconds": 0.0022933330000000085,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            175254.4890625,
+            297342.0590625,
+            141572.52781250002,
+            206430.3146875
+          ],
+          "error_tokens": -12609.609375
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": 293428.0,
+          "failure": null,
+          "latency_seconds": 2.41700000003231e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            75735.0,
+            27826.0,
+            103816.0,
+            86051.0
+          ],
+          "error_tokens": -539781.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1306,
+          "target_end_exclusive": 1310,
+          "horizon_bins": 4,
+          "truth_tokens": 833209.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 1.208000000030296e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": 310944.0,
+          "failure": null,
+          "latency_seconds": 1.37499999997015e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            77736.0,
+            77736.0,
+            77736.0,
+            77736.0
+          ],
+          "error_tokens": 253289.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": 1690394.75,
+          "failure": null,
+          "latency_seconds": 8.499999999966867e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            422598.6875,
+            422598.6875,
+            422598.6875,
+            422598.6875
+          ],
+          "error_tokens": 1632739.75
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.125000000046228e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -57655.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": 1597485.50625,
+          "failure": null,
+          "latency_seconds": 0.002269291999999923,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            364056.3928125,
+            361510.7128125,
+            453588.2528125,
+            418330.1478125
+          ],
+          "error_tokens": 1539830.50625
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": 50139.0,
+          "failure": null,
+          "latency_seconds": 1.7079999999891626e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            15176.0,
+            10006.0,
+            21686.0,
+            3271.0
+          ],
+          "error_tokens": -7516.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1322,
+          "target_end_exclusive": 1326,
+          "horizon_bins": 4,
+          "truth_tokens": 57655.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.920000000272154e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": 915084.0,
+          "failure": null,
+          "latency_seconds": 1.3750000000811724e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            228771.0,
+            228771.0,
+            228771.0,
+            228771.0
+          ],
+          "error_tokens": 159009.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": 731025.25,
+          "failure": null,
+          "latency_seconds": 8.250000000042945e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            182756.3125,
+            182756.3125,
+            182756.3125,
+            182756.3125
+          ],
+          "error_tokens": -25049.75
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -756075.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": 920500.150625,
+          "failure": null,
+          "latency_seconds": 0.002303915999999906,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            209151.92375,
+            177296.32875,
+            261774.03375,
+            272277.864375
+          ],
+          "error_tokens": 164425.150625
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": 2077257.0,
+          "failure": null,
+          "latency_seconds": 1.6250000000050946e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            632999.0,
+            556865.0,
+            574629.0,
+            312764.0
+          ],
+          "error_tokens": 1321182.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1338,
+          "target_end_exclusive": 1342,
+          "horizon_bins": 4,
+          "truth_tokens": 756075.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.910000000554973e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": 393992.0,
+          "failure": null,
+          "latency_seconds": 1.3330000000477682e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            98498.0,
+            98498.0,
+            98498.0,
+            98498.0
+          ],
+          "error_tokens": -601071.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": 1074757.5,
+          "failure": null,
+          "latency_seconds": 8.290999999993609e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            268689.375,
+            268689.375,
+            268689.375,
+            268689.375
+          ],
+          "error_tokens": 79694.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.125000000046228e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -995063.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": 1336808.35125,
+          "failure": null,
+          "latency_seconds": 0.002305208000000003,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            328812.3146875,
+            295191.4546875,
+            373649.19843750005,
+            339155.3834375
+          ],
+          "error_tokens": 341745.35125000007
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": 719843.0,
+          "failure": null,
+          "latency_seconds": 1.833999999978353e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            7801.0,
+            7530.0,
+            120997.0,
+            583515.0
+          ],
+          "error_tokens": -275220.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1350,
+          "target_end_exclusive": 1354,
+          "horizon_bins": 4,
+          "truth_tokens": 995063.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.340000000606196e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": 3002604.0,
+          "failure": null,
+          "latency_seconds": 1.208000000030296e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            750651.0,
+            750651.0,
+            750651.0,
+            750651.0
+          ],
+          "error_tokens": -96226.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": 2583943.5,
+          "failure": null,
+          "latency_seconds": 7.1660000000584034e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            645985.875,
+            645985.875,
+            645985.875,
+            645985.875
+          ],
+          "error_tokens": -514886.5
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -3098830.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": 2771949.73875,
+          "failure": null,
+          "latency_seconds": 0.0022968339999999143,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            686497.8834375,
+            626476.6384375,
+            783773.0684375,
+            675202.1484375
+          ],
+          "error_tokens": -326880.26125
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": 1325276.0,
+          "failure": null,
+          "latency_seconds": 1.8749999999290168e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            359411.0,
+            395883.0,
+            347862.0,
+            222120.0
+          ],
+          "error_tokens": -1773554.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1366,
+          "target_end_exclusive": 1370,
+          "horizon_bins": 4,
+          "truth_tokens": 3098830.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.159999999619473e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": 4509680.0,
+          "failure": null,
+          "latency_seconds": 1.4170000000035543e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            1127420.0,
+            1127420.0,
+            1127420.0,
+            1127420.0
+          ],
+          "error_tokens": 1850775.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": 2987931.0,
+          "failure": null,
+          "latency_seconds": 8.459000000016204e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            746982.75,
+            746982.75,
+            746982.75,
+            746982.75
+          ],
+          "error_tokens": 329026.0
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -2658905.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": 3365721.75875,
+          "failure": null,
+          "latency_seconds": 0.0022894169999999603,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            974969.5484375,
+            747838.9184375,
+            812951.7584375,
+            829961.5334375
+          ],
+          "error_tokens": 706816.75875
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": 4141417.0,
+          "failure": null,
+          "latency_seconds": 1.875000000040039e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            458618.0,
+            817337.0,
+            1970246.0,
+            895216.0
+          ],
+          "error_tokens": 1482512.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1382,
+          "target_end_exclusive": 1386,
+          "horizon_bins": 4,
+          "truth_tokens": 2658905.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 9.169999999336653e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": 1694820.0,
+          "failure": null,
+          "latency_seconds": 1.5420000000210266e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            423705.0,
+            423705.0,
+            423705.0,
+            423705.0
+          ],
+          "error_tokens": 8164.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": 2937660.25,
+          "failure": null,
+          "latency_seconds": 8.499999999966867e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            734415.0625,
+            734415.0625,
+            734415.0625,
+            734415.0625
+          ],
+          "error_tokens": 1251004.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0829999999018014e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -1686656.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": 3311512.7059375,
+          "failure": null,
+          "latency_seconds": 0.002309041999999928,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            946940.113125,
+            779952.758125,
+            771365.6015625,
+            813254.233125
+          ],
+          "error_tokens": 1624856.7059375
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": 2420900.0,
+          "failure": null,
+          "latency_seconds": 1.6670000000384988e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            770929.0,
+            586964.0,
+            163520.0,
+            899487.0
+          ],
+          "error_tokens": 734244.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1398,
+          "target_end_exclusive": 1402,
+          "horizon_bins": 4,
+          "truth_tokens": 1686656.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.340000000606196e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": 1016388.0,
+          "failure": null,
+          "latency_seconds": 1.2920000000971044e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            254097.0,
+            254097.0,
+            254097.0,
+            254097.0
+          ],
+          "error_tokens": -370580.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": 2230688.25,
+          "failure": null,
+          "latency_seconds": 8.000000000008e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            557672.0625,
+            557672.0625,
+            557672.0625,
+            557672.0625
+          ],
+          "error_tokens": 843720.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.999999999177334e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -1386968.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": 2005369.033125,
+          "failure": null,
+          "latency_seconds": 0.00230841599999998,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            654359.3821875,
+            444035.2784375,
+            400047.5053125,
+            506926.8671875
+          ],
+          "error_tokens": 618401.0331250001
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": 4316766.0,
+          "failure": null,
+          "latency_seconds": 1.6670000000384988e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            384564.0,
+            1230004.0,
+            1609796.0,
+            1092402.0
+          ],
+          "error_tokens": 2929798.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1414,
+          "target_end_exclusive": 1418,
+          "horizon_bins": 4,
+          "truth_tokens": 1386968.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 7.499999999938112e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": 3748720.0,
+          "failure": null,
+          "latency_seconds": 1.208000000030296e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            937180.0,
+            937180.0,
+            937180.0,
+            937180.0
+          ],
+          "error_tokens": -148880.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": 1293847.75,
+          "failure": null,
+          "latency_seconds": 7.375000000031662e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            323461.9375,
+            323461.9375,
+            323461.9375,
+            323461.9375
+          ],
+          "error_tokens": -2603752.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 9.579999999953515e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -3897600.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": 1294851.9378125,
+          "failure": null,
+          "latency_seconds": 0.00231304099999996,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            409545.2346875,
+            293222.275625,
+            296116.8775,
+            295967.55
+          ],
+          "error_tokens": -2602748.0621875003
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": 3991971.0,
+          "failure": null,
+          "latency_seconds": 1.875000000040039e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            984006.0,
+            929923.0,
+            1187730.0,
+            890312.0
+          ],
+          "error_tokens": 94371.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1426,
+          "target_end_exclusive": 1430,
+          "horizon_bins": 4,
+          "truth_tokens": 3897600.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.329999999778792e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": 84688.0,
+          "failure": null,
+          "latency_seconds": 1.3340000000194863e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            21172.0,
+            21172.0,
+            21172.0,
+            21172.0
+          ],
+          "error_tokens": 57533.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": 2494390.25,
+          "failure": null,
+          "latency_seconds": 8.083999999963787e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            623597.5625,
+            623597.5625,
+            623597.5625,
+            623597.5625
+          ],
+          "error_tokens": 2467235.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0409999999794195e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -27155.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": 2244003.69375,
+          "failure": null,
+          "latency_seconds": 0.002352165999999989,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            559719.344375,
+            606673.029375,
+            494670.025625,
+            582941.294375
+          ],
+          "error_tokens": 2216848.69375
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": 872011.0,
+          "failure": null,
+          "latency_seconds": 2.082999999930557e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            428876.0,
+            3054.0,
+            426506.0,
+            13575.0
+          ],
+          "error_tokens": 844856.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1442,
+          "target_end_exclusive": 1446,
+          "horizon_bins": 4,
+          "truth_tokens": 27155.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        },
+        {
+          "candidate": "last_observation",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": 190836.0,
+          "failure": null,
+          "latency_seconds": 1.4170000000035543e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            47709.0,
+            47709.0,
+            47709.0,
+            47709.0
+          ],
+          "error_tokens": -1327742.0
+        },
+        {
+          "candidate": "trailing_mean_16",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": 492144.75,
+          "failure": null,
+          "latency_seconds": 7.959000000057337e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            123036.1875,
+            123036.1875,
+            123036.1875,
+            123036.1875
+          ],
+          "error_tokens": -1026433.25
+        },
+        {
+          "candidate": "zero_diagnostic",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": 0.0,
+          "failure": null,
+          "latency_seconds": 1.0830000000128237e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "error_tokens": -1518578.0
+        },
+        {
+          "candidate": "joint_block_mean",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": 727453.5359375001,
+          "failure": null,
+          "latency_seconds": 0.0023309590000000213,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            120286.3878125,
+            203684.53625,
+            110739.005625,
+            292743.60625
+          ],
+          "error_tokens": -791124.4640624999
+        },
+        {
+          "candidate": "seasonal_naive",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": 1964050.0,
+          "failure": null,
+          "latency_seconds": 1.958000000024107e-06,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false,
+          "prediction_path_tokens": [
+            862109.0,
+            477039.0,
+            298363.0,
+            326539.0
+          ],
+          "error_tokens": 445472.0
+        },
+        {
+          "candidate": "foundation",
+          "origin_index": 1458,
+          "target_end_exclusive": 1462,
+          "horizon_bins": 4,
+          "truth_tokens": 1518578.0,
+          "prediction_tokens": null,
+          "failure": "ValueError: genuine pretrained checkpoint/runtime not supplied",
+          "latency_seconds": 8.750000000112834e-07,
+          "slice_zero_target": false,
+          "slice_high_load_target": false,
+          "slice_burst_target": false
+        }
+      ]
+    }
+  },
+  "target_meter": "input_tokens",
+  "inputs": {
+    "series_sha256": "501f1f40c880ee38bc97b73ad5f15f9bd1d42866357edb55e9e5f396d13858de",
+    "provenance_sha256": "80b06bbf2eed7389a2d4e2085b2f4c8571cbf08818f9af14711c6ea8c7a25100",
+    "series_path": "benchmarks/robustness/data/burstgpt_hourly_input_tokens.csv",
+    "provenance_path": "benchmarks/robustness/data/burstgpt_input_provenance.json",
+    "provenance": {
+      "dataset_id": "burstgpt-first-two-months-hourly-input-native",
+      "dataset_title": "BurstGPT: A Real-World Workload Dataset to Optimize LLM Serving Systems",
+      "source_repository": "https://github.com/HPMLL/BurstGPT",
+      "source_revision": "d895a53bb7b8ec137d0d2fe203b335835a78c10a",
+      "source_path": "data/BurstGPT_1.csv",
+      "source_blob_sha1": "f95dd2c84454b067fdd0973858c55ecfe31bdad7",
+      "source_url": "https://raw.githubusercontent.com/HPMLL/BurstGPT/d895a53bb7b8ec137d0d2fe203b335835a78c10a/data/BurstGPT_1.csv",
+      "acquisition_method": "Connected GitHub github_fetch_blob returns authoritative UTF-8 content by Git blob SHA; full content processed programmatically without model transcription.",
+      "acquired_date_utc": "2026-10-24",
+      "raw_sha256": "46fc9480ef0b748ecb2b51d512ff08c196b031782cbe6f78e28044d768e86d5a",
+      "raw_bytes": 50853373,
+      "raw_retained_locally": false,
+      "raw_retention_note": "Full raw CSV was fetched into tool orchestration memory and aggregated directly; remote immutable source blob + SHA256 retained. Reacquire via GitHub blob or ordinary public download and run prepare_burstgpt.py to reproduce.",
+      "license": "CC-BY-4.0",
+      "license_url": "https://github.com/HPMLL/BurstGPT/blob/d895a53bb7b8ec137d0d2fe203b335835a78c10a/LICENSE",
+      "attribution": "Yuxin Wang et al., BurstGPT: A Real-World Workload Dataset to Optimize LLM Serving Systems, KDD 2025, DOI 10.1145/3711896.3737413.",
+      "paper_url": "https://doi.org/10.1145/3711896.3737413",
+      "native_time_unit": "seconds from local first-day midnight; absolute date/timezone not supplied in CSV",
+      "timestamp_semantics": "Request submission, not completion or billing time",
+      "native_bin_seconds": 3600,
+      "canonical_path": "burstgpt_hourly_input_tokens.csv",
+      "canonical_sha256": "501f1f40c880ee38bc97b73ad5f15f9bd1d42866357edb55e9e5f396d13858de",
+      "components_path": "burstgpt_hourly_components.csv",
+      "components_sha256": "7c131661210b089b58b092550473a4941939fb683abfa8f0806af8c904e9c79f",
+      "transformation": "All source rows retained for parsing and full-source QA; input+output sums grouped by floor(timestamp/3600). Canonical field named total_tokens contains SUM OF INPUT TOKENS ONLY across all models/logtypes; target_meter=input_tokens. Exclude first and last bins containing trace bounds; keep complete interior [3600,5266800). Fill 36 empty interior bins zero under observed-release coverage assumption. No scaling, resampling, detrending, currency conversion, fabricated team/user assignment or shifted calendar dates.",
+      "evidence_class": "real_public_token_usage_trace",
+      "target_semantics": "Recorded request input tokens assigned to submission-time bin; input length is known at submission, reducing final-output availability leakage. This is serving input workload proxy, not invoice spending.",
+      "coverage_assumption": "IDEALIZED: trace release is treated as observed request stream throughout interior span; no per-bin provider completeness/outage metadata supplied. Empty bins describe no recorded requests, not verified no real demand.",
+      "availability_assumption": "IDEALIZED: preceding bins treated as observed at origin. Input length known at submission, but original export lacks capture/receipt/maturity histories, so end-to-end historical acquisition availability remains unverified.",
+      "privacy_identity": "No users, teams, projects, accounts, organizations or sessions in actual source CSV. Model+Log Type cohorts are workload cohorts only. Newer README mentions Session ID and Elapsed time but those columns are absent from immutable /data asset used here.",
+      "unsupported_fields": [
+        "cache tokens",
+        "cached-input fraction",
+        "reasoning tokens",
+        "user identity",
+        "team attribution",
+        "invoice costs",
+        "historical prices",
+        "company plans",
+        "budget decisions",
+        "provider enforcement",
+        "completion timestamps",
+        "data receipt/maturity timestamps"
+      ],
+      "failure_handling": "25,443 rows with zero response tokens retained; authors identify these as failures, which may still involve input usage and do not establish billing treatment.",
+      "seasonality_prior": "Pinned README labels daily and weekly periodicity figures; fixed 24-bin daily seasonal-naive comparator may be declared before final evaluation, without choosing lag on final outcomes.",
+      "limitations": [
+        "One anonymized Azure-backed workload stream; not representative enterprise team spend or prospective accuracy.",
+        "Single fixed hindsight export cannot validate the production bitemporal ingestion gates.",
+        "Hourly horizons are1hour/4hours; do not relabel bins as days or claim weekly/monthly planning performance.",
+        "No provider-reported monetary target or actual model deployment version; coarse ChatGPT/GPT-4 names cannot establish historical tariff.",
+        "Pretrained model may have trained on public historical trace; contamination cannot be ruled out without model training provenance."
+      ],
+      "summary": {
+        "raw_chars": 50853373,
+        "header": [
+          "Timestamp",
+          "Model",
+          "Request tokens",
+          "Response tokens",
+          "Total tokens",
+          "Log Type"
+        ],
+        "row_count": 1429737,
+        "min_timestamp_seconds": 5,
+        "max_timestamp_seconds": 5269973,
+        "invalid_rows": 0,
+        "zero_response_rows": 25443,
+        "token_identity_mismatches": 0,
+        "source_nonmonotone_transitions": 0,
+        "sums": {
+          "input_tokens": 872984237,
+          "output_tokens": 176278813,
+          "total_tokens": 1049263050
+        },
+        "groups": {
+          "ChatGPT|Conversation log": {
+            "rows": 103111,
+            "input_tokens": 70858197,
+            "output_tokens": 25649939,
+            "total_tokens": 96508136
+          },
+          "GPT-4|Conversation log": {
+            "rows": 51108,
+            "input_tokens": 40000422,
+            "output_tokens": 12957188,
+            "total_tokens": 52957610
+          },
+          "GPT-4|API log": {
+            "rows": 168520,
+            "input_tokens": 102136622,
+            "output_tokens": 34122696,
+            "total_tokens": 136259318
+          },
+          "ChatGPT|API log": {
+            "rows": 1106998,
+            "input_tokens": 659988996,
+            "output_tokens": 103548990,
+            "total_tokens": 763537986
+          }
+        },
+        "bin_seconds": 3600,
+        "start_inclusive_seconds": 3600,
+        "end_exclusive_seconds": 5266800,
+        "bin_count": 1462,
+        "empty_bins": 36,
+        "canonical_chars": 21066
+      },
+      "target_meter": "input_tokens",
+      "retrospective_secondary_target": "burstgpt_hourly_tokens.csv is total input+eventual output attributed to submission time; use only as hindsight secondary."
+    },
+    "harness_sha256": "a1358012eff0ad19548056205f0eb8074124d1a6a1db28a929cae4a251180271"
+  },
+  "procedure_manifest": {
+    "series_sha256": "501f1f40c880ee38bc97b73ad5f15f9bd1d42866357edb55e9e5f396d13858de",
+    "provenance_sha256": "80b06bbf2eed7389a2d4e2085b2f4c8571cbf08818f9af14711c6ea8c7a25100",
+    "harness_sha256": "a1358012eff0ad19548056205f0eb8074124d1a6a1db28a929cae4a251180271",
+    "joint_implementation_sha256": "7bce4d18fb226a569e7e67be1a7cde9f2794302894dff75c7980bcca1bb80350",
+    "model_implementation_sha256": "107850be94349512b1422169fc711fd68c54268293ba4a05f706b095569edd1b",
+    "foundation": {
+      "adapter_sha256": "293f971a981ac9c7b81058be6b06207df4ca34df3e69b213d0ba68d04f6f6be7"
+    },
+    "context": 64,
+    "origins": {
+      "1": [
+        1170,
+        1185,
+        1201,
+        1216,
+        1231,
+        1247,
+        1262,
+        1277,
+        1293,
+        1308,
+        1323,
+        1338,
+        1354,
+        1369,
+        1384,
+        1400,
+        1415,
+        1430,
+        1446,
+        1461
+      ],
+      "4": [
+        1170,
+        1186,
+        1202,
+        1214,
+        1230,
+        1246,
+        1262,
+        1278,
+        1290,
+        1306,
+        1322,
+        1338,
+        1350,
+        1366,
+        1382,
+        1398,
+        1414,
+        1426,
+        1442,
+        1458
+      ]
+    },
+    "seasonal_period": 24,
+    "seed": 0,
+    "target_meter": "input_tokens",
+    "mean_window": 16,
+    "joint_paths": 200,
+    "joint_baseline": "trailing_mean",
+    "joint_projection": "clip_nonnegative",
+    "baseline_projection": "none",
+    "fit_policy": "zero-shot pretrained, joint residual fit per origin on prefix only",
+    "calibration": "none",
+    "pricing": "none",
+    "fallback": "record failure, no substitution"
+  },
+  "procedure_identity": "9818f3e4b71e1169c016f2e62949c423abec7ea5561797dcd629a13faa53c80b"
+}

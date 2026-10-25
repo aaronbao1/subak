@@ -1,0 +1,98 @@
+[
+  {
+    "id": "08-S01",
+    "title": "Principles and Algorithms for Forecasting Groups of Time Series: Locality and Globality",
+    "url": "https://arxiv.org/html/2008.00444v3",
+    "authors_or_org": "Pablo Montero-Manso and Rob J. Hyndman",
+    "published_or_version": "arXiv v3, 2021-03-26; IJF 37(4), 1632–1653, 2021; author publication page dates publication 2021-05-10",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper, full text",
+    "supported_claim": "Sections 2–3 distinguish whole-history representational equivalence, finite-memory exceptions, and conditional generalization arguments for local/global forecasts.",
+    "limitations": "Existence does not rank fitted algorithms. Panel-average bounds impose independent-series, bounded-loss and effective-sample assumptions. No enterprise AI-spend validation.",
+    "license_status": "HTML explicitly identifies arXiv perpetual non-exclusive distribution license; no general code/data reuse license established."
+  },
+  {
+    "id": "08-S02",
+    "title": "Stan User’s Guide: Regression Models — Hierarchical regression",
+    "url": "https://mc-stan.org/docs/stan-users-guide/regression.html#hierarchical-regression",
+    "authors_or_org": "Stan Development Team",
+    "published_or_version": "Version 2.40 shown on page; publication date not verified",
+    "accessed": "2026-10-24",
+    "kind": "Primary software documentation",
+    "supported_claim": "Complete/no/partial pooling and multivariate hierarchical coefficient priors provide a concrete modeling vocabulary for heterogeneous groups.",
+    "limitations": "Illustrative regression models are not a validated spend forecasting system; prior and likelihood sensitivity remain. A software documentation example does not establish predictive superiority.",
+    "license_status": "Reuse license of this documentation page not verified; no code copied."
+  },
+  {
+    "id": "08-S03",
+    "title": "Understanding and Improving Information Transfer in Multi-Task Learning",
+    "url": "https://arxiv.org/abs/2005.00944v1",
+    "authors_or_org": "Sen Wu, Hongyang R. Zhang and Christopher Ré",
+    "published_or_version": "ICLR 2020; arXiv v1 submitted 2020-05-02",
+    "accessed": "2026-10-24",
+    "kind": "Primary research paper",
+    "supported_claim": "Shared-representation multi-task learning can suffer negative transfer from task-data misalignment; conditions and experiments examine alignment and reweighting.",
+    "limitations": "Theory is architecture/assumption specific; empirical tasks are NLP and images. Transfer to enterprise series is an inference, not a demonstrated result.",
+    "license_status": "arXiv license link verified as perpetual non-exclusive distribution license; broader reuse and associated code license not verified."
+  },
+  {
+    "id": "08-S04",
+    "title": "Ensembles of Localised Models for Time Series Forecasting",
+    "url": "https://arxiv.org/abs/2012.15059v2",
+    "authors_or_org": "Rakshitha Godahewa, Kasun Bandara, Geoffrey I. Webb, Slawek Smyl and Christoph Bergmeir",
+    "published_or_version": "arXiv v2, 2021-09-21; Knowledge-Based Systems (2021), 107518",
+    "accessed": "2026-10-24",
+    "kind": "Primary forecasting research paper",
+    "supported_claim": "Localized/clustered global ensembles and specialist approaches can improve over baseline global and univariate models; evaluation uses eight public datasets.",
+    "limitations": "No demonstrated correspondence between benchmark clusters and enterprise roles/projects; clustering adds selection cost and can be unstable with short histories.",
+    "license_status": "arXiv license link verified as perpetual non-exclusive distribution license; repository and dataset reuse licenses not assessed."
+  },
+  {
+    "id": "08-S05",
+    "title": "DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks",
+    "url": "https://arxiv.org/abs/1704.04110v3",
+    "authors_or_org": "David Salinas, Valentin Flunkert and Jan Gasthaus (arXiv author listing)",
+    "published_or_version": "arXiv v3, 2019-02-22; first submitted 2017-04-13",
+    "accessed": "2026-10-24",
+    "kind": "Primary forecasting research paper",
+    "supported_claim": "A shared autoregressive recurrent model trained across related series is a concrete probabilistic global forecasting candidate.",
+    "limitations": "Benchmark results do not imply accuracy with a few enterprise teams or zero-history users; sharing parameters is not by itself a joint dependence model across employees.",
+    "license_status": "arXiv license link verified as perpetual non-exclusive distribution license; implementation and data licenses not verified."
+  },
+  {
+    "id": "08-S06",
+    "title": "Deep Factors for Forecasting",
+    "url": "https://proceedings.mlr.press/v97/wang19k.html",
+    "authors_or_org": "Yuyang Wang, Alex Smola, Danielle Maddix, Jan Gasthaus, Dean Foster and Tim Januschowski",
+    "published_or_version": "ICML 2019, PMLR 97:6607–6617; 9–15 June 2019 conference dates in proceedings metadata",
+    "accessed": "2026-10-24",
+    "kind": "Primary conference research paper",
+    "supported_claim": "Global latent deep structure plus local probabilistic components is a hybrid alternative; exchangeability motivates the theoretical decomposition.",
+    "limitations": "Assumptions and benchmark populations need examination before use for enterprise AI spending; not evidence that a neural hybrid is required.",
+    "license_status": "Page carries authors/PMLR copyright footer; exact article/code/data reuse license not verified."
+  },
+  {
+    "id": "08-S07",
+    "title": "lme4: Mixed-effects models in R",
+    "url": "https://lme4.github.io/lme4/",
+    "authors_or_org": "Douglas Bates, Martin Maechler, Ben Bolker and Steven Walker",
+    "published_or_version": "Documentation displays version 1.1-37.9000; page publication date not verified",
+    "accessed": "2026-10-24",
+    "kind": "Primary author-maintained software documentation",
+    "supported_claim": "Nested and crossed random effects and generalized linear mixed models are supported modeling structures, so organization levels need not be forced into a single tree.",
+    "limitations": "Capability documentation, not a comparison proving that crossed effects improve this target. Sparse intersections may be unidentified.",
+    "license_status": "Package page explicitly states GPL (>=2); no inference made about licenses of unrelated datasets or other implementations."
+  },
+  {
+    "id": "08-S08",
+    "title": "Optimal forecast reconciliation for hierarchical and grouped time series through trace minimization",
+    "url": "https://robjhyndman.com/publications/mint/",
+    "authors_or_org": "Shanika L. Wickramasuriya, George Athanasopoulos and Rob J. Hyndman",
+    "published_or_version": "Author page dates 2019-06-14; JASA 114(526), 804–819",
+    "accessed": "2026-10-24",
+    "kind": "Primary author publication page describing research paper",
+    "supported_claim": "Reconciliation enforces aggregation coherence and uses forecast-error covariance; MinT's optimization claim is conditional on its formulation and unbiasedness assumptions.",
+    "limitations": "Covariance estimation and changing aggregation structures are practical issues; coherent forecasts need not be calibrated or accurate for enterprise workloads.",
+    "license_status": "Author site copyright shown; article, implementation and data reuse licenses not verified."
+  }
+]

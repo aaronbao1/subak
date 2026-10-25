@@ -1,0 +1,110 @@
+[
+  {
+    "id": "16-S01",
+    "title": "How Do AI Agents Spend Your Money? Analyzing and Predicting Token Consumption in Agentic Coding Tasks",
+    "url": "https://arxiv.org/html/2604.22750v3",
+    "authors_or_org": "Longju Bai, Zhemin Huang, Xingyao Wang, Jiao Sun, Rada Mihalcea, Erik Brynjolfsson, Alex Pentland, Jiaxin Pei",
+    "published_or_version": "arXiv:2604.22750v3; initial 2026-04-24; revised 2026-10-02",
+    "accessed": "2026-10-24",
+    "kind": "primary empirical research preprint",
+    "supported_claim": "Eight-model OpenHands/SWE-bench Verified study with four runs per task reports stochastic token consumption, input-driven cost, weak human-difficulty alignment, and weak-to-moderate pre-execution self-prediction with underestimation.",
+    "limitations": "Benchmark, harness and model selection are not enterprise population validation; self-prediction is not the same estimator as a supervised aggregate forecast. Observational token/success association is not causal effect of extra budget.",
+    "license_status": "Paper HTML explicitly states CC BY 4.0; dataset/code licenses not verified here."
+  },
+  {
+    "id": "16-S02",
+    "title": "TraceLab: Characterizing Coding Agent Workloads for LLM Serving",
+    "url": "https://arxiv.org/html/2606.30560v2",
+    "authors_or_org": "Kan Zhu, Mathew Jacob, Chenxi Ma, Yi Pan, Stephanie Wang, Arvind Krishnamurthy, Baris Kasikci",
+    "published_or_version": "arXiv:2606.30560v2; initial 2026-06-29; revised 2026-06-30",
+    "accessed": "2026-10-24",
+    "kind": "primary observational coding-agent trace study",
+    "supported_claim": "Real developer logs have session/request/step hierarchy, human-paced gaps, context growth and reductions, imperfect caching, and long-tailed tool latency. Table 1 reports 4,265 sessions, 43 developers and 357,161 steps, with costs as estimated API list-price equivalents.",
+    "limitations": "Researchers' day-to-day workflow sample; not representative enterprise billing or general agent domains. Provider internals and causal caching mechanisms unobserved. Public data does not provide this company's financial or planning context.",
+    "license_status": "Paper explicitly states CC BY 4.0."
+  },
+  {
+    "id": "16-S03",
+    "title": "TraceLab public dataset and toolkit repository",
+    "url": "https://github.com/uw-syfi/TraceLab",
+    "authors_or_org": "University of Washington SyFI Lab / uw-syfi",
+    "published_or_version": "Repository README snapshot 2026-10-24 identifies public dataset v0.0.1; extractor/schema commit not pinned in research stage",
+    "accessed": "2026-10-24",
+    "kind": "primary data and software documentation",
+    "supported_claim": "Public metadata, separate code/data licenses and dataset v0.0.1 are documented. README also documents late Codex usage reports and CLI/turn-ID-dependent result association: a normalized row is not wholly available at its first timestamp.",
+    "limitations": "No dataset downloaded or experiment executed. Pin asset/checksum separately from extractor/schema. Field-level availability is required for prefix replay; without original ingestion history label event-time simulation, not preserved real arrival/source-delay replay. No enterprise billing truth.",
+    "license_status": "README explicitly states code Apache License 2.0 and public trace dataset CC BY 4.0."
+  },
+  {
+    "id": "16-S04",
+    "title": "Measuring AI agent autonomy in practice",
+    "url": "https://www.anthropic.com/research/measuring-agent-autonomy",
+    "authors_or_org": "Anthropic Societal Impacts",
+    "published_or_version": "2026-02-18",
+    "accessed": "2026-10-24",
+    "kind": "primary provider observational research",
+    "supported_claim": "Autonomous turn duration is confounded by task difficulty, user oversight, product speed and concurrency; public API requests cannot reliably be grouped into sessions, unlike the provider's own Claude Code telemetry.",
+    "limitations": "Provider-selected usage; autonomy and human intervention endpoints are not spending-forecast accuracy. Changing user composition complicates time trends. No universal time-to-token conversion.",
+    "license_status": "Reuse license not verified; cite and paraphrase only."
+  },
+  {
+    "id": "16-S05",
+    "title": "Coding agents ignore their own budgets",
+    "url": "https://labs.ramp.com/research/coding-agents-ignore-spend/",
+    "authors_or_org": "Shaiyon Hariri / Ramp Labs",
+    "published_or_version": "2026-04-21",
+    "accessed": "2026-10-24",
+    "kind": "primary vendor experimental research blog",
+    "supported_claim": "GPT-5.4/mini-swe-agent budget experiment reports no observable effect of passive budget prompts; balanced 100-task controller evaluation separates work from continuation approval, including oracle-information conditions.",
+    "limitations": "Control under a specific utility and selected balanced tasks, not forecasting validation. Article prose about near-universal approval by four controllers conflicts with displayed class accuracies. Oracle-probability success demonstrates decision arithmetic with supplied information, not estimation.",
+    "license_status": "Reuse license not verified; cite and paraphrase only."
+  },
+  {
+    "id": "16-S06",
+    "title": "BAGEN: Are LLM Agents Budget-Aware?",
+    "url": "https://arxiv.org/html/2606.00198v1",
+    "authors_or_org": "Yuxiang Lin, Zihan Wang, Mengyang Liu, Yuxuan Shan, Longju Bai, Junyao Zhang, Xing Jin, Boshan Chen, Jinyan Su, Xingyao Wang, Jiaxin Pei, Manling Li",
+    "published_or_version": "arXiv:2606.00198v1; 2026-05-29",
+    "accessed": "2026-10-24",
+    "kind": "primary budget-estimation benchmark preprint",
+    "supported_claim": "Rollout-prefix remaining-budget interval evaluation distinguishes feasibility, early failure recognition and calibration; tested frontier models show optimistic errors and limited interval calibration.",
+    "limitations": "Four environments and five agents; eventual resources/feasibility rather than enterprise horizon increments or future arrival forecasts. Offline replay does not establish effects under a changed live execution policy.",
+    "license_status": "Paper HTML explicitly states CC BY 4.0; dataset/code licenses not verified here."
+  },
+  {
+    "id": "16-S07",
+    "title": "Beyond Token Savings: A Systematic Study of Context Compression in LLM Agents",
+    "url": "https://arxiv.org/html/2609.32961v1",
+    "authors_or_org": "Ritul Satish, Prasoon Sinha, Akiho Kawada, Neeraja J. Yadwadkar",
+    "published_or_version": "arXiv:2609.32961v1; 2026-09-26",
+    "accessed": "2026-10-24",
+    "kind": "primary compression-policy empirical preprint",
+    "supported_claim": "Across almost 35,000 runs with three open-weight models and two coding benchmarks, compression affects behavior and token reductions need not imply lower latency or estimated cost.",
+    "limitations": "Benchmark and model/policy-specific findings; estimated costs do not establish billed enterprise savings or a universal compaction effect.",
+    "license_status": "Paper HTML explicitly states CC BY 4.0; experimental artifact licenses not verified here."
+  },
+  {
+    "id": "16-S08",
+    "title": "Using Time Dependent Covariates and Time Dependent Coefficients in the Cox Model",
+    "url": "https://stat.ethz.ch/R-manual/R-devel/library/survival/doc/timedep.pdf",
+    "authors_or_org": "Terry Therneau, Cynthia Crowson, Elizabeth Atkinson / Mayo Clinic",
+    "published_or_version": "Document dated 2026-01-12; R-devel survival documentation snapshot",
+    "accessed": "2026-10-24",
+    "kind": "primary statistical software/methodology documentation",
+    "supported_claim": "Time-dependent survival analysis encodes intervals and risk sets using covariates available before an event; using future outcomes in covariates introduces invalid look-ahead.",
+    "limitations": "Methodological source, not validation of a survival model for coding sessions. Informative missingness and population assumptions must be checked in the proposed application.",
+    "license_status": "PDF-specific reuse license not verified; no code copied."
+  },
+  {
+    "id": "16-S09",
+    "title": "Hawkes Processes",
+    "url": "https://arxiv.org/abs/1507.02822",
+    "authors_or_org": "Patrick J. Laub, Thomas Taimre, Philip K. Pollett",
+    "published_or_version": "arXiv:1507.02822v1; 2015-07-10",
+    "accessed": "2026-10-24",
+    "kind": "author-authored mathematical review",
+    "supported_claim": "Hawkes processes represent self-excitation in event arrival intensity; establishes mathematical model class, not suitability for coding demand.",
+    "limitations": "No coding-agent workload evidence; apparent clustering can reflect omitted common causes or measurement artifacts. Use as a candidate only after residual diagnostics and baseline comparison.",
+    "license_status": "Reuse license not verified; cite and paraphrase only."
+  }
+]

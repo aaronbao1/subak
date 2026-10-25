@@ -1,0 +1,34 @@
+{
+  "aggregate": {
+    "process": "aggregate",
+    "evidence_class": "synthetic_fixture",
+    "artifact_id": "ee0dc9af90aa83b883359e3d4d021222aa8419f24fac2915a1062e56026cc006",
+    "retrieved_artifact_id": "ee0dc9af90aa83b883359e3d4d021222aa8419f24fac2915a1062e56026cc006",
+    "bundle_artifact_id": "83bc34fce3bf54d48baa286565e7a3d8e7e525b52bc041a52da785f9bee1cd6e",
+    "commercial_artifact_id": "67ea21b2f5e1949a9b5460bc4681007c4392c7a7b0396caa247bc8e8ce5d497b",
+    "state_artifact_id": null,
+    "snapshot_artifact_id": "51cd8df52fb87b009d43fc72e2e48d1f37095661133f6b4c53c16d2197836f5e",
+    "usage_mean": "20",
+    "conditional_contract_mean": "26",
+    "monetary_exceedance_probability": 1.0,
+    "monetary_expected_shortfall": "26",
+    "safe_transfer": false,
+    "qualification": "synthetic fixture; conditional law, no empirical enterprise qualification"
+  },
+  "state": {
+    "process": "state",
+    "evidence_class": "synthetic_fixture",
+    "artifact_id": "7880b21619c137092403e2f5164acd58835eb2403e5bdc016669b361a6999434",
+    "retrieved_artifact_id": "7880b21619c137092403e2f5164acd58835eb2403e5bdc016669b361a6999434",
+    "bundle_artifact_id": "e65fc99336e4276407c7825995c6aadb2a669f1c60655d0c0998304633a5dfc8",
+    "commercial_artifact_id": "f8f3158562be2323643d25ce357948080ac28bed46af5a70de418091180ab085",
+    "state_artifact_id": "be99ee5bf4429bda371aeceb13342fa70ac4097829ec2f4210cba1e655c5c58b",
+    "snapshot_artifact_id": "726f31dad8a2ebaa4080c86960c5a8832ec7e11e9aa62a89bf02cafb59ee1b19",
+    "usage_mean": "20",
+    "conditional_contract_mean": "26",
+    "monetary_exceedance_probability": 1.0,
+    "monetary_expected_shortfall": "26",
+    "safe_transfer": false,
+    "qualification": "synthetic fixture; conditional law, no empirical enterprise qualification"
+  }
+}

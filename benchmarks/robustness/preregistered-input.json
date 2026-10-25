@@ -1,0 +1,67 @@
+{
+  "target_meter": "input_tokens",
+  "bin_seconds": 3600,
+  "context": 64,
+  "horizons": [
+    1,
+    4
+  ],
+  "seasonal_period": 24,
+  "seed": 0,
+  "max_origins": 20,
+  "series_sha256": "501f1f40c880ee38bc97b73ad5f15f9bd1d42866357edb55e9e5f396d13858de",
+  "procedures": [
+    "last_observation",
+    "trailing_mean_16",
+    "seasonal_naive_24",
+    "joint_block_mean_200",
+    "foundation_if_genuine_acquired",
+    "zero_diagnostic"
+  ],
+  "origin_indices": {
+    "1": [
+      1170,
+      1185,
+      1201,
+      1216,
+      1231,
+      1247,
+      1262,
+      1277,
+      1293,
+      1308,
+      1323,
+      1338,
+      1354,
+      1369,
+      1384,
+      1400,
+      1415,
+      1430,
+      1446,
+      1461
+    ],
+    "4": [
+      1170,
+      1186,
+      1202,
+      1214,
+      1230,
+      1246,
+      1262,
+      1278,
+      1290,
+      1306,
+      1322,
+      1338,
+      1350,
+      1366,
+      1382,
+      1398,
+      1414,
+      1426,
+      1442,
+      1458
+    ]
+  }
+}
